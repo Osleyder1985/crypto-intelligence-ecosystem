@@ -248,3 +248,27 @@ Los NFR-001–NFR-018 se mantienen en sus tablas por atributo de calidad. **No e
 - Las fases F0–F9 corresponden a la hoja de ruta; la asignación no declara que una capacidad esté implementada ni que la fase esté completada.
 - REQ-P-007 es un límite de seguridad transversal y aparece en F0 como condición previa, aunque debe verificarse también en seguridad y release.
 - Los requisitos de datos y análisis pueden tener dependencias cruzadas; el índice define su fase primaria para evitar duplicar el mismo ID en varias filas.
+
+## 14. Matriz de trazabilidad entre Issues y requisitos
+
+Esta matriz propone la cobertura documental de los Issues de arquitectura y requisitos. **No declara que los Issues estén resueltos ni que los requisitos estén implementados.** La asignación se basa en el alcance y los criterios de aceptación documentados en cada Issue; el responsable del proyecto debe confirmar la cobertura antes de aprobar la línea base. Un requisito puede vincularse a más de un Issue cuando exista una dependencia real.
+
+| Issue | Alcance de trazabilidad | Requisitos de producto vinculados | NFR vinculados | Estado de la relación |
+|---|---|---|---|---|
+| [#3 — Gobernanza ISO/IEC](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/issues/3) | Aplicabilidad normativa, gobernanza y límites de conformidad | REQ-P-028, REQ-P-033 | NFR-004, NFR-005 | Propuesta; confirmar contra criterios de aceptación del Issue |
+| [#4 — Ingeniería de software](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/issues/4) | Ciclo de vida, validación, experimentación, calidad y puertas de entrega | REQ-P-001, REQ-P-004, REQ-P-005, REQ-P-007, REQ-P-008, REQ-P-009, REQ-P-010, REQ-P-014, REQ-P-017, REQ-P-018, REQ-P-019, REQ-P-020, REQ-P-033 | NFR-001, NFR-002, NFR-007, NFR-009, NFR-011, NFR-012, NFR-013, NFR-014, NFR-015, NFR-016, NFR-017 | Propuesta; confirmar contra criterios de aceptación del Issue |
+| [#5 — Clientes multiplataforma](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/issues/5) | Web/PWA, Android, iOS y escritorio opcional según evidencia | REQ-P-006, REQ-P-027, REQ-P-030 | NFR-006, NFR-018 | Propuesta; confirmar contra criterios de aceptación del Issue |
+| [#6 — Plataforma central de datos y API](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/issues/6) | Fuente de verdad, contratos API, identidad, frescura, resiliencia y trabajos | REQ-P-002, REQ-P-008, REQ-P-011, REQ-P-018, REQ-P-019, REQ-P-032 | NFR-002, NFR-003, NFR-004, NFR-009, NFR-011, NFR-015 | Propuesta; confirmar contra criterios de aceptación del Issue |
+| [#7 — Selección de mercados spot](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/issues/7) | Universo reproducible de exchanges/pares, liquidez y restricciones spot | REQ-P-003, REQ-P-011, REQ-P-025, REQ-P-029 | NFR-003, NFR-010, NFR-011 | Propuesta; confirmar contra criterios de aceptación del Issue |
+| [#8 — Arquitectura y trazabilidad](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/issues/8) | Arquitectura de referencia, decisiones, evidencia y trazabilidad normativa | REQ-P-002, REQ-P-004, REQ-P-010, REQ-P-020, REQ-P-028, REQ-P-032, REQ-P-033 | NFR-007, NFR-008, NFR-011 | Propuesta; confirmar contra criterios de aceptación del Issue |
+| [#9 — Selección del stack tecnológico](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/issues/9) | Criterios ponderados, pruebas de concepto, rendimiento, portabilidad y coste | REQ-P-010, REQ-P-030, REQ-P-031 | NFR-001, NFR-007, NFR-008, NFR-010 | Propuesta; confirmar contra criterios de aceptación del Issue |
+| [#10 — Alojamiento y costes](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/issues/10) | Hosting, cuotas, recuperación, operación móvil y salida del proveedor | REQ-P-001, REQ-P-010, REQ-P-031, REQ-P-032 | NFR-001, NFR-002, NFR-008, NFR-009, NFR-010, NFR-015 | Propuesta; confirmar contra criterios de aceptación del Issue |
+| [#11 — Marco maestro](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/issues/11) | Integración del marco, riesgos, hoja de ruta y Definition of Done | REQ-P-028, REQ-P-033 | NFR-007, NFR-011 | Propuesta; Issue rector, no sustituye la trazabilidad específica de los Issues subordinados |
+| [#13 — Requisitos analíticos](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/issues/13) | Historial, comparaciones, ranking, eventos, liquidez, predicciones y niveles técnicos | REQ-P-004, REQ-P-005, REQ-P-009, REQ-P-012, REQ-P-013, REQ-P-014, REQ-P-015, REQ-P-016, REQ-P-017, REQ-P-018, REQ-P-019, REQ-P-020, REQ-P-021, REQ-P-022, REQ-P-023, REQ-P-024, REQ-P-025, REQ-P-026, REQ-P-027, REQ-P-029 | NFR-003, NFR-011, NFR-012, NFR-013, NFR-014, NFR-016, NFR-017, NFR-018 | Propuesta; confirmar contra criterios de aceptación del Issue |
+
+### Criterios de cierre de trazabilidad
+
+- Cada requisito definido debe estar vinculado a, al menos, un Issue de alcance; una mención en el Issue rector no sustituye la relación específica cuando exista un Issue especializado.
+- Todo ID mencionado en esta matriz debe existir en el catálogo y todo ID del catálogo debe aparecer en una fila de trazabilidad.
+- La relación Issue–requisito es una hipótesis revisable: al aprobar un requisito se debe conservar evidencia de la revisión de los criterios de aceptación y evitar duplicar requisitos con distinto ID.
+- Esta matriz no equivale a una matriz completa de cumplimiento normativo ni a evidencia de implementación; esas trazabilidades requieren artefactos y verificaciones propios.
