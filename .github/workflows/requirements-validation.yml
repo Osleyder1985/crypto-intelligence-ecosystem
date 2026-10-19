@@ -1,0 +1,27 @@
+name: Requirements traceability validation
+
+on:
+  pull_request:
+    paths:
+      - "docs/engineering/**"
+      - "scripts/quality/validate_requirements_catalog.py"
+      - ".github/workflows/requirements-validation.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate-requirements:
+    name: Validate requirements catalogue and traceability
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Validate requirements catalogue
+        run: python scripts/quality/validate_requirements_catalog.py
