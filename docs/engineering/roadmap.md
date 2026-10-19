@@ -82,7 +82,7 @@ Todos estos resultados permanecen pendientes hasta que existan evidencias reprod
 
 ## Índice de requisitos por fase y prioridad
 
-La vista ordenada y el mapeo primario de cada requisito de producto se mantienen en el [catálogo de requisitos y trazabilidad](requirements-traceability-catalog.md), sección 9. La fase primaria se usa para planificar; las dependencias cruzadas se documentan en la matriz de trazabilidad y no duplican IDs. Las prioridades son iniciales, no aprobadas. Los NFR-001–NFR-018 todavía requieren fase primaria y prioridad justificadas.
+La vista ordenada y el mapeo primario de cada requisito de producto se mantienen en el [catálogo de requisitos y trazabilidad](requirements-traceability-catalog.md), sección 13. La fase primaria se usa para planificar; las dependencias cruzadas se documentan en la matriz de trazabilidad y no duplican IDs. Las prioridades son iniciales, no aprobadas. El catálogo incorpora ahora una clasificación propuesta de los NFR-001–NFR-018 por fase primaria y prioridad (sección 12); sus umbrales medibles, responsables y aceptación por el propietario siguen pendientes.
 
 ### Cobertura del motor cuantitativo
 
