@@ -54,6 +54,11 @@ Esta sección propone asociaciones de control para orientar el diseño y la evid
 | Gestión de riesgos | REQ-P-012, REQ-P-016, REQ-P-019; NFR-013, NFR-015, NFR-016 | Registro de riesgos, escenarios, sensibilidad, tratamiento, responsable y riesgo residual | Propuesta; no implica certificación |
 | Procedencia e integridad de datos | REQ-P-011, REQ-P-020; NFR-003, NFR-011, NFR-014 | Catálogo de fuentes, timestamps point-in-time, control de unidades, referencias/hash y reproducción de ejecución | Propuesta; diseño pendiente |
 | Validación cuantitativa y transparencia | REQ-P-013, REQ-P-014, REQ-P-017, REQ-P-019; NFR-012, NFR-013, NFR-017 | Protocolo predefinido, benchmark, evaluación temporal, calibración, sensibilidad y conservación de resultados negativos | Control interno propuesto; no atribuirlo como exigencia textual de una norma sin verificarla |
+| Historial y comparación de evaluaciones | REQ-P-005, REQ-P-020, REQ-P-021 | Identificadores de ejecución, referencias inmutables, comparación de versiones y distinción entre cambios de mercado, método y datos | Control interno propuesto; pruebas de reconstrucción pendientes |
+| Ranking reproducible de activos | REQ-P-022; NFR-017, NFR-016 | Universo elegible, exclusiones, horizonte, pesos, comparabilidad, incertidumbre y reconstrucción histórica | Control interno propuesto; protocolo y umbrales pendientes |
+| Detección de movimientos y memoria de eventos | REQ-P-023, REQ-P-024; REQ-P-013, REQ-P-014; NFR-014 | Evidencia fechada, timestamps de publicación/captura, explicaciones alternativas, predicciones y evaluación fuera de muestra | Control interno propuesto; no implica causalidad ni capacidad predictiva demostrada |
+| Profundidad y liquidez de mercado spot | REQ-P-003, REQ-P-025, REQ-P-011; NFR-003, NFR-011 | Capturas de libro/trades, cobertura por exchange/par, spread, profundidad, slippage, frescura y límites del histórico | Control interno propuesto; cobertura real por proveedor pendiente de validar |
+| Soportes/resistencias y experiencia analítica | REQ-P-026, REQ-P-027; NFR-006, NFR-016, NFR-018 | Métodos multi-temporalidad, invalidación, incertidumbre, accesibilidad y pruebas de tareas | Control interno propuesto; métricas y validación empírica pendientes |
 
 ### Regla de uso
 
