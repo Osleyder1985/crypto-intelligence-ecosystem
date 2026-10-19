@@ -92,8 +92,8 @@ def validate_catalog(content: str) -> list[str]:
             if requirement_id in product_rows:
                 errors.append(f"duplicate product requirement {requirement_id} at line {line_no}")
                 continue
-            if len(row) < 6:
-                errors.append(f"{requirement_id} row has {len(row)} cells; expected at least 6")
+            if len(row) < 7:
+                errors.append(f"{requirement_id} row has {len(row)} cells; expected at least 7 including responsible role")
                 continue
             fields = {
                 "description": row[1],
@@ -101,12 +101,15 @@ def validate_catalog(content: str) -> list[str]:
                 "acceptance": row[3],
                 "evidence": row[4],
                 "status": row[5],
+                "responsible role": row[6],
             }
             for name, value in fields.items():
                 if not value:
                     errors.append(f"{requirement_id} has empty {name} at line {line_no}")
             if row[2] not in PRIORITY_RANK:
                 errors.append(f"{requirement_id} has invalid priority {row[2]!r}")
+            if row[6] == "Por asignar":
+                errors.append(f"{requirement_id} has no proposed responsible role at line {line_no}")
             product_rows[requirement_id] = (line_no, row[2])
         elif NFR_ID.fullmatch(row[0]):
             requirement_id = row[0]
@@ -119,6 +122,10 @@ def validate_catalog(content: str) -> list[str]:
             if not all(row[1:4]):
                 errors.append(f"{requirement_id} has an empty required NFR field at line {line_no}")
             nfr_rows[requirement_id] = line_no
+
+    required_owner_header = "| ID | Requisito | Prioridad inicial | Criterio de aceptación propuesto | Evidencia prevista | Estado | Responsable |"
+    if content.count(required_owner_header) != 2:
+        errors.append("expected owner column in both product-requirement tables")
 
     if len(product_rows) != 33:
         errors.append(f"expected 33 product requirements; found {len(product_rows)}")
