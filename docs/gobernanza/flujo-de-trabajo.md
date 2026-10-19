@@ -59,3 +59,18 @@ Para análisis cuantitativos o de modelos se deben registrar también la versió
 ## Estado de esta política
 
 Este documento define el proceso esperado. Su existencia no demuestra que la protección de `main`, las reglas de revisión o los controles de integración estén activos en GitHub. Esos controles deben configurarse y verificarse por separado.
+
+
+## Puerta automática inicial
+
+El workflow `.github/workflows/validacion-gobernanza.yml` ejecuta `scripts/quality/check_governance.py` en cada Pull Request. Su alcance inicial se limita a verificar que los documentos obligatorios existan y conserven ciertos contratos de gobernanza. No valida por sí solo el contenido semántico de los formularios, no ejecuta pruebas del producto y no activa protección de ramas.
+
+### Activación como requisito de integración
+
+1. Abrir el PR que introduce el workflow y comprobar que la ejecución aparece en la pestaña **Checks**.
+2. Confirmar que el job `validar-gobernanza` finaliza correctamente en el commit más reciente.
+3. En la configuración del repositorio, crear una regla para `main` que exija PR y el check de estado `validar-gobernanza`.
+4. Desactivar force-push y eliminación de `main`; habilitar resolución de conversaciones y revisiones si la política/plan lo permite.
+5. Verificar la regla efectiva en GitHub y documentar la fecha y el resultado de la comprobación.
+
+No seleccionar un check obligatorio hasta que haya publicado al menos un resultado con el nombre exacto. Los checks obligatorios deben publicarse para el evento de PR y en el commit actual; de lo contrario, podrían quedar pendientes y bloquear integración. La configuración efectiva sigue pendiente porque no se dispone de una acción autorizada para modificar/verificar reglas de rama desde este flujo.
