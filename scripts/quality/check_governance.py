@@ -12,9 +12,9 @@ ROOT = Path(__file__).resolve().parents[2]
 REQUIRED_FILES = (
     "CONTRIBUTING.md",
     ".github/PULL_REQUEST_TEMPLATE.md",
-    ".github/ISSUE_TEMPLATE/01-requisito-mejora.yml",
-    ".github/ISSUE_TEMPLATE/02-defecto.yml",
-    "docs/gobernanza/flujo-de-trabajo.md",
+    ".github/ISSUE_TEMPLATE/01-requirement-improvement.yml",
+    ".github/ISSUE_TEMPLATE/02-defect.yml",
+    "docs/governance/workflow.md",
 )
 
 REQUIRED_TEXT = {
@@ -31,18 +31,18 @@ REQUIRED_TEXT = {
         "Riesgos y compatibilidad",
         "no se afirma que se ejecutaron pruebas",
     ),
-    "docs/gobernanza/flujo-de-trabajo.md": (
+    "docs/governance/workflow.md": (
         "Criterios de aceptación",
         "protección efectiva",
         "Evidencia y reproducibilidad",
         "No se debe integrar un PR hasta que",
     ),
-    ".github/ISSUE_TEMPLATE/01-requisito-mejora.yml": (
+    ".github/ISSUE_TEMPLATE/01-requirement-improvement.yml": (
         'name: "Requisito o mejora"',
         "Criterios de aceptación",
         "Evidencia disponible y pendiente",
     ),
-    ".github/ISSUE_TEMPLATE/02-defecto.yml": (
+    ".github/ISSUE_TEMPLATE/02-defect.yml": (
         'name: "Defecto"',
         "Pasos para reproducir",
         "Criterios de aceptación",
