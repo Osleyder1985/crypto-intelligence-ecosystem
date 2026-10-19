@@ -1,7 +1,6 @@
 name: "Requisito o mejora"
 description: "Registrar una necesidad, decisión o mejora del ecosistema."
 title: "[REQUISITO] "
-labels: ["tipo: requisito"]
 body:
   - type: markdown
     attributes:
