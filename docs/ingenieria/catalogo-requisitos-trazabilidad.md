@@ -2,6 +2,7 @@
 
 - **Estado:** borrador de trabajo; no constituye una línea base aprobada.
 - **Issue rector:** [#11](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/issues/11)
+- **Issue relacionado:** [#13 — Requisitos analíticos](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/issues/13)
 - **Convención:** los identificadores son estables; si cambia sustancialmente el significado, se retira el ID anterior y se crea uno nuevo.
 
 ## 1. Requisitos de producto (borrador)
