@@ -64,3 +64,78 @@ Antes de aprobar esta lista:
 3. Convertir los criterios de aceptación generales en escenarios medibles.
 4. Definir modelos de datos y contratos solo después de aclarar casos de uso y fuentes.
 5. Revisar implicaciones legales/regulatorias según jurisdicciones y proveedores concretos.
+
+
+## 6. Requisitos ampliados para investigación de nivel avanzado
+
+Los siguientes requisitos amplían el catálogo a partir del alcance del Issue #13. Siguen siendo propuestas: no implican que la capacidad exista ni que la metodología esté aprobada. Las métricas y umbrales numéricos se fijarán antes de evaluar resultados, con una justificación basada en el uso previsto y la evidencia disponible.
+
+| ID | Requisito | Prioridad inicial | Criterio de aceptación propuesto | Evidencia prevista | Estado |
+|---|---|---|---|---|---|
+| REQ-P-011 | Cada dato analítico tendrá identidad canónica, procedencia, marcas temporales y estado de calidad. | Crítica | El sistema distingue activo, red/contrato cuando aplique, exchange, mercado/par y proveedor; detecta conflictos de identidad y no los resuelve silenciosamente. | Esquema versionado, catálogo de identidad, fixtures y pruebas de reconciliación | Propuesto |
+| REQ-P-012 | Los informes separarán calidad de evidencia, puntuación del activo, oportunidad por horizonte y riesgo. | Crítica | Una puntuación no oculta cobertura deficiente, incertidumbre ni incompatibilidad entre horizontes; el sistema puede abstenerse de emitir una conclusión cuando falten datos críticos. | Casos límite, pruebas de reglas de abstención y revisión de informes | Propuesto |
+| REQ-P-013 | Las predicciones registradas serán probabilísticas, fechadas y evaluables posteriormente. | Alta | Cada predicción conserva instante de emisión, horizonte, evento/variable objetivo, probabilidad o intervalo, condiciones de invalidación, versión del método y resultado posterior; no se reescribe retroactivamente. | Registro inmutable, evaluación fuera de muestra y métricas de calibración | Propuesto |
+| REQ-P-014 | Las estrategias y señales se compararán con líneas base y validación temporal fuera de muestra. | Crítica | Se documentan particiones temporales, selección del universo, costes, sesgos examinados, benchmarks y resultados negativos; ninguna métrica de prueba se usa para ajustar y certificar el mismo experimento sin separación explícita. | Protocolo experimental versionado, resultados brutos y reproducción independiente | Propuesto |
+| REQ-P-015 | El análisis fundamental/on-chain será específico al tipo de activo y a la disponibilidad verificable de datos. | Alta | Se registran aplicabilidad, fuente, timestamp, unidad, cobertura y limitaciones para oferta/emisiones/unlocks, concentración, actividad, seguridad y métricas de protocolo cuando correspondan; datos no aplicables no se puntúan como cero. | Diccionario de métricas por categoría de activo y pruebas de ausencia/no aplicabilidad | Propuesto |
+| REQ-P-016 | El motor de riesgo evaluará exposición a mercado, volatilidad, drawdown, correlaciones y escenarios adversos. | Alta | Cada evaluación identifica horizonte, método, ventana, supuestos, exposición relevante y limitaciones; los resultados se comparan con benchmarks y escenarios definidos previamente. | Casos de prueba, análisis de sensibilidad y pruebas de estrés reproducibles | Propuesto |
+| REQ-P-017 | El producto mantendrá un benchmark de calidad analítica con protocolo reproducible. | Alta | Las comparaciones publican periodo, universo, datos, versiones, criterios, métricas y limitaciones; se incluyen fallos, falsos positivos y resultados no concluyentes, no solo casos favorables. | Protocolo de benchmark, dataset versionado y reporte reproducible | Propuesto |
+| REQ-P-018 | Los trabajos largos de investigación informarán su estado y conservarán diagnóstico de fallos. | Alta | El usuario puede distinguir en cola, en ejecución, completado, parcial, cancelado y fallido; un resultado parcial queda marcado y vinculado a errores y fuentes no disponibles. | Pruebas de estados, fallos inyectados y pruebas de integración | Propuesto |
+| REQ-P-019 | El sistema detectará degradación de fuentes, métodos y modelos a lo largo del tiempo. | Alta | Se miden frescura/cobertura de datos y cambios de rendimiento; alertas y revisiones quedan registradas sin cambiar silenciosamente versiones o umbrales. | Pruebas de datos degradados, monitorización y registro de cambios | Propuesto |
+| REQ-P-020 | Cada conclusión relevante podrá recorrerse hacia atrás hasta su evidencia y configuración de ejecución. | Crítica | Desde una conclusión se recuperan requisito, método/versión, parámetros, fuentes, timestamps, transformaciones, advertencias, prueba de validación y aprobaciones aplicables. | Prueba de trazabilidad de extremo a extremo | Propuesto |
+
+## 7. NFR adicionales para fiabilidad científica y operación
+
+| ID | Atributo | Métricas/controles a definir | Prueba/evidencia requerida |
+|---|---|---|---|
+| NFR-011 | Procedencia e integridad analítica | Cobertura de procedencia, referencias inmutables/hash, capacidad de reconstrucción y detección de alteraciones | Reproducción desde una ejecución registrada y prueba de integridad |
+| NFR-012 | Calibración y utilidad predictiva | Brier score/log loss cuando sean aplicables, calibración por horizonte, precisión/recobrado y comparación con benchmark | Evaluación temporal fuera de muestra con intervalos de incertidumbre |
+| NFR-013 | Robustez y sensibilidad | Sensibilidad a parámetros, periodos, proveedores, costes y universo elegible | Análisis de sensibilidad predefinido y repetible |
+| NFR-014 | Integridad temporal | Fuga de información, look-ahead, latencia entre evento y disponibilidad de dato | Pruebas con timestamps point-in-time y casos adversariales |
+| NFR-015 | Resiliencia operativa | Recuperación, errores parciales, duplicación de trabajos, pérdida de datos y comportamiento ante límites de API | Pruebas de fallo, idempotencia, backup/restore y recuperación |
+| NFR-016 | Transparencia de límites | Cobertura, datos ausentes, acuerdo entre métodos, confianza y frecuencia de abstención | Casos de insuficiencia de evidencia y revisión de reportes |
+| NFR-017 | Calidad de ranking | Estabilidad temporal, sensibilidad a pesos, comparabilidad y cambios de universo | Pruebas de sensibilidad y reconstrucción de rankings históricos |
+| NFR-018 | Calidad de experiencia | Éxito de tareas, accesibilidad, legibilidad de incertidumbre, estado de trabajos y errores de interpretación | Pruebas moderadas con usuarios y tecnología de asistencia |
+
+## 8. Trazabilidad ampliada
+
+| Objetivo | Requisitos asociados | Riesgo principal | Decisión/artefacto | Verificación |
+|---|---|---|---|---|
+| Identidad y calidad de datos | REQ-P-002, REQ-P-003, REQ-P-011, NFR-003, NFR-011 | Mezclar activos/pares o tratar datos incompletos como fiables | Registro canónico de instrumentos, catálogo de fuentes y contrato de calidad | Reconciliación, controles de frescura y reproducción |
+| Conclusiones honestas y comparables | REQ-P-004, REQ-P-012, REQ-P-020, NFR-016 | Falsa precisión o conclusión no sustentada | Esquema de informe con evidencia, incertidumbre y abstención | Casos de evidencia insuficiente y trazabilidad de extremo a extremo |
+| Predicción verificable | REQ-P-013, REQ-P-014, REQ-P-017, REQ-P-019, NFR-012, NFR-013, NFR-014 | Sobreajuste, fuga temporal, deriva y selección retrospectiva | Registro de predicciones y protocolo de experimentos | Validación temporal, calibración, sensibilidad y benchmark |
+| Evaluación del tipo de activo | REQ-P-015, REQ-P-016 | Métricas inaplicables, riesgos omitidos o datos no comparables | Taxonomía de activos, diccionario de métricas y motor de riesgo | Fixtures por categoría y pruebas de escenarios |
+| Trabajo fiable y recuperable | REQ-P-008, REQ-P-018, REQ-P-019, NFR-015 | Resultados parciales engañosos, trabajos duplicados o fallos silenciosos | Máquina de estados, correlación de trabajos y runbooks | Fallos inyectados, idempotencia y recuperación |
+| Calidad reconocible externamente | REQ-P-017, NFR-012, NFR-013, NFR-017, NFR-018 | Afirmaciones de superioridad no demostradas | Protocolo de benchmark público y métricas de producto | Reejecución independiente y publicación de resultados negativos y positivos |
+
+## 9. Reglas adicionales del laboratorio cuantitativo
+
+1. Definir el objetivo, universo, horizonte, métrica principal, benchmarks y umbrales antes de ejecutar la evaluación final.
+2. Mantener separados los datos disponibles en el instante de decisión y los datos conocidos posteriormente. La reconstrucción histórica debe respetar la disponibilidad temporal real.
+3. Separar desarrollo, validación y prueba final por tiempo; evitar reutilizar el conjunto de prueba para optimizar parámetros.
+4. Incluir comisiones, spread, slippage, restricciones de liquidez y supuestos de ejecución cuando se evalúe una estrategia negociable.
+5. Comparar métodos simples y transparentes antes de justificar complejidad estadística, ML o IA.
+6. Conservar resultados fallidos, hipótesis descartadas, versiones, semillas aleatorias cuando proceda y razones de cambios metodológicos.
+7. Informar incertidumbre, cobertura, tamaño de muestra y escenarios en que el método deja de ser fiable.
+8. No convertir una asociación histórica en explicación causal sin un diseño de investigación que permita sostener esa inferencia.
+
+## 10. Regla de abstención y estados de evidencia
+
+La plataforma debe poder responder «evidencia insuficiente» o «resultado no comparable». Como mínimo, la presentación distinguirá:
+
+- **Dato observado:** recuperado de una fuente identificada, con timestamp y estado de calidad.
+- **Dato derivado:** calculado a partir de entradas y una transformación versionada.
+- **Interpretación:** lectura analítica apoyada en datos y método, con incertidumbre.
+- **Hipótesis:** explicación que aún necesita validación.
+- **Predicción:** afirmación prospectiva registrada con horizonte y criterio de evaluación.
+- **Recomendación analítica:** resultado condicionado al objetivo, horizonte, riesgo y calidad de evidencia; nunca garantía de rentabilidad.
+
+Estos estados describen el tipo de afirmación, no una escala universal de confianza. Las escalas y umbrales requieren una definición separada y validación empírica.
+
+## 11. Próxima revisión del catálogo
+
+- Resolver trazabilidad con Issues #3–#13 y evitar duplicar decisiones ya asignadas.
+- Definir propietarios, prioridad aprobada y escenarios verificables para los requisitos críticos.
+- Elaborar el modelo de datos histórico y de procedencia antes de seleccionar proveedores o implementar puntuaciones.
+- Aprobar un protocolo de evaluación cuantitativa antes de comparar estrategias o modelos.
+- Establecer un benchmark inicial reproducible antes de afirmar que una versión mejora a otra.
+- Mantener los requisitos como propuestos hasta que el propietario apruebe la línea base.
