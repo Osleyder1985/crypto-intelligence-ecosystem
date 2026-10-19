@@ -30,7 +30,7 @@ class RequirementsCatalogueValidatorTests(unittest.TestCase):
             line for line in self.matrix.splitlines()
             if line.startswith("| 7-M03 |")
         )
-        mutated = self.matrix.replace(row + "\\n", "", 1)
+        mutated = self.matrix.replace(row + "\n", "", 1)
         errors = validator.validate_acceptance_closure_matrix(mutated)
         self.assertTrue(
             any("missing criterion: 7-M03" in error for error in errors),
