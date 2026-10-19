@@ -279,7 +279,7 @@ Los valores de la columna **Responsable** son roles funcionales propuestos, no p
 
 La revisión se realizó comparando las descripciones y criterios de aceptación vigentes de los Issues enlazados con los requisitos, NFR y artefactos citados en este catálogo. Es una revisión documental interna, no una revisión independiente. Las filas siguientes registran cobertura y brechas observadas; no marcan Issues como resueltos.
 
-Para el desglose operativo de los criterios originales de los Issues #7 y #13, véase la [matriz de cierre verificable](acceptance-closure-matrix-issues-7-13.md), que vincula cada criterio con evidencia mínima, método de verificación y decisiones/umbrales pendientes.
+Para el desglose operativo de los criterios originales de los Issues #7 y #13, véase la [matriz de cierre verificable](acceptance-closure-matrix-issues-7-13.md), que vincula cada criterio con evidencia mínima, método de verificación y decisiones/umbrales pendientes. Para la definición de campos, fórmulas y estados de decisión spot, véase también la [metodología reproducible de selección spot](spot-market-selection-methodology.md); sus umbrales siguen pendientes de aprobación.
 
 | Issue | Cobertura documental observada | Brecha o acción pendiente frente a criterios de aceptación | Evaluación documental |
 |---|---|---|---|
