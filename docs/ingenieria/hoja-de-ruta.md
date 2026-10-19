@@ -38,3 +38,30 @@
 ## Criterio de progreso
 
 El avance se informa por entregables aceptados y evidencia, no por número de archivos, líneas de código o tecnologías seleccionadas. Para cada entrega se reportan: estado, criterio, evidencia, defectos abiertos, riesgos residuales y próxima decisión necesaria.
+
+
+## Puertas de calidad analítica adicionales
+
+Estas puertas complementan las fases anteriores y se aplican antes de declarar fiable una capacidad de investigación. Son criterios propuestos, no evidencia de implementación.
+
+| Puerta | Comprobación obligatoria | Evidencia mínima | No se acepta como sustituto |
+|---|---|---|---|
+| QD-1. Identidad y procedencia | Activos, contratos/redes, exchanges, pares, unidades y tiempos quedan identificados sin ambigüedad; conflictos y ausencias son visibles. | Catálogo canónico, fixtures, resultados de reconciliación y pruebas de calidad. | Símbolos coincidentes o volumen reportado como única prueba de identidad/calidad. |
+| QD-2. Reproducibilidad histórica | Una ejecución conserva método, parámetros, datos/referencias, versiones, transformaciones y advertencias suficientes para reconstrucción. | Reproducción independiente de una muestra de ejecuciones. | Captura de pantalla o informe sin entradas y configuración. |
+| QD-3. Validez temporal | Las señales históricas solo usan información disponible en el instante de emisión y los experimentos separan desarrollo, validación y prueba. | Tests anti-leakage, particiones temporales documentadas y revisión de timestamps. | Backtest con datos actuales aplicados retrospectivamente sin control point-in-time. |
+| QD-4. Comparación cuantitativa | El método se compara con líneas base, costes realistas y escenarios relevantes; se conservan resultados negativos. | Protocolo fijado previamente, resultados brutos y evaluación fuera de muestra. | Un único periodo favorable o métricas elegidas después de ver resultados. |
+| QD-5. Calibración y abstención | Se mide la calidad de las predicciones y el sistema puede declarar evidencia insuficiente. | Métricas de calibración/utilidad por horizonte, cobertura y casos de abstención. | Confianza verbal no calibrada o predicción presentada como certeza. |
+| QD-6. Robustez y riesgo | Se examina sensibilidad a parámetros, liquidez, costes, correlaciones, cambios de régimen y escenarios adversos. | Análisis de sensibilidad y estrés reproducible. | Una puntuación única que oculta riesgo y limitaciones. |
+| QD-7. Benchmark y transparencia | Las comparaciones identifican universo, periodo, versión, métricas, incertidumbre y límites, incluyendo falsos positivos. | Protocolo reproducible y reporte susceptible de revisión independiente. | Afirmaciones de «mejor del mundo» sin comparación independiente. |
+| QD-8. Operación recuperable | Trabajos parciales/fallidos son explícitos; errores de proveedores, límites de API y recuperación son probados. | Pruebas de fallo, correlación de ejecución, backup/restore y runbooks cuando exista despliegue. | Demo exitosa sin pruebas de fallo o recuperación. |
+
+## Prioridad de secuenciación revisada
+
+1. **Primero, identidad, procedencia y calidad de datos.** Sin ello, los cálculos posteriores pueden ser precisos matemáticamente y aun así equivocados.
+2. **Después, historial reproducible y contratos comunes.** No construir rankings ni memoria de eventos sobre resultados que no puedan reconstruirse.
+3. **Luego, métodos descriptivos y líneas base transparentes.** Establecer resultados de referencia antes de probar modelos complejos.
+4. **Después, validación predictiva y riesgo.** Añadir calibración, controles temporales, sensibilidad y abstención.
+5. **En paralelo controlado, experiencia de usuario.** Probar cómo las personas entienden evidencia, incertidumbre, comparaciones y estados de trabajo.
+6. **Antes de cualquier release, seguridad y operación.** Validar límites, recuperación, costes y riesgos residuales.
+
+No se fijan fechas de calendario ni umbrales numéricos en esta revisión: dependen de los requisitos aprobados, disponibilidad de datos, coste y resultados de una línea base inicial.
