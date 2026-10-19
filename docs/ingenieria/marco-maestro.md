@@ -80,6 +80,19 @@ Estados de requisito: borrador, en revisión, aprobado, implementado, verificado
 8. Integrar solo tras revisión y autorización explícita del propietario del proyecto.
 9. Registrar versión, cambios, limitaciones conocidas y plan de reversión cuando proceda.
 
+### Exclusividad de Pull Requests y control de solapamientos
+
+1. Antes de crear un PR, buscar Issues y PR abiertos para comprobar si ya existe un trabajo que resuelva el mismo problema o modifique los mismos archivos.
+2. Para un mismo Issue/problema, mantener un único PR activo como vía de integración. Ampliar el PR existente y su rama si el alcance sigue siendo el mismo; no abrir otro PR equivalente.
+3. No mantener PR paralelos con cambios solapados sobre los mismos archivos cuando puedan integrarse de forma independiente y provocar sobrescrituras, conflictos o estados documentales incompatibles.
+4. Si aparece trabajo adicional mientras un PR está abierto, incorporarlo a la rama existente cuando pertenezca al mismo objetivo. Si es un objetivo distinto pero comparte archivos, documentar la dependencia y acordar el orden de integración antes de editar.
+5. Si un PR queda obsoleto o se decide sustituirlo, indicar cuál lo reemplaza, cerrar el PR anterior y conservar el vínculo entre ambos; no dejar duplicados abiertos.
+6. Antes de integrar, actualizar la rama contra la base vigente según la estrategia acordada, resolver conflictos explícitamente y volver a ejecutar las verificaciones afectadas.
+7. Un mismo cambio no se duplica en varias ramas activas. Los PR deben declarar Issue, archivos/alcance, dependencias, pruebas y si requieren que otro PR se integre primero.
+8. No integrar ningún PR hasta la revisión y autorización explícita del propietario del proyecto.
+
+Esta regla no impone que cada archivo solo pueda aparecer en un PR en toda su historia: controla los cambios concurrentes y el solapamiento que puede causar problemas de integración.
+
 La documentación de gobernanza propuesta en PR #2 no se considera integrada ni activa en `main` mientras ese PR permanezca sin integrar.
 
 ## 6. Ciclo de vida y puertas de decisión
