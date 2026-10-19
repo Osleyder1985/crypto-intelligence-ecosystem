@@ -22,8 +22,8 @@ La plataforma debe compartir una fuente central de verdad y una API versionada. 
 ### Capacidades objetivo sujetas a requisitos y validación
 
 1. Exploración de mercados y pares **spot** con controles de liquidez, calidad de datos y disponibilidad.
-2. Investigación bajo demanda de activos, eventos, noticias y contexto de mercado.
-3. Análisis cuantitativo con metodología, parámetros, ventana temporal, costes y limitaciones visibles.
+2. Investigación bajo demanda de activos, eventos, noticias y contexto de mercado, con historial de evaluaciones, comparación de cambios y rankings reconstruibles.
+3. Análisis cuantitativo de series OHLCV, movimientos, profundidad/liquidez spot y zonas de soporte/resistencia, con metodología, parámetros, ventana temporal, costes y limitaciones visibles.
 4. Informes que separen hechos observados, datos derivados, interpretación, hipótesis y recomendaciones.
 5. Historial reproducible de investigaciones, fuentes, versiones de algoritmos y resultados.
 6. Experiencia multiplataforma accesible, segura y coherente.
