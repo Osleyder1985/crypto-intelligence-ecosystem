@@ -73,7 +73,9 @@ class RequirementsCatalogueValidatorTests(unittest.TestCase):
         prefix, matrix = self.content[:start], self.content[start:]
         target = "| [#5 — Clientes multiplataforma](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/issues/5) | Web/PWA, Android, iOS y escritorio opcional según evidencia | REQ-P-006, REQ-P-027, REQ-P-030 | NFR-006, NFR-018 | Propuesta; confirmar contra criterios de aceptación del Issue |"
         self.assertIn(target, matrix)
-        mutated = prefix + matrix.replace(target, target.replace("REQ-P-006, ", ""), 1)
+        mutated_matrix = matrix.replace("REQ-P-006, ", "")
+        mutated_matrix = mutated_matrix.replace("REQ-P-006", "")
+        mutated = prefix + mutated_matrix
         errors = validator.validate_issue_traceability(mutated)
         self.assertTrue(any("REQ-P-006" in error and "not linked" in error for error in errors), errors)
 
