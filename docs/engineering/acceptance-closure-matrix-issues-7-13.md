@@ -3,6 +3,7 @@
 - **Estado:** propuesta de verificación; no aprobada como línea base.
 - **Rama/PR de trabajo:** `docs/issue-11-marco-maestro`, [PR #12](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/pull/12).
 - **Issues fuente:** [#7 — Selección reproducible de mercados spot](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/issues/7) y [#13 — Requisitos analíticos](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/issues/13).
+- **Especificación metodológica para Issue #7:** [metodología reproducible de selección spot](spot-market-selection-methodology.md).
 - **Propósito:** descomponer criterios y entregables en evidencias, métodos de verificación y decisiones pendientes. Esta matriz no declara que el producto exista, que un criterio esté satisfecho ni que un Issue pueda cerrarse.
 - **Regla de decisión:** PASS solo se permite cuando el criterio, la fuente de datos, el entorno/versiones, el procedimiento, el resultado y el artefacto reproducible estén registrados y el umbral haya sido aprobado antes de evaluar. Si falta umbral, fuente o evidencia, el estado es **PENDIENTE**, no PASS.
 - **Responsabilidad:** los roles indicados son propuestas funcionales. No hay personas responsables nominadas ni decisiones de aceptación delegadas por este documento.
