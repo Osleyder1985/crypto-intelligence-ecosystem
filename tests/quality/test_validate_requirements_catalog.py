@@ -55,7 +55,7 @@ class RequirementsCatalogueValidatorTests(unittest.TestCase):
         heading = "## 14. Matriz de trazabilidad entre Issues y requisitos"
         start = self.content.index(heading)
         prefix, matrix = self.content[:start], self.content[start:]
-        target = "| [#5 — Clientes multiplataforma](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/issues/5) | Alcance de trazabilidad | Web/PWA, Android, iOS y escritorio opcional según evidencia | REQ-P-006, REQ-P-027, REQ-P-030 | NFR-006, NFR-018 | Propuesta; confirmar contra criterios de aceptación del Issue |"
+        target = "| [#5 — Clientes multiplataforma](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/issues/5) | Web/PWA, Android, iOS y escritorio opcional según evidencia | REQ-P-006, REQ-P-027, REQ-P-030 | NFR-006, NFR-018 | Propuesta; confirmar contra criterios de aceptación del Issue |"
         self.assertIn(target, matrix)
         mutated = prefix + matrix.replace(target, target.replace("REQ-P-006, ", ""), 1)
         errors = validator.validate_issue_traceability(mutated)
