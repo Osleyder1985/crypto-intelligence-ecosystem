@@ -67,6 +67,18 @@ class RequirementsCatalogueValidatorTests(unittest.TestCase):
             errors,
         )
 
+    def test_missing_issue_acceptance_review_row_fails(self) -> None:
+        heading = "## 15. Revisión de cobertura contra criterios de aceptación de Issues"
+        start = self.content.index(heading)
+        prefix, review = self.content[:start], self.content[start:]
+        row = next(line for line in review.splitlines() if line.startswith("| [#10 —"))
+        mutated = prefix + review.replace(row + "\n", "", 1)
+        errors = validator.validate_issue_acceptance_review(mutated)
+        self.assertTrue(
+            any("missing rows for" in error and "#10" in error for error in errors),
+            errors,
+        )
+
     def test_unmapped_requirement_fails(self) -> None:
         heading = "## 14. Matriz de trazabilidad entre Issues y requisitos"
         start = self.content.index(heading)
