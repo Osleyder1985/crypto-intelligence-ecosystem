@@ -10,6 +10,7 @@ ROOT = Path(__file__).resolve().parents[2]
 CATALOG = ROOT / "docs" / "engineering" / "requirements-traceability-catalog.md"
 ENGINEERING_DIR = ROOT / "docs" / "engineering"
 CLOSURE_MATRIX = ENGINEERING_DIR / "acceptance-closure-matrix-issues-7-13.md"
+SPOT_METHOD = ENGINEERING_DIR / "spot-market-selection-methodology.md"
 PRIORITY_RANK = {"Crítica": 0, "Alta": 1, "Media": 2, "Baja": 3}
 PRODUCT_ID = re.compile(r"REQ-P-\d{3}")
 NFR_ID = re.compile(r"NFR-\d{3}")
@@ -272,6 +273,51 @@ def validate_acceptance_closure_matrix(content: str) -> list[str]:
     return errors
 
 
+
+def validate_spot_methodology(content: str) -> list[str]:
+    """Guard the minimum operational contract of the spot-selection specification."""
+    errors: list[str] = []
+    required_headings = (
+        "# Metodología reproducible para seleccionar mercados spot",
+        "## 3. Entidades y claves de datos",
+        "## 4. Contrato mínimo de captura",
+        "## 5. Métricas y definiciones",
+        "### 5.1 Volumen spot",
+        "### 5.2 Spread bid-ask",
+        "### 5.3 Profundidad",
+        "### 5.4 Slippage estimado por tamaño de orden",
+        "### 5.5 Comisiones",
+        "### 5.6 Disponibilidad exacta del par en Pionex",
+        "## 6. Controles de calidad de datos",
+        "## 7. Motor de decisión: sin umbrales implícitos",
+        "## 8. Resultado de evaluación esperado",
+        "## 9. Plan de validación y criterios de aceptación",
+        "## 10. Decisiones pendientes",
+    )
+    for heading in required_headings:
+        if heading not in content:
+            errors.append(f"spot methodology is missing heading: {heading}")
+
+    required_tokens = (
+        "PASS",
+        "FAIL",
+        "INDETERMINATE",
+        "NOT_APPLICABLE",
+        "NOT_RUN",
+        "payload_hash",
+        "parser_version",
+        "source_timestamp",
+        "captured_at_utc",
+        "\\text{spread}_{bps}",
+        "\\text{slippage}_{bps}",
+        "No se inventan umbrales",
+    )
+    for token in required_tokens:
+        if token not in content:
+            errors.append(f"spot methodology is missing required contract token: {token}")
+    return errors
+
+
 def validate_relative_links() -> list[str]:
     errors: list[str] = []
     for markdown_path in sorted(ENGINEERING_DIR.glob("*.md")):
@@ -306,6 +352,10 @@ def main() -> int:
         errors.append(f"acceptance closure matrix not found: {CLOSURE_MATRIX}")
     else:
         errors.extend(validate_acceptance_closure_matrix(CLOSURE_MATRIX.read_text(encoding="utf-8")))
+    if not SPOT_METHOD.is_file():
+        errors.append(f"spot methodology not found: {SPOT_METHOD}")
+    else:
+        errors.extend(validate_spot_methodology(SPOT_METHOD.read_text(encoding="utf-8")))
     errors.extend(validate_relative_links())
     if errors:
         print("FAIL: requirements documentation validation")
