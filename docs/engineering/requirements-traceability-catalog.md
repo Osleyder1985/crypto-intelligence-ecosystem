@@ -165,7 +165,40 @@ Estos estados describen el tipo de afirmación, no una escala universal de confi
 - Establecer un benchmark inicial reproducible antes de afirmar que una versión mejora a otra.
 - Mantener los requisitos como propuestos hasta que el propietario apruebe la línea base.
 
-## 9. Índice de planificación por fase y prioridad
+## 12. Índice de planificación por fase y prioridad para NFR
+
+La tabla siguiente completa la clasificación preliminar de NFR-001–NFR-018. **Fase y prioridad son propuestas de planificación, no una línea base aprobada.** La prioridad se asigna por impacto potencial si el atributo falla, dependencias de otras capacidades y alcance de la mitigación; no representa una puntuación cuantitativa de riesgo. Los umbrales numéricos quedan pendientes de requisitos de carga, coste, amenazas, datos y usuarios.
+
+| Orden | Fase primaria | ID | Prioridad propuesta | Justificación y criterio de aceptación a concretar |
+|---:|---|---|---|---|
+| 1 | F0 — Gobernanza y marco maestro | NFR-004 | Crítica | Una brecha de seguridad puede exponer datos o secretos y comprometer todo el sistema. Acordar modelo de amenazas, permisos mínimos, gestión de secretos, análisis de dependencias y pruebas negativas antes de integrar clientes/proveedores. Verificar de nuevo en F7. |
+| 2 | F0 — Gobernanza y marco maestro | NFR-005 | Alta | Definir finalidad, minimización, retención, acceso y eliminación antes de persistir datos personales, si los hubiera; aplicabilidad legal depende de datos y jurisdicciones reales. |
+| 3 | F1 — Requisitos y riesgos del producto | NFR-001 | Alta | Fijar operaciones críticas, perfiles de carga y objetivos de latencia/throughput antes de comparar arquitectura; medir p50/p95/p99 con benchmark repetible en F7. |
+| 4 | F1 — Requisitos y riesgos del producto | NFR-007 | Alta | Definir modularidad, política de pruebas, límites de complejidad y coste de cambio antes de escoger stack; verificar mediante revisión y regresiones continuas. |
+| 5 | F2 — Investigación de mercados y fuentes | NFR-003 | Crítica | Datos incorrectos, stale o con unidades/identidad ambiguas invalidan el análisis posterior. Definir frescura, cobertura, huecos, duplicados y reconciliación; fijar umbrales por fuente/mercado antes de ingestión estable. |
+| 6 | F2 — Investigación de mercados y fuentes | NFR-011 | Crítica | Sin procedencia e integridad no puede reconstruirse una conclusión. Definir referencias inmutables/hash, cobertura de procedencia y detección de alteraciones; reproducir una ejecución registrada. |
+| 7 | F3 — Arquitectura y selección tecnológica | NFR-008 | Alta | El riesgo de lock-in o pérdida de portabilidad afecta la continuidad y el coste. Comparar formatos abiertos, exportación, restauración y despliegue alternativo en PoC. |
+| 8 | F3 — Arquitectura y selección tecnológica | NFR-010 | Alta | El coste debe quedar acotado antes de elegir proveedores. Definir escenarios de carga, almacenamiento, tráfico, cuotas, alertas y coste máximo aceptable; contrastar estimación con medición. |
+| 9 | F4 — Plataforma central de datos | NFR-002 | Alta | La plataforma necesita consistencia y degradación controlada ante fallos de proveedores. Definir disponibilidad/recuperación requeridas según uso y probar reintentos, timeout, recuperación y consistencia. |
+| 10 | F4 — Plataforma central de datos | NFR-015 | Alta | Los trabajos duplicados, pérdida de datos o límites de API pueden generar resultados falsos o pérdida de historial. Definir idempotencia, recuperación, comportamiento parcial y backup/restore; probar fallos. |
+| 11 | F4 — Plataforma central de datos | NFR-009 | Alta | Los fallos no son gestionables sin logs, métricas, trazas y correlación. Definir cobertura de telemetría y alertas para ingestión, API y trabajos; demostrar diagnóstico en un incidente simulado. |
+| 12 | F5 — Motor de investigación cuantitativa | NFR-012 | Crítica | Las predicciones no deben presentarse como útiles sin evaluación y calibración. Definir métricas apropiadas por objetivo/horizonte, benchmarks e incertidumbre; evaluar fuera de muestra. |
+| 13 | F5 — Motor de investigación cuantitativa | NFR-014 | Crítica | La fuga temporal puede invalidar retrospectivamente cualquier señal. Definir reglas point-in-time y disponibilidad real de datos; ejecutar pruebas anti-look-ahead y casos adversariales. |
+| 14 | F5 — Motor de investigación cuantitativa | NFR-016 | Crítica | El sistema debe exponer datos ausentes, cobertura y casos en que no puede concluir. Definir estados de evidencia/abstención y revisar casos límite para evitar falsa precisión. |
+| 15 | F5 — Motor de investigación cuantitativa | NFR-013 | Alta | La sensibilidad a parámetros, periodos, proveedores, costes y universo puede revelar sobreajuste. Fijar protocolo antes de ejecutar y conservar resultados de escenarios predefinidos. |
+| 16 | F5 — Motor de investigación cuantitativa | NFR-017 | Alta | Rankings inestables o incomparables inducen decisiones engañosas. Definir pruebas de sensibilidad a pesos/universo, estabilidad temporal y reconstrucción histórica. |
+| 17 | F6 — Experiencia web y móvil | NFR-006 | Alta | Una interfaz no utilizable o inaccesible puede hacer que se interpreten mal datos y riesgos. Definir tareas, tasa de éxito, errores, accesibilidad y tecnología de asistencia; evaluar en plataformas objetivo. |
+| 18 | F6 — Experiencia web y móvil | NFR-018 | Alta | La comprensión de incertidumbre, errores y estados de trabajo es crítica para evitar malas interpretaciones. Definir tareas moderadas, criterios de comprensión y pruebas de accesibilidad/responsividad. |
+
+### Reglas para completar la línea base NFR
+
+- La prioridad **Crítica** indica que el fallo puede invalidar resultados, crear un riesgo de seguridad relevante o hacer que las conclusiones sean engañosas; no equivale a severidad cuantificada ni a aceptación automática del riesgo.
+- La prioridad **Alta** indica que el atributo es necesario para una entrega fiable y debe verificarse antes de la fase de salida correspondiente.
+- F0–F6 son la fase primaria de definición/entrega. Los controles de seguridad, fiabilidad, portabilidad, coste y observabilidad se vuelven a verificar en F7–F8 aunque tengan otra fase primaria.
+- Los criterios de aceptación de los NFR siguen incompletos hasta que se definan umbrales medibles, condiciones de prueba, responsable, entorno y regla PASS/FAIL. No se inventan objetivos numéricos.
+- Antes de aprobar el catálogo, el propietario debe confirmar o modificar estas prioridades, responsables y fases a la luz de los riesgos y dependencias de Issues #3–#13.
+
+## 13. Índice de planificación por fase y prioridad
 
 Esta vista es el **orden de planificación propuesto** de los requisitos de producto. La asignación es primaria (una fase de referencia por requisito) para ordenar el trabajo; no impide dependencias ni verificaciones transversales. Las prioridades siguen siendo iniciales y requieren aprobación. Los identificadores originales no se renumeran.
 
