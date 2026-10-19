@@ -51,6 +51,22 @@ class RequirementsCatalogueValidatorTests(unittest.TestCase):
         errors = validator.validate_catalog(mutated)
         self.assertTrue(any("REQ-P-001 priority differs" in error for error in errors), errors)
 
+    def test_missing_responsible_role_fails(self) -> None:
+        line = next(
+            row for row in self.content.splitlines()
+            if row.startswith("| REQ-P-001 |")
+        )
+        row = validator.cells(line)
+        self.assertEqual(len(row), 7)
+        row[6] = ""
+        mutated_row = "| " + " | ".join(row) + " |"
+        mutated = self.content.replace(line, mutated_row, 1)
+        errors = validator.validate_catalog(mutated)
+        self.assertTrue(
+            any("REQ-P-001 has empty responsible role" in error for error in errors),
+            errors,
+        )
+
     def test_unmapped_requirement_fails(self) -> None:
         heading = "## 14. Matriz de trazabilidad entre Issues y requisitos"
         start = self.content.index(heading)
