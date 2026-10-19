@@ -46,3 +46,12 @@ El PR debe estar vinculado a un Issue, describir la solución y su justificació
 ## Protección de main
 
 La regla de protección debe configurarse y comprobarse en los ajustes de GitHub. Este documento y los archivos del repositorio describen el proceso, pero no activan por sí mismos la protección del servidor. Mientras no se confirme la configuración efectiva, debe tratarse como una tarea pendiente y evitar cambios directos a `main`.
+
+
+## Verificación automática de gobernanza
+
+El workflow `.github/workflows/validacion-gobernanza.yml` ejecuta `scripts/quality/check_governance.py` en cada Pull Request y en los pushes a `main`. Comprueba la presencia de los documentos obligatorios y contratos textuales mínimos de gobernanza. Es un control inicial de documentación, no una prueba del producto ni una validación semántica completa de YAML.
+
+Antes de exigir este control como estado obligatorio para integrar, se debe abrir el PR, esperar a que GitHub ejecute el workflow y confirmar el nombre exacto del check. Después, el propietario debe configurar en Settings → Rules (o Branches) una regla aplicable a `main` que exija Pull Request y el check `validar-gobernanza`; debe impedir force-push y eliminación de la rama. La exigencia de aprobación se configura solo según las capacidades disponibles y sin fingir una revisión independiente cuando no exista otro revisor autorizado.
+
+La protección no queda activa por crear este workflow. Hasta verificar la regla en GitHub, el estado se mantiene como pendiente.
