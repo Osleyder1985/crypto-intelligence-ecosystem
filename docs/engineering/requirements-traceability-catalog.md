@@ -164,3 +164,54 @@ Estos estados describen el tipo de afirmación, no una escala universal de confi
 - Aprobar un protocolo de evaluación cuantitativa antes de comparar estrategias o modelos.
 - Establecer un benchmark inicial reproducible antes de afirmar que una versión mejora a otra.
 - Mantener los requisitos como propuestos hasta que el propietario apruebe la línea base.
+
+## 9. Índice de planificación por fase y prioridad
+
+Esta vista es el **orden de planificación propuesto** de los requisitos de producto. La asignación es primaria (una fase de referencia por requisito) para ordenar el trabajo; no impide dependencias ni verificaciones transversales. Las prioridades siguen siendo iniciales y requieren aprobación. Los identificadores originales no se renumeran.
+
+| Orden | Fase de referencia | ID | Prioridad inicial | Tema |
+|---:|---|---|---|---|
+| 1 | F0 — Gobernanza y marco maestro | REQ-P-007 | Crítica | Límite de seguridad: sin trading real |
+| 2 | F0 — Gobernanza y marco maestro | REQ-P-028 | Alta | Gobernanza y aplicabilidad normativa |
+| 3 | F0 — Gobernanza y marco maestro | REQ-P-033 | Alta | Puertas de fase y Definition of Done |
+| 4 | F2 — Investigación de mercados y fuentes | REQ-P-011 | Crítica | Identidad y procedencia de datos |
+| 5 | F2 — Investigación de mercados y fuentes | REQ-P-003 | Alta | Universo de activos y pares spot |
+| 6 | F2 — Investigación de mercados y fuentes | REQ-P-029 | Alta | Selección reproducible de exchanges/pares |
+| 7 | F3 — Arquitectura y selección tecnológica | REQ-P-010 | Alta | Selección de stack y hosting |
+| 8 | F3 — Arquitectura y selección tecnológica | REQ-P-030 | Alta | Decisión de plataformas cliente |
+| 9 | F3 — Arquitectura y selección tecnológica | REQ-P-031 | Alta | Hosting, costes y recuperación |
+| 10 | F4 — Plataforma central de datos | REQ-P-002 | Alta | API central y contratos comunes |
+| 11 | F4 — Plataforma central de datos | REQ-P-008 | Alta | Errores y resultados parciales |
+| 12 | F4 — Plataforma central de datos | REQ-P-018 | Alta | Estados y diagnóstico de trabajos |
+| 13 | F4 — Plataforma central de datos | REQ-P-032 | Alta | API, acceso, frescura y caché |
+| 14 | F5 — Motor de investigación cuantitativa | REQ-P-012 | Crítica | Calidad de evidencia y abstención |
+| 15 | F5 — Motor de investigación cuantitativa | REQ-P-014 | Crítica | Validación temporal fuera de muestra |
+| 16 | F5 — Motor de investigación cuantitativa | REQ-P-020 | Crítica | Trazabilidad de conclusiones |
+| 17 | F5 — Motor de investigación cuantitativa | REQ-P-004 | Alta | Informes y evidencia analítica |
+| 18 | F5 — Motor de investigación cuantitativa | REQ-P-005 | Alta | Historial reproducible |
+| 19 | F5 — Motor de investigación cuantitativa | REQ-P-009 | Alta | Costes y sesgos cuantitativos |
+| 20 | F5 — Motor de investigación cuantitativa | REQ-P-013 | Alta | Registro de predicciones |
+| 21 | F5 — Motor de investigación cuantitativa | REQ-P-015 | Alta | Análisis fundamental/on-chain por activo |
+| 22 | F5 — Motor de investigación cuantitativa | REQ-P-016 | Alta | Motor de riesgo y escenarios |
+| 23 | F5 — Motor de investigación cuantitativa | REQ-P-017 | Alta | Benchmark analítico reproducible |
+| 24 | F5 — Motor de investigación cuantitativa | REQ-P-021 | Alta | Comparación histórica |
+| 25 | F5 — Motor de investigación cuantitativa | REQ-P-022 | Alta | Rankings comparables |
+| 26 | F5 — Motor de investigación cuantitativa | REQ-P-023 | Alta | Movimientos de mercado y eventos |
+| 27 | F5 — Motor de investigación cuantitativa | REQ-P-024 | Alta | Memoria de eventos y predicciones |
+| 28 | F5 — Motor de investigación cuantitativa | REQ-P-025 | Alta | Profundidad y liquidez spot |
+| 29 | F5 — Motor de investigación cuantitativa | REQ-P-026 | Alta | Soportes y resistencias |
+| 30 | F6 — Experiencia web y móvil | REQ-P-001 | Alta | Inicio y control del trabajo de investigación |
+| 31 | F6 — Experiencia web y móvil | REQ-P-006 | Alta | Clientes web y móviles |
+| 32 | F6 — Experiencia web y móvil | REQ-P-027 | Alta | Navegación analítica y experiencia |
+| 33 | F8 — Operación y release controlada | REQ-P-019 | Alta | Monitorización de degradación |
+
+### Cobertura de NFR
+
+Los NFR-001–NFR-018 se mantienen en sus tablas por atributo de calidad. **No están ordenados por prioridad**, porque el catálogo aún no les asigna una prioridad ni una fase primaria aprobadas. Para completar el orden de todo el catálogo, la siguiente revisión debe asignarles fase primaria, prioridad justificada y criterio de aceptación medible; no se infiere una prioridad a partir del nombre del atributo.
+
+### Reglas de lectura
+
+- Orden: fase ascendente; dentro de cada fase, prioridad Crítica antes que Alta; después, ID ascendente.
+- Las fases F0–F9 corresponden a la hoja de ruta; la asignación no declara que una capacidad esté implementada ni que la fase esté completada.
+- REQ-P-007 es un límite de seguridad transversal y aparece en F0 como condición previa, aunque debe verificarse también en seguridad y release.
+- Los requisitos de datos y análisis pueden tener dependencias cruzadas; el índice define su fase primaria para evitar duplicar el mismo ID en varias filas.
