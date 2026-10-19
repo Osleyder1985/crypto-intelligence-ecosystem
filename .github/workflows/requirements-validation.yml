@@ -5,6 +5,7 @@ on:
     paths:
       - "docs/engineering/**"
       - "scripts/quality/validate_requirements_catalog.py"
+      - "tests/quality/**"
       - ".github/workflows/requirements-validation.yml"
   workflow_dispatch:
 
