@@ -310,7 +310,7 @@ def validate_spot_methodology(content: str) -> list[str]:
         "captured_at_utc",
         "\\text{spread}_{bps}",
         "\\text{slippage}_{bps}",
-        "No se inventan umbrales",
+        "no se inventan umbrales",
     )
     for token in required_tokens:
         if token not in content:
