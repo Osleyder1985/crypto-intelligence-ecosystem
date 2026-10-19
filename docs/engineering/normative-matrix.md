@@ -29,6 +29,12 @@ Esta matriz es una evaluación inicial de aplicabilidad, no una declaración de 
 4. [ISO/IEC 27001:2022/Amd 1:2024 — ficha oficial](https://www.iso.org/standard/88435.html).
 5. [ISO 31000:2018 — ficha oficial ISO](https://www.iso.org/standard/31000). La ficha señala que la edición permanece vigente y está marcada para revisión; la norma es guía y no se usa para certificación.
 
+| Gobernanza normativa y ciclo de vida | REQ-P-028, REQ-P-033; REQ-P-001, REQ-P-005, REQ-P-010 | Fuente oficial, edición/estado, aplicabilidad, responsable, riesgos, decisiones, puertas de fase y evidencia reproducible; separación entre control interno, conformidad evaluada, certificación y cumplimiento legal | Propuesta; responsables y evidencias por definir |
+| Plataformas y experiencia multiplataforma | REQ-P-006, REQ-P-030; NFR-006, NFR-008 | Casos de uso web/Android/iOS, escritorio condicional, accesibilidad, necesidades offline, notificaciones, distribución y mantenimiento | Propuesta; requiere matriz de decisión y PoC |
+| API y gobierno de datos | REQ-P-002, REQ-P-032; NFR-003, NFR-004, NFR-009 | Fuente de verdad por dominio, contratos versionados, permisos, frescura, caché, linaje y consistencia entre clientes | Propuesta; contratos y pruebas pendientes |
+| Selección de exchanges y pares spot | REQ-P-003, REQ-P-029; NFR-003, NFR-010 | Universo comparador, disponibilidad del par objetivo, liquidez, spread, profundidad, slippage, comisiones, calidad API y restricciones geográficas | Control interno propuesto; capturas y umbrales pendientes |
+| Selección de stack y hosting | REQ-P-010, REQ-P-031; NFR-001, NFR-002, NFR-008, NFR-009, NFR-010 | Matriz de decisión, PoC, cuotas oficiales, coste total, suspensión, backups, portabilidad, recuperación y alertas de coste | Control interno propuesto; pruebas y mediciones pendientes |
+
 ## Reglas para aprobar una referencia
 
 Antes de pasar cualquier fila a “aprobada”:
