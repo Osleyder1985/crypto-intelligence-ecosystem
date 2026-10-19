@@ -55,3 +55,15 @@ El workflow `.github/workflows/validacion-gobernanza.yml` ejecuta `scripts/quali
 Antes de exigir este control como estado obligatorio para integrar, se debe abrir el PR, esperar a que GitHub ejecute el workflow y confirmar el nombre exacto del check. Después, el propietario debe configurar en Settings → Rules (o Branches) una regla aplicable a `main` que exija Pull Request y el check `validar-gobernanza`; debe impedir force-push y eliminación de la rama. La exigencia de aprobación se configura solo según las capacidades disponibles y sin fingir una revisión independiente cuando no exista otro revisor autorizado.
 
 La protección no queda activa por crear este workflow. Hasta verificar la regla en GitHub, el estado se mantiene como pendiente.
+
+## Convención de nombres y estructura
+
+Esta convención es una decisión de ingeniería del proyecto para favorecer consistencia, interoperabilidad y mantenimiento; no se atribuye como una obligación universal impuesta por ISO/IEC.
+
+- Rutas técnicas, nombres de scripts, workflows, pruebas, módulos, variables, funciones, clases y contratos de API: inglés, con una convención uniforme por tecnología.
+- Contenido explicativo de documentación, Issues, Pull Requests y registros de decisiones: español. Se conservan identificadores, nombres oficiales y términos técnicos cuando sea necesario para la precisión.
+- Identificadores de requisitos, riesgos, decisiones y pruebas deben ser estables y únicos, por ejemplo `REQ-001`, `RISK-001`, `ADR-001` y `TEST-001`.
+- Cualquier cambio de rutas debe actualizar en el mismo PR todos los enlaces, referencias de workflows, scripts, configuración y documentación afectados.
+- Antes de renombrar, se inspeccionan las referencias y se ejecutan los controles disponibles. No se cambia una ruta técnica en aislamiento.
+- La estructura y el contenido documental se gestionan con trazabilidad, control de cambios, estado de aprobación y evidencia de verificación. La aplicabilidad normativa concreta se mantiene en la matriz normativa; no se afirma conformidad por adoptar esta convención.
+
