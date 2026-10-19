@@ -15,10 +15,27 @@ class RequirementsCatalogueValidatorTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
         cls.content = validator.CATALOG.read_text(encoding="utf-8")
+        cls.matrix = validator.CLOSURE_MATRIX.read_text(encoding="utf-8")
 
     def test_current_catalogue_is_consistent(self) -> None:
         self.assertEqual(validator.validate_catalog(self.content), [])
         self.assertEqual(validator.validate_issue_traceability(self.content), [])
+
+
+    def test_acceptance_closure_matrix_has_required_criteria(self) -> None:
+        self.assertEqual(validator.validate_acceptance_closure_matrix(self.matrix), [])
+
+    def test_missing_spot_acceptance_criterion_fails(self) -> None:
+        row = next(
+            line for line in self.matrix.splitlines()
+            if line.startswith("| 7-M03 |")
+        )
+        mutated = self.matrix.replace(row + "\\n", "", 1)
+        errors = validator.validate_acceptance_closure_matrix(mutated)
+        self.assertTrue(
+            any("missing criterion: 7-M03" in error for error in errors),
+            errors,
+        )
 
     def test_missing_product_index_entry_fails(self) -> None:
         heading = "## 13. Índice de planificación por fase y prioridad"
