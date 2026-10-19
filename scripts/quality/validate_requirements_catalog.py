@@ -208,6 +208,34 @@ def validate_issue_traceability(content: str) -> list[str]:
     return errors
 
 
+def validate_issue_acceptance_review(content: str) -> list[str]:
+    heading = "## 15. Revisión de cobertura contra criterios de aceptación de Issues"
+    start = content.find(heading)
+    if start < 0:
+        return ["missing section 15: Issue acceptance-criteria review"]
+
+    section = content[start:]
+    found: set[int] = set()
+    for line in section.splitlines():
+        if not line.startswith("|"):
+            continue
+        row = cells(line)
+        if not row:
+            continue
+        match = re.match(r"\[#(\d+)\b", row[0])
+        if match:
+            found.add(int(match.group(1)))
+
+    required = {3, 4, 5, 6, 7, 8, 9, 10, 11, 13}
+    missing = sorted(required - found)
+    if missing:
+        return [
+            "Issue acceptance-criteria review is missing rows for: "
+            + ", ".join(f"#{number}" for number in missing)
+        ]
+    return []
+
+
 def validate_relative_links() -> list[str]:
     errors: list[str] = []
     for markdown_path in sorted(ENGINEERING_DIR.glob("*.md")):
@@ -237,6 +265,7 @@ def main() -> int:
     catalog_content = CATALOG.read_text(encoding="utf-8")
     errors = validate_catalog(catalog_content)
     errors.extend(validate_issue_traceability(catalog_content))
+    errors.extend(validate_issue_acceptance_review(catalog_content))
     errors.extend(validate_relative_links())
     if errors:
         print("FAIL: requirements documentation validation")
