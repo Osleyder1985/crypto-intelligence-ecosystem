@@ -16,6 +16,7 @@ class RequirementsCatalogueValidatorTests(unittest.TestCase):
     def setUpClass(cls) -> None:
         cls.content = validator.CATALOG.read_text(encoding="utf-8")
         cls.matrix = validator.CLOSURE_MATRIX.read_text(encoding="utf-8")
+        cls.spot_method = validator.SPOT_METHOD.read_text(encoding="utf-8")
 
     def test_current_catalogue_is_consistent(self) -> None:
         self.assertEqual(validator.validate_catalog(self.content), [])
@@ -34,6 +35,18 @@ class RequirementsCatalogueValidatorTests(unittest.TestCase):
         errors = validator.validate_acceptance_closure_matrix(mutated)
         self.assertTrue(
             any("missing criterion: 7-M03" in error for error in errors),
+            errors,
+        )
+
+
+    def test_spot_methodology_has_required_operational_contract(self) -> None:
+        self.assertEqual(validator.validate_spot_methodology(self.spot_method), [])
+
+    def test_missing_slippage_formula_fails(self) -> None:
+        mutated = self.spot_method.replace("\\\\text{slippage}_{bps}", "", 1)
+        errors = validator.validate_spot_methodology(mutated)
+        self.assertTrue(
+            any("missing required contract token" in error and "slippage" in error for error in errors),
             errors,
         )
 
