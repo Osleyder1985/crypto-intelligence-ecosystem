@@ -245,6 +245,8 @@ La matriz normativa debe distinguir en cada caso: requisito normativo verificado
 
 ### 17.1 Contexto del proyecto
 
+**Estado de la decisión:** aprobada por el propietario del proyecto el 2026-10-19. Esta aprobación se limita al modelo operativo descrito en esta sección; el marco maestro completo sigue siendo una propuesta pendiente de revisión integral y no constituye una línea base aprobada.
+
 El proyecto se desarrolla con un único propietario humano y asistencia de inteligencia artificial. La IA asume las funciones operativas necesarias para avanzar el ciclo de ingeniería: análisis de requisitos, arquitectura, implementación, revisión técnica, pruebas y QA, análisis de seguridad, revisión de aplicabilidad normativa, documentación, gestión de trazabilidad y preparación de propuestas de integración.
 
 El propietario establece objetivos y prioridades, puede intervenir o recomendar cambios en cualquier momento y conserva la autoridad final para aceptar decisiones estratégicas y autorizar la integración en `main`. La ausencia de observaciones no equivale a aprobación. La IA no puede inferir autorización para fusionar, desplegar o activar operaciones financieras.
