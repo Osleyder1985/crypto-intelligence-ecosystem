@@ -30,9 +30,9 @@
 
 ## Plan inmediato
 
-1. Revisar el borrador de marco maestro, la matriz normativa, el catálogo y este roadmap.
-2. Contrastar el catálogo inicial con Issues #3–#10; registrar contradicciones o decisiones nuevas como Issues.
-3. Completar la trazabilidad de los requisitos prioritarios y definir criterios medibles.
+1. Revisar el borrador de marco maestro, la matriz normativa, el catálogo y este roadmap; contrastar explícitamente su cobertura con los criterios de aceptación de Issues #3–#10.
+2. Usar la matriz de cobertura del marco para separar requisitos documentados de evidencia pendiente; registrar contradicciones o decisiones nuevas como Issues sin duplicar trabajos abiertos.
+3. Completar la trazabilidad de REQ-P-028–REQ-P-033 y los requisitos prioritarios; definir responsables, umbrales medibles y artefactos de cierre por Issue.
 4. Obtener la aprobación explícita de la línea base documental.
 5. Solo entonces comenzar la especificación de requisitos detallada y las PoC técnicas que correspondan.
 
@@ -66,3 +66,16 @@ Estas puertas complementan las fases anteriores y se aplican antes de declarar f
 6. **Antes de cualquier release, seguridad y operación.** Validar límites, recuperación, costes y riesgos residuales.
 
 No se fijan fechas de calendario ni umbrales numéricos en esta revisión: dependen de los requisitos aprobados, disponibilidad de datos, coste y resultados de una línea base inicial.
+
+## Matriz de cobertura frente a Issues #3–#10
+
+La sección 18 del [marco maestro](master-framework.md) contiene la correspondencia Issue → requisitos → evidencia de cierre pendiente. Esta matriz evita interpretar la existencia de requisitos como cierre de una investigación técnica.
+
+Antes de cerrar los Issues:
+- **#3–#4:** verificar aplicabilidad normativa, responsables, gestión de riesgos y definición de terminado con evidencia de pruebas.
+- **#5–#6:** comparar clientes con PoC y validar contratos API, frescura, permisos y consistencia.
+- **#7:** ejecutar la metodología spot con capturas fechadas y publicar cobertura PASS/FAIL por exchange/par, incluida disponibilidad exacta en Pionex.
+- **#8–#9:** producir vistas/ADR y ejecutar PoC con criterios fijados antes de puntuar.
+- **#10:** verificar documentación oficial vigente de hosting y demostrar costes, operación desde móvil, restauración y salida del proveedor.
+
+Todos estos resultados permanecen pendientes hasta que existan evidencias reproducibles y decisiones explícitas. No se asignan puntuaciones, costes, cobertura ni resultados de PoC por anticipado.
