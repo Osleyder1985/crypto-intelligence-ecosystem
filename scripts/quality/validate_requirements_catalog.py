@@ -157,6 +157,50 @@ def validate_catalog(content: str) -> list[str]:
     return errors
 
 
+def validate_issue_traceability(content: str) -> list[str]:
+    errors: list[str] = []
+    heading = "## 14. Matriz de trazabilidad entre Issues y requisitos"
+    start = content.find(heading)
+    if start < 0:
+        return ["missing section 14: Issue-to-requirement traceability matrix"]
+
+    section = content[start:]
+    defined = set(re.findall(r"(?<!\w)(?:REQ-P|NFR)-\d{3}(?!\w)", content[:start]))
+    mapped: set[str] = set()
+    issues_found: set[int] = set()
+    for line_no, line in enumerate(section.splitlines(), start=1):
+        if not line.startswith("|"):
+            continue
+        row = cells(line)
+        if not row:
+            continue
+        issue_match = re.match(r"\[#(\d+)\b", row[0])
+        if not issue_match:
+            continue
+        issues_found.add(int(issue_match.group(1)))
+        ids = set(re.findall(r"(?<!\w)(?:REQ-P|NFR)-\d{3}(?!\w)", line))
+        unknown = sorted(ids - defined)
+        if unknown:
+            errors.append(
+                f"Issue traceability row references undefined IDs: {', '.join(unknown)}"
+            )
+        mapped.update(ids)
+
+    required_issues = {3, 4, 5, 6, 7, 8, 9, 10, 11, 13}
+    missing_issues = sorted(required_issues - issues_found)
+    if missing_issues:
+        errors.append(
+            "Issue traceability matrix is missing rows for: "
+            + ", ".join(f"#{number}" for number in missing_issues)
+        )
+    missing_ids = sorted(defined - mapped)
+    if missing_ids:
+        errors.append(
+            "requirements are not linked to any Issue: " + ", ".join(missing_ids)
+        )
+    return errors
+
+
 def validate_relative_links() -> list[str]:
     errors: list[str] = []
     for markdown_path in sorted(ENGINEERING_DIR.glob("*.md")):
@@ -183,7 +227,9 @@ def main() -> int:
     if not CATALOG.is_file():
         print(f"FAIL: catalogue not found: {CATALOG}", file=sys.stderr)
         return 2
-    errors = validate_catalog(CATALOG.read_text(encoding="utf-8"))
+    catalog_content = CATALOG.read_text(encoding="utf-8")
+    errors = validate_catalog(catalog_content)
+    errors.extend(validate_issue_traceability(catalog_content))
     errors.extend(validate_relative_links())
     if errors:
         print("FAIL: requirements documentation validation")
