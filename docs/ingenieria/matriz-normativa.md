@@ -25,7 +25,7 @@ Esta matriz es una evaluación inicial de aplicabilidad, no una declaración de 
 2. [ISO/IEC 25010:2023 — ficha oficial ISO](https://www.iso.org/standard/78176.html). Define un modelo de calidad de producto con características y subcaracterísticas.
 3. [ISO/IEC 27001:2022 — ficha oficial](https://committee.iso.org/standard/27001).
 4. [ISO/IEC 27001:2022/Amd 1:2024 — ficha oficial](https://www.iso.org/standard/88435.html).
-5. [ISO 31000:2018 — ficha oficial ISO](https://www.iso.org/standard/65694.html). La ficha señala que la edición permanece vigente y está marcada para revisión; la norma es guía y no se usa para certificación.
+5. [ISO 31000:2018 — ficha oficial ISO](https://www.iso.org/standard/31000). La ficha señala que la edición permanece vigente y está marcada para revisión; la norma es guía y no se usa para certificación.
 
 ## Reglas para aprobar una referencia
 
