@@ -275,20 +275,6 @@ Para cambios críticos —seguridad, datos financieros, cálculos de señales, m
 - No se realiza merge, despliegue ni activación de trading real sin autorización humana explícita y específica.
 - El estado de protección de `main` se verifica en la configuración efectiva de GitHub; la documentación por sí sola no acredita que esté activa.
 
-
-
-## 19. Modelo operativo de gobernanza y riesgos
-
-El detalle operativo propuesto se mantiene en [Modelo de gobernanza, responsabilidades y riesgos](governance-and-risk-model.md). Este documento complementario desarrolla:
-
-- dominios de gobernanza y sus artefactos/evidencias mínimos;
-- funciones operativas y límites de autoridad;
-- Definition of Done verificable y puertas G0–G5;
-- registro inicial de riesgos RISK-001–RISK-014, con mitigaciones y evidencia pendiente;
-- reglas de escalamiento y limitaciones de la autoevaluación asistida por IA.
-
-El registro no tiene puntuaciones cuantitativas porque aún no se han acordado escalas de probabilidad, impacto ni tolerancia. Los responsables nominales y las aceptaciones de riesgo siguen pendientes. Las mitigaciones son propuestas, no controles implementados. La existencia del documento no cierra los Issues #3/#4 ni acredita conformidad normativa.
-
 ## 18. Cobertura de Issues de arquitectura y gobernanza (#3–#10)
 
 La cobertura documental se contrasta contra los criterios de aceptación de cada Issue; la mera mención de un tema no se considera cierre. Los requisitos nuevos siguen en estado **Propuesto** y no sustituyen los análisis y evidencias que cada Issue exige.
@@ -305,3 +291,15 @@ La cobertura documental se contrasta contra los criterios de aceptación de cada
 | [#10 Hosting y coste](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/issues/10) | REQ-P-031; DEC-006; NFR-002/008/009/010 | Verificar condiciones oficiales vigentes, desplegar una PoC, medir costes y cuotas y demostrar backup/restore, operación móvil y migración. |
 
 La cobertura actual es **documental y de requisitos**. No implica que se hayan ejecutado las PoC, verificado todas las fuentes normativas, implementado controles o satisfecho los criterios de cierre de esos Issues.
+
+## 19. Modelo operativo de gobernanza y riesgos
+
+El detalle operativo propuesto se mantiene en [Modelo de gobernanza, responsabilidades y riesgos](governance-and-risk-model.md). Este documento complementario desarrolla:
+
+- dominios de gobernanza y sus artefactos/evidencias mínimos;
+- funciones operativas y límites de autoridad;
+- Definition of Done verificable y puertas G0–G5;
+- registro inicial de riesgos RISK-001–RISK-014, con mitigaciones y evidencia pendiente;
+- reglas de escalamiento y limitaciones de la autoevaluación asistida por IA.
+
+El registro no tiene puntuaciones cuantitativas porque aún no se han acordado escalas de probabilidad, impacto ni tolerancia. Los responsables nominales y las aceptaciones de riesgo siguen pendientes. Las mitigaciones son propuestas, no controles implementados. La existencia del documento no cierra los Issues #3/#4 ni acredita conformidad normativa.
