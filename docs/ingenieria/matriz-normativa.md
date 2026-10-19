@@ -38,3 +38,25 @@ Antes de pasar cualquier fila a “aprobada”:
 6. Definir quién revisará la matriz y qué evento obliga a actualizarla.
 
 **No conformidad automática:** no se debe declarar cumplimiento, certificación ni auditoría satisfactoria a partir de esta matriz. La implementación y la evidencia aún deben producirse y revisarse.
+
+
+## Trazabilidad normativa con los requisitos analíticos ampliados
+
+Esta sección propone asociaciones de control para orientar el diseño y la evidencia. No equivale a una evaluación formal de conformidad; las cláusulas específicas solo se deben asignar tras verificar legalmente la edición completa aplicable y su alcance.
+
+| Área de control | Requisitos relacionados | Evidencia de producto prevista | Estado |
+|---|---|---|---|
+| Ciclo de vida y gestión de requisitos | REQ-P-001, REQ-P-005, REQ-P-010, REQ-P-020 | IDs estables, decisiones registradas, trazabilidad requisito-diseño-prueba-release y control de cambios | Propuesta; cláusulas pendientes |
+| Calidad de producto y experiencia | REQ-P-004, REQ-P-006, REQ-P-008, REQ-P-018; NFR-001, NFR-006, NFR-016, NFR-018 | Criterios de calidad medibles, pruebas de tareas, accesibilidad, rendimiento, estados de error e incertidumbre | Propuesta; métricas por acordar |
+| Seguridad y resiliencia | REQ-P-007, REQ-P-018, REQ-P-019; NFR-004, NFR-005, NFR-015 | Modelo de amenazas, control de acceso, gestión de secretos, registro seguro, pruebas de recuperación y riesgos residuales | Propuesta; aplicabilidad por evaluar |
+| Gestión de riesgos | REQ-P-012, REQ-P-016, REQ-P-019; NFR-013, NFR-015, NFR-016 | Registro de riesgos, escenarios, sensibilidad, tratamiento, responsable y riesgo residual | Propuesta; no implica certificación |
+| Procedencia e integridad de datos | REQ-P-011, REQ-P-020; NFR-003, NFR-011, NFR-014 | Catálogo de fuentes, timestamps point-in-time, control de unidades, referencias/hash y reproducción de ejecución | Propuesta; diseño pendiente |
+| Validación cuantitativa y transparencia | REQ-P-013, REQ-P-014, REQ-P-017, REQ-P-019; NFR-012, NFR-013, NFR-017 | Protocolo predefinido, benchmark, evaluación temporal, calibración, sensibilidad y conservación de resultados negativos | Control interno propuesto; no atribuirlo como exigencia textual de una norma sin verificarla |
+
+### Regla de uso
+
+- No asociar una práctica a una cláusula normativa específica sin verificar la fuente oficial y el texto aplicable.
+- Distinguir requisitos normativos, buenas prácticas voluntarias y controles de producto definidos por el equipo.
+- Cada control aprobado debe tener responsable, riesgo que trata, artefacto, método de verificación y evidencia retenida.
+- Revisar aplicabilidad y obligaciones legales por jurisdicción, proveedor y tipo de dato antes de publicar el servicio.
+- No declarar conformidad, certificación o auditoría satisfactoria por el mero hecho de mantener esta matriz.
