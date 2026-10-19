@@ -23,5 +23,7 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+      - name: Test requirements validator
+        run: python -m unittest discover -s tests/quality -p 'test_*.py' -v
       - name: Validate requirements catalogue
         run: python scripts/quality/validate_requirements_catalog.py
