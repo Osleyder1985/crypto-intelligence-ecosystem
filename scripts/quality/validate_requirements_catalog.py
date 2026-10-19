@@ -9,6 +9,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 CATALOG = ROOT / "docs" / "engineering" / "requirements-traceability-catalog.md"
 ENGINEERING_DIR = ROOT / "docs" / "engineering"
+CLOSURE_MATRIX = ENGINEERING_DIR / "acceptance-closure-matrix-issues-7-13.md"
 PRIORITY_RANK = {"Crítica": 0, "Alta": 1, "Media": 2, "Baja": 3}
 PRODUCT_ID = re.compile(r"REQ-P-\d{3}")
 NFR_ID = re.compile(r"NFR-\d{3}")
@@ -236,6 +237,41 @@ def validate_issue_acceptance_review(content: str) -> list[str]:
     return []
 
 
+
+def validate_acceptance_closure_matrix(content: str) -> list[str]:
+    """Ensure criterion-level coverage for the acceptance matrix of Issues #7 and #13."""
+    errors: list[str] = []
+    for heading in (
+        "# Matriz de cierre verificable de criterios de aceptación — Issues #7 y #13",
+        "## 1. Issue #7 — Selección reproducible de exchanges y pares spot",
+        "## 2. Issue #13 — Cobertura de criterios de aceptación",
+        "## 3. Descomposición funcional del Issue #13 para diseñar pruebas",
+        "## 4. Contrato de evidencia para cada prueba",
+        "## 5. Decisiones necesarias antes de declarar cierre",
+    ):
+        if heading not in content:
+            errors.append(f"acceptance closure matrix is missing heading: {heading}")
+
+    required_ids = (
+        [f"7-M{i:02d}" for i in range(1, 9)]
+        + [f"7-D{i:02d}" for i in range(1, 7)]
+        + [f"13-C{i:02d}" for i in range(1, 13)]
+        + [f"RF-{i:02d}" for i in range(1, 10)]
+    )
+    lines = content.splitlines()
+    for criterion_id in required_ids:
+        matches = [
+            line for line in lines
+            if line.startswith("| " + criterion_id + " |")
+            or line.startswith("| " + criterion_id + " ")
+        ]
+        if not matches:
+            errors.append(f"acceptance closure matrix is missing criterion: {criterion_id}")
+        elif len(matches) > 1:
+            errors.append(f"acceptance closure matrix duplicates criterion: {criterion_id}")
+    return errors
+
+
 def validate_relative_links() -> list[str]:
     errors: list[str] = []
     for markdown_path in sorted(ENGINEERING_DIR.glob("*.md")):
@@ -266,6 +302,10 @@ def main() -> int:
     errors = validate_catalog(catalog_content)
     errors.extend(validate_issue_traceability(catalog_content))
     errors.extend(validate_issue_acceptance_review(catalog_content))
+    if not CLOSURE_MATRIX.is_file():
+        errors.append(f"acceptance closure matrix not found: {CLOSURE_MATRIX}")
+    else:
+        errors.extend(validate_acceptance_closure_matrix(CLOSURE_MATRIX.read_text(encoding="utf-8")))
     errors.extend(validate_relative_links())
     if errors:
         print("FAIL: requirements documentation validation")
