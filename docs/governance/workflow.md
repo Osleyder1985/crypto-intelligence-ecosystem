@@ -4,6 +4,14 @@
 
 Mantener trazabilidad entre cada necesidad del proyecto, su análisis, la solución propuesta, los cambios implementados, las pruebas ejecutadas y la decisión de integración.
 
+## Modelo de trabajo con un único propietario y apoyo de IA
+
+El proyecto tiene un único propietario humano. La inteligencia artificial asume las funciones operativas de ingeniería y calidad que se necesiten: analista de requisitos, arquitecta de soluciones, implementadora, revisora técnica, responsable de pruebas/QA, analista de seguridad, revisora de aplicabilidad normativa y mantenedora de la documentación y trazabilidad.
+
+El propietario define objetivos y prioridades, puede revisar y recomendar intervenciones en cualquier momento y mantiene la autoridad final sobre decisiones de alcance y autorización de integración en `main`. El silencio, una respuesta breve como «adelante» referida a una tarea, o la existencia de un PR no constituyen autorización para fusionar, desplegar o activar operaciones financieras, salvo que la autorización explícita cubra exactamente esa acción.
+
+La asignación de varios roles a la IA es una distribución funcional de responsabilidades, no independencia organizativa. Si la IA revisa código o documentos que ella misma generó, debe señalarlo cuando sea relevante y aplicar controles compensatorios: pruebas automatizadas, criterios verificables, revisión adversarial, comprobación de enlaces y referencias, inspección del diff, reproducción de resultados y registro de incertidumbres. No debe calificar esa revisión como auditoría independiente ni como certificación externa.
+
 ## Registro de trabajo
 
 Se debe abrir o actualizar un Issue antes de iniciar cualquier cambio sustancial. Esto incluye requisitos, defectos, decisiones de arquitectura, análisis de proveedores o datos, cambios de metodología, riesgos, tareas de investigación y preguntas cuya respuesta afecte al diseño o al alcance.
@@ -31,6 +39,9 @@ No se debe integrar un PR hasta que:
 4. Los controles automáticos disponibles estén satisfactorios o las excepciones hayan sido evaluadas y aprobadas explícitamente.
 5. Los riesgos y las limitaciones conocidas estén documentados.
 6. No queden observaciones bloqueantes.
+7. El propietario haya autorizado explícitamente la integración.
+
+La IA debe entregar una recomendación clara: aceptar, rechazar o devolver con acciones pendientes. La recomendación no sustituye la autorización de integración del propietario.
 
 No se debe afirmar que una prueba, auditoría, certificación o protección está completada sin evidencia verificable.
 
@@ -60,7 +71,6 @@ Para análisis cuantitativos o de modelos se deben registrar también la versió
 
 Este documento define el proceso esperado. Su existencia no demuestra que la protección de `main`, las reglas de revisión o los controles de integración estén activos en GitHub. Esos controles deben configurarse y verificarse por separado.
 
-
 ## Puerta automática inicial
 
 El workflow `.github/workflows/governance-validation.yml` ejecuta `scripts/quality/check_governance.py` en cada Pull Request. Su alcance inicial se limita a verificar que los documentos obligatorios existan y conserven ciertos contratos de gobernanza. No valida por sí solo el contenido semántico de los formularios, no ejecuta pruebas del producto y no activa protección de ramas.
@@ -78,4 +88,3 @@ No seleccionar un check obligatorio hasta que haya publicado al menos un resulta
 ## Convención de nombres técnicos y documentación
 
 La convención de idioma y rutas es una decisión de proyecto, no una exigencia universal de ISO. Se propone mantener en inglés los nombres de rutas técnicas, código, scripts, workflows, pruebas y contratos de API; el contenido explicativo de documentos, Issues, PR y decisiones se mantiene en español. Los identificadores técnicos deben ser estables y únicos. Todo renombrado debe incluir inventario y actualización de referencias, enlaces, scripts y workflows en el mismo PR, seguido de verificaciones reproducibles. La matriz normativa identifica qué requisitos se derivan de normas y cuáles son controles internos del proyecto.
-
