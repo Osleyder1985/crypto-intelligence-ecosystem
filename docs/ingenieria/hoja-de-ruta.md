@@ -2,6 +2,7 @@
 
 - **Estado:** propuesta, sujeta a revisión y priorización.
 - **Issue rector:** [#11](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/issues/11)
+- **Issue relacionado:** [#13 — Requisitos analíticos](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/issues/13)
 - **Regla:** una fase no se considera completada por haber escrito su documentación; requiere criterios de salida y evidencia.
 
 ## Orden propuesto
