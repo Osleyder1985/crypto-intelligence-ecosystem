@@ -79,3 +79,11 @@ Antes de cerrar los Issues:
 - **#10:** verificar documentación oficial vigente de hosting y demostrar costes, operación desde móvil, restauración y salida del proveedor.
 
 Todos estos resultados permanecen pendientes hasta que existan evidencias reproducibles y decisiones explícitas. No se asignan puntuaciones, costes, cobertura ni resultados de PoC por anticipado.
+
+## Índice de requisitos por fase y prioridad
+
+La vista ordenada y el mapeo primario de cada requisito de producto se mantienen en el [catálogo de requisitos y trazabilidad](requirements-traceability-catalog.md), sección 9. La fase primaria se usa para planificar; las dependencias cruzadas se documentan en la matriz de trazabilidad y no duplican IDs. Las prioridades son iniciales, no aprobadas. Los NFR-001–NFR-018 todavía requieren fase primaria y prioridad justificadas.
+
+### Cobertura del motor cuantitativo
+
+La Fase 5 incluye, como mínimo, REQ-P-004, REQ-P-005, REQ-P-009, REQ-P-012–REQ-P-017 y REQ-P-020–REQ-P-026. También depende de identidad/calidad de datos (Fase 2), plataforma central (Fase 4), control de trabajos y frescura (Fase 4) y validación integral (Fase 7). La memoria y la monitorización operativa no sustituyen la validación fuera de muestra ni las pruebas anti-look-ahead.
