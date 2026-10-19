@@ -1,0 +1,66 @@
+name: "Requisito o mejora"
+description: "Registrar una necesidad, decisión o mejora del ecosistema."
+title: "[REQUISITO] "
+labels: ["tipo: requisito"]
+body:
+  - type: markdown
+    attributes:
+      value: "Describe la necesidad con precisión. Evita proponer una implementación antes de analizar el problema."
+  - type: textarea
+    id: situacion
+    attributes:
+      label: Situación o problema
+      description: "¿Qué ocurre, qué se necesita o qué decisión debe tomarse?"
+      placeholder: "Describe el estado actual y el resultado esperado."
+    validations:
+      required: true
+  - type: textarea
+    id: causa
+    attributes:
+      label: Causa o fundamento
+      description: "¿Por qué existe el problema o qué evidencia justifica la necesidad?"
+    validations:
+      required: true
+  - type: textarea
+    id: impacto
+    attributes:
+      label: Impacto y alcance
+      description: "¿Qué componentes, usuarios, riesgos o procesos se ven afectados?"
+    validations:
+      required: true
+  - type: textarea
+    id: solucion
+    attributes:
+      label: Solución propuesta
+      description: "Explica la solución inicial y cómo se verificará. Puede ajustarse tras el análisis."
+    validations:
+      required: true
+  - type: textarea
+    id: alternativas
+    attributes:
+      label: Alternativas consideradas
+      description: "Incluye alternativas relevantes y motivos para descartarlas. Si aún no se han estudiado, indícalo."
+    validations:
+      required: true
+  - type: textarea
+    id: aceptacion
+    attributes:
+      label: Criterios de aceptación
+      description: "Define resultados observables y comprobables."
+      placeholder: "- [ ] Criterio verificable"
+    validations:
+      required: true
+  - type: textarea
+    id: riesgos
+    attributes:
+      label: Riesgos, dependencias y restricciones
+      description: "Incluye seguridad, calidad, datos, costes, compatibilidad y dependencias pertinentes."
+    validations:
+      required: true
+  - type: textarea
+    id: evidencia
+    attributes:
+      label: Evidencia disponible y pendiente
+      description: "Enlaces, mediciones, documentos o pruebas que respaldan el Issue; indica lo que falta comprobar."
+    validations:
+      required: true
