@@ -61,3 +61,26 @@ Esta sección propone asociaciones de control para orientar el diseño y la evid
 - Cada control aprobado debe tener responsable, riesgo que trata, artefacto, método de verificación y evidencia retenida.
 - Revisar aplicabilidad y obligaciones legales por jurisdicción, proveedor y tipo de dato antes de publicar el servicio.
 - No declarar conformidad, certificación o auditoría satisfactoria por el mero hecho de mantener esta matriz.
+
+## Convención documental y de nombres del repositorio (propuesta)
+
+Las normas citadas no se interpretan como una obligación universal de nombrar carpetas, archivos, variables o funciones en inglés. ISO/IEC/IEEE 15289 aborda el propósito y contenido de los elementos de información del ciclo de vida, pero no prescribe un formato único de almacenamiento o una política universal de idioma para nombres de archivo. ISO/IEC/IEEE 42010 establece requisitos para describir la arquitectura, pero no impone un formato de archivo concreto. Por tanto, la convención siguiente es una decisión de ingeniería del proyecto que deberá aprobarse y controlarse como tal, no una cita literal de ISO.
+
+- Rutas técnicas, nombres de módulos, scripts, workflows, pruebas, símbolos de código y contratos de API: inglés, ASCII cuando sea viable, minúsculas y separación por guiones bajos o guiones según la tecnología; cada área fijará una única convención.
+- Contenido explicativo de documentación, Issues, Pull Requests y decisiones: español, conservando los identificadores normativos, términos de dominio, nombres propios y nombres oficiales de tecnologías.
+- Identificadores de requisitos, riesgos, decisiones y pruebas: estables, únicos y no dependientes del idioma; por ejemplo, `REQ-001`, `RISK-001`, `ADR-001` y `TEST-001`.
+- Los nombres de rutas se cambiarán solo mediante PR, con inventario de referencias, actualización de enlaces y validación de workflows/scripts; no se renombrarán archivos aislados sin actualizar sus consumidores.
+- Esta convención se considera propuesta hasta que el propietario del proyecto la apruebe. La coherencia y la trazabilidad son los criterios de aceptación; el idioma inglés no se presentará como exigencia de ISO.
+
+## Referencias normativas adicionales verificadas
+
+- **ISO/IEC/IEEE 12207:2026**, edición publicada en abril de 2026, es la edición vigente localizada; la ficha oficial indica que 12207:2017 fue retirada. Debe usarse la edición 2026 al fijar la línea base normativa, tras evaluar aplicabilidad.
+- **ISO/IEC/IEEE 15289:2019**, edición 4, publicada y confirmada en 2025 según la ficha oficial consultada; la ficha también señala que está en revisión para posible revisión futura. Su alcance cubre el propósito y contenido de los elementos de información del ciclo de vida, pero no define por sí sola una estructura universal de carpetas ni un formato de almacenamiento.
+- **ISO/IEC/IEEE 42010:2022**, edición 2, publicada; especifica requisitos para la estructura y expresión de descripciones de arquitectura, incluidos marcos, puntos de vista y modelos. No prescribe un formato o medio único para registrar la descripción.
+
+Fuentes oficiales:
+1. [ISO/IEC/IEEE 12207:2026](https://www.iso.org/standard/90219.html).
+2. [ISO/IEC/IEEE 15289:2019](https://www.iso.org/standard/74909.html).
+3. [ISO/IEC/IEEE 42010:2022](https://www.iso.org/standard/74393.html).
+
+
