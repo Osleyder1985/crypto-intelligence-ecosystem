@@ -74,3 +74,8 @@ El workflow `.github/workflows/validacion-gobernanza.yml` ejecuta `scripts/quali
 5. Verificar la regla efectiva en GitHub y documentar la fecha y el resultado de la comprobación.
 
 No seleccionar un check obligatorio hasta que haya publicado al menos un resultado con el nombre exacto. Los checks obligatorios deben publicarse para el evento de PR y en el commit actual; de lo contrario, podrían quedar pendientes y bloquear integración. La configuración efectiva sigue pendiente porque no se dispone de una acción autorizada para modificar/verificar reglas de rama desde este flujo.
+
+## Convención de nombres técnicos y documentación
+
+La convención de idioma y rutas es una decisión de proyecto, no una exigencia universal de ISO. Se propone mantener en inglés los nombres de rutas técnicas, código, scripts, workflows, pruebas y contratos de API; el contenido explicativo de documentos, Issues, PR y decisiones se mantiene en español. Los identificadores técnicos deben ser estables y únicos. Todo renombrado debe incluir inventario y actualización de referencias, enlaces, scripts y workflows en el mismo PR, seguido de verificaciones reproducibles. La matriz normativa identifica qué requisitos se derivan de normas y cuáles son controles internos del proyecto.
+
