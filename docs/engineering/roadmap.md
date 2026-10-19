@@ -9,7 +9,7 @@
 
 | Orden | Fase | Resultado esperado | Dependencias | Riesgo principal a controlar | Evidencia mínima | Puerta de salida | Estado |
 |---:|---|---|---|---|---|---|---|
-| 0 | Gobernanza y marco maestro | Marco, matriz normativa, catálogo, trazabilidad, índice y roadmap revisables | Issues #1, #3, #4, #8 y #11; PR #2 pendiente de revisión | Documentos contradictorios o decisiones implícitas | Revisión cruzada de documentos, enlaces y estados de decisión | Revisión documental y autorización del propietario | En preparación |
+| 0 | Gobernanza y marco maestro | Marco, matriz normativa, catálogo, trazabilidad, índice, roadmap, modelo de responsabilidades y registro inicial de riesgos revisables | Issues #1, #3, #4, #8 y #11; PR #2 pendiente de revisión | Documentos contradictorios o decisiones implícitas | Revisión cruzada de documentos, enlaces y estados de decisión | Revisión documental y autorización del propietario | En preparación |
 | 1 | Requisitos y riesgos del producto | Casos de uso, actores, NFR, límites, riesgos y métricas | Fase 0 | Requisitos vagos o prioridades sesgadas | Catálogo aprobado, escenarios de aceptación y registro de riesgos | Requisitos prioritarios aprobados y verificables | Pendiente |
 | 2 | Investigación de mercados y fuentes | Matriz de exchanges/pares spot, licencias, cobertura, calidad y coste | Fase 1; Issue #7 | Volumen artificial, datos incompletos, restricciones geográficas o coste oculto | Capturas fechadas, metodología versionada, datos de prueba y comparativa reproducible | Método de selección aprobado y resultados repetibles | Pendiente |
 | 3 | Arquitectura y selección tecnológica | Arquitectura lógica/física inicial, ADR, comparativas y PoC | Fases 1–2; Issues #8–#10 | Lock-in, sobreingeniería o PoC no representativas | ADR, criterios fijados antes de probar, resultados brutos y análisis de costes | Alternativas probadas y decisiones autorizadas | Pendiente |
@@ -30,7 +30,7 @@
 
 ## Plan inmediato
 
-1. Revisar el borrador de marco maestro, la matriz normativa, el catálogo y este roadmap; contrastar explícitamente su cobertura con los criterios de aceptación de Issues #3–#10.
+1. Revisar el marco maestro, la matriz normativa, el catálogo, el roadmap y el [modelo de gobernanza y riesgos](governance-and-risk-model.md); contrastar explícitamente la cobertura con los criterios de aceptación de Issues #3–#10.
 2. Usar la matriz de cobertura del marco para separar requisitos documentados de evidencia pendiente; registrar contradicciones o decisiones nuevas como Issues sin duplicar trabajos abiertos.
 3. Completar la trazabilidad de REQ-P-028–REQ-P-033 y los requisitos prioritarios; definir responsables, umbrales medibles y artefactos de cierre por Issue.
 4. Obtener la aprobación explícita de la línea base documental.
