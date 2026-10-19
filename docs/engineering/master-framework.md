@@ -239,3 +239,36 @@ La matriz normativa debe distinguir en cada caso: requisito normativo verificado
 4. Los controles automatizados se ejecutan y sus resultados se registran; los controles no ejecutados quedan explícitamente pendientes.
 5. La política permanece como propuesta hasta aprobación expresa; no implica certificación ni conformidad ISO.
 
+
+
+## 17. Modelo operativo de responsabilidades: propietario e inteligencia artificial
+
+### 17.1 Contexto del proyecto
+
+El proyecto se desarrolla con un único propietario humano y asistencia de inteligencia artificial. La IA asume las funciones operativas necesarias para avanzar el ciclo de ingeniería: análisis de requisitos, arquitectura, implementación, revisión técnica, pruebas y QA, análisis de seguridad, revisión de aplicabilidad normativa, documentación, gestión de trazabilidad y preparación de propuestas de integración.
+
+El propietario establece objetivos y prioridades, puede intervenir o recomendar cambios en cualquier momento y conserva la autoridad final para aceptar decisiones estratégicas y autorizar la integración en `main`. La ausencia de observaciones no equivale a aprobación. La IA no puede inferir autorización para fusionar, desplegar o activar operaciones financieras.
+
+### 17.2 Controles para evitar la falsa independencia
+
+La asignación de varios roles a la IA es funcional, no una separación organizativa independiente. Cuando la IA revise artefactos que ella misma haya producido, no debe describir el resultado como auditoría independiente, certificación externa ni garantía de ausencia de defectos. Para reducir el riesgo de autoevaluación, deberá aplicar controles compensatorios según el impacto: criterios de aceptación verificables, pruebas automatizadas, inspección del diff, revisión adversarial, validación de referencias y enlaces, ejecución reproducible, análisis de escenarios negativos y declaración explícita de pruebas no ejecutadas, incertidumbres y riesgos residuales.
+
+Para cambios críticos —seguridad, datos financieros, cálculos de señales, migraciones destructivas, cambios de arquitectura con impacto amplio o despliegues— la IA debe elevar el nivel de evidencia y recomendar revisión externa independiente cuando el riesgo no pueda mitigarse adecuadamente mediante controles técnicos.
+
+### 17.3 Flujo de decisión
+
+1. La IA registra o actualiza el Issue y determina el alcance, riesgos y criterios de aceptación.
+2. La IA analiza alternativas y registra las decisiones técnicas pertinentes.
+3. La IA implementa en una rama y prepara un PR con el alcance y la evidencia.
+4. La IA verifica el cambio, ejecuta las pruebas disponibles y comunica los controles pendientes o fallidos.
+5. La IA presenta una recomendación explícita: aceptar, rechazar o devolver para correcciones, junto con la evidencia, limitaciones y riesgos residuales.
+6. El propietario puede intervenir, solicitar ajustes o recomendar otro enfoque y mantiene la autorización final para integrar.
+7. Después de integrar con autorización, la IA verifica el resultado y actualiza la trazabilidad.
+
+### 17.4 Condiciones de aceptación
+
+- Los roles de IA no se presentan como personas independientes ni como certificadores externos.
+- Las pruebas solo se declaran satisfactorias cuando existe resultado verificable.
+- Los controles no ejecutados, las limitaciones de herramientas y la incertidumbre se exponen antes de solicitar aceptación.
+- No se realiza merge, despliegue ni activación de trading real sin autorización humana explícita y específica.
+- El estado de protección de `main` se verifica en la configuración efectiva de GitHub; la documentación por sí sola no acredita que esté activa.
