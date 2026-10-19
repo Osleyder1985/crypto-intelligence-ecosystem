@@ -156,7 +156,7 @@ La matriz detallada se mantiene en [matriz de aplicabilidad normativa](matriz-no
 - ISO/IEC/IEEE 12207:2026: marco de procesos del ciclo de vida del software. [Ficha oficial](https://www.iso.org/standard/90219.html).
 - ISO/IEC 25010:2023: modelo de calidad de producto. [Ficha oficial](https://www.iso.org/standard/78176.html).
 - ISO/IEC 27001:2022 y Enmienda 1:2024: requisitos del sistema de gestión de seguridad de la información. [Ficha oficial de la norma](https://committee.iso.org/standard/27001) y [enmienda](https://www.iso.org/standard/88435.html).
-- ISO 31000:2018: directrices de gestión de riesgos; la ficha oficial indica que sigue vigente y está destinada a revisión. No es una norma certificable. [Ficha oficial](https://www.iso.org/standard/65694.html).
+- ISO 31000:2018: directrices de gestión de riesgos; la ficha oficial indica que sigue vigente y está destinada a revisión. No es una norma certificable. [Ficha oficial](https://www.iso.org/standard/31000).
 
 Las referencias de sistemas, arquitectura, experiencia de usuario, accesibilidad e IA quedan sujetas a verificación adicional de edición, estado y aplicabilidad antes de ser incluidas como base normativa aprobada.
 
