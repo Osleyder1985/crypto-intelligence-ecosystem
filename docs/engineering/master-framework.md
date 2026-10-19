@@ -274,3 +274,20 @@ Para cambios críticos —seguridad, datos financieros, cálculos de señales, m
 - Los controles no ejecutados, las limitaciones de herramientas y la incertidumbre se exponen antes de solicitar aceptación.
 - No se realiza merge, despliegue ni activación de trading real sin autorización humana explícita y específica.
 - El estado de protección de `main` se verifica en la configuración efectiva de GitHub; la documentación por sí sola no acredita que esté activa.
+
+## 18. Cobertura de Issues de arquitectura y gobernanza (#3–#10)
+
+La cobertura documental se contrasta contra los criterios de aceptación de cada Issue; la mera mención de un tema no se considera cierre. Los requisitos nuevos siguen en estado **Propuesto** y no sustituyen los análisis y evidencias que cada Issue exige.
+
+| Issue | Cobertura trazada | Evidencia que sigue pendiente antes de cerrar el Issue |
+|---|---|---|
+| [#3 Gobernanza normativa](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/issues/3) | REQ-P-028; matriz normativa; registro de riesgos y decisiones | Verificar las fuentes/ediciones restantes, asignar responsables y confirmar alcance; separar controles internos, conformidad evaluada, certificación y obligaciones legales. |
+| [#4 Ingeniería de software](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/issues/4) | REQ-P-033; ciclo de vida y puertas de las secciones 6 y 12 | Aprobar definición de terminado, criterios medibles por fase, estrategia de verificación/validación y evidencia ejecutada para señales/backtests. |
+| [#5 Plataformas](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/issues/5) | REQ-P-006 y REQ-P-030; DEC-002/003 | Matriz de casos de uso, comparación de alternativas y PoC en dispositivos; confirmar límites de PWA, publicación y necesidad real de escritorio. |
+| [#6 Datos y API central](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/issues/6) | REQ-P-002 y REQ-P-032; arquitectura lógica | Definir contratos por dominio, autenticación/autorización, frescura, caché, fuente de verdad, consistencia y pruebas entre clientes. |
+| [#7 Exchanges y pares spot](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/issues/7) | REQ-P-003 y REQ-P-029; controles de calidad de datos | Ejecutar capturas comparables y fechadas, verificar disponibilidad exacta en Pionex, definir umbrales PASS/FAIL y reportar cobertura real por exchange/par. |
+| [#8 Arquitectura y trazabilidad](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/issues/8) | Secciones 5–10, DEC-001–009 y catálogo de requisitos | Producir vistas de arquitectura, modelo de amenazas, ADR y matriz norma–proceso–artefacto–evidencia; verificar las referencias pendientes. |
+| [#9 Stack y PoC](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/issues/9) | REQ-P-010 y REQ-P-030; NFR-001/007/008/010 | Acordar criterios/pesos antes de puntuar, ejecutar PoC reproducibles y registrar versiones, comandos, resultados, costes e incertidumbre. |
+| [#10 Hosting y coste](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/issues/10) | REQ-P-031; DEC-006; NFR-002/008/009/010 | Verificar condiciones oficiales vigentes, desplegar una PoC, medir costes y cuotas y demostrar backup/restore, operación móvil y migración. |
+
+La cobertura actual es **documental y de requisitos**. No implica que se hayan ejecutado las PoC, verificado todas las fuentes normativas, implementado controles o satisfecho los criterios de cierre de esos Issues.
