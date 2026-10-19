@@ -206,3 +206,36 @@ Cada modificación se propone mediante Issue y PR. La revisión del marco se act
 ## 15. Descargo de alcance
 
 Este marco es una propuesta de ingeniería y calidad de producto. No constituye asesoramiento financiero, promesa de resultados, certificación ISO, auditoría independiente ni confirmación de que los controles descritos ya estén implementados.
+
+## 16. Política de estructura, idioma y control normativo
+
+### 16.1 Principio
+
+La estructura del repositorio debe ser coherente con los procesos de ingeniería, la gestión de la información y la trazabilidad. No se afirmará que ISO impone universalmente el inglés para nombres de carpetas o archivos: las normas aplicables se interpretan según su alcance y el texto oficial verificado. El idioma y la convención de nombres se registran como decisión interna de arquitectura/gobernanza, salvo que un contrato, regulación, estándar específico o requisito de interoperabilidad aplicable establezca otra cosa.
+
+### 16.2 Convención propuesta
+
+- Rutas técnicas y nombres de código, módulos, scripts, workflows, pruebas, variables, funciones, clases y contratos API: inglés, con reglas consistentes y compatibles con las herramientas.
+- Contenido explicativo de documentación, Issues, Pull Requests y registros de decisiones: español, conservando identificadores y términos técnicos normalizados.
+- IDs estables para requisitos, riesgos, decisiones, pruebas y defectos; no depender del idioma ni reutilizar IDs retirados.
+- Cada artefacto documental debe declarar propósito, estado (borrador/propuesto/aprobado), propietario o responsable cuando se asigne, referencias relacionadas y evidencia necesaria para su aceptación.
+- Cada cambio estructural debe actualizar enlaces, referencias cruzadas, configuración, workflows y scripts en el mismo PR, y ejecutar las comprobaciones pertinentes.
+- Los nombres de carpetas no son sustituto de la arquitectura documental: debe existir un índice que explique propósito, alcance, relaciones y estado de los artefactos.
+
+### 16.3 Referencias y límites de interpretación
+
+- ISO/IEC/IEEE 12207:2026 es la edición publicada vigente localizada para procesos del ciclo de vida del software; la edición 2017 aparece retirada en la ficha oficial consultada.
+- ISO/IEC/IEEE 15289:2019 sirve como referencia para propósito y contenido de los elementos de información del ciclo de vida; no se interpreta como una prescripción universal de estructura física del repositorio.
+- ISO/IEC/IEEE 42010:2022 sirve para estructurar descripciones de arquitectura; la ficha oficial aclara que no prescribe un formato o medio único de registro.
+- ISO/IEC 25010:2023 se utiliza como referencia para definir atributos de calidad del producto y convertirlos en requisitos verificables.
+
+La matriz normativa debe distinguir en cada caso: requisito normativo verificado, guía/recomendación, control interno del proyecto, evidencia prevista, responsable y estado de aprobación. No se asociará una práctica a una cláusula concreta sin revisar legalmente la edición completa aplicable.
+
+### 16.4 Criterios de aceptación de esta política
+
+1. La convención queda documentada en el proceso de contribución y en la matriz normativa.
+2. Los nombres técnicos y las rutas son coherentes o cuentan con una excepción documentada.
+3. Los cambios de rutas no dejan enlaces, tests, scripts ni workflows apuntando a ubicaciones antiguas.
+4. Los controles automatizados se ejecutan y sus resultados se registran; los controles no ejecutados quedan explícitamente pendientes.
+5. La política permanece como propuesta hasta aprobación expresa; no implica certificación ni conformidad ISO.
+
