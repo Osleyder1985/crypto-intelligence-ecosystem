@@ -2,6 +2,7 @@
 
 - **Estado:** preliminar; pendiente de aprobación.
 - **Issue rector:** [#11](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/issues/11)
+- **Issue relacionado:** [#13 — Requisitos analíticos](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/issues/13)
 - **Fecha de consulta de fichas oficiales:** 2026-10-19.
 
 Esta matriz es una evaluación inicial de aplicabilidad, no una declaración de conformidad. Debe actualizarse cuando cambie el alcance y antes de usarla como criterio formal de auditoría. La norma completa puede contener requisitos adicionales que no se reproducen aquí.
