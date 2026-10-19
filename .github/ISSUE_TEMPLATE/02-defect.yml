@@ -1,0 +1,55 @@
+name: "Defecto"
+description: "Registrar un comportamiento incorrecto o una regresión."
+title: "[DEFECTO] "
+body:
+  - type: textarea
+    id: situacion
+    attributes:
+      label: Situación o comportamiento observado
+      description: "¿Qué está ocurriendo y qué resultado se esperaba?"
+    validations:
+      required: true
+  - type: textarea
+    id: reproduccion
+    attributes:
+      label: Pasos para reproducir
+      description: "Incluye pasos mínimos, entorno, versión y datos de entrada seguros."
+      placeholder: "1. ...\n2. ...\n3. ..."
+    validations:
+      required: true
+  - type: textarea
+    id: causa
+    attributes:
+      label: Causa conocida o hipótesis
+      description: "Separa la causa confirmada de las hipótesis que todavía deben investigarse."
+    validations:
+      required: true
+  - type: textarea
+    id: impacto
+    attributes:
+      label: Impacto y severidad
+      description: "Describe usuarios, componentes, datos, seguridad o resultados afectados."
+    validations:
+      required: true
+  - type: textarea
+    id: solucion
+    attributes:
+      label: Solución propuesta
+      description: "Explica la corrección que se propone y cómo se comprobará."
+    validations:
+      required: true
+  - type: textarea
+    id: aceptacion
+    attributes:
+      label: Criterios de aceptación
+      description: "Define condiciones comprobables para confirmar la corrección."
+      placeholder: "- [ ] El comportamiento esperado se verifica."
+    validations:
+      required: true
+  - type: textarea
+    id: evidencia
+    attributes:
+      label: Evidencia y limitaciones
+      description: "Añade registros, capturas o resultados sin incluir secretos. Indica qué falta comprobar."
+    validations:
+      required: true
