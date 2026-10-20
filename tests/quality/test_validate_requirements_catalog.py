@@ -79,6 +79,14 @@ class RequirementsCatalogueValidatorTests(unittest.TestCase):
     def test_spot_methodology_has_required_operational_contract(self) -> None:
         self.assertEqual(validator.validate_spot_methodology(self.spot_method), [])
 
+    def test_missing_locked_book_policy_fails(self) -> None:
+        mutated = self.spot_method.replace("libro bloqueado", "estado ambiguo")
+        errors = validator.validate_spot_methodology(mutated)
+        self.assertTrue(
+            any("libro bloqueado" in error for error in errors),
+            errors,
+        )
+
     def test_missing_slippage_formula_fails(self) -> None:
         mutated = self.spot_method.replace("\\text{slippage}_{bps}", "")
         errors = validator.validate_spot_methodology(mutated)
