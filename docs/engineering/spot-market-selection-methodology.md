@@ -273,14 +273,14 @@ Se añadieron los siguientes componentes en la rama del PR:
 
 - [Contrato normalizado](../../scripts/market_selection/data_contract.py): versión `market-observation-v1`, validación estructural, timestamps ISO-8601 con zona explícita, campos de procedencia, hash SHA-256, control de duplicados en niveles y estados de calidad.
 - [Lector público Binance Spot](../../scripts/market_selection/binance_public.py): consulta de solo lectura a `GET /api/v3/depth` y `GET /api/v3/exchangeInfo`, sin claves, secretos ni métodos de envío de órdenes.
-- [Pruebas deterministas](../../tests/market_selection/test_data_contract_and_binance.py): respuestas simuladas para libro válido, JSON inválido, error de API, libro cruzado, niveles duplicados, símbolo inválido, estado de símbolo y hash del payload.
+- [Pruebas deterministas](../../tests/market_selection/test_data_contract_and_binance.py): respuestas simuladas para libro válido, JSON inválido, error de API, libro cruzado, niveles duplicados, símbolo inválido, estado de símbolo, unión de metadatos exactos, bloqueo de libro cuando el símbolo no está disponible y hash de ambos payloads.
 
 ### Reglas importantes de procedencia y calidad
 
 1. El hash se calcula sobre los bytes exactos de la respuesta recibida; no demuestra que la fuente sea correcta ni que el dato sea auténtico.
 2. El payload original no se persiste en el registro de observación (`raw_payload_retained=false`). El hash permite comparar una copia externa si se conserva conforme a la política aplicable, pero no reconstruir por sí solo la respuesta.
 3. El snapshot de profundidad de Binance expone `lastUpdateId`, no un timestamp de evento equivalente a la hora de mercado. Por ello, `source_timestamp_utc=null` y `quality_status=INDETERMINATE`; no se permite convertir la hora de captura en timestamp de origen.
-4. El activo base y cotizado se mantienen como desconocidos en el registro de profundidad hasta enlazarlos con metadatos exactos de `exchangeInfo`. La respuesta de estado del símbolo incluye el detalle del exchange, pero el enlace entre registros debe ser explícito y conservar ambas procedencias.
+4. El método `fetch_market_snapshot` consulta `exchangeInfo` y profundidad por separado, exige coincidencia exacta del símbolo y une `baseAsset`/`quoteAsset` al snapshot solo si el par está confirmado como Spot negociable. Conserva por separado las referencias, hashes y horas de captura de ambos payloads. El snapshot sigue `INDETERMINATE` por falta de timestamp de origen de la profundidad.
 5. El estado de disponibilidad describe exclusivamente el listado/estado reportado por Binance. No demuestra que el mismo par esté disponible en Pionex, que pueda usarse en una región concreta o que sea apropiado para invertir.
 6. El adaptador valida símbolos y límites, limita el tamaño de respuesta y distingue errores HTTP/transporte, JSON inválido, errores declarados por la API y payloads fuera de esquema. Los tests inyectan un transporte simulado: no dependen de una conexión real.
 7. La captura real, las condiciones de servicio, límites de frecuencia, política de reintentos, retención de payloads y reconciliación automática con Pionex permanecen pendientes. No se afirma que se haya consultado el mercado en vivo ni que un par real haya superado los criterios de selección.
