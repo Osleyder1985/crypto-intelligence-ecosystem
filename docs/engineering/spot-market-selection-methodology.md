@@ -303,3 +303,13 @@ La ejecución de CI asociada al commit que incorpora estos componentes debe veri
 - [Validación de trazabilidad #46](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/actions/runs/39364681509): en curso al redactar esta actualización; no se registra todavía como PASS.
 - La ejecución #15 falló inicialmente en dos pruebas porque la validación de activos desconocidos no coincidía con el estado `INDETERMINATE`. La regla se corrigió en el commit indicado y la ejecución #16 quedó en éxito. Se conserva esta incidencia como evidencia del ciclo de corrección, no se oculta.
 - El éxito de #16 valida fixtures sintéticos y la implementación en CI; **no** acredita una consulta real a Binance, disponibilidad en Pionex, validez de tarifas, rentabilidad ni conformidad ISO.
+
+
+### Evidencia final de CI para la unión de metadatos
+
+- Commit de implementación y prueba: `df8da4d0c567eabb70ef4b9a9519023b73beb607`.
+- [Ejecución del selector #20](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/actions/runs/39364821104): **completed / success**; log confirma 41 pruebas ejecutadas y `OK`.
+- [Validación de trazabilidad #47](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/actions/runs/39364821165): **completed / success**.
+- Se comprobó que el snapshot solo une base/cotizado cuando `exchangeInfo` confirma el símbolo exacto como Spot negociable, conserva hash y referencia de ambas respuestas y no solicita el libro cuando el símbolo está ausente.
+- El contrato ahora impide declarar `quality_status=VALID` si faltan los metadatos base/cotizado o el timestamp de origen. La profundidad sin timestamp de evento continúa explícitamente en `INDETERMINATE`.
+- En una ejecución anterior, la prueba del contrato falló porque el fixture declaraba calidad `VALID` sin timestamp de origen. Se corrigió el fixture para reflejar el contrato; la ejecución #20 pasó. Se mantiene la distinción entre evidencia sintética CI y prueba de integración real.
