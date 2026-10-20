@@ -101,6 +101,7 @@ def evaluate_batch(artifact: dict[str, Any], config: dict[str, Any] | None = Non
                 return out
             bids, asks = levels(depth.get("bids"), "bids"), levels(depth.get("asks"), "asks")
             bid, ask = bids[0]["price"], asks[0]["price"]
+            if bid == ask: raise ValueError("book is locked: best bid equals best ask")
             if bid > ask: raise ValueError("book is crossed: best bid exceeds best ask")
             mid=(bid+ask)/2
             spr=spread_bps(bid, ask)
