@@ -265,3 +265,32 @@ Se amplió el motor para que no considere suficiente un libro numéricamente vá
 También se añadieron campos explícitos `maker_fee_bps` y `taker_fee_bps`. El motor expone tarifas por lado y una estimación de tarifa taker de ida y vuelta (dos lados). Este cálculo **no** incluye automáticamente retiros, red, descuentos, niveles de cuenta ni condiciones particulares; la dimensión `fees = PASS` significa únicamente que los inputs de tarifas configurados son numéricamente válidos, no que la operación sea rentable o que la tarifa haya sido verificada con el exchange.
 
 La configuración del fixture continúa marcada como TEST-ONLY. Los nuevos controles no equivalen a captura de datos real, validación de tarifas oficiales ni aprobación de una política financiera. La ejecución del selector #10 confirmó 24 pruebas aprobadas; se añadieron casos adversariales para niveles de precio duplicados, booleanos usados como tarifas y timestamps de captura futuros. Esta evidencia solo valida la lógica de fixtures sintéticos, no fuentes ni mercados reales.
+
+
+## 14. Contrato normalizado y adaptador público Binance Spot (implementación inicial)
+
+Se añadieron los siguientes componentes en la rama del PR:
+
+- [Contrato normalizado](../../scripts/market_selection/data_contract.py): versión `market-observation-v1`, validación estructural, timestamps ISO-8601 con zona explícita, campos de procedencia, hash SHA-256, control de duplicados en niveles y estados de calidad.
+- [Lector público Binance Spot](../../scripts/market_selection/binance_public.py): consulta de solo lectura a `GET /api/v3/depth` y `GET /api/v3/exchangeInfo`, sin claves, secretos ni métodos de envío de órdenes.
+- [Pruebas deterministas](../../tests/market_selection/test_data_contract_and_binance.py): respuestas simuladas para libro válido, JSON inválido, error de API, libro cruzado, niveles duplicados, símbolo inválido, estado de símbolo y hash del payload.
+
+### Reglas importantes de procedencia y calidad
+
+1. El hash se calcula sobre los bytes exactos de la respuesta recibida; no demuestra que la fuente sea correcta ni que el dato sea auténtico.
+2. El payload original no se persiste en el registro de observación (`raw_payload_retained=false`). El hash permite comparar una copia externa si se conserva conforme a la política aplicable, pero no reconstruir por sí solo la respuesta.
+3. El snapshot de profundidad de Binance expone `lastUpdateId`, no un timestamp de evento equivalente a la hora de mercado. Por ello, `source_timestamp_utc=null` y `quality_status=INDETERMINATE`; no se permite convertir la hora de captura en timestamp de origen.
+4. El activo base y cotizado se mantienen como desconocidos en el registro de profundidad hasta enlazarlos con metadatos exactos de `exchangeInfo`. La respuesta de estado del símbolo incluye el detalle del exchange, pero el enlace entre registros debe ser explícito y conservar ambas procedencias.
+5. El estado de disponibilidad describe exclusivamente el listado/estado reportado por Binance. No demuestra que el mismo par esté disponible en Pionex, que pueda usarse en una región concreta o que sea apropiado para invertir.
+6. El adaptador valida símbolos y límites, limita el tamaño de respuesta y distingue errores HTTP/transporte, JSON inválido, errores declarados por la API y payloads fuera de esquema. Los tests inyectan un transporte simulado: no dependen de una conexión real.
+7. La captura real, las condiciones de servicio, límites de frecuencia, política de reintentos, retención de payloads y reconciliación automática con Pionex permanecen pendientes. No se afirma que se haya consultado el mercado en vivo ni que un par real haya superado los criterios de selección.
+
+### Ejecución reproducible
+
+Desde la raíz del repositorio:
+
+```bash
+python -m unittest discover -s tests/market_selection -p 'test_*.py' -v
+```
+
+La ejecución de CI asociada al commit que incorpora estos componentes debe verificarse antes de registrar PASS. El resultado de los tests sintéticos no equivale a una prueba de integración contra Binance ni a validación independiente del contrato.
