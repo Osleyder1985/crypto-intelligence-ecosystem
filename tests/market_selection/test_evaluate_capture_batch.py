@@ -70,6 +70,44 @@ class BatchEvaluatorTests(unittest.TestCase):
         market=evaluate_batch(a)["markets"][0]
         self.assertEqual(market["dimension_status"]["spread"],"INDETERMINATE")
         self.assertTrue(any("crossed" in reason for reason in market["reasons"]))
+    def test_locked_book_is_indeterminate(self):
+        a=fixture()
+        payload=a["records"][2]["parsed_json"]
+        payload["bids"]=[[ "100.0", "10" ], [ "99.99", "10" ]]
+        payload["asks"]=[[ "100.0", "10" ], [ "100.01", "10" ]]
+        a["records"][2]=rec("BTC_USDT","binance_depth",payload)
+        market=evaluate_batch(a)["markets"][0]
+        self.assertEqual(market["dimension_status"]["spread"],"INDETERMINATE")
+        self.assertNotIn("spread_bps",market["metrics"])
+        self.assertTrue(any("book is locked" in reason for reason in market["reasons"]))
+
+    def test_empty_book_side_is_indeterminate(self):
+        a=fixture()
+        payload=a["records"][2]["parsed_json"]
+        payload["asks"]=[]
+        a["records"][2]=rec("BTC_USDT","binance_depth",payload)
+        market=evaluate_batch(a)["markets"][0]
+        self.assertEqual(market["dimension_status"]["spread"],"INDETERMINATE")
+        self.assertTrue(any("side is empty" in reason for reason in market["reasons"]))
+
+    def test_malformed_book_level_is_indeterminate(self):
+        a=fixture()
+        payload=a["records"][2]["parsed_json"]
+        payload["asks"]=[[ "100.01" ]]
+        a["records"][2]=rec("BTC_USDT","binance_depth",payload)
+        market=evaluate_batch(a)["markets"][0]
+        self.assertEqual(market["dimension_status"]["spread"],"INDETERMINATE")
+        self.assertTrue(any("malformed book level" in reason for reason in market["reasons"]))
+
+    def test_unsorted_asks_are_indeterminate(self):
+        a=fixture()
+        payload=a["records"][2]["parsed_json"]
+        payload["asks"]=[[ "100.02", "10" ], [ "100.01", "10" ]]
+        a["records"][2]=rec("BTC_USDT","binance_depth",payload)
+        market=evaluate_batch(a)["markets"][0]
+        self.assertEqual(market["dimension_status"]["spread"],"INDETERMINATE")
+        self.assertTrue(any("asks side is not ordered" in reason for reason in market["reasons"]))
+
     def test_duplicate_provider_record_rejected(self):
         a=fixture(); a["records"].append(a["records"][0])
         with self.assertRaises(ValueError): evaluate_batch(a)
