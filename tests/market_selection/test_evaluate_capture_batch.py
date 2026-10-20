@@ -153,6 +153,57 @@ class BatchEvaluatorTests(unittest.TestCase):
         self.assertEqual(market["dimension_status"]["binance_spot_market"],"INDETERMINATE")
         self.assertTrue(any("exactly one matching symbol" in reason for reason in market["reasons"]))
 
+    def test_pionex_missing_identity_field_is_indeterminate(self):
+        for field in ("baseCurrency", "quoteCurrency", "type", "enable"):
+            with self.subTest(field=field):
+                a=fixture()
+                payload=a["records"][0]["parsed_json"]
+                payload["data"]["symbols"][0].pop(field)
+                a["records"][0]=rec("BTC_USDT","pionex",payload)
+                market=evaluate_batch(a)["markets"][0]
+                self.assertEqual(market["dimension_status"]["pionex_spot_availability"],"INDETERMINATE")
+                self.assertTrue(any("missing or invalid" in reason for reason in market["reasons"]))
+
+    def test_pionex_wrong_base_asset_fails_closed(self):
+        a=fixture()
+        payload=a["records"][0]["parsed_json"]
+        payload["data"]["symbols"][0]["baseCurrency"]="ETH"
+        a["records"][0]=rec("BTC_USDT","pionex",payload)
+        market=evaluate_batch(a)["markets"][0]
+        self.assertEqual(market["dimension_status"]["pionex_spot_availability"],"FAIL")
+        self.assertTrue(any("baseCurrency/quoteCurrency" in reason for reason in market["reasons"]))
+
+    def test_pionex_non_spot_and_disabled_markets_fail(self):
+        for field, value in (("type","MARGIN"),("enable",False)):
+            with self.subTest(field=field):
+                a=fixture()
+                payload=a["records"][0]["parsed_json"]
+                payload["data"]["symbols"][0][field]=value
+                a["records"][0]=rec("BTC_USDT","pionex",payload)
+                market=evaluate_batch(a)["markets"][0]
+                self.assertEqual(market["dimension_status"]["pionex_spot_availability"],"FAIL")
+
+    def test_binance_missing_identity_field_is_indeterminate(self):
+        for field in ("baseAsset", "quoteAsset", "status", "isSpotTradingAllowed"):
+            with self.subTest(field=field):
+                a=fixture()
+                payload=a["records"][1]["parsed_json"]
+                payload["symbols"][0].pop(field)
+                a["records"][1]=rec("BTC_USDT","binance_exchange_info",payload)
+                market=evaluate_batch(a)["markets"][0]
+                self.assertEqual(market["dimension_status"]["binance_spot_market"],"INDETERMINATE")
+                self.assertTrue(any("missing or invalid" in reason for reason in market["reasons"]))
+
+    def test_binance_non_trading_or_spot_disabled_fails(self):
+        for field, value in (("status","BREAK"),("isSpotTradingAllowed",False)):
+            with self.subTest(field=field):
+                a=fixture()
+                payload=a["records"][1]["parsed_json"]
+                payload["symbols"][0][field]=value
+                a["records"][1]=rec("BTC_USDT","binance_exchange_info",payload)
+                market=evaluate_batch(a)["markets"][0]
+                self.assertEqual(market["dimension_status"]["binance_spot_market"],"FAIL")
+
     def test_duplicate_provider_record_rejected(self):
         a=fixture(); a["records"].append(a["records"][0])
         with self.assertRaises(ValueError): evaluate_batch(a)
