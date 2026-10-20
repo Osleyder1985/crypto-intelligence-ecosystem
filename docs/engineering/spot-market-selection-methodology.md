@@ -92,7 +92,7 @@ Para mejor bid (b) y mejor ask (a), válidos y positivos:
 \text{spread}_{bps} = \frac{a-b}{\text{mid}}\times 10{,}000
 ]
 
-Si falta bid/ask, el precio es no positivo, el libro está cruzado ((b>a)) o el snapshot no supera controles de calidad, la métrica no pasa a cero: se marca inválida o indeterminada con razón explícita. Si (a=b), el spread matemático es cero, pero el registro debe conservar esa observación y revisar la calidad del snapshot.
+Si falta bid/ask, el precio o la cantidad no son positivos/finitos, hay niveles duplicados, el libro está desordenado o el snapshot no supera controles de calidad, la métrica no se calcula como válida: se marca `INDETERMINATE` con razón explícita. El libro cruzado (`best_bid > best_ask`) y el **libro bloqueado** (`best_bid == best_ask`) se rechazan como anomalías en el evaluador de capturas multipar; no se publica un spread válido (ni se interpreta el bloqueo como spread cero aceptable). La política es determinista y solo debe cambiarse mediante revisión documentada y pruebas.
 
 ### 5.3 Profundidad
 
