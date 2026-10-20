@@ -150,6 +150,37 @@ class BinanceReaderTests(unittest.TestCase):
         )
         self.assertEqual(reader.fetch_spot_symbol_status("BTCUSDT")["availability_status"], "unavailable")
 
+    def test_market_snapshot_joins_exact_symbol_metadata_and_preserves_both_hashes(self) -> None:
+        calls = []
+        def fake_get(url, timeout):
+            calls.append(url)
+            return exchange_info_payload() if "exchangeInfo" in url else depth_payload()
+        reader = binance_public.BinancePublicSpotReader(
+            http_get=fake_get, clock=lambda: "2026-10-19T12:00:00Z"
+        )
+        result = reader.fetch_market_snapshot("BTCUSDT")
+        observation = result["observation"]
+        self.assertEqual(result["availability"]["availability_status"], "confirmed")
+        self.assertEqual(observation["base_asset"], "BTC")
+        self.assertEqual(observation["quote_asset"], "USDT")
+        self.assertEqual(observation["availability_status"], "confirmed")
+        self.assertEqual(observation["metadata_payload_sha256"], hashlib.sha256(exchange_info_payload()).hexdigest())
+        self.assertEqual(observation["payload_sha256"], hashlib.sha256(depth_payload()).hexdigest())
+        self.assertEqual(observation["quality_status"], "INDETERMINATE")
+        self.assertEqual(data_contract.validate_observation(observation), [])
+        self.assertEqual(len(calls), 2)
+
+    def test_unavailable_symbol_does_not_fetch_order_book(self) -> None:
+        calls = []
+        reader = binance_public.BinancePublicSpotReader(
+            http_get=lambda url, timeout: calls.append(url) or b'{"symbols":[]}',
+            clock=lambda: "2026-10-19T12:00:00Z",
+        )
+        result = reader.fetch_market_snapshot("BTCUSDT")
+        self.assertEqual(result["availability"]["availability_status"], "unavailable")
+        self.assertIsNone(result["observation"])
+        self.assertEqual(len(calls), 1)
+
     def test_reader_has_no_order_submission_method(self) -> None:
         self.assertFalse(hasattr(binance_public.BinancePublicSpotReader, "place_order"))
         self.assertFalse(hasattr(binance_public.BinancePublicSpotReader, "create_order"))
