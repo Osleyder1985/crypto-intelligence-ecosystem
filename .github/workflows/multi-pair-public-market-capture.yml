@@ -1,0 +1,69 @@
+name: Multi-pair public market capture (read-only)
+
+on:
+  pull_request:
+    paths:
+      - "scripts/market_selection/capture_public_market_batch.py"
+      - "tests/market_selection/test_capture_public_market_batch.py"
+      - ".github/workflows/multi-pair-public-market-capture.yml"
+      - "docs/engineering/multi-pair-public-market-capture.md"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  offline-tests:
+    name: Test multi-pair capture offline
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Run unit tests
+        run: python -m unittest discover -s tests/market_selection -p "test_capture_public_market_batch.py" -v
+
+  live-capture:
+    name: Capture bounded public market universe
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Capture three spot pairs
+        run: python scripts/market_selection/capture_public_market_batch.py
+      - name: Validate batch structure and preserve evidence
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          artifact = json.loads(Path("artifacts/public-market-capture-batch.json").read_text(encoding="utf-8"))
+          assert artifact["schema_version"] == "public-market-capture-batch-v1"
+          assert artifact["expected_record_count"] == 9
+          assert artifact["actual_record_count"] == 9
+          assert len(artifact["universe"]) == 3
+          assert len({item["pionex_symbol"] for item in artifact["universe"]}) == 3
+          print(json.dumps({
+              "overall_status": artifact["overall_status"],
+              "expected_record_count": artifact["expected_record_count"],
+              "actual_record_count": artifact["actual_record_count"],
+              "markets": artifact["universe"],
+              "records": [
+                  {"market_id": r["market_id"], "provider": r["provider"],
+                   "capture_status": r["capture_status"], "http_status": r["http_status"]}
+                  for r in artifact["records"]
+              ],
+          }, indent=2))
+          PY
+      - name: Upload captured evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: public-market-capture-batch-${{ github.run_id }}-${{ github.run_attempt }}
+          path: artifacts/public-market-capture-batch.json
+          if-no-files-found: error
+          retention-days: 14
