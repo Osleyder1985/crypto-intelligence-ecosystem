@@ -12,6 +12,9 @@ REQUIRED_CONFIG = (
     "order_size_base",
     "max_slippage_bps",
     "critical_dimensions",
+    "config_approval_status",
+    "config_version",
+    "config_approval_ref",
 )
 DIMENSIONS = ("market_type", "spread", "depth", "slippage", "availability")
 
@@ -183,7 +186,17 @@ def evaluate_market(observation: dict[str, Any], config: dict[str, Any]) -> dict
     valid_critical = isinstance(critical, list) and bool(critical) and all(
         isinstance(item, str) and item in states for item in critical
     )
-    if not valid_critical:
+    approval_valid = (
+        config.get("config_approval_status") == "approved"
+        and isinstance(config.get("config_version"), str)
+        and bool(config["config_version"].strip())
+        and isinstance(config.get("config_approval_ref"), str)
+        and bool(config["config_approval_ref"].strip())
+    )
+    if not approval_valid:
+        reasons.append("configuration approval status/version/reference is missing or not approved")
+        decision = "INDETERMINATE"
+    elif not valid_critical:
         reasons.append("critical_dimensions must be an approved non-empty list of known dimensions")
         decision = "INDETERMINATE"
     elif missing_config or any(states[key] in {"INDETERMINATE", "NOT_RUN"} for key in critical):
