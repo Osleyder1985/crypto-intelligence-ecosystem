@@ -3,7 +3,10 @@ from __future__ import annotations
 import argparse, base64, hashlib, json, math
 from pathlib import Path
 from typing import Any
-from selector import depth_quote, estimate_slippage_bps, spread_bps
+try:
+    from .selector import depth_quote, estimate_slippage_bps, spread_bps
+except ImportError:  # Support direct CLI execution from this directory.
+    from selector import depth_quote, estimate_slippage_bps, spread_bps
 
 SCHEMA = "public-market-batch-evaluation-v1"
 PROVIDERS = ("pionex", "binance_exchange_info", "binance_depth")
