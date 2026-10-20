@@ -94,7 +94,7 @@ Uso desde la raíz del repositorio:
 
 ```bash
 python scripts/quality/validate_readiness_manifest.py ruta/al/manifiesto.json
-python -m unittest tests.quality.test_validate_readiness_manifest -v
+python -m unittest discover -s tests/quality -p 'test_*.py' -v
 ```
 
 El manifiesto debe incluir el identificador del expediente, versión y SHA, entorno, fecha UTC, roles responsables, las nueve puertas obligatorias y riesgos residuales. Los estados admitidos son `NOT_RUN`, `PASS`, `FAIL` e `INDETERMINATE`. Cada puerta en `PASS` requiere resultado observado, referencia de evidencia y fecha de ejecución; un riesgo crítico/alto sin excepción aprobada se rechaza.
