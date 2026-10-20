@@ -54,7 +54,10 @@ def evaluate_batch(artifact: dict[str, Any], config: dict[str, Any] | None = Non
         status = {"capture_integrity":"PASS", "pionex_spot_availability":"INDETERMINATE",
                   "binance_spot_market":"INDETERMINATE", "spread":"NOT_RUN", "depth":"NOT_RUN",
                   "slippage":"NOT_RUN", "source_freshness":"INDETERMINATE", "fees":"INDETERMINATE"}
-        metrics, reasons = {}, []
+        metrics, reasons = {}, [
+            "Source-event freshness is INDETERMINATE: the captured Binance depth payload has no source event timestamp; capture time is not a substitute.",
+            "Trading fees and total execution cost are INDETERMINATE: no verified account-applicable official fee schedule is included in this artifact.",
+        ]
         pdata = pionex.get("data")
         syms = pdata.get("symbols") if isinstance(pdata, dict) else None
         matches = [s for s in syms if isinstance(s, dict) and s.get("symbol") == market] if isinstance(syms, list) else []
