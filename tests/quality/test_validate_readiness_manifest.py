@@ -54,6 +54,36 @@ class ReadinessManifestTests(unittest.TestCase):
         manifest["residual_risks"] = [{"severity": "high", "status": "open"}]
         self.assertTrue(any("sin excepción aprobada" in e for e in validate_manifest(manifest)))
 
+    def test_high_risk_exception_requires_approver_justification_and_utc_expiry(self):
+        manifest = valid_manifest()
+        manifest["residual_risks"] = [{
+            "severity": "HIGH",
+            "status": "approved_exception",
+            "approved_by": "release-authority",
+            "justification": "temporary documented mitigation",
+            "expires_at_utc": "2026-12-01T00:00:00Z",
+        }]
+        self.assertEqual(validate_manifest(manifest), [])
+
+    def test_high_risk_exception_without_approval_evidence_is_rejected(self):
+        manifest = valid_manifest()
+        manifest["residual_risks"] = [{
+            "severity": "High",
+            "status": "approved_exception",
+        }]
+        self.assertTrue(any("excepción aprobada completa" in e for e in validate_manifest(manifest)))
+
+    def test_high_risk_exception_requires_utc_expiry(self):
+        manifest = valid_manifest()
+        manifest["residual_risks"] = [{
+            "severity": "critical",
+            "status": "approved_exception",
+            "approved_by": "release-authority",
+            "justification": "temporary documented mitigation",
+            "expires_at_utc": "2026-12-01T02:00:00+02:00",
+        }]
+        self.assertTrue(any("expires_at_utc debe ser ISO 8601 UTC" in e for e in validate_manifest(manifest)))
+
     def test_non_object_root_is_rejected(self):
         self.assertTrue(validate_manifest([]))
 
