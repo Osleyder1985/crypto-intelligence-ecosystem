@@ -126,14 +126,14 @@ class BatchEvaluatorTests(unittest.TestCase):
         self.assertEqual(market["dimension_status"]["spread"],"INDETERMINATE")
         self.assertTrue(any("invalid book level" in reason for reason in market["reasons"]))
 
-    def test_pionex_quote_identity_mismatch_is_indeterminate(self):
+    def test_pionex_quote_identity_mismatch_fails_closed(self):
         a=fixture()
         payload=a["records"][0]["parsed_json"]
         payload["data"]["symbols"][0]["quoteCurrency"]="BTC"
         a["records"][0]=rec("BTC_USDT","pionex",payload)
         market=evaluate_batch(a)["markets"][0]
-        self.assertEqual(market["dimension_status"]["pionex_spot_availability"],"INDETERMINATE")
-        self.assertTrue(any("Pionex symbol fields" in reason for reason in market["reasons"]))
+        self.assertEqual(market["dimension_status"]["pionex_spot_availability"],"FAIL")
+        self.assertTrue(any("baseCurrency/quoteCurrency" in reason for reason in market["reasons"]))
 
     def test_binance_quote_identity_mismatch_fails_closed(self):
         a=fixture()
