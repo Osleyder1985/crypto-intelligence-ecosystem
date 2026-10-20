@@ -2,9 +2,6 @@ name: Public market API capture (read-only)
 
 on:
   pull_request:
-    paths:
-      - "scripts/market_selection/capture_public_market_data.py"
-      - ".github/workflows/public-market-capture.yml"
   workflow_dispatch:
 
 permissions:
@@ -12,7 +9,7 @@ permissions:
 
 jobs:
   capture-public-market-data:
-    name: Capture public Pionex and Binance data
+    name: Capture bounded public market universe
     runs-on: ubuntu-latest
     timeout-minutes: 3
     steps:
