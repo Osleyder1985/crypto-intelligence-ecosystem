@@ -62,8 +62,13 @@ def request_capture(provider: str, url: str) -> dict[str, object]:
             record["error_type"] = "UnexpectedHTTPStatus"
             record["error_message"] = f"expected HTTP 200, received {status}"
             return record
+        if not isinstance(parsed, dict):
+            record["error_type"] = "InvalidResponseSchema"
+            record["error_message"] = "top-level JSON value must be an object"
+            return record
         if provider == "pionex":
-            symbols = parsed.get("data", {}).get("symbols", []) if isinstance(parsed, dict) else []
+            data = parsed.get("data")
+            symbols = data.get("symbols", []) if isinstance(data, dict) else []
             exact = [item for item in symbols if isinstance(item, dict) and item.get("symbol") == "BTC_USDT"]
             record["summary"] = {
                 "result": parsed.get("result") if isinstance(parsed, dict) else None,
@@ -74,7 +79,7 @@ def request_capture(provider: str, url: str) -> dict[str, object]:
                     "confirmed" if len(exact) == 1 and exact[0].get("type") == "SPOT"
                     and exact[0].get("baseCurrency") == "BTC" and exact[0].get("quoteCurrency") == "USDT"
                     and exact[0].get("enable") is True else
-                    "unavailable" if len(exact) == 0 or (len(exact) == 1 and exact[0].get("enable") is not True)
+                    "unavailable" if len(exact) == 0 or (len(exact) == 1 and (exact[0].get("type") != "SPOT" or exact[0].get("enable") is not True))
                     else "indeterminate"
                 ),
             }
