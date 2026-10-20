@@ -41,6 +41,9 @@ def _levels(value: Any, side: str) -> list[tuple[float, float]]:
         if not isinstance(level, dict) or not _positive(level.get("price")) or not _positive(level.get("quantity")):
             raise ValueError(f"{side}[{index}] requires finite positive price and quantity")
         result.append((float(level["price"]), float(level["quantity"])))
+    prices = [price for price, _ in result]
+    if len(prices) != len(set(prices)):
+        raise ValueError(f"{side} order book contains duplicate price levels")
     return sorted(result, key=lambda item: item[0], reverse=(side == "bids"))
 
 
@@ -61,7 +64,10 @@ def depth_quote(levels: list[dict[str, Any]], mid: float, band_bps: float, side:
     parsed = _levels(levels, side)
     lower = mid * (1.0 - band_bps / 10_000.0)
     upper = mid * (1.0 + band_bps / 10_000.0)
-    return sum(price * quantity for price, quantity in parsed if lower <= price <= upper)
+    total = sum(price * quantity for price, quantity in parsed if lower <= price <= upper)
+    if not math.isfinite(total):
+        raise ValueError("computed depth is non-finite")
+    return total
 
 
 def estimate_slippage_bps(
