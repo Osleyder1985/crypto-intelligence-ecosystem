@@ -4,7 +4,9 @@ on:
   pull_request:
     paths:
       - "scripts/market_selection/capture_public_market_batch.py"
+      - "scripts/market_selection/evaluate_capture_batch.py"
       - "tests/market_selection/test_capture_public_market_batch.py"
+      - "tests/market_selection/test_evaluate_capture_batch.py"
       - ".github/workflows/multi-pair-public-market-capture.yml"
       - "docs/engineering/multi-pair-public-market-capture.md"
   workflow_dispatch:
@@ -14,7 +16,7 @@ permissions:
 
 jobs:
   offline-tests:
-    name: Test multi-pair capture offline
+    name: Test multi-pair capture and evaluation offline
     runs-on: ubuntu-latest
     timeout-minutes: 3
     steps:
@@ -23,10 +25,10 @@ jobs:
         with:
           python-version: "3.12"
       - name: Run unit tests
-        run: python -m unittest discover -s tests/market_selection -p "test_capture_public_market_batch.py" -v
+        run: python -m unittest discover -s tests/market_selection -p "test_*batch.py" -v
 
   live-capture:
-    name: Capture bounded public market universe
+    name: Capture and evaluate bounded public market universe
     runs-on: ubuntu-latest
     timeout-minutes: 4
     steps:
@@ -36,34 +38,46 @@ jobs:
           python-version: "3.12"
       - name: Capture three spot pairs
         run: python scripts/market_selection/capture_public_market_batch.py
-      - name: Validate batch structure and preserve evidence
+      - name: Validate batch structure
         run: |
           python - <<'PY'
           import json
           from pathlib import Path
           artifact = json.loads(Path("artifacts/public-market-capture-batch.json").read_text(encoding="utf-8"))
           assert artifact["schema_version"] == "public-market-capture-batch-v1"
-          assert artifact["expected_record_count"] == 9
-          assert artifact["actual_record_count"] == 9
+          assert artifact["overall_status"] == "PASS"
+          assert artifact["expected_record_count"] == artifact["actual_record_count"] == 9
           assert len(artifact["universe"]) == 3
           assert len({item["pionex_symbol"] for item in artifact["universe"]}) == 3
-          print(json.dumps({
-              "overall_status": artifact["overall_status"],
-              "expected_record_count": artifact["expected_record_count"],
-              "actual_record_count": artifact["actual_record_count"],
-              "markets": artifact["universe"],
-              "records": [
-                  {"market_id": r["market_id"], "provider": r["provider"],
-                   "capture_status": r["capture_status"], "http_status": r["http_status"]}
-                  for r in artifact["records"]
-              ],
-          }, indent=2))
+          print(json.dumps({"overall_status": artifact["overall_status"], "markets": artifact["universe"]}, indent=2))
           PY
-      - name: Upload captured evidence
+      - name: Evaluate batch twice and compare outputs
+        run: |
+          set -euo pipefail
+          python scripts/market_selection/evaluate_capture_batch.py --artifact artifacts/public-market-capture-batch.json --output artifacts/batch-evaluation-1.json
+          python scripts/market_selection/evaluate_capture_batch.py --artifact artifacts/public-market-capture-batch.json --output artifacts/batch-evaluation-2.json
+          cmp --silent artifacts/batch-evaluation-1.json artifacts/batch-evaluation-2.json
+          cat > artifacts/scenario.json <<'JSON'
+          {"max_spread_bps":5,"depth_band_bps":10,"min_depth_quote":10000,"order_size_base":0.01,"max_slippage_bps":10}
+          JSON
+          python scripts/market_selection/evaluate_capture_batch.py --artifact artifacts/public-market-capture-batch.json --config artifacts/scenario.json --output artifacts/scenario-evaluation-1.json
+          python scripts/market_selection/evaluate_capture_batch.py --artifact artifacts/public-market-capture-batch.json --config artifacts/scenario.json --output artifacts/scenario-evaluation-2.json
+          cmp --silent artifacts/scenario-evaluation-1.json artifacts/scenario-evaluation-2.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          result=json.loads(Path("artifacts/scenario-evaluation-1.json").read_text(encoding="utf-8"))
+          assert result["markets_evaluated"] == 3 and result["decision_status"] == "INDETERMINATE"
+          assert result["orders_submitted"] is False and result["network_requests_made"] is False
+          assert result["config_approved"] is False
+          assert all(m["dimension_status"]["capture_integrity"] == "PASS" for m in result["markets"])
+          print(json.dumps({"markets_evaluated":result["markets_evaluated"],"decision_status":result["decision_status"],"markets":[{"market_id":m["market_id"],"dimension_status":m["dimension_status"],"metrics":m["metrics"]} for m in result["markets"]]},indent=2,sort_keys=True))
+          PY
+      - name: Upload capture and evaluation evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: public-market-capture-batch-${{ github.run_id }}-${{ github.run_attempt }}
-          path: artifacts/public-market-capture-batch.json
+          path: artifacts/
           if-no-files-found: error
           retention-days: 14
