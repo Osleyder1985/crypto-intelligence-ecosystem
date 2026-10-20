@@ -1,6 +1,4 @@
 import unittest
-from datetime import datetime, timezone
-
 from scripts.quality.validate_readiness_manifest import REQUIRED_GATES, validate_manifest
 
 
@@ -12,7 +10,7 @@ def valid_manifest():
         "environment": "isolated-test-environment",
         "executed_at_utc": "2026-10-20T12:00:00Z",
         "executor": "test-operator-role",
-        "independent_reviewer": "reviewer-role-pending-actual-review",
+        "independent_reviewer": "reviewer-role-identified",
         "risk_acceptance_authority": "release-authority-role",
         "decision": "NOT_READY",
         "gates": [
