@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import math
+from datetime import datetime
 from typing import Any
 
 VALID_STATES = {"PASS", "FAIL", "INDETERMINATE", "NOT_APPLICABLE", "NOT_RUN"}
@@ -15,8 +16,12 @@ REQUIRED_CONFIG = (
     "config_approval_status",
     "config_version",
     "config_approval_ref",
+    "max_snapshot_age_seconds",
+    "max_source_lag_seconds",
+    "maker_fee_bps",
+    "taker_fee_bps",
 )
-DIMENSIONS = ("market_type", "spread", "depth", "slippage", "availability")
+DIMENSIONS = ("market_type", "spread", "depth", "slippage", "availability", "freshness", "fees")
 
 
 def _number(value: Any) -> bool:
@@ -100,6 +105,39 @@ def estimate_slippage_bps(
     }
 
 
+
+def _timestamp(value: Any, field: str) -> datetime:
+    """Parse an ISO-8601 timestamp and require an explicit timezone."""
+    if not isinstance(value, str) or not value.strip():
+        raise ValueError(f"{field} must be a non-empty ISO-8601 timestamp")
+    try:
+        parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+    except ValueError as exc:
+        raise ValueError(f"{field} is not a valid ISO-8601 timestamp") from exc
+    if parsed.tzinfo is None or parsed.utcoffset() is None:
+        raise ValueError(f"{field} must include an explicit timezone")
+    return parsed
+
+
+def evaluate_freshness(observation: dict[str, Any], config: dict[str, Any]) -> dict[str, Any]:
+    """Check source-to-capture lag and capture age against explicit configured limits."""
+    required = ("source_timestamp_utc", "captured_at_utc", "evaluation_time_utc")
+    if any(not observation.get(key) for key in required):
+        raise ValueError("source_timestamp_utc, captured_at_utc and evaluation_time_utc are required")
+    max_age = config.get("max_snapshot_age_seconds")
+    max_lag = config.get("max_source_lag_seconds")
+    if not _number(max_age) or max_age < 0 or not _number(max_lag) or max_lag < 0:
+        raise ValueError("freshness limits must be finite and non-negative")
+    source = _timestamp(observation["source_timestamp_utc"], "source_timestamp_utc")
+    captured = _timestamp(observation["captured_at_utc"], "captured_at_utc")
+    evaluated = _timestamp(observation["evaluation_time_utc"], "evaluation_time_utc")
+    source_lag = (captured - source).total_seconds()
+    snapshot_age = (evaluated - captured).total_seconds()
+    if source_lag < 0 or snapshot_age < 0:
+        raise ValueError("timestamps are inconsistent or lie in the future")
+    return {"source_lag_seconds": source_lag, "snapshot_age_seconds": snapshot_age,
+            "status": "PASS" if source_lag <= max_lag and snapshot_age <= max_age else "FAIL"}
+
 def evaluate_market(observation: dict[str, Any], config: dict[str, Any]) -> dict[str, Any]:
     """Evaluate one synthetic/normalized snapshot. Missing thresholds never default silently."""
     if not isinstance(observation, dict) or not isinstance(config, dict):
@@ -169,6 +207,29 @@ def evaluate_market(observation: dict[str, Any], config: dict[str, Any]) -> dict
         for dimension in ("spread", "depth", "slippage"):
             states[dimension] = "INDETERMINATE"
         reasons.append(f"order book invalid or incomplete: {exc}")
+
+    try:
+        freshness = evaluate_freshness(observation, config)
+        metrics["freshness"] = freshness
+        states["freshness"] = freshness["status"]
+        if freshness["status"] == "FAIL":
+            reasons.append("snapshot freshness/source-lag limits exceeded")
+    except (KeyError, TypeError, ValueError) as exc:
+        states["freshness"] = "INDETERMINATE"
+        reasons.append(f"freshness cannot be established: {exc}")
+
+    maker_fee = config.get("maker_fee_bps")
+    taker_fee = config.get("taker_fee_bps")
+    if _number(maker_fee) and maker_fee >= 0 and _number(taker_fee) and taker_fee >= 0:
+        metrics["fees"] = {"maker_fee_bps_per_side": float(maker_fee),
+                            "taker_fee_bps_per_side": float(taker_fee),
+                            "taker_round_trip_fee_bps": float(taker_fee) * 2.0,
+                            "note": "Fee estimate only; excludes withdrawal/network fees and account-specific discounts unless configured separately."}
+        states["fees"] = "PASS"
+    else:
+        states["fees"] = "INDETERMINATE"
+        reasons.append("maker_fee_bps and taker_fee_bps must be explicitly configured as finite non-negative values")
+
 
     availability = observation.get("availability_status")
     if availability == "confirmed":
