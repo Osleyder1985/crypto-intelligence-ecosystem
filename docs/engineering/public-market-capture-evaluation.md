@@ -62,7 +62,7 @@ La decisión global permanece `INDETERMINATE`: no existe una política de decisi
 
 ### Pruebas automatizadas
 
-Workflow [market-capture-evaluation, ejecución 39365873626](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/actions/runs/39365873626): estado `completed / success`; el log registró 60 pruebas y resultado `OK`. Estas pruebas son offline y usan fixtures, por lo que no deben describirse como una ejecución end-to-end del evaluador sobre la captura live.
+Workflow de pruebas offline [39365873626](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/actions/runs/39365873626): `completed / success`, 60 pruebas, resultado `OK`. Estas pruebas usan fixtures; la validación live E2E separada está documentada a continuación.
 
 ### Captura live de referencia
 
@@ -75,7 +75,13 @@ Workflow [public-market-capture, ejecución 39365509886](https://github.com/Osle
 - Binance: `BTCUSDT`, estado `TRADING`, spot permitido en la respuesta capturada.
 - Binance depth: 20 niveles bid y 20 ask; `lastUpdateId` disponible, sin timestamp de evento.
 
-Una comprobación independiente de los bytes descargados confirmó los hashes, los tamaños, la coincidencia entre JSON preservado e interpretado, y reprodujo un spread aproximado de `0.001219 bps` para ese snapshot. Esta comprobación independiente no sustituye a registrar una ejecución del CLI del evaluador sobre ese artefacto; esa ejecución debe hacerse y conservarse como evidencia separada antes de declarar el flujo E2E completado.
+### Ejecución E2E del evaluador sobre la captura live
+
+Workflow [market-capture-evaluation, ejecución 39366725132](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/actions/runs/39366725132), commit `6c612b9c37cb7afdae17447b0b379c69fce7eb26`: `completed / success`. El workflow descargó el artefacto live desde GitHub, verificó el SHA-256 del ZIP, ejecutó el CLI `evaluate_capture.py` dos veces sobre el mismo JSON y comparó los informes byte a byte; ambos fueron idénticos. La ejecución también comprobó explícitamente que la decisión global sigue `INDETERMINATE`, la integridad y disponibilidad spot pasan, y no hubo solicitudes de red ni órdenes durante la evaluación.
+
+El log reporta `spread_bps = 0.0012191661445804635`, mejor bid `82023.27`, mejor ask `82023.28`, 20 niveles por lado, `source_freshness = INDETERMINATE`, `fees = INDETERMINATE`, y `depth`/`spread`/`slippage = NOT_RUN` cuando no se proporcionan parámetros de escenario. Informe y captura fuente conservados en el artefacto [live-capture-evaluation-report](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/actions/runs/39366725132/artifacts/12238944233), SHA-256 del ZIP de informe: `785ec198cb42e74063b9122fad966c8d3772955517bdb1d75e2257e2584dd6e8` (retención de 14 días desde su creación).
+
+Esta prueba demuestra ejecución E2E reproducible sobre la captura archivada específica; no demuestra que las métricas predigan rentabilidad ni que los umbrales sean adecuados para operar.
 
 ## Siguiente criterio de aceptación
 
