@@ -41,7 +41,7 @@ class ContractTests(unittest.TestCase):
             "quote_asset": "USDT",
             "source_kind": "order_book_snapshot",
             "source_ref": "https://api.binance.com/api/v3/depth?symbol=BTCUSDT&limit=100",
-            "source_timestamp_utc": None,
+            "source_timestamp_utc": "2026-10-19T11:59:59Z",
             "captured_at_utc": "2026-10-19T12:00:00Z",
             "payload_sha256": "a" * 64,
             "parser_version": "test-v1",
