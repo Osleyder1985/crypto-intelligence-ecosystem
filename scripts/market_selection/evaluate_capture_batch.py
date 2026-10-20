@@ -72,8 +72,13 @@ def evaluate_batch(artifact: dict[str, Any], config: dict[str, Any] | None = Non
         bmatches = [s for s in bsymbols if isinstance(s, dict) and s.get("symbol") == bsym] if isinstance(bsymbols, list) else []
         if len(bmatches) == 1:
             s = bmatches[0]
-            if s.get("status") == "TRADING" and s.get("isSpotTradingAllowed") is True: status["binance_spot_market"] = "PASS"
-            elif s.get("status") != "TRADING" or s.get("isSpotTradingAllowed") is False: status["binance_spot_market"] = "FAIL"
+            if s.get("baseAsset") != base or s.get("quoteAsset") != quote:
+                status["binance_spot_market"] = "FAIL"
+                reasons.append("Binance baseAsset/quoteAsset do not match the declared market identity")
+            elif s.get("status") == "TRADING" and s.get("isSpotTradingAllowed") is True:
+                status["binance_spot_market"] = "PASS"
+            elif s.get("status") != "TRADING" or s.get("isSpotTradingAllowed") is False:
+                status["binance_spot_market"] = "FAIL"
         else:
             status["binance_spot_market"] = "FAIL" if not bmatches else "INDETERMINATE"
             reasons.append("Binance did not return exactly one matching symbol")
@@ -81,14 +86,22 @@ def evaluate_batch(artifact: dict[str, Any], config: dict[str, Any] | None = Non
             def levels(raw, name):
                 if not isinstance(raw, list) or not raw: raise ValueError(f"{name} side is empty")
                 out=[]
+                seen_prices=set()
+                previous=None
                 for item in raw:
-                    if not isinstance(item, list) or len(item)<2: raise ValueError("malformed book level")
+                    if not isinstance(item, list) or len(item) != 2: raise ValueError("malformed book level")
                     price, qty=float(item[0]),float(item[1])
                     if not math.isfinite(price) or not math.isfinite(qty) or price<=0 or qty<=0: raise ValueError("invalid book level")
+                    if price in seen_prices: raise ValueError(f"{name} side contains duplicate price levels")
+                    if previous is not None and ((name == "bids" and price > previous) or (name == "asks" and price < previous)):
+                        raise ValueError(f"{name} side is not ordered best-price-first")
+                    seen_prices.add(price)
+                    previous=price
                     out.append({"price":price,"quantity":qty})
                 return out
             bids, asks = levels(depth.get("bids"), "bids"), levels(depth.get("asks"), "asks")
             bid, ask = bids[0]["price"], asks[0]["price"]
+            if bid > ask: raise ValueError("book is crossed: best bid exceeds best ask")
             mid=(bid+ask)/2
             spr=spread_bps(bid, ask)
             metrics.update(best_bid=bid,best_ask=ask,mid=mid,spread_bps=spr,bid_levels=len(bids),ask_levels=len(asks))
