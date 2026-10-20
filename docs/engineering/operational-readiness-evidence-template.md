@@ -84,3 +84,19 @@ No se aceptan riesgos críticos por silencio. Las excepciones deben identificar 
 ## 6. Límites de esta plantilla
 
 Esta plantilla organiza la evidencia; no demuestra que las pruebas se hayan ejecutado, no sustituye una revisión de seguridad ni certifica conformidad con ISO u otra norma. La auditoría debe citar artefactos reales y conservar el estado NOT_RUN, FAIL o INDETERMINATE cuando no exista evidencia suficiente.
+
+
+## 7. Validador estructural del manifiesto
+
+Se incorpora `scripts/quality/validate_readiness_manifest.py` para validar un manifiesto JSON de evidencia antes de revisión. La prueba unitaria asociada está en `tests/quality/test_validate_readiness_manifest.py`.
+
+Uso desde la raíz del repositorio:
+
+```bash
+python scripts/quality/validate_readiness_manifest.py ruta/al/manifiesto.json
+python -m unittest tests.quality.test_validate_readiness_manifest -v
+```
+
+El manifiesto debe incluir el identificador del expediente, versión y SHA, entorno, fecha UTC, roles responsables, las nueve puertas obligatorias y riesgos residuales. Los estados admitidos son `NOT_RUN`, `PASS`, `FAIL` e `INDETERMINATE`. Cada puerta en `PASS` requiere resultado observado, referencia de evidencia y fecha de ejecución; un riesgo crítico/alto sin excepción aprobada se rechaza.
+
+El validador aplica reglas estructurales y fail-closed, pero no confirma que los enlaces sean accesibles o auténticos, no ejecuta pruebas de producto y no sustituye la aprobación humana. El estado del producto permanece `NOT_READY` hasta que exista evidencia operativa real revisada.
