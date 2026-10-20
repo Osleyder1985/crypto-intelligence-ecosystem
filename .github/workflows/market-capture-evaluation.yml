@@ -2,12 +2,6 @@ name: Reproducible market capture evaluation
 
 on:
   pull_request:
-    paths:
-      - "scripts/market_selection/evaluate_capture.py"
-      - "scripts/market_selection/selector.py"
-      - "tests/market_selection/**"
-      - "docs/engineering/public-market-capture-evaluation.md"
-      - ".github/workflows/market-capture-evaluation.yml"
   workflow_dispatch:
 
 permissions:
