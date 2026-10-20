@@ -294,3 +294,12 @@ python -m unittest discover -s tests/market_selection -p 'test_*.py' -v
 ```
 
 La ejecución de CI asociada al commit que incorpora estos componentes debe verificarse antes de registrar PASS. El resultado de los tests sintéticos no equivale a una prueba de integración contra Binance ni a validación independiente del contrato.
+
+
+### Evidencia CI de esta ampliación
+
+- Commit de código y corrección del contrato: `62af41bf0161fd15b9d653fb64eabb47960131bc`.
+- [Ejecución del selector #16](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/actions/runs/39364681504): `completed / success`; el log confirma `Ran 39 tests`, incluidas las pruebas nuevas del contrato y del lector público.
+- [Validación de trazabilidad #46](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/actions/runs/39364681509): en curso al redactar esta actualización; no se registra todavía como PASS.
+- La ejecución #15 falló inicialmente en dos pruebas porque la validación de activos desconocidos no coincidía con el estado `INDETERMINATE`. La regla se corrigió en el commit indicado y la ejecución #16 quedó en éxito. Se conserva esta incidencia como evidencia del ciclo de corrección, no se oculta.
+- El éxito de #16 valida fixtures sintéticos y la implementación en CI; **no** acredita una consulta real a Binance, disponibilidad en Pionex, validez de tarifas, rentabilidad ni conformidad ISO.
