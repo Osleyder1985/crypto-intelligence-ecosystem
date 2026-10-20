@@ -1,0 +1,31 @@
+name: Requirements traceability validation
+on:
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  scope:
+    runs-on: ubuntu-latest
+    outputs:
+      applicable: ${{ steps.detect.outputs.applicable }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: detect
+        run: |
+          if [ -f scripts/quality/validate_requirements_catalog.py ] && [ -f tests/quality/test_validate_requirements_catalog.py ]; then echo "applicable=true" >> "$GITHUB_OUTPUT"; else echo "applicable=false" >> "$GITHUB_OUTPUT"; fi
+  validate-requirements:
+    name: Validate requirements catalogue and traceability
+    needs: scope
+    if: needs.scope.outputs.applicable == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Test requirements validator
+        run: python -m unittest discover -s tests/quality -p 'test_*.py' -v
+      - name: Validate requirements catalogue
+        run: python scripts/quality/validate_requirements_catalog.py
