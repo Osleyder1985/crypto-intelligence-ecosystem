@@ -71,6 +71,8 @@ def validate_observation(record: Any) -> list[str]:
             errors.append(f"{key} must be a non-empty string or null")
     if (record["base_asset"] is None or record["quote_asset"] is None) and record["quality_status"] == "VALID":
         errors.append("asset metadata cannot be unknown when quality_status is VALID")
+    if record["source_timestamp_utc"] is None and record["quality_status"] == "VALID":
+        errors.append("source timestamp cannot be unknown when quality_status is VALID")
     if record["market_type"] != "spot":
         errors.append("market_type must be 'spot'")
     if record["quality_status"] not in QUALITY_STATES:
