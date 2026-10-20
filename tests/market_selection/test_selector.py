@@ -31,6 +31,9 @@ BASE_CONFIG = {
     "order_size_base": 1.0,
     "max_slippage_bps": 30.0,
     "critical_dimensions": ["market_type", "spread", "depth", "slippage", "availability"],
+    "config_approval_status": "approved",
+    "config_version": "synthetic-fixture-v1",
+    "config_approval_ref": "TEST-ONLY; not an approved trading baseline",
 }
 
 
@@ -116,6 +119,12 @@ class SpotSelectorTests(unittest.TestCase):
         first = selector.evaluate_market(BASE_OBSERVATION, BASE_CONFIG)
         second = selector.evaluate_market(BASE_OBSERVATION, BASE_CONFIG)
         self.assertEqual(first, second)
+
+    def test_unapproved_configuration_blocks_global_decision(self) -> None:
+        config = dict(BASE_CONFIG, config_approval_status="proposed")
+        result = selector.evaluate_market(BASE_OBSERVATION, config)
+        self.assertEqual(result["decision_status"], "INDETERMINATE")
+        self.assertTrue(any("configuration approval" in reason for reason in result["decision_reasons"]))
 
     def test_bad_critical_dimension_list_blocks_global_decision(self) -> None:
         config = dict(BASE_CONFIG, critical_dimensions=["unknown"])
