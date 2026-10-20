@@ -144,6 +144,15 @@ class BatchEvaluatorTests(unittest.TestCase):
         self.assertEqual(market["dimension_status"]["binance_spot_market"],"FAIL")
         self.assertTrue(any("baseAsset/quoteAsset" in reason for reason in market["reasons"]))
 
+    def test_duplicate_pionex_symbols_are_indeterminate(self):
+        a=fixture()
+        payload=a["records"][0]["parsed_json"]
+        payload["data"]["symbols"].append(dict(payload["data"]["symbols"][0]))
+        a["records"][0]=rec("BTC_USDT","pionex",payload)
+        market=evaluate_batch(a)["markets"][0]
+        self.assertEqual(market["dimension_status"]["pionex_spot_availability"],"INDETERMINATE")
+        self.assertTrue(any("exactly one matching symbol" in reason for reason in market["reasons"]))
+
     def test_duplicate_binance_symbols_are_indeterminate(self):
         a=fixture()
         payload=a["records"][1]["parsed_json"]
