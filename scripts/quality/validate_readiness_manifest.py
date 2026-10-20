@@ -32,9 +32,13 @@ REQUIRED_TOP_LEVEL = {
 
 
 def _nonempty(value: Any) -> bool:
-    return isinstance(value, str) and bool(value.strip()) and value.strip().lower() not in {
-        "pending", "pendiente", "unknown", "desconocido", "n/a"
-    }
+    return (
+        isinstance(value, str)
+        and bool(value.strip())
+        and not any(token in value.strip().lower() for token in (
+            "pending", "pendiente", "unknown", "desconocido", "n/a"
+        ))
+    )
 
 
 def validate_manifest(data: Any) -> list[str]:
