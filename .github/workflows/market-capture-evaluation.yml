@@ -64,11 +64,52 @@ jobs:
               "two_runs_identical": True
           }, indent=2, sort_keys=True))
           PY
+      - name: Evaluate explicit non-approved liquidity scenario twice
+        run: |
+          set -euo pipefail
+          cat > scenario.json <<'JSON'
+          {
+            "max_spread_bps": 5,
+            "depth_band_bps": 10,
+            "min_depth_quote": 10000,
+            "order_size_base": 0.01,
+            "max_slippage_bps": 10
+          }
+          JSON
+          python scripts/market_selection/evaluate_capture.py --artifact capture/public-market-capture.json --config scenario.json --output scenario-evaluation-1.json
+          python scripts/market_selection/evaluate_capture.py --artifact capture/public-market-capture.json --config scenario.json --output scenario-evaluation-2.json
+          cmp --silent scenario-evaluation-1.json scenario-evaluation-2.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          result = json.loads(Path("scenario-evaluation-1.json").read_text(encoding="utf-8"))
+          metrics = result["metrics"]
+          assert result["decision_status"] == "INDETERMINATE"
+          assert result["orders_submitted"] is False
+          assert result["network_requests_made"] is False
+          assert "min_side_depth_quote" in metrics
+          assert "buy_execution" in metrics and "sell_execution" in metrics
+          assert result["dimension_status"]["spread"] in {"PASS", "FAIL"}
+          assert result["dimension_status"]["depth"] in {"PASS", "FAIL"}
+          assert result["dimension_status"]["slippage"] in {"PASS", "FAIL", "INDETERMINATE"}
+          print(json.dumps({
+              "scenario_thresholds_approved": False,
+              "decision_status": result["decision_status"],
+              "dimension_status": result["dimension_status"],
+              "depth_band_bps": metrics["depth_band_bps"],
+              "min_side_depth_quote": metrics["min_side_depth_quote"],
+              "buy_execution": metrics["buy_execution"],
+              "sell_execution": metrics["sell_execution"],
+              "two_runs_identical": True
+          }, indent=2, sort_keys=True))
+          PY
       - name: Preserve end-to-end evaluation report
         uses: actions/upload-artifact@v4
         with:
           name: live-capture-evaluation-report
           path: |
             evaluation-1.json
+            scenario.json
+            scenario-evaluation-1.json
             capture/public-market-capture.json
           retention-days: 14
