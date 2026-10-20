@@ -70,6 +70,16 @@ class BatchEvaluatorTests(unittest.TestCase):
         market=evaluate_batch(a)["markets"][0]
         self.assertEqual(market["dimension_status"]["spread"],"INDETERMINATE")
         self.assertTrue(any("crossed" in reason for reason in market["reasons"]))
+    def test_invalid_book_marks_all_book_metrics_indeterminate(self):
+        a=fixture()
+        payload=a["records"][2]["parsed_json"]
+        payload["bids"]=[[ "100.02", "10" ], [ "99.99", "10" ]]
+        a["records"][2]=rec("BTC_USDT","binance_depth",payload)
+        market=evaluate_batch(a,{"depth_band_bps":10,"min_depth_quote":100,"order_size_base":0.1,"max_slippage_bps":10})["markets"][0]
+        self.assertEqual(market["dimension_status"]["spread"],"INDETERMINATE")
+        self.assertEqual(market["dimension_status"]["depth"],"INDETERMINATE")
+        self.assertEqual(market["dimension_status"]["slippage"],"INDETERMINATE")
+
     def test_locked_book_is_indeterminate(self):
         a=fixture()
         payload=a["records"][2]["parsed_json"]
