@@ -1,0 +1,207 @@
+"""Read-only spot market selector prototype; no exchange/API integration."""
+from __future__ import annotations
+
+import math
+from typing import Any
+
+VALID_STATES = {"PASS", "FAIL", "INDETERMINATE", "NOT_APPLICABLE", "NOT_RUN"}
+REQUIRED_CONFIG = (
+    "max_spread_bps",
+    "depth_band_bps",
+    "min_depth_quote",
+    "order_size_base",
+    "max_slippage_bps",
+    "critical_dimensions",
+)
+DIMENSIONS = ("market_type", "spread", "depth", "slippage", "availability")
+
+
+def _number(value: Any) -> bool:
+    return isinstance(value, (int, float)) and not isinstance(value, bool) and math.isfinite(value)
+
+
+def _positive(value: Any) -> bool:
+    return _number(value) and value > 0
+
+
+def _levels(value: Any, side: str) -> list[tuple[float, float]]:
+    """Validate levels represented as {price, quantity}; return price-sorted levels."""
+    if not isinstance(value, list) or not value:
+        raise ValueError(f"{side} order book must be a non-empty list")
+    result: list[tuple[float, float]] = []
+    for index, level in enumerate(value):
+        if not isinstance(level, dict) or not _positive(level.get("price")) or not _positive(level.get("quantity")):
+            raise ValueError(f"{side}[{index}] requires finite positive price and quantity")
+        result.append((float(level["price"]), float(level["quantity"])))
+    return sorted(result, key=lambda item: item[0], reverse=(side == "bids"))
+
+
+def spread_bps(best_bid: float, best_ask: float) -> float:
+    """Return quoted spread in basis points; reject invalid or crossed books."""
+    if not _positive(best_bid) or not _positive(best_ask):
+        raise ValueError("best bid and ask must be finite and positive")
+    if best_bid > best_ask:
+        raise ValueError("crossed order book: best bid exceeds best ask")
+    mid = (best_bid + best_ask) / 2.0
+    return (best_ask - best_bid) / mid * 10_000.0
+
+
+def depth_quote(levels: list[dict[str, Any]], mid: float, band_bps: float, side: str) -> float:
+    """Sum quote notional within a symmetric mid-price band."""
+    if not _positive(mid) or not _number(band_bps) or band_bps < 0:
+        raise ValueError("mid must be positive and band_bps must be finite and non-negative")
+    parsed = _levels(levels, side)
+    lower = mid * (1.0 - band_bps / 10_000.0)
+    upper = mid * (1.0 + band_bps / 10_000.0)
+    return sum(price * quantity for price, quantity in parsed if lower <= price <= upper)
+
+
+def estimate_slippage_bps(
+    levels: list[dict[str, Any]], mid: float, order_size_base: float, side: str
+) -> dict[str, float | None]:
+    """Estimate snapshot VWAP slippage for a base-quantity order; never assume uncovered fills."""
+    if not _positive(mid) or not _positive(order_size_base):
+        raise ValueError("mid and order_size_base must be finite and positive")
+    if side not in {"asks", "bids"}:
+        raise ValueError("side must be 'asks' (buy) or 'bids' (sell)")
+    parsed = _levels(levels, side)
+    remaining = float(order_size_base)
+    filled = 0.0
+    notional = 0.0
+    for price, quantity in parsed:
+        take = min(remaining, quantity)
+        filled += take
+        notional += take * price
+        remaining -= take
+        if remaining <= 1e-12:
+            break
+    vwap = notional / filled if filled > 0 else None
+    if remaining > 1e-12 or vwap is None:
+        return {
+            "requested_base": float(order_size_base),
+            "filled_base": filled,
+            "uncovered_base": max(remaining, 0.0),
+            "vwap": vwap,
+            "slippage_bps": None,
+        }
+    if side == "asks":
+        slippage = (vwap / mid - 1.0) * 10_000.0
+    else:
+        slippage = (1.0 - vwap / mid) * 10_000.0
+    return {
+        "requested_base": float(order_size_base),
+        "filled_base": filled,
+        "uncovered_base": 0.0,
+        "vwap": vwap,
+        "slippage_bps": max(slippage, 0.0),
+    }
+
+
+def evaluate_market(observation: dict[str, Any], config: dict[str, Any]) -> dict[str, Any]:
+    """Evaluate one synthetic/normalized snapshot. Missing thresholds never default silently."""
+    if not isinstance(observation, dict) or not isinstance(config, dict):
+        raise TypeError("observation and config must be dictionaries")
+
+    missing_config = [key for key in REQUIRED_CONFIG if key not in config or config[key] is None]
+    states: dict[str, str] = {dimension: "NOT_RUN" for dimension in DIMENSIONS}
+    metrics: dict[str, Any] = {}
+    reasons: list[str] = []
+
+    market_type = observation.get("market_type")
+    if market_type != "spot":
+        states["market_type"] = "FAIL" if market_type is not None else "INDETERMINATE"
+        reasons.append("market_type must be explicitly 'spot'")
+        return _result(states, metrics, reasons, "FAIL" if states["market_type"] == "FAIL" else "INDETERMINATE")
+
+    states["market_type"] = "PASS"
+    if missing_config:
+        reasons.append("missing required configuration: " + ", ".join(missing_config))
+
+    try:
+        bids = _levels(observation.get("bids"), "bids")
+        asks = _levels(observation.get("asks"), "asks")
+        bid, ask = bids[0][0], asks[0][0]
+        spread = spread_bps(bid, ask)
+        mid = (bid + ask) / 2.0
+        metrics["mid"] = mid
+        metrics["spread_bps"] = spread
+        if bid > ask:
+            raise ValueError("crossed order book")
+        if "max_spread_bps" in config and _number(config["max_spread_bps"]) and config["max_spread_bps"] >= 0:
+            states["spread"] = "PASS" if spread <= config["max_spread_bps"] else "FAIL"
+        else:
+            states["spread"] = "INDETERMINATE"
+            reasons.append("max_spread_bps is missing or invalid")
+        if "depth_band_bps" in config and _number(config["depth_band_bps"]) and config["depth_band_bps"] >= 0:
+            depth_bid = depth_quote(observation["bids"], mid, config["depth_band_bps"], "bids")
+            depth_ask = depth_quote(observation["asks"], mid, config["depth_band_bps"], "asks")
+            metrics["depth_bid_quote"] = depth_bid
+            metrics["depth_ask_quote"] = depth_ask
+            if _positive(config.get("min_depth_quote")):
+                states["depth"] = "PASS" if min(depth_bid, depth_ask) >= config["min_depth_quote"] else "FAIL"
+            else:
+                states["depth"] = "INDETERMINATE"
+                reasons.append("min_depth_quote is missing or invalid")
+        else:
+            states["depth"] = "INDETERMINATE"
+            reasons.append("depth_band_bps is missing or invalid")
+        if _positive(config.get("order_size_base")):
+            buy = estimate_slippage_bps(observation["asks"], mid, config["order_size_base"], "asks")
+            sell = estimate_slippage_bps(observation["bids"], mid, config["order_size_base"], "bids")
+            metrics["buy_execution"] = buy
+            metrics["sell_execution"] = sell
+            max_slippage = config.get("max_slippage_bps")
+            if buy["slippage_bps"] is None or sell["slippage_bps"] is None:
+                states["slippage"] = "INDETERMINATE"
+                reasons.append("order book does not cover the full configured order size")
+            elif _number(max_slippage) and max_slippage >= 0:
+                states["slippage"] = "PASS" if max(buy["slippage_bps"], sell["slippage_bps"]) <= max_slippage else "FAIL"
+            else:
+                states["slippage"] = "INDETERMINATE"
+                reasons.append("max_slippage_bps is missing or invalid")
+        else:
+            states["slippage"] = "INDETERMINATE"
+            reasons.append("order_size_base is missing or invalid")
+    except (KeyError, TypeError, ValueError) as exc:
+        for dimension in ("spread", "depth", "slippage"):
+            states[dimension] = "INDETERMINATE"
+        reasons.append(f"order book invalid or incomplete: {exc}")
+
+    availability = observation.get("availability_status")
+    if availability == "confirmed":
+        states["availability"] = "PASS"
+    elif availability == "unavailable":
+        states["availability"] = "FAIL"
+        reasons.append("target-platform pair availability is confirmed unavailable")
+    else:
+        states["availability"] = "INDETERMINATE"
+        reasons.append("target-platform pair availability is not confirmed")
+
+    if missing_config:
+        reasons.append("global decision blocked until required configuration is complete")
+    critical = config.get("critical_dimensions")
+    valid_critical = isinstance(critical, list) and bool(critical) and all(
+        isinstance(item, str) and item in states for item in critical
+    )
+    if not valid_critical:
+        reasons.append("critical_dimensions must be an approved non-empty list of known dimensions")
+        decision = "INDETERMINATE"
+    elif missing_config or any(states[key] in {"INDETERMINATE", "NOT_RUN"} for key in critical):
+        decision = "INDETERMINATE"
+    elif any(states[key] == "FAIL" for key in critical):
+        decision = "FAIL"
+    else:
+        decision = "PASS"
+    return _result(states, metrics, reasons, decision)
+
+
+def _result(states: dict[str, str], metrics: dict[str, Any], reasons: list[str], decision: str) -> dict[str, Any]:
+    return {
+        "decision_status": decision,
+        "dimension_status": states,
+        "metrics": metrics,
+        "decision_reasons": reasons,
+        "execution_mode": "read_only",
+        "live_data_used": False,
+        "orders_submitted": False,
+    }
