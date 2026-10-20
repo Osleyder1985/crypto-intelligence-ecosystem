@@ -313,6 +313,8 @@ def validate_spot_methodology(content: str) -> list[str]:
         "\\text{spread}_{bps}",
         "\\text{slippage}_{bps}",
         "Los valores faltantes en esta configuración",
+        "libro bloqueado",
+        "best_bid == best_ask",
     )
     for token in required_tokens:
         if token not in content:
