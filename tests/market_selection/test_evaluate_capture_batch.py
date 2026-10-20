@@ -14,7 +14,7 @@ def fixture():
       "universe":[{"pionex_symbol":market,"binance_symbol":"BTCUSDT","base_asset":"BTC","quote_asset":"USDT"}],
       "records":[
         rec(market,"pionex",{"result":True,"data":{"symbols":[{"symbol":market,"type":"SPOT","baseCurrency":"BTC","quoteCurrency":"USDT","enable":True}]}}),
-        rec(market,"binance_exchange_info",{"symbols":[{"symbol":"BTCUSDT","status":"TRADING","isSpotTradingAllowed":True}]}),
+        rec(market,"binance_exchange_info",{"symbols":[{"symbol":"BTCUSDT","status":"TRADING","isSpotTradingAllowed":True,"baseAsset":"BTC","quoteAsset":"USDT"}]}),
         rec(market,"binance_depth",{"bids":[["99.99","10"],["99.98","10"]],"asks":[["100.01","10"],["100.02","10"]],"lastUpdateId":123})]}
 
 class BatchEvaluatorTests(unittest.TestCase):
@@ -34,6 +34,42 @@ class BatchEvaluatorTests(unittest.TestCase):
     def test_tampered_hash_rejected(self):
         a=fixture(); a["records"][0]["response_sha256"]="0"*64
         with self.assertRaises(ValueError): evaluate_batch(a)
+
+    def test_binance_asset_identity_mismatch_fails_closed(self):
+        a=fixture()
+        payload=a["records"][1]["parsed_json"]
+        payload["symbols"][0]["baseAsset"]="ETH"
+        a["records"][1]=rec("BTC_USDT","binance_exchange_info",payload)
+        market=evaluate_batch(a)["markets"][0]
+        self.assertEqual(market["dimension_status"]["binance_spot_market"],"FAIL")
+        self.assertTrue(any("baseAsset/quoteAsset" in reason for reason in market["reasons"]))
+
+    def test_duplicate_book_price_level_is_indeterminate(self):
+        a=fixture()
+        payload=a["records"][2]["parsed_json"]
+        payload["bids"]=[[ "99.99", "10" ], [ "99.99", "7" ]]
+        a["records"][2]=rec("BTC_USDT","binance_depth",payload)
+        market=evaluate_batch(a)["markets"][0]
+        self.assertEqual(market["dimension_status"]["spread"],"INDETERMINATE")
+        self.assertTrue(any("duplicate price" in reason for reason in market["reasons"]))
+
+    def test_unsorted_book_is_not_silently_normalized(self):
+        a=fixture()
+        payload=a["records"][2]["parsed_json"]
+        payload["bids"]=[[ "99.98", "10" ], [ "99.99", "10" ]]
+        a["records"][2]=rec("BTC_USDT","binance_depth",payload)
+        market=evaluate_batch(a)["markets"][0]
+        self.assertEqual(market["dimension_status"]["spread"],"INDETERMINATE")
+        self.assertTrue(any("not ordered" in reason for reason in market["reasons"]))
+
+    def test_crossed_book_is_indeterminate(self):
+        a=fixture()
+        payload=a["records"][2]["parsed_json"]
+        payload["bids"]=[[ "100.02", "10" ], [ "99.99", "10" ]]
+        a["records"][2]=rec("BTC_USDT","binance_depth",payload)
+        market=evaluate_batch(a)["markets"][0]
+        self.assertEqual(market["dimension_status"]["spread"],"INDETERMINATE")
+        self.assertTrue(any("crossed" in reason for reason in market["reasons"]))
     def test_duplicate_provider_record_rejected(self):
         a=fixture(); a["records"].append(a["records"][0])
         with self.assertRaises(ValueError): evaluate_batch(a)
