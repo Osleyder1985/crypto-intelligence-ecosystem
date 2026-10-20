@@ -151,7 +151,7 @@ class BatchEvaluatorTests(unittest.TestCase):
         a["records"][1]=rec("BTC_USDT","binance_exchange_info",payload)
         market=evaluate_batch(a)["markets"][0]
         self.assertEqual(market["dimension_status"]["binance_spot_market"],"INDETERMINATE")
-        self.assertTrue(any("exactly one symbol" in reason for reason in market["reasons"]))
+        self.assertTrue(any("exactly one matching symbol" in reason for reason in market["reasons"]))
 
     def test_duplicate_provider_record_rejected(self):
         a=fixture(); a["records"].append(a["records"][0])
