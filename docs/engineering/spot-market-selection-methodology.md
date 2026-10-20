@@ -344,3 +344,20 @@ El artefacto `public-market-capture.json` incluye endpoint, hora de inicio/captu
 - SHA-256 acredita identidad de bytes, no autenticidad criptográfica del proveedor.
 - La profundidad de Binance no incluye un timestamp de evento equivalente; no se infiere frescura de mercado a partir de la hora local de captura.
 - La captura inicial y los tests de integración deben distinguirse de los tests unitarios simulados. Hasta que el workflow publique el artefacto, no se declara una captura integrada completada.
+
+
+### Evidencia de integración real — 2026-10-20
+
+La ejecución [Public market API capture #39365452045](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/actions/runs/39365452045) terminó en `completed / success`, con `overall_status=PASS`. Artefacto: [public-market-capture-39365452045-1](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/actions/runs/39365452045/artifacts/12238519886). SHA-256 del ZIP del artefacto reportado por GitHub: `fc692bb5888aef94cb362729d5a4666bb4b48722be85d9130d092d563774dc32`. Retención configurada hasta el 2026-11-03.
+
+| Captura | Resultado observado | Captura UTC | Bytes | SHA-256 del payload |
+|---|---|---|---:|---|
+| Pionex `BTC_USDT` | HTTP 200; una coincidencia exacta; `type=SPOT`; base `BTC`; quote `USDT`; `enable=true` | 2026-10-20T03:39:42.247Z | 368 | `ae6c10cfb32f27bcf9a77bd74cb722eb19a3348d756392725efee244554e6980` |
+| Binance `BTCUSDT` `exchangeInfo` | HTTP 200; estado `TRADING`; `isSpotTradingAllowed=true`; base `BTC`; quote `USDT` | 2026-10-20T03:39:42.826Z | 5349 | `81e78b15613d5711fe1d902a2ff1e7bcff2f2119ea9bb286e9a721da5feea2b0` |
+| Binance `BTCUSDT` profundidad, 20 niveles | HTTP 200; 20 bids y 20 asks; mejor bid `82071.42`; mejor ask `82071.43`; `lastUpdateId=101665041948` | 2026-10-20T03:39:43.382Z | 1327 | `76c4d224b9569c41ad198ec45d055988cee0c8ac82e0f3e95b0c6b4cfa927c49` |
+
+El spread observado en ese snapshot de Binance es aproximadamente `0.001218 bps`, calculado como `(ask-bid)/mid × 10,000`. Es una lectura de un único instante y un libro limitado a 20 niveles; no representa el spread histórico, no mide por sí solo la profundidad ejecutable para un tamaño de orden y no es una señal de rentabilidad.
+
+La ejecución [tests #39365452000](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/actions/runs/39365452000) terminó en `success`; el log confirma `Ran 53 tests` y `OK`. La [validación de trazabilidad #39365451982](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/actions/runs/39365451982) también terminó en `success`.
+
+**Alcance de esta evidencia:** confirma que los endpoints públicos respondieron y que los campos listados estaban presentes en esa captura. No confirma acceso a la cuenta/región del usuario, disponibilidad futura, comisiones efectivas, retirada/redes, suficiencia de liquidez para una orden no especificada, riesgo fundamental del activo ni rentabilidad. El artefacto de CI conserva los bytes originales en Base64 y sus hashes para poder reproducir la verificación mientras no expire.
