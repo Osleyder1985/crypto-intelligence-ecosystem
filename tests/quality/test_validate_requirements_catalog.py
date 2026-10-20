@@ -21,10 +21,23 @@ class RequirementsCatalogueValidatorTests(unittest.TestCase):
     def test_current_catalogue_is_consistent(self) -> None:
         self.assertEqual(validator.validate_catalog(self.content), [])
         self.assertEqual(validator.validate_issue_traceability(self.content), [])
+        self.assertEqual(validator.validate_issue_acceptance_review(self.content), [])
 
 
     def test_acceptance_closure_matrix_has_required_criteria(self) -> None:
         self.assertEqual(validator.validate_acceptance_closure_matrix(self.matrix), [])
+
+    def test_missing_issue_acceptance_review_row_fails(self) -> None:
+        heading = "## 15. Revisión de cobertura contra criterios de aceptación de Issues"
+        start = self.content.index(heading)
+        prefix, review = self.content[:start], self.content[start:]
+        row = next(line for line in review.splitlines() if line.startswith("| [#10 —"))
+        mutated = prefix + review.replace(row + "\n", "", 1)
+        errors = validator.validate_issue_acceptance_review(mutated)
+        self.assertTrue(
+            any("missing rows for" in error and "#10" in error for error in errors),
+            errors,
+        )
 
     def test_missing_spot_acceptance_criterion_fails(self) -> None:
         row = next(
