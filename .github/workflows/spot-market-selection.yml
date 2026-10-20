@@ -1,0 +1,27 @@
+name: Spot market selection prototype tests
+
+on:
+  pull_request:
+    paths:
+      - "scripts/market_selection/**"
+      - "tests/market_selection/**"
+      - ".github/workflows/spot-market-selection.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  spot-market-selection-tests:
+    name: Test read-only spot selector
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Run deterministic selector tests
+        run: python -m unittest discover -s tests/market_selection -p 'test_*.py' -v
