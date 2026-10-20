@@ -243,9 +243,9 @@ Se incorporó una primera implementación de solo lectura para probar fórmulas 
 
 ### Evidencia de CI
 
-- Commit de referencia: 968e42840fbfeb6624f9ef084b2614e6aad23a36.
-- [Ejecución del selector #3](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/actions/runs/39363894181): completada con éxito; el log registra 16 pruebas ejecutadas y resultado OK.
-- [Validación de trazabilidad #32](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/actions/runs/39363894157): completada con éxito.
+- Commit de referencia de la ampliación: adcccff6846f4e1584bc9aacc735e1ceb6ab4ebd.
+- [Ejecución del selector #6](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/actions/runs/39364148312): completada con éxito; el log registra 21 pruebas ejecutadas y resultado OK.
+- [Validación de trazabilidad #35](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/actions/runs/39364148367): completada con éxito.
 
 Las pruebas cubren spread, profundidad, slippage por VWAP, libro cruzado, profundidad insuficiente, mercado no spot, disponibilidad no confirmada, configuración incompleta/no aprobada y repetibilidad determinista.
 
@@ -264,4 +264,4 @@ Se amplió el motor para que no considere suficiente un libro numéricamente vá
 
 También se añadieron campos explícitos `maker_fee_bps` y `taker_fee_bps`. El motor expone tarifas por lado y una estimación de tarifa taker de ida y vuelta (dos lados). Este cálculo **no** incluye automáticamente retiros, red, descuentos, niveles de cuenta ni condiciones particulares; la dimensión `fees = PASS` significa únicamente que los inputs de tarifas configurados son numéricamente válidos, no que la operación sea rentable o que la tarifa haya sido verificada con el exchange.
 
-La configuración del fixture continúa marcada como TEST-ONLY. Los nuevos controles no equivalen a captura de datos real, validación de tarifas oficiales ni aprobación de una política financiera. La ejecución de CI de esta ampliación debe confirmarse antes de declarar las pruebas aprobadas.
+La configuración del fixture continúa marcada como TEST-ONLY. Los nuevos controles no equivalen a captura de datos real, validación de tarifas oficiales ni aprobación de una política financiera. La ejecución del selector #6 confirmó 21 pruebas aprobadas; esta evidencia solo valida la lógica de fixtures sintéticos, no fuentes ni mercados reales.
