@@ -108,6 +108,51 @@ class BatchEvaluatorTests(unittest.TestCase):
         self.assertEqual(market["dimension_status"]["spread"],"INDETERMINATE")
         self.assertTrue(any("asks side is not ordered" in reason for reason in market["reasons"]))
 
+    def test_invalid_nonfinite_book_level_is_indeterminate(self):
+        a=fixture()
+        payload=a["records"][2]["parsed_json"]
+        payload["bids"]=[[ "nan", "10" ], [ "99.98", "10" ]]
+        a["records"][2]=rec("BTC_USDT","binance_depth",payload)
+        market=evaluate_batch(a)["markets"][0]
+        self.assertEqual(market["dimension_status"]["spread"],"INDETERMINATE")
+        self.assertTrue(any("invalid book level" in reason for reason in market["reasons"]))
+
+    def test_invalid_book_quantity_is_indeterminate(self):
+        a=fixture()
+        payload=a["records"][2]["parsed_json"]
+        payload["asks"]=[[ "100.01", "0" ], [ "100.02", "10" ]]
+        a["records"][2]=rec("BTC_USDT","binance_depth",payload)
+        market=evaluate_batch(a)["markets"][0]
+        self.assertEqual(market["dimension_status"]["spread"],"INDETERMINATE")
+        self.assertTrue(any("invalid book level" in reason for reason in market["reasons"]))
+
+    def test_pionex_quote_identity_mismatch_is_indeterminate(self):
+        a=fixture()
+        payload=a["records"][0]["parsed_json"]
+        payload["data"]["symbols"][0]["quoteCurrency"]="BTC"
+        a["records"][0]=rec("BTC_USDT","pionex",payload)
+        market=evaluate_batch(a)["markets"][0]
+        self.assertEqual(market["dimension_status"]["pionex_spot_availability"],"INDETERMINATE")
+        self.assertTrue(any("Pionex symbol fields" in reason for reason in market["reasons"]))
+
+    def test_binance_quote_identity_mismatch_fails_closed(self):
+        a=fixture()
+        payload=a["records"][1]["parsed_json"]
+        payload["symbols"][0]["quoteAsset"]="BTC"
+        a["records"][1]=rec("BTC_USDT","binance_exchange_info",payload)
+        market=evaluate_batch(a)["markets"][0]
+        self.assertEqual(market["dimension_status"]["binance_spot_market"],"FAIL")
+        self.assertTrue(any("baseAsset/quoteAsset" in reason for reason in market["reasons"]))
+
+    def test_duplicate_binance_symbols_are_indeterminate(self):
+        a=fixture()
+        payload=a["records"][1]["parsed_json"]
+        payload["symbols"].append(dict(payload["symbols"][0]))
+        a["records"][1]=rec("BTC_USDT","binance_exchange_info",payload)
+        market=evaluate_batch(a)["markets"][0]
+        self.assertEqual(market["dimension_status"]["binance_spot_market"],"INDETERMINATE")
+        self.assertTrue(any("exactly one symbol" in reason for reason in market["reasons"]))
+
     def test_duplicate_provider_record_rejected(self):
         a=fixture(); a["records"].append(a["records"][0])
         with self.assertRaises(ValueError): evaluate_batch(a)
