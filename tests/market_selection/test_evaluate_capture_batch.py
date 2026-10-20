@@ -1,0 +1,43 @@
+"""Offline tests for the multi-pair capture evaluator."""
+import base64, hashlib, json, unittest
+from scripts.market_selection.evaluate_capture_batch import evaluate_batch
+
+def rec(market, provider, payload):
+    raw=json.dumps(payload,separators=(",",":")).encode()
+    return {"market_id":market,"provider":provider,"capture_status":"PASS","http_status":200,
+      "response_base64":base64.b64encode(raw).decode(),"response_sha256":hashlib.sha256(raw).hexdigest(),
+      "response_bytes":len(raw),"parsed_json":payload}
+def fixture():
+    market="BTC_USDT"
+    return {"schema_version":"public-market-capture-batch-v1","overall_status":"PASS",
+      "created_at_utc":"2026-10-20T00:00:00Z",
+      "universe":[{"pionex_symbol":market,"binance_symbol":"BTCUSDT","base_asset":"BTC","quote_asset":"USDT"}],
+      "records":[
+        rec(market,"pionex",{"result":True,"data":{"symbols":[{"symbol":market,"type":"SPOT","baseCurrency":"BTC","quoteCurrency":"USDT","enable":True}]}}),
+        rec(market,"binance_exchange_info",{"symbols":[{"symbol":"BTCUSDT","status":"TRADING","isSpotTradingAllowed":True}]}),
+        rec(market,"binance_depth",{"bids":[["99.99","10"],["99.98","10"]],"asks":[["100.01","10"],["100.02","10"]],"lastUpdateId":123})]}
+
+class BatchEvaluatorTests(unittest.TestCase):
+    def test_integrity_market_states_and_spread(self):
+        out=evaluate_batch(fixture()); m=out["markets"][0]
+        self.assertEqual(m["dimension_status"]["pionex_spot_availability"],"PASS")
+        self.assertEqual(m["dimension_status"]["binance_spot_market"],"PASS")
+        self.assertAlmostEqual(m["metrics"]["spread_bps"],2.0,places=5)
+        self.assertEqual(out["decision_status"],"INDETERMINATE")
+        self.assertFalse(out["orders_submitted"]); self.assertFalse(out["network_requests_made"])
+    def test_configured_depth_and_slippage(self):
+        cfg={"max_spread_bps":5,"depth_band_bps":10,"min_depth_quote":100,"order_size_base":0.1,"max_slippage_bps":10}
+        out=evaluate_batch(fixture(),cfg); m=out["markets"][0]
+        self.assertIn("min_side_depth_quote",m["metrics"]); self.assertIn("buy_execution",m["metrics"])
+        self.assertEqual(m["dimension_status"]["depth"],"PASS"); self.assertEqual(m["dimension_status"]["slippage"],"PASS")
+        self.assertFalse(out["config_approved"])
+    def test_tampered_hash_rejected(self):
+        a=fixture(); a["records"][0]["response_sha256"]="0"*64
+        with self.assertRaises(ValueError): evaluate_batch(a)
+    def test_duplicate_provider_record_rejected(self):
+        a=fixture(); a["records"].append(a["records"][0])
+        with self.assertRaises(ValueError): evaluate_batch(a)
+    def test_wrong_schema_rejected(self):
+        a=fixture(); a["schema_version"]="public-market-capture-v1"
+        with self.assertRaises(ValueError): evaluate_batch(a)
+if __name__=="__main__": unittest.main()
