@@ -173,7 +173,9 @@ def validate_issue_traceability(content: str) -> list[str]:
     if start < 0:
         return ["missing section 14: Issue-to-requirement traceability matrix"]
 
-    section = content[start:]
+    next_heading = "## 15. Revisión de cobertura contra criterios de aceptación de Issues"
+    end = content.find(next_heading, start + len(heading))
+    section = content[start:end] if end >= 0 else content[start:]
     defined = set(re.findall(r"(?<!\w)(?:REQ-P|NFR)-\d{3}(?!\w)", content[:start]))
     mapped: set[str] = set()
     issues_found: set[int] = set()
