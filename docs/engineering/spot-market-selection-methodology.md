@@ -313,3 +313,14 @@ La ejecución de CI asociada al commit que incorpora estos componentes debe veri
 - Se comprobó que el snapshot solo une base/cotizado cuando `exchangeInfo` confirma el símbolo exacto como Spot negociable, conserva hash y referencia de ambas respuestas y no solicita el libro cuando el símbolo está ausente.
 - El contrato ahora impide declarar `quality_status=VALID` si faltan los metadatos base/cotizado o el timestamp de origen. La profundidad sin timestamp de evento continúa explícitamente en `INDETERMINATE`.
 - En una ejecución anterior, la prueba del contrato falló porque el fixture declaraba calidad `VALID` sin timestamp de origen. Se corrigió el fixture para reflejar el contrato; la ejecución #20 pasó. Se mantiene la distinción entre evidencia sintética CI y prueba de integración real.
+
+
+## 15. Verificación exacta de disponibilidad en Pionex
+
+Se añadió [`pionex_public.py`](../../scripts/market_selection/pionex_public.py) para consultar el endpoint público `GET /api/v1/common/symbols` sin credenciales ni operaciones de trading. La implementación sigue el contrato público descrito en la [documentación oficial de Common Symbols de Pionex](https://www.pionex.com/docs/api-docs/trade-api/common) y la [especificación OpenAPI oficial](https://github.com/pionex-official/pionex-open-api/blob/main/openapi.yaml).
+
+La validación exige una coincidencia exacta del símbolo `BASE_QUOTE`, tipo `SPOT`, coincidencia de `baseCurrency`/ `quoteCurrency` y `enable=true`. Un símbolo ausente, deshabilitado o no Spot no se etiqueta como disponible. Respuestas malformadas, fallos API o metadatos base/cotizado contradictorios generan error explícito, no una falsa conclusión de indisponibilidad.
+
+El resultado conserva URL consultada, timestamp de respuesta si está disponible, hora de captura y SHA-256 de los bytes recibidos. Si falta el timestamp de respuesta, la frescura queda `INDETERMINATE`; no se inventa una marca temporal. La disponibilidad es una observación puntual y no demuestra acceso regional, elegibilidad de cuenta, liquidez suficiente, comisiones, calidad de inversión ni rentabilidad.
+
+Las pruebas de [`test_pionex_public.py`](../../tests/market_selection/test_pionex_public.py) usan payloads sintéticos. No se ha hecho una llamada real al endpoint desde esta implementación; la verificación de un símbolo en vivo debe ejecutarse de forma separada y registrarse con fecha, respuesta/hash y limitaciones antes de usarla como evidencia operativa.
