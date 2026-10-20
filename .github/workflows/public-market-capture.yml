@@ -1,27 +1,31 @@
 name: Public market API capture (read-only)
-
 on:
   pull_request:
   workflow_dispatch:
-
 permissions:
   contents: read
-
 jobs:
+  scope:
+    runs-on: ubuntu-latest
+    outputs:
+      applicable: ${{ steps.detect.outputs.applicable }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: detect
+        run: |
+          if [ -f scripts/market_selection/capture_public_market_data.py ]; then echo "applicable=true" >> "$GITHUB_OUTPUT"; else echo "applicable=false" >> "$GITHUB_OUTPUT"; fi
   capture-public-market-data:
     name: Capture bounded public market universe
+    needs: scope
+    if: needs.scope.outputs.applicable == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 3
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - name: Capture public API responses
-        id: capture
-        run: python scripts/market_selection/capture_public_market_data.py
+      - run: python scripts/market_selection/capture_public_market_data.py
       - name: Upload timestamped capture and raw-response evidence
         if: always()
         uses: actions/upload-artifact@v4
