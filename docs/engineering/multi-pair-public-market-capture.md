@@ -47,6 +47,20 @@ CI ejecuta pruebas offline y captura pública live. Evalúa dos veces la misma c
 
 La frescura del evento y las comisiones permanecen `INDETERMINATE`. Veinte niveles no son el libro completo; un snapshot no garantiza fills; disponibilidad no prueba acceso regional o de cuenta. Riesgo de activo, histórico de liquidez, comisiones oficiales, series temporales y rentabilidad quedan fuera. No se envían órdenes.
 
+
+## Evidencia E2E registrada
+
+Workflow [39367485108](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/actions/runs/39367485108), commit `702afe229d40c8ca2d33e7a053f296994c055d9d`: `completed / success`. En la misma ejecución pasaron las pruebas offline de captura/evaluación y la captura pública live de nueve respuestas; el evaluador procesó los tres pares dos veces, tanto sin parámetros como con escenario ilustrativo, y comparó los informes byte a byte.
+
+- Los nueve registros devolvieron HTTP 200 y JSON válido.
+- Para los tres pares, la integridad de captura, disponibilidad spot de Pionex y estado spot de Binance resultaron `PASS` en esta captura.
+- En el escenario ilustrativo (banda 10 bps, orden de 0,01 unidades base, máximos de spread y slippage de 5/10 bps), las dimensiones spread, profundidad y slippage pasaron para los tres snapshots.
+- Spread observado: BTC/USDT ≈ 0,001217 bps; ETH/USDT ≈ 0,041426 bps; SOL/USDT ≈ 0,949623 bps.
+- Profundidad mínima por lado dentro de 10 bps: BTC ≈ 260.689 USDT; ETH ≈ 76.071 USDT; SOL ≈ 884.717 USDT.
+- Slippage estimado para orden de 0,01 unidades base: BTC ≈ 0,000609 bps; ETH ≈ 0,020713 bps; SOL ≈ 0,474811 bps.
+- Frescura de origen y comisiones permanecen `INDETERMINATE`; la decisión global sigue `INDETERMINATE`. Estos valores describen snapshots de Binance, no garantizan ejecución ni demuestran rentabilidad.
+- Artefacto con captura e informes: [public-market-capture-batch](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/actions/runs/39367485108/artifacts/12239772976), SHA-256 del ZIP `53a888a93bc24b6d799a5bba085d0df2d9bd7a2a13120a7c2f31e5a5608bcaaf`, retención hasta 2026-11-03.
+
 ## Aceptación
 
 1. Universo explícito y sin símbolos duplicados.
