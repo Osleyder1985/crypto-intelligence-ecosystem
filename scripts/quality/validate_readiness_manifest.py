@@ -115,8 +115,31 @@ def validate_manifest(data: Any) -> list[str]:
         if not isinstance(risk, dict):
             errors.append(f"residual_risks[{index}]: debe ser un objeto.")
             continue
-        if risk.get("severity") in {"critical", "high", "crítica", "alta"} and risk.get("status") != "approved_exception":
-            errors.append(f"Riesgo residual crítico/alto sin excepción aprobada: índice {index}.")
+        severity = risk.get("severity")
+        normalized_severity = severity.strip().lower() if isinstance(severity, str) else ""
+        high_risk = normalized_severity in {"critical", "high", "crítica", "critica", "alta"}
+        if high_risk:
+            approved = risk.get("status") == "approved_exception"
+            exception_complete = all(
+                _nonempty(risk.get(field))
+                for field in ("approved_by", "justification", "expires_at_utc")
+            )
+            if not approved or not exception_complete:
+                errors.append(
+                    f"Riesgo residual crítico/alto sin excepción aprobada completa "
+                    f"(status, approved_by, justification y expires_at_utc): índice {index}."
+                )
+            else:
+                try:
+                    expiry = datetime.fromisoformat(
+                        risk["expires_at_utc"].replace("Z", "+00:00")
+                    )
+                    if not risk["expires_at_utc"].endswith("Z") or expiry.utcoffset() is None or expiry.utcoffset().total_seconds() != 0:
+                        raise ValueError("not UTC Z")
+                except (ValueError, TypeError, AttributeError):
+                    errors.append(
+                        f"Riesgo residual crítico/alto: expires_at_utc debe ser ISO 8601 UTC terminado en Z: índice {index}."
+                    )
 
     declared = data.get("decision")
     all_pass = len(seen) == len(REQUIRED_GATES) and all(
