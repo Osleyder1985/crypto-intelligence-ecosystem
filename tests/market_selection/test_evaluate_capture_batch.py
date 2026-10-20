@@ -213,6 +213,31 @@ class BatchEvaluatorTests(unittest.TestCase):
                 market=evaluate_batch(a)["markets"][0]
                 self.assertEqual(market["dimension_status"]["binance_spot_market"],"FAIL")
 
+    def test_missing_timestamps_and_unknown_fees_remain_indeterminate(self):
+        a=fixture()
+        for record in a["records"]:
+            record.pop("captured_at_utc", None)
+        market=evaluate_batch(a)["markets"][0]
+        self.assertEqual(market["dimension_status"]["source_freshness"],"INDETERMINATE")
+        self.assertEqual(market["dimension_status"]["fees"],"INDETERMINATE")
+
+    def test_stale_timestamps_and_obsolete_fee_metadata_do_not_pass(self):
+        a=fixture()
+        for record in a["records"]:
+            record["captured_at_utc"]="2020-01-01T00:00:00Z"
+            record["fee_metadata"]={"source":"fixture","observed_at_utc":"2020-01-01T00:00:00Z","maker":0,"taker":0}
+        market=evaluate_batch(a)["markets"][0]
+        self.assertEqual(market["dimension_status"]["source_freshness"],"INDETERMINATE")
+        self.assertEqual(market["dimension_status"]["fees"],"INDETERMINATE")
+
+    def test_insufficient_book_depth_keeps_slippage_indeterminate(self):
+        a=fixture()
+        cfg={"order_size_base":1000,"max_slippage_bps":10}
+        market=evaluate_batch(a,cfg)["markets"][0]
+        self.assertEqual(market["dimension_status"]["slippage"],"INDETERMINATE")
+        self.assertEqual(market["dimension_status"]["fees"],"INDETERMINATE")
+        self.assertEqual(market["dimension_status"]["source_freshness"],"INDETERMINATE")
+
     def test_duplicate_provider_record_rejected(self):
         a=fixture(); a["records"].append(a["records"][0])
         with self.assertRaises(ValueError): evaluate_batch(a)
