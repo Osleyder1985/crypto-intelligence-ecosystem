@@ -2,11 +2,6 @@ name: Requirements traceability validation
 
 on:
   pull_request:
-    paths:
-      - "docs/engineering/**"
-      - "scripts/quality/validate_requirements_catalog.py"
-      - "tests/quality/**"
-      - ".github/workflows/requirements-validation.yml"
   workflow_dispatch:
 
 permissions:
