@@ -1,47 +1,57 @@
-# Captura reproducible multi-par de mercado spot
+# Captura y evaluación reproducible multi-par de mercado spot
 
 ## Objetivo y alcance
 
-`scripts/market_selection/capture_public_market_batch.py` amplía la captura de un único mercado a un universo inicial explícito de tres pares: BTC/USDT, ETH/USDT y SOL/USDT. Para cada par registra una respuesta pública de disponibilidad de Pionex, metadatos de mercado spot de Binance y profundidad de Binance limitada a 20 niveles.
+`scripts/market_selection/capture_public_market_batch.py` captura tres pares explícitos: BTC/USDT, ETH/USDT y SOL/USDT. Por par guarda respuestas públicas de Pionex y Binance, incluida profundidad Binance limitada a 20 niveles. `scripts/market_selection/evaluate_capture_batch.py` verifica la integridad de los bytes y evalúa cada mercado sin solicitudes de red ni órdenes.
 
-El proceso es de solo lectura: no usa credenciales, no envía órdenes y no clasifica activos por potencial de inversión. El universo es un conjunto de prueba inicial, no una recomendación ni una selección aprobada de activos.
+El universo es una prueba técnica inicial, no un ranking ni una recomendación de inversión. No usa credenciales y no puede operar.
 
-## Contrato del artefacto
+## Contrato de captura
 
-Esquema: `public-market-capture-batch-v1`.
+Esquema: `public-market-capture-batch-v1`. El artefacto incluye universo, nueve registros (tres proveedores por mercado), URL, timestamps, estado HTTP, tamaño, SHA-256, bytes originales Base64, JSON parseado y errores. `overall_status: PASS` solo indica que las nueve respuestas son HTTP 200 con JSON objeto válido; no certifica disponibilidad semántica.
 
-- `universe`: lista explícita de pares con símbolos exactos de Pionex y Binance y activos base/cotización.
-- `records`: nueve registros esperados, tres proveedores por mercado, cada uno con URL, timestamps de captura, estado HTTP, tamaño, SHA-256, bytes originales en Base64, JSON parseado y error cuando corresponda.
-- `expected_record_count` / `actual_record_count`: detectan capturas incompletas.
-- `overall_status`: `PASS` solo cuando se obtienen las nueve respuestas HTTP 200 con JSON objeto válido; en caso contrario, `FAIL`.
+## Contrato de evaluación
 
-Un registro HTTP 200 no equivale a disponibilidad del par. La interpretación de cada respuesta de mercado requiere un evaluador específico del esquema batch; este artefacto no se debe pasar al evaluador `public-market-capture-v1` de un solo par.
+Esquema de salida: `public-market-batch-evaluation-v1`. Verifica hash, longitud y consistencia del JSON original, rechaza proveedores ausentes o duplicados, comprueba campos de disponibilidad spot y calcula spread. Con parámetros explícitos calcula profundidad en banda y deslizamiento estimado por VWAP, por par.
 
-## Reproducibilidad y controles
+Configuración ilustrativa no aprobada:
 
-Ejecutar:
+```json
+{
+  "max_spread_bps": 5,
+  "depth_band_bps": 10,
+  "min_depth_quote": 10000,
+  "order_size_base": 0.01,
+  "max_slippage_bps": 10
+}
+```
+
+Los umbrales no se aprueban por aparecer en un JSON. La decisión global permanece `INDETERMINATE`; no hay ranking ni decisión de inversión aprobada.
+
+## Ejecución
 
 ```powershell
 python scripts/market_selection/capture_public_market_batch.py
-python -m unittest discover -s tests/market_selection -p "test_capture_public_market_batch.py" -v
+python -m unittest discover -s tests/market_selection -p "test_*batch.py" -v
+python scripts/market_selection/evaluate_capture_batch.py --artifact .\artifacts\public-market-capture-batch.json --output .\artifacts\batch-evaluation.json
 ```
 
-Las pruebas son offline y sustituyen las respuestas HTTP con dobles controlados. CI ejecuta pruebas y una captura live independiente. Los artefactos se retienen 14 días.
+CI ejecuta pruebas offline y captura pública live. Evalúa dos veces la misma captura, con y sin escenario ilustrativo, y compara los informes byte a byte. Los artefactos se retienen 14 días.
 
-## Límites y siguientes puertas
+## Estados y límites
 
-- Nueve solicitudes secuenciales; cada solicitud tiene timeout de 12 segundos y límite de 5 MiB. No se implementa reintento automático.
-- La captura es un snapshot; no constituye una serie temporal ni acredita frescura del evento de mercado.
-- La profundidad de 20 niveles no es el libro completo; el volumen 24h tampoco sustituye la profundidad ejecutable.
-- La disponibilidad de Pionex no garantiza acceso por región/cuenta ni ejecución.
-- Comisiones, frescura de origen, riesgo de activo, calidad histórica y rentabilidad no se evalúan aquí.
-- No emitir ranking ni decisión de inversión hasta validar los esquemas por mercado, implementar evaluación batch y aprobar explícitamente criterios de elegibilidad.
-- Si un proveedor falla, el artefacto se conserva para diagnóstico, pero el workflow live falla y el lote no se considera completo.
+- `PASS` solo aplica a una dimensión y a la evidencia disponible; no es señal de compra.
+- `FAIL` indica que una comprobación explícita no se cumple.
+- `INDETERMINATE` indica evidencia insuficiente.
+- `NOT_RUN` indica que no se proporcionó el parámetro necesario.
+
+La frescura del evento y las comisiones permanecen `INDETERMINATE`. Veinte niveles no son el libro completo; un snapshot no garantiza fills; disponibilidad no prueba acceso regional o de cuenta. Riesgo de activo, histórico de liquidez, comisiones oficiales, series temporales y rentabilidad quedan fuera. No se envían órdenes.
 
 ## Aceptación
 
-1. Universo declarado y sin símbolos duplicados.
-2. Tres proveedores por cada mercado; nueve registros para la configuración inicial.
-3. Cada respuesta conserva bytes originales, tamaño y SHA-256.
-4. Los tests offline validan matriz de solicitudes, integridad, respuesta HTTP no exitosa y contrato batch.
-5. El workflow conserva el artefacto incluso si falla la captura.
+1. Universo explícito y sin símbolos duplicados.
+2. Nueve respuestas y combinación única mercado/proveedor.
+3. Integridad de bytes antes de calcular métricas.
+4. Pruebas offline de captura y evaluación.
+5. Dos ejecuciones con inputs idénticos producen informes idénticos.
+6. Decisión global `INDETERMINATE`; sin órdenes ni red durante la evaluación.
