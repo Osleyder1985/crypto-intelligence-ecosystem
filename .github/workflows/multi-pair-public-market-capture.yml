@@ -2,13 +2,6 @@ name: Multi-pair public market capture (read-only)
 
 on:
   pull_request:
-    paths:
-      - "scripts/market_selection/capture_public_market_batch.py"
-      - "scripts/market_selection/evaluate_capture_batch.py"
-      - "tests/market_selection/test_capture_public_market_batch.py"
-      - "tests/market_selection/test_evaluate_capture_batch.py"
-      - ".github/workflows/multi-pair-public-market-capture.yml"
-      - "docs/engineering/multi-pair-public-market-capture.md"
   workflow_dispatch:
 
 permissions:
