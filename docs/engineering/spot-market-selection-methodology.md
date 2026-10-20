@@ -324,3 +324,23 @@ La validación exige una coincidencia exacta del símbolo `BASE_QUOTE`, tipo `SP
 El resultado conserva URL consultada, timestamp de respuesta si está disponible, hora de captura y SHA-256 de los bytes recibidos. Si falta el timestamp de respuesta, la frescura queda `INDETERMINATE`; no se inventa una marca temporal. La disponibilidad es una observación puntual y no demuestra acceso regional, elegibilidad de cuenta, liquidez suficiente, comisiones, calidad de inversión ni rentabilidad.
 
 Las pruebas de [`test_pionex_public.py`](../../tests/market_selection/test_pionex_public.py) usan payloads sintéticos. No se ha hecho una llamada real al endpoint desde esta implementación; la verificación de un símbolo en vivo debe ejecutarse de forma separada y registrarse con fecha, respuesta/hash y limitaciones antes de usarla como evidencia operativa.
+
+
+## 16. Captura de integración pública reproducible
+
+Se añadieron:
+
+- [`capture_public_market_data.py`](../../scripts/market_selection/capture_public_market_data.py): solicita tres respuestas públicas: disponibilidad exacta de `BTC_USDT` en Pionex, `exchangeInfo` de `BTCUSDT` en Binance y snapshot de profundidad de Binance con 20 niveles. No usa credenciales ni envía órdenes.
+- [Workflow de captura](../../.github/workflows/public-market-capture.yml): ejecuta la captura en PR cuando cambian el script o el workflow, y permite ejecución manual. Siempre intenta subir el artefacto aunque falle alguna API; el job falla si una o más capturas no se validan.
+- [Pruebas de integridad de captura](../../tests/market_selection/test_public_market_capture.py): verifican SHA-256 sobre bytes exactos, reversibilidad de Base64 y rechazo de JSON inválido/esquemas no objeto.
+
+El artefacto `public-market-capture.json` incluye endpoint, hora de inicio/captura UTC, código HTTP, tamaño, SHA-256, respuesta original codificada en Base64, JSON parseado y resumen de la evaluación. La retención configurada del artefacto es de 14 días. Las respuestas se guardan como evidencia de CI y no se añaden al repositorio como si fueran datos permanentes.
+
+### Interpretación de resultados
+
+- Cada proveedor se evalúa por separado; un fallo de Pionex no convierte el estado de Binance en fallo y viceversa.
+- `overall_status=PASS` solo se produce cuando las tres respuestas HTTP/JSON se capturan y validan.
+- `availability=confirmed` es una observación puntual según los campos públicos de listado; no acredita acceso regional/de cuenta ni liquidez suficiente.
+- SHA-256 acredita identidad de bytes, no autenticidad criptográfica del proveedor.
+- La profundidad de Binance no incluye un timestamp de evento equivalente; no se infiere frescura de mercado a partir de la hora local de captura.
+- La captura inicial y los tests de integración deben distinguirse de los tests unitarios simulados. Hasta que el workflow publique el artefacto, no se declara una captura integrada completada.
