@@ -169,6 +169,30 @@ class SpotSelectorTests(unittest.TestCase):
         self.assertEqual(result["dimension_status"]["fees"], "INDETERMINATE")
         self.assertEqual(result["decision_status"], "INDETERMINATE")
 
+
+    def test_duplicate_price_levels_make_book_indeterminate(self) -> None:
+        duplicate_bids = [
+            {"price": 99.9, "quantity": 20.0},
+            {"price": 99.9, "quantity": 30.0},
+        ]
+        observation = dict(BASE_OBSERVATION, bids=duplicate_bids)
+        result = selector.evaluate_market(observation, BASE_CONFIG)
+        self.assertEqual(result["dimension_status"]["spread"], "INDETERMINATE")
+        self.assertEqual(result["decision_status"], "INDETERMINATE")
+        self.assertTrue(any("duplicate price levels" in reason for reason in result["decision_reasons"]))
+
+    def test_boolean_is_not_accepted_as_numeric_fee(self) -> None:
+        config = dict(BASE_CONFIG, taker_fee_bps=True)
+        result = selector.evaluate_market(BASE_OBSERVATION, config)
+        self.assertEqual(result["dimension_status"]["fees"], "INDETERMINATE")
+        self.assertEqual(result["decision_status"], "INDETERMINATE")
+
+    def test_future_capture_timestamp_is_indeterminate(self) -> None:
+        observation = dict(BASE_OBSERVATION, captured_at_utc="2026-10-20T03:00:06Z")
+        result = selector.evaluate_market(observation, BASE_CONFIG)
+        self.assertEqual(result["dimension_status"]["freshness"], "INDETERMINATE")
+        self.assertEqual(result["decision_status"], "INDETERMINATE")
+
     def test_result_explicitly_disclaims_live_data_and_orders(self) -> None:
         result = selector.evaluate_market(BASE_OBSERVATION, BASE_CONFIG)
         self.assertFalse(result["live_data_used"])
