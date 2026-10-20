@@ -143,7 +143,10 @@ def evaluate_batch(artifact: dict[str, Any], config: dict[str, Any] | None = Non
                 elif _num(maximum) and maximum>=0: status["slippage"]="PASS" if max(buy["slippage_bps"],sell["slippage_bps"])<=maximum else "FAIL"
                 else: status["slippage"]="INDETERMINATE"
         except (ValueError, TypeError, IndexError, KeyError) as exc:
-            status["spread"]="INDETERMINATE"; reasons.append(f"book metrics unavailable: {exc}")
+            status["spread"] = "INDETERMINATE"
+            status["depth"] = "INDETERMINATE"
+            status["slippage"] = "INDETERMINATE"
+            reasons.append(f"book metrics unavailable: {exc}")
         results.append({"market_id":market,"binance_symbol":bsym,"dimension_status":status,"metrics":metrics,"reasons":reasons,"decision_status":"INDETERMINATE"})
     return {"schema_version":SCHEMA,"source_schema_version":artifact["schema_version"],
             "source_created_at_utc":artifact.get("created_at_utc"),"config":config,"config_approved":False,
