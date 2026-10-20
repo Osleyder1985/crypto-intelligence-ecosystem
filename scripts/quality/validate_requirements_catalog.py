@@ -197,7 +197,7 @@ def validate_issue_traceability(content: str) -> list[str]:
             )
         mapped.update(ids)
 
-    required_issues = {3, 4, 5, 6, 7, 8, 9, 10, 11, 13, 16, 17, 18, 19, 20, 21}
+    required_issues = {3, 4, 5, 6, 7, 8, 9, 10, 11, 13, 16, 17, 18, 19, 20, 21, 22}
     missing_issues = sorted(required_issues - issues_found)
     if missing_issues:
         errors.append(
