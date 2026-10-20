@@ -60,11 +60,20 @@ def evaluate_batch(artifact: dict[str, Any], config: dict[str, Any] | None = Non
         matches = [s for s in syms if isinstance(s, dict) and s.get("symbol") == market] if isinstance(syms, list) else []
         if pionex.get("result") is True and len(matches) == 1:
             s = matches[0]
-            if s.get("type") == "SPOT" and s.get("baseCurrency") == base and s.get("quoteCurrency") == quote and s.get("enable") is True:
-                status["pionex_spot_availability"] = "PASS"
-            elif s.get("type") != "SPOT" or s.get("enable") is False:
+            p_base, p_quote, p_type, p_enable = (
+                s.get("baseCurrency"), s.get("quoteCurrency"), s.get("type"), s.get("enable")
+            )
+            if not all(isinstance(v, str) and v for v in (p_base, p_quote, p_type)) or not isinstance(p_enable, bool):
+                status["pionex_spot_availability"] = "INDETERMINATE"
+                reasons.append("Pionex identity/type/enable metadata is missing or invalid")
+            elif p_type != "SPOT" or p_enable is False:
                 status["pionex_spot_availability"] = "FAIL"
-            else: reasons.append("Pionex symbol fields do not conclusively establish availability")
+                reasons.append("Pionex market is not enabled spot")
+            elif p_base != base or p_quote != quote:
+                status["pionex_spot_availability"] = "FAIL"
+                reasons.append("Pionex baseCurrency/quoteCurrency do not match the declared market identity")
+            else:
+                status["pionex_spot_availability"] = "PASS"
         else:
             status["pionex_spot_availability"] = "FAIL" if not matches else "INDETERMINATE"
             reasons.append("Pionex did not confirm exactly one matching symbol")
@@ -72,13 +81,21 @@ def evaluate_batch(artifact: dict[str, Any], config: dict[str, Any] | None = Non
         bmatches = [s for s in bsymbols if isinstance(s, dict) and s.get("symbol") == bsym] if isinstance(bsymbols, list) else []
         if len(bmatches) == 1:
             s = bmatches[0]
-            if s.get("baseAsset") != base or s.get("quoteAsset") != quote:
+            b_base, b_quote = s.get("baseAsset"), s.get("quoteAsset")
+            if not all(isinstance(v, str) and v for v in (b_base, b_quote)):
+                status["binance_spot_market"] = "INDETERMINATE"
+                reasons.append("Binance baseAsset/quoteAsset metadata is missing or invalid")
+            elif b_base != base or b_quote != quote:
                 status["binance_spot_market"] = "FAIL"
                 reasons.append("Binance baseAsset/quoteAsset do not match the declared market identity")
-            elif s.get("status") == "TRADING" and s.get("isSpotTradingAllowed") is True:
-                status["binance_spot_market"] = "PASS"
+            elif not isinstance(s.get("status"), str) or not s.get("status") or not isinstance(s.get("isSpotTradingAllowed"), bool):
+                status["binance_spot_market"] = "INDETERMINATE"
+                reasons.append("Binance status/spot permission metadata is missing or invalid")
             elif s.get("status") != "TRADING" or s.get("isSpotTradingAllowed") is False:
                 status["binance_spot_market"] = "FAIL"
+                reasons.append("Binance market is not trading or spot trading is not allowed")
+            else:
+                status["binance_spot_market"] = "PASS"
         else:
             status["binance_spot_market"] = "FAIL" if not bmatches else "INDETERMINATE"
             reasons.append("Binance did not return exactly one matching symbol")
