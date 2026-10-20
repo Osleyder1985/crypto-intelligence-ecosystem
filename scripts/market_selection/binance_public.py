@@ -105,6 +105,34 @@ class BinancePublicSpotReader:
             "detail": detail,
         }
 
+    def fetch_market_snapshot(self, symbol: str, limit: int = 100) -> dict[str, object]:
+        """Join a depth snapshot with exact-symbol metadata from exchangeInfo.
+
+        Returns no order book when Binance does not confirm that exact symbol as
+        tradable Spot. Metadata and depth provenance remain separately visible.
+        """
+        symbol = self._symbol(symbol)
+        availability = self.fetch_spot_symbol_status(symbol)
+        if availability["availability_status"] != "confirmed":
+            return {"availability": availability, "observation": None}
+        detail = availability.get("detail")
+        if not isinstance(detail, dict):
+            raise ExchangeReadError("confirmed symbol status has no metadata object")
+        base_asset, quote_asset = detail.get("baseAsset"), detail.get("quoteAsset")
+        if not isinstance(base_asset, str) or not base_asset or not isinstance(quote_asset, str) or not quote_asset:
+            raise ExchangeReadError("exchangeInfo metadata is missing baseAsset or quoteAsset")
+        observation = self.fetch_order_book(symbol, limit)
+        observation["base_asset"] = base_asset
+        observation["quote_asset"] = quote_asset
+        observation["availability_status"] = "confirmed"
+        observation["metadata_source_ref"] = availability["source_ref"]
+        observation["metadata_payload_sha256"] = availability["payload_sha256"]
+        observation["metadata_captured_at_utc"] = availability["captured_at_utc"]
+        violations = validate_observation(observation)
+        if violations:
+            raise ExchangeReadError("joined market snapshot failed contract validation: " + "; ".join(violations))
+        return {"availability": availability, "observation": observation}
+
     def fetch_order_book(self, symbol: str, limit: int = 100) -> dict[str, object]:
         """Fetch a public depth snapshot and emit a normalized observation.
 
