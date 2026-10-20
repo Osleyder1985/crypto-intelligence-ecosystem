@@ -6,17 +6,19 @@ on:
       - "scripts/market_selection/evaluate_capture.py"
       - "scripts/market_selection/selector.py"
       - "tests/market_selection/**"
+      - "docs/engineering/public-market-capture-evaluation.md"
       - ".github/workflows/market-capture-evaluation.yml"
   workflow_dispatch:
 
 permissions:
   contents: read
+  actions: read
 
 jobs:
   test-market-capture-evaluation:
     name: Test offline capture evaluation
     runs-on: ubuntu-latest
-    timeout-minutes: 3
+    timeout-minutes: 5
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -26,3 +28,47 @@ jobs:
           python-version: "3.12"
       - name: Run market selection and capture evaluation tests
         run: python -m unittest discover -s tests/market_selection -p "test_*.py" -v
+      - name: Download and verify preserved live capture artifact
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh api repos/${GITHUB_REPOSITORY}/actions/artifacts/12238549860/zip > capture.zip
+          echo "c4b9e4852a9b32165dc792e4a4f3b22a180f285bedfcc7cdfafebf18f0798288  capture.zip" | sha256sum --check
+          mkdir -p capture
+          unzip -q capture.zip -d capture
+          test -s capture/public-market-capture.json
+      - name: Evaluate the live capture twice and compare outputs
+        run: |
+          set -euo pipefail
+          python scripts/market_selection/evaluate_capture.py --artifact capture/public-market-capture.json --output evaluation-1.json
+          python scripts/market_selection/evaluate_capture.py --artifact capture/public-market-capture.json --output evaluation-2.json
+          cmp --silent evaluation-1.json evaluation-2.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          result = json.loads(Path("evaluation-1.json").read_text(encoding="utf-8"))
+          assert result["schema_version"] == "public-market-evaluation-v1"
+          assert result["decision_status"] == "INDETERMINATE"
+          assert result["orders_submitted"] is False
+          assert result["network_requests_made"] is False
+          assert result["dimension_status"]["capture_integrity"] == "PASS"
+          assert result["dimension_status"]["pionex_availability"] == "PASS"
+          assert result["dimension_status"]["binance_spot_market"] == "PASS"
+          print(json.dumps({
+              "decision_status": result["decision_status"],
+              "dimension_status": result["dimension_status"],
+              "metrics": result["metrics"],
+              "orders_submitted": result["orders_submitted"],
+              "network_requests_made": result["network_requests_made"],
+              "two_runs_identical": True
+          }, indent=2, sort_keys=True))
+          PY
+      - name: Preserve end-to-end evaluation report
+        uses: actions/upload-artifact@v4
+        with:
+          name: live-capture-evaluation-report
+          path: |
+            evaluation-1.json
+            capture/public-market-capture.json
+          retention-days: 14
