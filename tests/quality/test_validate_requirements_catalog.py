@@ -39,6 +39,30 @@ class RequirementsCatalogueValidatorTests(unittest.TestCase):
             errors,
         )
 
+    def test_missing_audit_issue_traceability_row_fails(self) -> None:
+        heading = "## 14. Matriz de trazabilidad entre Issues y requisitos"
+        start = self.content.index(heading)
+        prefix, matrix = self.content[:start], self.content[start:]
+        row = next(line for line in matrix.splitlines() if line.startswith("| [#18 —"))
+        mutated = prefix + matrix.replace(row + "\n", "", 1)
+        errors = validator.validate_issue_traceability(mutated)
+        self.assertTrue(
+            any("missing rows for" in error and "#18" in error for error in errors),
+            errors,
+        )
+
+    def test_missing_audit_issue_acceptance_row_fails(self) -> None:
+        heading = "## 15. Revisión de cobertura contra criterios de aceptación de Issues"
+        start = self.content.index(heading)
+        prefix, review = self.content[:start], self.content[start:]
+        row = next(line for line in review.splitlines() if line.startswith("| [#18 —"))
+        mutated = prefix + review.replace(row + "\n", "", 1)
+        errors = validator.validate_issue_acceptance_review(mutated)
+        self.assertTrue(
+            any("missing rows for" in error and "#18" in error for error in errors),
+            errors,
+        )
+
     def test_missing_spot_acceptance_criterion_fails(self) -> None:
         row = next(
             line for line in self.matrix.splitlines()
