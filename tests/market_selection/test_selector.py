@@ -14,6 +14,9 @@ import selector  # noqa: E402
 BASE_OBSERVATION = {
     "market_type": "spot",
     "availability_status": "confirmed",
+    "source_timestamp_utc": "2026-10-20T03:00:00Z",
+    "captured_at_utc": "2026-10-20T03:00:02Z",
+    "evaluation_time_utc": "2026-10-20T03:00:05Z",
     "bids": [
         {"price": 99.9, "quantity": 20.0},
         {"price": 99.0, "quantity": 30.0},
@@ -30,10 +33,14 @@ BASE_CONFIG = {
     "min_depth_quote": 1000.0,
     "order_size_base": 1.0,
     "max_slippage_bps": 30.0,
-    "critical_dimensions": ["market_type", "spread", "depth", "slippage", "availability"],
+    "critical_dimensions": ["market_type", "spread", "depth", "slippage", "availability", "freshness", "fees"],
     "config_approval_status": "approved",
     "config_version": "synthetic-fixture-v1",
     "config_approval_ref": "TEST-ONLY; not an approved trading baseline",
+    "max_snapshot_age_seconds": 30.0,
+    "max_source_lag_seconds": 5.0,
+    "maker_fee_bps": 10.0,
+    "taker_fee_bps": 10.0,
 }
 
 
@@ -129,6 +136,37 @@ class SpotSelectorTests(unittest.TestCase):
     def test_bad_critical_dimension_list_blocks_global_decision(self) -> None:
         config = dict(BASE_CONFIG, critical_dimensions=["unknown"])
         result = selector.evaluate_market(BASE_OBSERVATION, config)
+        self.assertEqual(result["decision_status"], "INDETERMINATE")
+
+
+    def test_fresh_snapshot_passes_with_explicit_timezone(self) -> None:
+        result = selector.evaluate_market(BASE_OBSERVATION, BASE_CONFIG)
+        self.assertEqual(result["dimension_status"]["freshness"], "PASS")
+        self.assertEqual(result["metrics"]["freshness"]["source_lag_seconds"], 2.0)
+
+    def test_stale_snapshot_fails_freshness_dimension(self) -> None:
+        observation = dict(BASE_OBSERVATION, evaluation_time_utc="2026-10-20T03:01:00Z")
+        result = selector.evaluate_market(observation, BASE_CONFIG)
+        self.assertEqual(result["dimension_status"]["freshness"], "FAIL")
+        self.assertEqual(result["decision_status"], "FAIL")
+
+    def test_missing_or_timezone_naive_timestamp_is_indeterminate(self) -> None:
+        observation = dict(BASE_OBSERVATION, source_timestamp_utc="2026-10-20T03:00:00")
+        result = selector.evaluate_market(observation, BASE_CONFIG)
+        self.assertEqual(result["dimension_status"]["freshness"], "INDETERMINATE")
+        self.assertEqual(result["decision_status"], "INDETERMINATE")
+
+    def test_fee_metrics_are_explicit_and_separate_maker_from_taker(self) -> None:
+        result = selector.evaluate_market(BASE_OBSERVATION, BASE_CONFIG)
+        self.assertEqual(result["dimension_status"]["fees"], "PASS")
+        self.assertEqual(result["metrics"]["fees"]["maker_fee_bps_per_side"], 10.0)
+        self.assertEqual(result["metrics"]["fees"]["taker_round_trip_fee_bps"], 20.0)
+
+    def test_missing_fee_input_is_indeterminate(self) -> None:
+        config = dict(BASE_CONFIG)
+        del config["taker_fee_bps"]
+        result = selector.evaluate_market(BASE_OBSERVATION, config)
+        self.assertEqual(result["dimension_status"]["fees"], "INDETERMINATE")
         self.assertEqual(result["decision_status"], "INDETERMINATE")
 
     def test_result_explicitly_disclaims_live_data_and_orders(self) -> None:
