@@ -256,3 +256,12 @@ Las pruebas cubren spread, profundidad, slippage por VWAP, libro cruzado, profun
 - No están implementadas la captura de proveedores, frescura temporal, tarifas, evaluación de riesgo del activo ni verificación real de pares Pionex.
 - El éxito de estas pruebas no demuestra rentabilidad, ejecución real, cobertura de mercado ni conformidad ISO.
 - La metodología y los umbrales continúan propuestos; el prototipo no debe utilizarse para decisiones de inversión reales.
+
+
+## 13. Ampliación del prototipo: frescura y tarifas (en validación)
+
+Se amplió el motor para que no considere suficiente un libro numéricamente válido si la temporalidad del dato no puede demostrarse. La observación debe incluir `source_timestamp_utc`, `captured_at_utc` y `evaluation_time_utc`, todos ISO-8601 con zona horaria explícita. La configuración debe definir `max_source_lag_seconds` y `max_snapshot_age_seconds`. Marcas temporales ausentes, sin zona, inconsistentes o futuras provocan `INDETERMINATE`; superar límites configurados produce `FAIL` en la dimensión de frescura.
+
+También se añadieron campos explícitos `maker_fee_bps` y `taker_fee_bps`. El motor expone tarifas por lado y una estimación de tarifa taker de ida y vuelta (dos lados). Este cálculo **no** incluye automáticamente retiros, red, descuentos, niveles de cuenta ni condiciones particulares; la dimensión `fees = PASS` significa únicamente que los inputs de tarifas configurados son numéricamente válidos, no que la operación sea rentable o que la tarifa haya sido verificada con el exchange.
+
+La configuración del fixture continúa marcada como TEST-ONLY. Los nuevos controles no equivalen a captura de datos real, validación de tarifas oficiales ni aprobación de una política financiera. La ejecución de CI de esta ampliación debe confirmarse antes de declarar las pruebas aprobadas.
