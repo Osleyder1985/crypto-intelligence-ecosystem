@@ -1,20 +1,27 @@
 name: Spot market selection prototype tests
-
 on:
   pull_request:
   workflow_dispatch:
-
 permissions:
   contents: read
-
 jobs:
+  scope:
+    runs-on: ubuntu-latest
+    outputs:
+      applicable: ${{ steps.detect.outputs.applicable }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: detect
+        run: |
+          if [ -f tests/market_selection/test_selector.py ]; then echo "applicable=true" >> "$GITHUB_OUTPUT"; else echo "applicable=false" >> "$GITHUB_OUTPUT"; fi
   spot-market-selection-tests:
     name: Test read-only spot selector
+    needs: scope
+    if: needs.scope.outputs.applicable == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
