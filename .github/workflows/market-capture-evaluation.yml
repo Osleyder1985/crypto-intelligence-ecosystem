@@ -1,0 +1,28 @@
+name: Reproducible market capture evaluation
+
+on:
+  pull_request:
+    paths:
+      - "scripts/market_selection/evaluate_capture.py"
+      - "scripts/market_selection/selector.py"
+      - "tests/market_selection/**"
+      - ".github/workflows/market-capture-evaluation.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test-market-capture-evaluation:
+    name: Test offline capture evaluation
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Run market selection and capture evaluation tests
+        run: python -m unittest discover -s tests/market_selection -p "test_*.py" -v
