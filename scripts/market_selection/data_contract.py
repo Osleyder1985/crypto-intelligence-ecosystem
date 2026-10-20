@@ -63,10 +63,14 @@ def validate_observation(record: Any) -> list[str]:
         return errors
     if record["contract_version"] != CONTRACT_VERSION:
         errors.append("unsupported contract_version")
-    for key in ("observation_id", "exchange_id", "symbol_native", "base_asset",
-                "quote_asset", "source_kind", "source_ref", "parser_version"):
+    for key in ("observation_id", "exchange_id", "symbol_native", "source_kind", "source_ref", "parser_version"):
         if not isinstance(record[key], str) or not record[key].strip():
             errors.append(f"{key} must be a non-empty string")
+    for key in ("base_asset", "quote_asset"):
+        if record[key] is not None and (not isinstance(record[key], str) or not record[key].strip()):
+            errors.append(f"{key} must be a non-empty string or null")
+    if (record["base_asset"] is None or record["quote_asset"] is None) and record["quality_status"] == "VALID":
+        errors.append("asset metadata cannot be unknown when quality_status is VALID")
     if record["market_type"] != "spot":
         errors.append("market_type must be 'spot'")
     if record["quality_status"] not in QUALITY_STATES:
