@@ -2,12 +2,6 @@ name: Reproducible market capture evaluation
 
 on:
   pull_request:
-    paths:
-      - "scripts/market_selection/evaluate_capture.py"
-      - "scripts/market_selection/selector.py"
-      - "tests/market_selection/**"
-      - "docs/engineering/public-market-capture-evaluation.md"
-      - ".github/workflows/market-capture-evaluation.yml"
   workflow_dispatch:
 
 permissions:
@@ -15,7 +9,18 @@ permissions:
   actions: read
 
 jobs:
+  scope:
+    runs-on: ubuntu-latest
+    outputs:
+      applicable: ${{ steps.detect.outputs.applicable }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: detect
+        run: |
+          if [ -f scripts/market_selection/evaluate_capture.py ] && [ -f tests/market_selection/test_evaluate_capture.py ]; then echo "applicable=true" >> "$GITHUB_OUTPUT"; else echo "applicable=false" >> "$GITHUB_OUTPUT"; fi
   test-market-capture-evaluation:
+    needs: scope
+    if: needs.scope.outputs.applicable == 'true'
     name: Test offline capture evaluation
     runs-on: ubuntu-latest
     timeout-minutes: 5
