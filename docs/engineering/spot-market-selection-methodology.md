@@ -231,3 +231,28 @@ Los fixtures y las pruebas deben implementarse y ejecutarse antes de marcar esta
 - No garantiza que el histórico de profundidad esté disponible; la captura propia solo genera historial desde su inicio.
 - No ejecuta órdenes ni requiere claves privadas/API de trading.
 - No acredita cumplimiento ISO ni validación independiente.
+
+
+## 12. Estado del prototipo ejecutable
+
+Se incorporó una primera implementación de solo lectura para probar fórmulas y reglas de decisión con fixtures sintéticos:
+
+- Motor: [scripts/market_selection/selector.py](../../scripts/market_selection/selector.py).
+- Pruebas: [tests/market_selection/test_selector.py](../../tests/market_selection/test_selector.py).
+- Workflow: [.github/workflows/spot-market-selection.yml](../../.github/workflows/spot-market-selection.yml).
+
+### Evidencia de CI
+
+- Commit de referencia: 968e42840fbfeb6624f9ef084b2614e6aad23a36.
+- [Ejecución del selector #3](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/actions/runs/39363894181): completada con éxito; el log registra 16 pruebas ejecutadas y resultado OK.
+- [Validación de trazabilidad #32](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/actions/runs/39363894157): completada con éxito.
+
+Las pruebas cubren spread, profundidad, slippage por VWAP, libro cruzado, profundidad insuficiente, mercado no spot, disponibilidad no confirmada, configuración incompleta/no aprobada y repetibilidad determinista.
+
+### Límites de esta evidencia
+
+- Los datos de prueba son sintéticos; no se consultaron exchanges ni se capturaron libros reales.
+- La referencia de aprobación del fixture es TEST-ONLY; no representa aprobación humana de umbrales ni autoriza usar esa configuración en producción.
+- No están implementadas la captura de proveedores, frescura temporal, tarifas, evaluación de riesgo del activo ni verificación real de pares Pionex.
+- El éxito de estas pruebas no demuestra rentabilidad, ejecución real, cobertura de mercado ni conformidad ISO.
+- La metodología y los umbrales continúan propuestos; el prototipo no debe utilizarse para decisiones de inversión reales.
