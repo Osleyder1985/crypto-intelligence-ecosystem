@@ -300,4 +300,39 @@ class BatchEvaluatorTests(unittest.TestCase):
         self.assertTrue(any("no verified account-applicable official fee schedule" in reason for reason in market["reasons"]))
         self.assertEqual(evaluate_batch(artifact)["decision_status"], "INDETERMINATE")
 
+
+    def test_future_source_timestamp_never_passes_without_approved_policy(self):
+        artifact = fixture()
+        for record in artifact["records"]:
+            record["captured_at_utc"] = "2026-10-21T00:00:00Z"
+            record["source_event_at_utc"] = "2026-10-21T00:00:01Z"
+            record["source_timestamp_field"] = "eventTime"
+            record["source_timestamp_semantics"] = "provider event time"
+        market = evaluate_batch(artifact)["markets"][0]
+        self.assertEqual(market["dimension_status"]["source_freshness"], "INDETERMINATE")
+        self.assertEqual(market["decision_status"], "INDETERMINATE")
+
+    def test_malformed_source_timestamp_never_passes(self):
+        artifact = fixture()
+        for record in artifact["records"]:
+            record["captured_at_utc"] = "2026-10-21T00:00:00Z"
+            record["source_event_at_utc"] = "not-a-timestamp"
+            record["source_timestamp_field"] = "eventTime"
+        market = evaluate_batch(artifact)["markets"][0]
+        self.assertEqual(market["dimension_status"]["source_freshness"], "INDETERMINATE")
+        self.assertEqual(market["decision_status"], "INDETERMINATE")
+
+    def test_zero_fee_fixture_without_account_evidence_never_passes(self):
+        artifact = fixture()
+        for record in artifact["records"]:
+            record["fee_metadata"] = {
+                "source": "unverified fixture",
+                "observed_at_utc": "2026-10-21T00:00:00Z",
+                "maker": 0,
+                "taker": 0,
+            }
+        market = evaluate_batch(artifact)["markets"][0]
+        self.assertEqual(market["dimension_status"]["fees"], "INDETERMINATE")
+        self.assertEqual(market["decision_status"], "INDETERMINATE")
+
 if __name__=="__main__": unittest.main()
