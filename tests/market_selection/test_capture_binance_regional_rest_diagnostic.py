@@ -53,14 +53,14 @@ class BinanceRegionalRestDiagnosticTests(unittest.TestCase):
 
     def test_exchange_info_selects_existing_symbol(self):
         payload = {"symbols": [
-            {"symbol": "BTCUSD", "baseAsset": "BTC", "quoteAsset": "USD", "status": "TRADING"},
+            {"symbol": "BTCUSDT", "baseAsset": "BTC", "quoteAsset": "USDT", "status": "TRADING"},
             {"symbol": "ETHUSDT", "baseAsset": "ETH", "quoteAsset": "USDT", "status": "TRADING"},
         ]}
         fake = {"http_status": 200, "raw": b'{}', "payload": payload}
         with patch("scripts.market_selection.capture_binance_regional_rest_diagnostic.request_json", return_value=fake):
             record = capture_endpoint(VENUES[1], "exchange_info", "https://example.invalid/api/v3/exchangeInfo")
         pairs = record["parsed_summary"]["available_asset_pairs"]
-        self.assertEqual(pairs["BTC"], "BTCUSD")
+        self.assertEqual(pairs["BTC"], "BTCUSDT")
         self.assertEqual(pairs["ETH"], "ETHUSDT")
         self.assertIsNone(pairs["SOL"])
 
