@@ -268,6 +268,18 @@ class BatchEvaluatorTests(unittest.TestCase):
     def test_duplicate_provider_record_rejected(self):
         a=fixture(); a["records"].append(a["records"][0])
         with self.assertRaises(ValueError): evaluate_batch(a)
+    def test_duplicate_market_identity_in_universe_rejected(self):
+        a=fixture()
+        a["universe"].append(dict(a["universe"][0]))
+        with self.assertRaisesRegex(ValueError, "duplicate market_id"):
+            evaluate_batch(a)
+
+    def test_duplicate_binance_symbol_across_universe_rejected(self):
+        a=fixture()
+        a["universe"].append({"pionex_symbol":"ETH_USDT","binance_symbol":"BTCUSDT","base_asset":"ETH","quote_asset":"USDT"})
+        with self.assertRaisesRegex(ValueError, "duplicate Binance symbol"):
+            evaluate_batch(a)
+
     def test_wrong_schema_rejected(self):
         a=fixture(); a["schema_version"]="public-market-capture-v1"
         with self.assertRaises(ValueError): evaluate_batch(a)
