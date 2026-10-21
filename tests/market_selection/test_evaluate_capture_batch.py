@@ -250,8 +250,8 @@ class BatchEvaluatorTests(unittest.TestCase):
 
     def test_boolean_book_values_are_indeterminate(self):
         cases = (
-            ("bids", [[True, "10"], ["99.98", "10"]]),
-            ("asks", [["100.01", False], ["100.02", "10"]]),
+            ("bids", [["99.99", "10"], [True, "10"]]),
+            ("asks", [["100.01", "10"], ["100.02", True]]),
         )
         for side, levels in cases:
             with self.subTest(side=side):
