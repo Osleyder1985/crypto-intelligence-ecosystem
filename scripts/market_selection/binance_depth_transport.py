@@ -144,8 +144,12 @@ def capture_once(
                 return {
                     "status": "SYNCHRONIZED",
                     "symbol": normalized_symbol,
+                    "snapshot_last_update_id": book["snapshot_last_update_id"],
                     "last_applied_update_id": book["last_applied_update_id"],
                     "applied_event_count": book["applied_event_count"],
+                    "source_event_at_utc": book["last_event_time_utc"],
+                    "last_event_received_at_utc": book["last_received_at_utc"],
+                    "evaluated_at_utc": observation["evaluation_time_utc"],
                     "bids": book["bids"],
                     "asks": book["asks"],
                     "freshness_observation": observation,
