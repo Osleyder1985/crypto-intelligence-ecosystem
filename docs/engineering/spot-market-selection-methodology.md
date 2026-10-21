@@ -216,13 +216,15 @@ Los fixtures y las pruebas deben implementarse y ejecutarse antes de marcar esta
 
 ## 10. Decisiones pendientes
 
-1. Aprobar ventanas, bandas, tamaños de orden y umbrales por dimensión.
-2. Aprobar política de exclusión crítica y reglas para estado global.
-3. Nombrar responsables humanos de mercado/datos, cuantitativo, riesgo y QA.
-4. Confirmar regiones objetivo, condiciones de proveedores y cobertura real de cada API.
-5. Decidir política de retención y reproducción cuando licencias impidan guardar payloads.
-6. Ejecutar una prueba de concepto de captura en modo solo lectura, sin secretos de trading.
-7. Revisar resultados adversos y límites de cobertura antes de ampliar el universo.
+1. Identificar qué requisitos numéricos están expresamente fijados por fuentes oficiales y citar su versión vigente.
+2. Cuando las fuentes oficiales no fijen una cifra, documentar el contexto de uso, obtener mediciones reproducibles, evaluar riesgos y justificar cualquier criterio interno antes de evaluar datos.
+3. Aprobar la política de exclusión crítica y las reglas para el estado global.
+4. Derivar los tamaños de orden de requisitos del caso de uso y de filtros oficiales del mercado; no elegirlos arbitrariamente para obtener un resultado favorable.
+5. Nombrar responsables humanos de mercado/datos, cuantitativo, riesgo y QA.
+6. Confirmar regiones objetivo, condiciones de proveedores y cobertura real de cada API.
+7. Decidir política de retención y reproducción cuando licencias impidan guardar payloads.
+8. Ejecutar una prueba de concepto de captura en modo solo lectura, sin secretos de trading.
+9. Revisar resultados adversos y límites de cobertura antes de ampliar el universo.
 
 ## 11. Límites de esta especificación
 
