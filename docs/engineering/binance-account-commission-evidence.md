@@ -11,15 +11,17 @@
 Desde un entorno donde el usuario esté autorizado a consultar ese endpoint y el servicio oficial de Binance sea accesible. El capturador solo envía credenciales a `https://api.binance.com`; no permite cambiar el host de destino:
 
 ```bash
-export BINANCE_API_KEY='...'
-export BINANCE_API_SECRET='...'
+set +x
+read -r -s -p "Binance API key: " BINANCE_API_KEY; printf '\n'
+read -r -s -p "Binance API secret: " BINANCE_API_SECRET; printf '\n'
+export BINANCE_API_KEY BINANCE_API_SECRET
 python scripts/market_selection/capture_binance_account_commission_evidence.py \
   --symbol BTCUSDT \
   --output artifacts/binance-spot-account-commission-evidence-BTCUSDT.json
 unset BINANCE_API_KEY BINANCE_API_SECRET
 ```
 
-Utiliza una API key con los permisos mínimos necesarios para consultar datos de cuenta; no habilites permisos de trading o retiros para esta captura. No introduzcas secretos en el repositorio, línea de comandos, issues, logs ni artefactos. El script no envía órdenes, no usa el endpoint de orden de prueba y no persiste la URL firmada. Los errores HTTP se registran sin guardar su cuerpo.
+Utiliza una API key dedicada con permiso de lectura de datos de cuenta; no habilites permisos de trading o retiros para esta captura. La entrada oculta evita que el secreto aparezca en el historial de comandos; no ejecutes el shell con trazado (`set -x`). No introduzcas secretos en el repositorio, línea de comandos, issues, logs ni artefactos. El script no envía órdenes, no usa el endpoint de orden de prueba y no persiste la URL firmada. Los errores HTTP se registran sin guardar su cuerpo.
 
 ## Qué valida y qué no
 
