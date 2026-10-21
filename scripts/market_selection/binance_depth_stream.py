@@ -62,7 +62,10 @@ def validate_depth_event(event: Any) -> dict[str, Any]:
         raise ValueError("s must be a non-empty symbol")
     _validate_levels(event.get("b"), "b")
     _validate_levels(event.get("a"), "a")
-    event_time = datetime.fromtimestamp(event_time_ms / 1000, tz=timezone.utc)
+    try:
+        event_time = datetime.fromtimestamp(event_time_ms / 1000, tz=timezone.utc)
+    except (OverflowError, OSError, ValueError) as exc:
+        raise ValueError("E must be a representable Unix timestamp in milliseconds") from exc
     return {
         "symbol": symbol,
         "event_time_ms": event_time_ms,
