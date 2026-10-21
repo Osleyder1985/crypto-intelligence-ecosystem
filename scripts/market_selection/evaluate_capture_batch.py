@@ -110,6 +110,7 @@ def evaluate_batch(artifact: dict[str, Any], config: dict[str, Any] | None = Non
                 previous=None
                 for item in raw:
                     if not isinstance(item, list) or len(item) != 2: raise ValueError("malformed book level")
+                    if isinstance(item[0], bool) or isinstance(item[1], bool): raise ValueError("invalid book level")
                     price, qty=float(item[0]),float(item[1])
                     if not math.isfinite(price) or not math.isfinite(qty) or price<=0 or qty<=0: raise ValueError("invalid book level")
                     if price in seen_prices: raise ValueError(f"{name} side contains duplicate price levels")
