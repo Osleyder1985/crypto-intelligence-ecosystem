@@ -150,7 +150,13 @@ def synchronize_snapshot_with_events(snapshot: Any, buffered_events: Any) -> dic
     applied = 0
     last_id = snapshot_id
     last_event_time_utc = None
+    expected_symbol = None
     for event in buffered_events:
+        metadata = validate_depth_event(event)
+        if expected_symbol is None:
+            expected_symbol = metadata["symbol"]
+        elif metadata["symbol"] != expected_symbol:
+            raise ValueError("buffered depth events must all use the same symbol")
         decision = classify_depth_event(last_id, event)
         if decision["state"] == IGNORE_OLD:
             continue
@@ -167,6 +173,17 @@ def synchronize_snapshot_with_events(snapshot: Any, buffered_events: Any) -> dic
             }
         _apply_levels(bids, event["b"])
         _apply_levels(asks, event["a"])
+        if not bids or not asks or max(bids) >= min(asks):
+            return {
+                "status": "RESYNC_REQUIRED",
+                "reason": "applied event produced an empty, locked, or crossed order book",
+                "snapshot_last_update_id": snapshot_id,
+                "last_applied_update_id": last_id,
+                "applied_event_count": applied,
+                "last_event_time_utc": last_event_time_utc,
+                "bids": None,
+                "asks": None,
+            }
         last_id = decision["final_update_id"]
         last_event_time_utc = decision["event_time_utc"]
         applied += 1

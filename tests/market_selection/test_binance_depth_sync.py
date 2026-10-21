@@ -76,6 +76,29 @@ class SnapshotSynchronizationTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "duplicate price"):
             synchronize_snapshot_with_events(bad, [])
 
+    def test_rejects_buffered_events_from_different_symbols(self):
+        with self.assertRaisesRegex(ValueError, "same symbol"):
+            synchronize_snapshot_with_events(snapshot(), [
+                event(first=101, final=102, s="BTCUSDT"),
+                event(first=103, final=104, s="ETHUSDT"),
+            ])
+
+    def test_discards_book_if_applied_event_crosses_bid_and_ask(self):
+        result = synchronize_snapshot_with_events(snapshot(), [
+            event(first=101, final=102, b=[["102", "1"]]),
+        ])
+        self.assertEqual(result["status"], "RESYNC_REQUIRED")
+        self.assertIn("crossed", result["reason"])
+        self.assertIsNone(result["bids"])
+        self.assertIsNone(result["asks"])
+
+    def test_discards_book_if_applied_event_removes_entire_side(self):
+        result = synchronize_snapshot_with_events(snapshot(), [
+            event(first=101, final=102, b=[["99.0", "0"], ["98.0", "0"]]),
+        ])
+        self.assertEqual(result["status"], "RESYNC_REQUIRED")
+        self.assertIsNone(result["bids"])
+
     def test_rejects_malformed_event_in_buffer(self):
         with self.assertRaisesRegex(ValueError, "event type"):
             synchronize_snapshot_with_events(snapshot(), [{"e": "trade"}])
