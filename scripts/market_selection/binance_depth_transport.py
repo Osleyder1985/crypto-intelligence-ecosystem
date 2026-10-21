@@ -20,8 +20,8 @@ from scripts.market_selection.binance_depth_session import (
     DepthBookSession,
 )
 
-REST_BASE = "https://api.binance.com/api/v3/depth"
-WS_BASE = "wss://stream.binance.com:9443/ws"
+REST_BASE = "https://data-api.binance.vision/api/v3/depth"
+WS_BASE = "wss://data-stream.binance.vision:443/ws"
 DEFAULT_TIMEOUT_SECONDS = 5.0
 DEFAULT_MAX_MESSAGES = 2000
 DEFAULT_MAX_RESYNC_ATTEMPTS = 3
