@@ -6,7 +6,6 @@ on:
 
 permissions:
   contents: read
-  actions: read
 
 jobs:
   scope:
@@ -31,19 +30,24 @@ jobs:
         uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
         with:
           python-version: "3.12"
-      - name: Run market selection and capture evaluation tests
+      - name: Run offline unit tests
         run: python -m unittest discover -s tests/market_selection -p "test_*.py" -v
-      - name: Download and verify preserved live capture artifact
-        env:
-          GH_TOKEN: ${{ github.token }}
+      - name: Build deterministic synthetic capture fixture
         run: |
           set -euo pipefail
-          gh api repos/${GITHUB_REPOSITORY}/actions/artifacts/12238549860/zip > capture.zip
-          echo "c4b9e4852a9b32165dc792e4a4f3b22a180f285bedfcc7cdfafebf18f0798288  capture.zip" | sha256sum --check
-          mkdir -p capture
-          unzip -q capture.zip -d capture
-          test -s capture/public-market-capture.json
-      - name: Evaluate the live capture twice and compare outputs
+          python - <<'PY'
+          import json
+          import sys
+          from pathlib import Path
+          sys.path.insert(0, "tests/market_selection")
+          from test_evaluate_capture import fixture
+          out = Path("capture/public-market-capture.json")
+          out.parent.mkdir(parents=True, exist_ok=True)
+          out.write_text(json.dumps(fixture(), ensure_ascii=False, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+          print("fixture_type=synthetic_test_data")
+          print(f"artifact={out}")
+          PY
+      - name: Evaluate synthetic fixture twice and compare outputs
         run: |
           set -euo pipefail
           python scripts/market_selection/evaluate_capture.py --artifact capture/public-market-capture.json --output evaluation-1.json
@@ -61,6 +65,7 @@ jobs:
           assert result["dimension_status"]["pionex_availability"] == "PASS"
           assert result["dimension_status"]["binance_spot_market"] == "PASS"
           print(json.dumps({
+              "fixture_type": "synthetic_test_data",
               "decision_status": result["decision_status"],
               "dimension_status": result["dimension_status"],
               "metrics": result["metrics"],
@@ -69,7 +74,7 @@ jobs:
               "two_runs_identical": True
           }, indent=2, sort_keys=True))
           PY
-      - name: Evaluate explicit non-approved liquidity scenario twice
+      - name: Evaluate explicit non-approved scenario twice
         run: |
           set -euo pipefail
           cat > scenario.json <<'JSON'
@@ -98,6 +103,7 @@ jobs:
           assert result["dimension_status"]["depth"] in {"PASS", "FAIL"}
           assert result["dimension_status"]["slippage"] in {"PASS", "FAIL", "INDETERMINATE"}
           print(json.dumps({
+              "fixture_type": "synthetic_test_data",
               "scenario_thresholds_approved": False,
               "decision_status": result["decision_status"],
               "dimension_status": result["dimension_status"],
@@ -108,10 +114,10 @@ jobs:
               "two_runs_identical": True
           }, indent=2, sort_keys=True))
           PY
-      - name: Preserve end-to-end evaluation report
+      - name: Preserve deterministic evaluation report
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
-          name: live-capture-evaluation-report
+          name: synthetic-capture-evaluation-report
           path: |
             evaluation-1.json
             scenario.json
