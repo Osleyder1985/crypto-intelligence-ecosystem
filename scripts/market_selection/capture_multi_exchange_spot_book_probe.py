@@ -193,7 +193,7 @@ def main() -> int:
         "artifact": str(path), "schema_version": artifact["schema_version"],
         "overall_status": artifact["overall_status"], "expected_record_count": artifact["expected_record_count"],
         "actual_record_count": artifact["actual_record_count"], "exchange_status": artifact["exchange_status"],
-        "records": [{k: r.get(k) for k in ("exchange", "asset", "symbol", "capture_status", "http_status", "best_bid", "best_ask", "error_type", "error_message")} for r in artifact["records"]],
+        "records": [{k: r.get(k) for k in ("exchange", "asset", "symbol", "capture_status", "http_status", "response_bytes", "response_bytes_observed", "response_limit_bytes", "content_length_header", "best_bid", "best_ask", "error_type", "error_message")} for r in artifact["records"]],
     }, ensure_ascii=False, indent=2))
     return 0 if artifact["overall_status"] == "PASS" else 1
 
