@@ -16,17 +16,9 @@ El artefacto debe usar `public-market-capture-v1`, tener `overall_status: PASS` 
 
 Para ejecutar un escenario explícito de análisis, se puede proporcionar un archivo JSON con parámetros, por ejemplo:
 
-```json
-{
-  "max_spread_bps": 5,
-  "depth_band_bps": 10,
-  "min_depth_quote": 10000,
-  "order_size_base": 0.01,
-  "max_slippage_bps": 10
-}
-```
+No se proporciona una configuración numérica predeterminada. Para ejecutar un escenario, la configuración debe derivarse de requisitos documentados del caso de uso y restricciones oficiales del mercado. Si la fuente oficial no prescribe un límite, no se debe inventar ni presentar como requisito ISO/Binance. Los campos obligatorios ausentes deben provocar `NOT_RUN`, error de configuración o `INDETERMINATE`, según el contrato del evaluador.
 
-Estos valores son ilustrativos; no son umbrales aprobados para operar. Ejecutar con `--config scenario.json` evalúa ese escenario, pero no convierte la configuración en política aprobada.
+Los ejemplos numéricos usados anteriormente se eligieron manualmente para probar el comportamiento del software; no procedían de ISO ni de Binance. Se retiran como recomendación. Ejecutar con `--config scenario.json` evalúa únicamente los parámetros suministrados y no convierte la configuración en política aprobada.
 
 ## Controles de integridad
 
@@ -81,9 +73,9 @@ Workflow [market-capture-evaluation, ejecución 39366725132](https://github.com/
 
 El log reporta `spread_bps = 0.0012191661445804635`, mejor bid `82023.27`, mejor ask `82023.28`, 20 niveles por lado, `source_freshness = INDETERMINATE`, `fees = INDETERMINATE`, y `depth`/`spread`/`slippage = NOT_RUN` cuando no se proporcionan parámetros de escenario. Informe y captura fuente conservados en el artefacto [live-capture-evaluation-report](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/actions/runs/39366725132/artifacts/12238944233), SHA-256 del ZIP de informe: `785ec198cb42e74063b9122fad966c8d3772955517bdb1d75e2257e2584dd6e8` (retención de 14 días desde su creación).
 
-### Escenario ilustrativo de profundidad y deslizamiento
+### Evidencia histórica de un escenario de prueba retirado
 
-La ejecución [39366846581](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/actions/runs/39366846581) amplió el flujo E2E con un escenario **no aprobado para operar**: spread máximo 5 bps, banda de profundidad de 10 bps, profundidad mínima por lado de 10.000 USDT, orden de 0,01 BTC y deslizamiento máximo de 10 bps. El CLI se ejecutó dos veces y los informes fueron idénticos; las dimensiones spread, depth y slippage resultaron `PASS` para ese snapshot y esos parámetros ilustrativos.
+La ejecución [39366846581](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/actions/runs/39366846581) utilizó parámetros escogidos manualmente para ejercitar el cálculo de spread, profundidad y deslizamiento. Esos parámetros no procedían de ISO ni de Binance y se retiran como recomendación o criterio de aceptación. La ejecución demuestra únicamente que el evaluador procesó de forma determinista ese escenario de software; el estado `PASS` se refería a los valores de prueba configurados, no a una política oficial ni a idoneidad para operar.
 
 - Profundidad mínima observada dentro de la banda de 10 bps: aproximadamente `281714.2153 USDT`.
 - Compra simulada de 0,01 BTC: VWAP `82023.28 USDT`, deslizamiento estimado `0.00060958 bps`.
@@ -91,7 +83,7 @@ La ejecución [39366846581](https://github.com/Osleyder1985/crypto-intelligence-
 - Frescura de la fuente y comisiones siguen `INDETERMINATE`; por tanto, la decisión global continúa `INDETERMINATE`.
 - Artefacto actualizado con informe base, configuración del escenario y su informe: [live-capture-evaluation-report](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/actions/runs/39366846581/artifacts/12239721110), ZIP SHA-256 `bdaa1f8068aa12731fc7ad33ff865e43f5368fab557db813bfde4fe78feabee0`.
 
-El resultado solo describe un snapshot de 20 niveles. La profundidad no representa el libro completo, el VWAP no garantiza ejecución y los parámetros del escenario son ejemplos de ingeniería, no límites de inversión aprobados.
+El resultado solo describe un snapshot de 20 niveles. La profundidad no representa el libro completo, el VWAP no garantiza ejecución y los parámetros históricos se consideran retirados; no son límites oficiales ni recomendación de inversión.
 
 Esta prueba demuestra ejecución E2E reproducible sobre la captura archivada específica; no demuestra que las métricas predigan rentabilidad ni que los umbrales sean adecuados para operar.
 
@@ -101,4 +93,4 @@ Esta prueba demuestra ejecución E2E reproducible sobre la captura archivada esp
 2. Ejecutar el CLI del evaluador contra el archivo JSON original.
 3. Conservar el informe JSON resultante y registrar los hashes del artefacto fuente y del informe.
 4. Repetir la evaluación con los mismos bytes y configuración; comprobar que los informes sean idénticos.
-5. Mantener `decision_status: INDETERMINATE` hasta aprobar explícitamente una política y sus umbrales.
+5. Mantener `decision_status: INDETERMINATE` hasta que haya criterios sustentados por fuentes oficiales o, cuando estas no fijen valores, por una justificación interna documentada con mediciones reproducibles y evaluación de riesgo.
