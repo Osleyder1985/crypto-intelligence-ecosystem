@@ -284,3 +284,21 @@ class BatchEvaluatorTests(unittest.TestCase):
         a=fixture(); a["schema_version"]="public-market-capture-v1"
         with self.assertRaises(ValueError): evaluate_batch(a)
 if __name__=="__main__": unittest.main()
+
+    def test_missing_source_event_timestamp_keeps_freshness_indeterminate(self):
+        artifact = fixture()
+        # The captured Binance depth response exposes lastUpdateId, not a verified
+        # market-event timestamp. Capture time must not be used as a substitute.
+        for record in artifact["records"]:
+            self.assertIsNone(record.get("source_event_at_utc"))
+        market = evaluate_batch(artifact)["markets"][0]
+        self.assertEqual(market["dimension_status"]["source_freshness"], "INDETERMINATE")
+        self.assertTrue(any("capture time is not a substitute" in reason for reason in market["reasons"]))
+
+    def test_missing_account_applicable_fee_evidence_keeps_fees_indeterminate(self):
+        artifact = fixture()
+        market = evaluate_batch(artifact)["markets"][0]
+        self.assertEqual(market["dimension_status"]["fees"], "INDETERMINATE")
+        self.assertTrue(any("no verified account-applicable official fee schedule" in reason for reason in market["reasons"]))
+        self.assertEqual(evaluate_batch(artifact)["decision_status"], "INDETERMINATE")
+
