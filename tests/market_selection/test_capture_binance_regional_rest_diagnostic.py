@@ -4,7 +4,7 @@ from urllib.error import HTTPError
 from io import BytesIO
 
 from scripts.market_selection.capture_binance_regional_rest_diagnostic import (
-    ASSETS, VENUES, capture_endpoint, capture_venue, request_json,
+    ASSETS, VENUES, MAX_BYTES, ResponseTooLarge, capture_endpoint, capture_venue, request_json,
 )
 
 
@@ -43,6 +43,24 @@ class BinanceRegionalRestDiagnosticTests(unittest.TestCase):
         self.assertIn("SOLUSDT", exchange_url)
         self.assertNotIn("exchangeInfo\"", exchange_url)
 
+    def test_response_limit_records_exact_boundary_and_overflow(self):
+        class FakeResponse:
+            status = 200
+            headers = {"Content-Length": str(MAX_BYTES)}
+            def __init__(self, body): self.body = body
+            def __enter__(self): return self
+            def __exit__(self, *args): return False
+            def read(self, size=-1): return self.body[:size]
+        with patch("scripts.market_selection.capture_binance_regional_rest_diagnostic.urlopen", return_value=FakeResponse(b"x" * MAX_BYTES)):
+            self.assertEqual(len(request_json("https://example.invalid")["raw"]), MAX_BYTES)
+        large = FakeResponse(b"x" * (MAX_BYTES + 1))
+        large.headers = {"Content-Length": str(MAX_BYTES + 1)}
+        with patch("scripts.market_selection.capture_binance_regional_rest_diagnostic.urlopen", return_value=large):
+            with self.assertRaises(ResponseTooLarge) as caught:
+                request_json("https://example.invalid")
+        self.assertEqual(caught.exception.observed_bytes, MAX_BYTES + 1)
+        self.assertEqual(caught.exception.content_length, str(MAX_BYTES + 1))
+        self.assertEqual(len(caught.exception.prefix_sha256), 64)
     def test_server_time_schema(self):
         response = {"serverTime": 123456789}
         fake = {"http_status": 200, "raw": b'{"serverTime":123456789}', "payload": response}
