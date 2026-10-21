@@ -69,7 +69,7 @@ def request_json(url: str) -> dict[str, object]:
     payload = json.loads(raw.decode("utf-8"))
     if not isinstance(payload, dict):
         raise ValueError("response JSON must be an object")
-    return {"http_status": status, "raw": raw, "payload": payload}
+    return {"http_status": status, "raw": raw, "payload": payload, "content_length": content_length}
 
 
 def capture_endpoint(venue: dict[str, str], kind: str, url: str, asset: str | None = None) -> dict[str, object]:
