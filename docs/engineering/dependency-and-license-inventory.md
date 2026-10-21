@@ -2,12 +2,13 @@
 
 - **Estado:** inventario preliminar; no constituye una decisión de licencia ni asesoramiento legal.
 - **Issue:** [#20 — Licencia, derechos de distribución y dependencias](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/issues/20).
-- **Base examinada:** `main`, commit `9aed74a44aa6ee20eba8878205027666e0568491` (2026-10-21). Repetir antes de una release.
+- **Base examinada:** `main`, commit `247bc4b53fe6a76913f624ac9a51d9dbc4c7d3c9` (2026-10-21). Repetir antes de una release.
 
 ## 1. Hallazgos reproducibles
 
 - El árbol integrado contiene `requirements-market-data.txt`, que fija `websocket-client==1.8.0` para el transporte público WebSocket de Binance. Es una dependencia opcional: el módulo la importa al abrir el socket en vivo; las pruebas offline pueden inyectar un transporte simulado.
 - La presencia del pin no prueba por sí sola que la dependencia se haya instalado, ejecutado en vivo, revisado por vulnerabilidades o aprobado para distribución.
+- Los cambios posteriores de documentación y evaluación de frescura (#50–#53) no añaden nuevas dependencias de runtime; PR #53 añade evaluación basada en la biblioteca estándar. La base se actualizó para incluir esos cambios, no para declarar completada la revisión de licencias.
 - El inventario consultado no identifica un archivo raíz `LICENSE` o `COPYING`. La ausencia de licencia explícita no convierte el código en dominio público ni otorga permisos generales de reutilización o redistribución.
 - Los workflows de GitHub Actions son dependencias de CI distintas de las dependencias de ejecución. Sus versiones, SHAs, licencias y procedencia deben revisarse contra las fuentes oficiales al mantener el inventario.
 - Los módulos revisados de captura y selección usan ampliamente la biblioteca estándar de Python. Esta observación no equivale a un análisis automatizado exhaustivo de todas las dependencias transitivas.
