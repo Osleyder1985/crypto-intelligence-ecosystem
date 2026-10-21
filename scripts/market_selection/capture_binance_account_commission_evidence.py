@@ -76,7 +76,6 @@ def capture_commission_evidence(
     api_key: str,
     api_secret: str,
     *,
-    base_url: str = DEFAULT_BASE_URL,
     timestamp_ms: int | None = None,
     opener=urlopen,
 ) -> dict[str, object]:
@@ -86,7 +85,7 @@ def capture_commission_evidence(
     queried_at = now_utc()
     timestamp = int(time.time() * 1000) if timestamp_ms is None else timestamp_ms
     request = Request(
-        build_signed_url(symbol, api_secret, timestamp, base_url),
+        build_signed_url(symbol, api_secret, timestamp, DEFAULT_BASE_URL),
         headers={"X-MBX-APIKEY": api_key, "Accept": "application/json"},
     )
     result: dict[str, object] = {
@@ -139,12 +138,11 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--symbol", required=True, help="Exact Binance Spot symbol, e.g. BTCUSDT")
     parser.add_argument("--output", default="artifacts/binance-spot-account-commission-evidence.json")
-    parser.add_argument("--base-url", default=DEFAULT_BASE_URL, help="Official API base URL for the authorized account/region")
     args = parser.parse_args()
     api_key, api_secret = os.environ.get("BINANCE_API_KEY"), os.environ.get("BINANCE_API_SECRET")
     if not api_key or not api_secret:
         parser.error("set BINANCE_API_KEY and BINANCE_API_SECRET in the local environment; never commit them")
-    evidence = capture_commission_evidence(args.symbol, api_key, api_secret, base_url=args.base_url)
+    evidence = capture_commission_evidence(args.symbol, api_key, api_secret)
     path = Path(args.output)
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(evidence, ensure_ascii=False, indent=2, sort_keys=True) + "\n", encoding="utf-8")
