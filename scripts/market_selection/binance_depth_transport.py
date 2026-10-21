@@ -7,7 +7,7 @@ only. It never submits orders.
 from __future__ import annotations
 
 import json
-import time
+import re
 from datetime import datetime, timezone
 from typing import Any, Callable
 from urllib.error import HTTPError, URLError
@@ -49,7 +49,11 @@ def fetch_public_depth_snapshot(
             payload = json.loads(response.read().decode("utf-8"))
     except (HTTPError, URLError, TimeoutError, UnicodeDecodeError, json.JSONDecodeError) as exc:
         raise RuntimeError(f"public depth snapshot request failed: {type(exc).__name__}") from exc
-    if not isinstance(payload, dict) or not isinstance(payload.get("lastUpdateId"), int):
+    if (
+        not isinstance(payload, dict)
+        or isinstance(payload.get("lastUpdateId"), bool)
+        or not isinstance(payload.get("lastUpdateId"), int)
+    ):
         raise RuntimeError("Binance REST snapshot response is malformed")
     if not isinstance(payload.get("bids"), list) or not isinstance(payload.get("asks"), list):
         raise RuntimeError("Binance REST snapshot has no bids/asks arrays")
@@ -89,7 +93,9 @@ def capture_once(
         raise ValueError("symbol must be a non-empty string")
     if timeout_seconds <= 0 or max_messages < 1 or max_resync_attempts < 1:
         raise ValueError("timeout and capture bounds must be positive")
-    normalized_symbol = symbol.upper()
+    normalized_symbol = symbol.strip().upper()
+    if not re.fullmatch(r"[A-Z0-9]{2,30}", normalized_symbol):
+        raise ValueError("symbol must contain only 2-30 ASCII letters or digits")
     factory = websocket_factory or _open_public_stream
     socket = factory(normalized_symbol, timeout_seconds)
     session = DepthBookSession()
