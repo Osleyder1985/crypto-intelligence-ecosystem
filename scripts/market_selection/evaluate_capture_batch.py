@@ -38,7 +38,7 @@ def _live_freshness(artifact: dict[str, Any], symbol: str, config: dict[str, Any
     """Evaluate a live stream observation only under an explicitly approved policy."""
     observations = artifact.get("live_depth_observations")
     if not isinstance(observations, list):
-        return "INDETERMINATE", {}, "no live depth observation is attached to the batch artifact"
+        return "INDETERMINATE", {}, "no live source-event timestamp is attached to the batch artifact; capture time is not a substitute"
     matches = [item for item in observations if isinstance(item, dict) and item.get("symbol") == symbol]
     if len(matches) != 1:
         return "INDETERMINATE", {}, f"expected exactly one live depth observation for {symbol}; found {len(matches)}"
