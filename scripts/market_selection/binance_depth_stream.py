@@ -93,3 +93,102 @@ def classify_depth_event(last_applied_update_id: Any, event: Any) -> dict[str, A
     else:
         state, reason = APPLY, "event covers the next required update ID"
     return {"state": state, "reason": reason, **metadata}
+
+
+def _snapshot_levels(value: Any, field: str) -> dict[Decimal, Decimal]:
+    if not isinstance(value, list) or not value:
+        raise ValueError(f"snapshot {field} must be a non-empty list")
+    levels: dict[Decimal, Decimal] = {}
+    for index, level in enumerate(value):
+        if not isinstance(level, list) or len(level) != 2:
+            raise ValueError(f"snapshot {field}[{index}] must contain price and quantity")
+        price_raw, quantity_raw = level
+        try:
+            price, quantity = Decimal(str(price_raw)), Decimal(str(quantity_raw))
+        except (InvalidOperation, ValueError) as exc:
+            raise ValueError(f"snapshot {field}[{index}] contains an invalid decimal") from exc
+        if not price.is_finite() or price <= 0 or not quantity.is_finite() or quantity <= 0:
+            raise ValueError(f"snapshot {field}[{index}] price and quantity must be finite and positive")
+        if price in levels:
+            raise ValueError(f"snapshot {field} contains duplicate price levels")
+        levels[price] = quantity
+    return levels
+
+
+def _apply_levels(book: dict[Decimal, Decimal], updates: list[list[Any]]) -> None:
+    for price_raw, quantity_raw in updates:
+        price, quantity = Decimal(str(price_raw)), Decimal(str(quantity_raw))
+        if quantity == 0:
+            book.pop(price, None)
+        else:
+            book[price] = quantity
+
+
+def _serialize_levels(book: dict[Decimal, Decimal], side: str) -> list[list[str]]:
+    prices = sorted(book, reverse=(side == "bids"))
+    return [[format(price, "f"), format(book[price], "f")] for price in prices]
+
+
+def synchronize_snapshot_with_events(snapshot: Any, buffered_events: Any) -> dict[str, Any]:
+    """Build a locally consistent snapshot book from buffered diff-depth events.
+
+    The function is deterministic and network-free. It returns no usable book if
+    no event bridges the snapshot update ID or if any sequence gap is detected.
+    It does not keep a live socket open; the caller must continue classifying each
+    subsequent event and discard/rebuild the book on GAP.
+    """
+    if not isinstance(snapshot, Mapping):
+        raise ValueError("snapshot must be an object")
+    snapshot_id = _update_id(snapshot.get("lastUpdateId"), "snapshot.lastUpdateId")
+    if not isinstance(buffered_events, list):
+        raise ValueError("buffered_events must be a list")
+    bids = _snapshot_levels(snapshot.get("bids"), "bids")
+    asks = _snapshot_levels(snapshot.get("asks"), "asks")
+    if max(bids) >= min(asks):
+        raise ValueError("snapshot order book must not be locked or crossed")
+
+    applied = 0
+    last_id = snapshot_id
+    last_event_time_utc = None
+    for event in buffered_events:
+        decision = classify_depth_event(last_id, event)
+        if decision["state"] == IGNORE_OLD:
+            continue
+        if decision["state"] == GAP:
+            return {
+                "status": "RESYNC_REQUIRED",
+                "reason": decision["reason"],
+                "snapshot_last_update_id": snapshot_id,
+                "last_applied_update_id": last_id,
+                "applied_event_count": applied,
+                "last_event_time_utc": last_event_time_utc,
+                "bids": None,
+                "asks": None,
+            }
+        _apply_levels(bids, event["b"])
+        _apply_levels(asks, event["a"])
+        last_id = decision["final_update_id"]
+        last_event_time_utc = decision["event_time_utc"]
+        applied += 1
+
+    if applied == 0:
+        return {
+            "status": "INDETERMINATE",
+            "reason": "no buffered event bridged the snapshot update ID",
+            "snapshot_last_update_id": snapshot_id,
+            "last_applied_update_id": last_id,
+            "applied_event_count": 0,
+            "last_event_time_utc": None,
+            "bids": None,
+            "asks": None,
+        }
+    return {
+        "status": "SYNCHRONIZED",
+        "reason": "snapshot bridged and buffered events applied without sequence gaps",
+        "snapshot_last_update_id": snapshot_id,
+        "last_applied_update_id": last_id,
+        "applied_event_count": applied,
+        "last_event_time_utc": last_event_time_utc,
+        "bids": _serialize_levels(bids, "bids"),
+        "asks": _serialize_levels(asks, "asks"),
+    }
