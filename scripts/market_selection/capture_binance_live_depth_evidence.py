@@ -21,7 +21,7 @@ from urllib.request import Request, urlopen
 
 from scripts.market_selection.binance_depth_transport import capture_once
 
-TIME_URL = "https://api.binance.com/api/v3/time"
+TIME_URL = "https://data-api.binance.vision/api/v3/time"
 DEFAULT_SYMBOLS = ("BTCUSDT", "ETHUSDT", "SOLUSDT")
 SCHEMA_VERSION = "binance-live-depth-evidence-v1"
 

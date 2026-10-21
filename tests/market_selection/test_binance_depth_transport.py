@@ -58,8 +58,8 @@ class BinanceDepthTransportTests(unittest.TestCase):
 
     def test_capture_returns_synchronized_read_only_book_and_closes_socket(self):
         socket = FakeSocket([
-            event(101, 102),
-            event(103, 104, b=[["100", "1"]]),
+            event(101, 102, b=[["100", "1"]]),
+            event(103, 104),
         ])
         snapshots = []
 
@@ -70,7 +70,6 @@ class BinanceDepthTransportTests(unittest.TestCase):
         times = iter([
             "2026-10-21T12:00:02.100Z",
             "2026-10-21T12:00:02.200Z",
-            "2026-10-21T12:00:02.300Z",
         ])
         result = capture_once(
             "btcusdt",
@@ -82,16 +81,51 @@ class BinanceDepthTransportTests(unittest.TestCase):
         self.assertEqual(result["status"], "SYNCHRONIZED")
         self.assertEqual(result["symbol"], "BTCUSDT")
         self.assertEqual(result["snapshot_last_update_id"], 100)
-        self.assertEqual(result["last_applied_update_id"], 104)
+        self.assertEqual(result["last_applied_update_id"], 102)
         self.assertEqual(result["source_event_at_utc"], result["freshness_observation"]["source_timestamp_utc"])
         self.assertEqual(result["last_event_received_at_utc"], result["freshness_observation"]["captured_at_utc"])
         self.assertEqual(result["evaluated_at_utc"], result["freshness_observation"]["evaluation_time_utc"])
         self.assertEqual(result["bids"][0], ["100", "1"])
         self.assertTrue(result["read_only"])
         self.assertFalse(result["orders_submitted"])
-        self.assertEqual(result["freshness_observation"]["captured_at_utc"], "2026-10-21T12:00:02.200Z")
-        self.assertEqual(result["freshness_observation"]["evaluation_time_utc"], "2026-10-21T12:00:02.300Z")
+        self.assertEqual(result["freshness_observation"]["captured_at_utc"], "2026-10-21T12:00:02.100Z")
+        self.assertEqual(result["freshness_observation"]["evaluation_time_utc"], "2026-10-21T12:00:02.200Z")
         self.assertEqual(snapshots, [("BTCUSDT", 5.0)])
+        self.assertTrue(socket.closed)
+
+
+    def test_waits_for_event_to_bridge_snapshot_instead_of_resyncing_early(self):
+        socket = FakeSocket([
+            event(101, 102),
+            event(103, 104),
+            event(105, 106),
+        ])
+        calls = []
+
+        def fetcher(symbol, timeout):
+            calls.append((symbol, timeout))
+            return snapshot(104)
+
+        times = iter([
+            "2026-10-21T12:00:02.100Z",
+            "2026-10-21T12:00:02.200Z",
+            "2026-10-21T12:00:02.300Z",
+            "2026-10-21T12:00:02.400Z",
+        ])
+        result = capture_once(
+            "BTCUSDT",
+            websocket_factory=lambda symbol, timeout: socket,
+            snapshot_fetcher=fetcher,
+            clock=lambda: next(times),
+            max_messages=10,
+            max_resync_attempts=3,
+        )
+        self.assertEqual(result["status"], "SYNCHRONIZED")
+        self.assertEqual(result["snapshot_last_update_id"], 104)
+        self.assertEqual(result["last_applied_update_id"], 106)
+        self.assertEqual(result["applied_event_count"], 1)
+        self.assertEqual(result["snapshot_attempts"], 1)
+        self.assertEqual(calls, [("BTCUSDT", 5.0)])
         self.assertTrue(socket.closed)
 
     def test_capture_restarts_after_sequence_gap(self):
@@ -105,7 +139,7 @@ class BinanceDepthTransportTests(unittest.TestCase):
 
         def fetcher(symbol, timeout):
             calls.append(symbol)
-            return snapshot(100 if len(calls) == 1 else 105)
+            return snapshot(99 if len(calls) == 1 else 105)
 
         times = iter([
             "2026-10-21T12:00:02.100Z",
@@ -123,7 +157,7 @@ class BinanceDepthTransportTests(unittest.TestCase):
             max_resync_attempts=3,
         )
         self.assertEqual(result["status"], "SYNCHRONIZED")
-        self.assertEqual(result["last_applied_update_id"], 109)
+        self.assertEqual(result["last_applied_update_id"], 107)
         self.assertEqual(result["snapshot_attempts"], 2)
         self.assertEqual(len(calls), 2)
         self.assertTrue(socket.closed)
@@ -134,7 +168,7 @@ class BinanceDepthTransportTests(unittest.TestCase):
             capture_once(
                 "BTCUSDT",
                 websocket_factory=lambda symbol, timeout: socket,
-                snapshot_fetcher=lambda symbol, timeout: snapshot(),
+                snapshot_fetcher=lambda symbol, timeout: snapshot(1000),
                 clock=lambda: "2026-10-21T12:00:02Z",
                 max_messages=1,
             )
