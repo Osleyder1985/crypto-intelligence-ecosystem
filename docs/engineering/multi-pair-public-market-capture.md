@@ -14,19 +14,11 @@ Esquema: `public-market-capture-batch-v1`. El artefacto incluye universo, nueve 
 
 Esquema de salida: `public-market-batch-evaluation-v1`. Verifica hash, longitud y consistencia del JSON original, rechaza proveedores ausentes o duplicados, comprueba campos de disponibilidad spot y calcula spread. Con parámetros explícitos calcula profundidad en banda y deslizamiento estimado por VWAP, por par.
 
-Configuración ilustrativa no aprobada:
+Se retira la configuración numérica ilustrativa anterior: sus valores fueron elegidos manualmente para probar el evaluador, no se derivaron de ISO ni de Binance y no deben usarse como umbrales recomendados. No se proporciona una configuración numérica predeterminada. Para ejecutar un escenario, los parámetros deben proceder de requisitos documentados del caso de uso y restricciones oficiales del mercado. Si falta un criterio requerido, el evaluador debe abstenerse.
 
-```json
-{
-  "max_spread_bps": 5,
-  "depth_band_bps": 10,
-  "min_depth_quote": 10000,
-  "order_size_base": 0.01,
-  "max_slippage_bps": 10
-}
-```
+No se proporciona una configuración numérica predeterminada. Para ejecutar un escenario, la configuración debe derivarse de requisitos documentados del caso de uso y restricciones oficiales del mercado. Si la fuente oficial no prescribe un límite, no se debe inventar ni presentar como requisito ISO/Binance. Los campos obligatorios ausentes deben provocar `NOT_RUN`, error de configuración o `INDETERMINATE`, según el contrato del evaluador.
 
-Los umbrales no se aprueban por aparecer en un JSON. La decisión global permanece `INDETERMINATE`; no hay ranking ni decisión de inversión aprobada.
+La decisión global permanece `INDETERMINATE`; no hay ranking ni decisión de inversión aprobada.
 
 ## Ejecución
 
@@ -36,7 +28,7 @@ python -m unittest discover -s tests/market_selection -p "test_*batch.py" -v
 python scripts/market_selection/evaluate_capture_batch.py --artifact .\artifacts\public-market-capture-batch.json --output .\artifacts\batch-evaluation.json
 ```
 
-CI ejecuta pruebas offline y captura pública live. Evalúa dos veces la misma captura, con y sin escenario ilustrativo, y compara los informes byte a byte. Los artefactos se retienen 14 días.
+CI ejecuta pruebas offline y captura pública live. Evalúa dos veces la misma captura y compara los informes byte a byte. Los escenarios históricos con valores arbitrarios se consideran pruebas de software retiradas como criterios de aceptación. Los artefactos se retienen 14 días.
 
 ## Estados y límites
 
@@ -54,7 +46,7 @@ Workflow [39367485108](https://github.com/Osleyder1985/crypto-intelligence-ecosy
 
 - Los nueve registros devolvieron HTTP 200 y JSON válido.
 - Para los tres pares, la integridad de captura, disponibilidad spot de Pionex y estado spot de Binance resultaron `PASS` en esta captura.
-- En el escenario ilustrativo (banda 10 bps, orden de 0,01 unidades base, máximos de spread y slippage de 5/10 bps), las dimensiones spread, profundidad y slippage pasaron para los tres snapshots.
+- Un escenario histórico de software usó parámetros numéricos elegidos manualmente; los estados `PASS` solo reflejaban esos parámetros, no una norma oficial ni criterios aprobados. Se retiran como base para aceptar mercados.
 - Spread observado: BTC/USDT ≈ 0,001217 bps; ETH/USDT ≈ 0,041426 bps; SOL/USDT ≈ 0,949623 bps.
 - Profundidad mínima por lado dentro de 10 bps: BTC ≈ 260.689 USDT; ETH ≈ 76.071 USDT; SOL ≈ 884.717 USDT.
 - Slippage estimado para orden de 0,01 unidades base: BTC ≈ 0,000609 bps; ETH ≈ 0,020713 bps; SOL ≈ 0,474811 bps.
