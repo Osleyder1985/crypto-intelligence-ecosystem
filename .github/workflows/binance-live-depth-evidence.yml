@@ -1,0 +1,67 @@
+name: Binance live depth evidence (read-only)
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "17 */6 * * *"
+permissions:
+  contents: read
+jobs:
+  offline-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+      - name: Run offline transport and evidence tests
+        run: |
+          python -m unittest discover -s tests/market_selection -p "test_binance_depth_*.py" -v
+          python -m unittest discover -s tests/market_selection -p "test_capture_binance_live_depth_evidence.py" -v
+  live-capture:
+    needs: offline-tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+      - name: Install optional public WebSocket client
+        run: python -m pip install -r requirements-market-data.txt
+      - name: Capture synchronized public depth and clock evidence
+        run: python scripts/market_selection/capture_binance_live_depth_evidence.py
+      - name: Validate evidence contract and abstention
+        if: always()
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          path = Path("artifacts/binance-live-depth-evidence.json")
+          if not path.exists():
+              raise SystemExit("capture artifact was not created")
+          evidence = json.loads(path.read_text(encoding="utf-8"))
+          assert evidence["schema_version"] == "binance-live-depth-evidence-v1"
+          assert evidence["decision_status"] == "INDETERMINATE"
+          assert evidence["freshness_policy_approved"] is False
+          assert evidence["orders_submitted"] is False
+          assert len(evidence["captures"]) == 3
+          assert len(evidence["artifact_sha256"]) == 64
+          for item in evidence["captures"]:
+              assert item["symbol"] in {"BTCUSDT", "ETHUSDT", "SOLUSDT"}
+              assert item["orders_submitted"] is False
+              assert len(item["evidence_sha256"]) == 64
+              if item["status"] == "SYNCHRONIZED":
+                  observation = item["freshness_observation"]
+                  assert observation["source_timestamp_utc"]
+                  assert observation["captured_at_utc"]
+                  assert observation["evaluation_time_utc"]
+          PY
+      - name: Upload live evidence even when capture fails
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: binance-live-depth-evidence-${{ github.run_id }}-${{ github.run_attempt }}
+          path: artifacts/binance-live-depth-evidence.json
+          if-no-files-found: warn
+          retention-days: 14
