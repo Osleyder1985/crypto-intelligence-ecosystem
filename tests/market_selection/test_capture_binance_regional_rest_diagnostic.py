@@ -69,7 +69,7 @@ class BinanceRegionalRestDiagnosticTests(unittest.TestCase):
         self.assertEqual(len(books), 3)
         self.assertEqual(books[0]["capture_status"], "PASS")
         self.assertEqual(books[1]["capture_status"], "NOT_AVAILABLE")
-        self.assertEqual(mocked.call_count, 5)
+        self.assertEqual(mocked.call_count, 3)
 
 
 if __name__ == "__main__":
