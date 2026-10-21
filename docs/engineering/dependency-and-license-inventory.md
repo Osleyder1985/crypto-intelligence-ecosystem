@@ -1,36 +1,39 @@
 # Inventario inicial de dependencias y licencias
 
-- **Estado:** inventario preliminar de la rama auditada; no constituye una decisión de licencia ni asesoramiento legal.
+- **Estado:** inventario preliminar; no constituye una decisión de licencia ni asesoramiento legal.
 - **Issue:** [#20 — Licencia, derechos de distribución y dependencias](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/issues/20).
-- **Base examinada:** rama `main`, commit `e62c9dba84f0492e477afa144c3bbcfbbaf11422` (verificado el 2026-10-21, tras integrar el PR #35). Repetir el inventario después de cambios de dependencias y antes de una release.
+- **Base examinada:** `main`, commit `9aed74a44aa6ee20eba8878205027666e0568491` (2026-10-21). Repetir antes de una release.
 
 ## 1. Hallazgos reproducibles
 
-- En la base examinada no aparece un archivo raíz LICENSE, COPYING, NOTICE, pyproject.toml, requirements.txt, Pipfile, poetry.lock, uv.lock ni package.json. La rama de trabajo del PR #48 añade `requirements-market-data.txt` con `websocket-client==1.8.0` como dependencia opcional del transporte público WebSocket; repetir la auditoría sobre la línea base integrada y verificar la licencia, procedencia y mantenimiento de ese paquete antes de una release.
-- Los módulos Python visibles de captura, selección y validación usan principalmente módulos de la biblioteca estándar en los archivos revisados; no se observó un manifiesto de dependencias Python de terceros en esta rama.
-- Los workflows de `main` fijan `actions/checkout` al SHA `3d3c42e5aac5ba805825da76410c181273ba90b1` (v7.0.1), `actions/setup-python` al SHA `5fda3b95a4ea91299a34e894583c3862153e4b97` (v7.0.0) y `actions/upload-artifact` al SHA `cf430e030ddbb5b0abf93d22962f4752f3646cd9`. Son dependencias de CI, separadas de las dependencias de ejecución; la versión/tag de upload-artifact debe verificarse contra la fuente oficial al actualizar el inventario.
-- La ausencia de un archivo de licencia explícito no significa que el contenido sea de dominio público ni que exista permiso general de reutilización o redistribución.
+- El árbol integrado contiene `requirements-market-data.txt`, que fija `websocket-client==1.8.0` para el transporte público WebSocket de Binance. Es una dependencia opcional: el módulo la importa al abrir el socket en vivo; las pruebas offline pueden inyectar un transporte simulado.
+- La presencia del pin no prueba por sí sola que la dependencia se haya instalado, ejecutado en vivo, revisado por vulnerabilidades o aprobado para distribución.
+- El inventario consultado no identifica un archivo raíz `LICENSE` o `COPYING`. La ausencia de licencia explícita no convierte el código en dominio público ni otorga permisos generales de reutilización o redistribución.
+- Los workflows de GitHub Actions son dependencias de CI distintas de las dependencias de ejecución. Sus versiones, SHAs, licencias y procedencia deben revisarse contra las fuentes oficiales al mantener el inventario.
+- Los módulos revisados de captura y selección usan ampliamente la biblioteca estándar de Python. Esta observación no equivale a un análisis automatizado exhaustivo de todas las dependencias transitivas.
 
 ## 2. Inventario por componente
 
 | Componente | Evidencia observada | Acción requerida |
 |---|---|---|
-| Código Python del prototipo | Sin manifiesto de paquetes detectado en el árbol del PR #12 | Confirmar el árbol integrado completo y generar inventario automatizado al incorporar nuevos paquetes |
-| Biblioteca estándar de Python | Imports visibles en módulos y pruebas; versiones de Python declaradas en CI | Registrar versión/runtime objetivo y validar compatibilidad |\n| Transporte público WebSocket (PR #48) | `requirements-market-data.txt` declara `websocket-client==1.8.0`, opcional para captura puntual de profundidad Binance Spot | Verificar licencia/procedencia oficial, evaluar mantenimiento y vulnerabilidades, e incluirlo en inventario automatizado antes de release |
-| GitHub Actions | En `main`: checkout v7.0.1 y setup-python v7.0.0 mediante SHA completos; upload-artifact fijado al SHA `cf430e030ddbb5b0abf93d22962f4752f3646cd9` | Verificar versión/tag y licencia oficial de cada SHA, registrar procedencia y mantener Dependabot habilitado |
-| Documentación y contenido | No se encontró licencia raíz explícita en el árbol auditado | Decidir derechos de código, documentación, marcas, capturas y contribuciones |
-| Dependencias de ramas aún no integradas | El alcance y los archivos pueden diferir de esta instantánea | Repetir inventario en la línea base candidata a release |
+| Código Python del prototipo | Módulos de captura, selección, evaluación y pruebas en `main` | Mantener inventario actualizado y revisar dependencias nuevas |
+| Biblioteca estándar de Python | Imports en los módulos revisados y runtime declarado en CI | Documentar runtime objetivo y comprobar compatibilidad |
+| Transporte público WebSocket | `requirements-market-data.txt` fija `websocket-client==1.8.0`; el transporte no usa credenciales ni envía órdenes | Verificar licencia y procedencia oficiales, mantenimiento, avisos y vulnerabilidades antes de distribuir |
+| GitHub Actions | Workflows con acciones fijadas por SHA | Verificar versión/tag y licencia de cada acción desde la fuente oficial; mantener actualizaciones controladas |
+| Documentación y contenido | No se ha identificado licencia raíz explícita en la línea base examinada | Decidir derechos de código, documentación, marcas, contribuciones y artefactos |
+| Dependencias transitivas | No se adjunta aquí un SBOM ni un resultado de escaneo completo | Generar inventario reproducible en el entorno de release |
 
 ## 3. Puertas pendientes
 
 - [ ] Decidir explícitamente el modelo de distribución: propietario, código abierto u otro.
-- [ ] Evaluar licencias candidatas y obtener asesoramiento legal cuando corresponda.
+- [ ] Evaluar licencias candidatas y solicitar asesoramiento legal cuando corresponda.
 - [ ] Confirmar que la decisión cubre código, documentación, marcas, contribuciones y artefactos/capturas externas.
-- [ ] Revisar licencias, avisos y procedencia de acciones de CI y de cualquier dependencia futura, incluido `websocket-client==1.8.0` si se integra el PR #48.
-- [ ] Incorporar un inventario automatizado de dependencias y una política de actualización/alertas apropiada.
-- [ ] Añadir el archivo de licencia y avisos solo después de la decisión aprobada, mediante PR revisable.
+- [ ] Verificar la licencia y procedencia de `websocket-client==1.8.0` en la fuente oficial y conservar evidencia fechada.
+- [ ] Revisar licencias, avisos, versiones y procedencia de las acciones de CI.
+- [ ] Incorporar SBOM o inventario automatizado y política de actualización/alertas apropiada.
+- [ ] Añadir licencia y avisos solo después de una decisión aprobada, mediante PR revisable.
 - [ ] Registrar responsable, justificación y fecha de aprobación.
 
 ## 4. Restricciones
 
-No se elige una licencia por inferencia ni se supone que una licencia de código abierto sea el objetivo correcto. Este inventario describe la evidencia disponible en una rama concreta; no certifica exhaustividad del repositorio integrado ni sustituye revisión legal.
+No se elige una licencia por inferencia ni se supone que el proyecto deba ser de código abierto. Este documento describe evidencia observada en una línea base concreta; no certifica exhaustividad, seguridad legal ni preparación para release.
