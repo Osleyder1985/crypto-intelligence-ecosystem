@@ -150,7 +150,13 @@ def synchronize_snapshot_with_events(snapshot: Any, buffered_events: Any) -> dic
     applied = 0
     last_id = snapshot_id
     last_event_time_utc = None
+    expected_symbol = None
     for event in buffered_events:
+        metadata = validate_depth_event(event)
+        if expected_symbol is None:
+            expected_symbol = metadata["symbol"]
+        elif metadata["symbol"] != expected_symbol:
+            raise ValueError("buffered depth events must all use the same symbol")
         decision = classify_depth_event(last_id, event)
         if decision["state"] == IGNORE_OLD:
             continue
