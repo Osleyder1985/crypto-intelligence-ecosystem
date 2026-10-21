@@ -1,8 +1,13 @@
 """Offline tests for the bounded read-only Binance transport adapter."""
 import json
+import sys
 import unittest
+from types import SimpleNamespace
+from unittest.mock import patch
 
-from scripts.market_selection.binance_depth_transport import capture_once
+from scripts.market_selection.binance_depth_transport import (
+    REST_BASE, WS_BASE, _open_public_stream, capture_once,
+)
 
 
 def event(first, final, **overrides):
@@ -42,6 +47,15 @@ class FakeSocket:
 
 
 class BinanceDepthTransportTests(unittest.TestCase):
+    def test_uses_official_market_data_only_rest_and_websocket_hosts(self):
+        self.assertEqual(REST_BASE, "https://data-api.binance.vision/api/v3/depth")
+        self.assertEqual(WS_BASE, "wss://data-stream.binance.vision:443/ws")
+        calls = []
+        fake_websocket = SimpleNamespace(create_connection=lambda url, **kwargs: calls.append((url, kwargs)) or object())
+        with patch.dict(sys.modules, {"websocket": fake_websocket}):
+            _open_public_stream("BTCUSDT", 3.0)
+        self.assertEqual(calls, [("wss://data-stream.binance.vision:443/ws/btcusdt@depth@100ms", {"timeout": 3.0, "enable_multithread": False})])
+
     def test_capture_returns_synchronized_read_only_book_and_closes_socket(self):
         socket = FakeSocket([
             event(101, 102),
