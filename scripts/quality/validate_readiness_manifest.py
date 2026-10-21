@@ -55,14 +55,16 @@ def validate_manifest(data: Any) -> list[str]:
             errors.append(f"{key}: debe contener un valor concreto.")
 
     timestamp = data.get("executed_at_utc")
+    execution_time = None
     if not _nonempty(timestamp):
         errors.append("executed_at_utc: debe ser una fecha ISO 8601 UTC terminada en Z.")
     else:
         try:
-            parsed = datetime.fromisoformat(timestamp.replace("Z", "+00:00"))
-            if not timestamp.endswith("Z") or parsed.utcoffset() is None or parsed.utcoffset().total_seconds() != 0:
+            execution_time = datetime.fromisoformat(timestamp.replace("Z", "+00:00"))
+            if not timestamp.endswith("Z") or execution_time.utcoffset() is None or execution_time.utcoffset().total_seconds() != 0:
                 raise ValueError("not UTC Z")
         except (ValueError, TypeError, AttributeError):
+            execution_time = None
             errors.append("executed_at_utc: formato inválido; use ISO 8601 UTC terminado en Z.")
 
     for key in ("independent_reviewer", "risk_acceptance_authority"):
@@ -136,6 +138,10 @@ def validate_manifest(data: Any) -> list[str]:
                     )
                     if not risk["expires_at_utc"].endswith("Z") or expiry.utcoffset() is None or expiry.utcoffset().total_seconds() != 0:
                         raise ValueError("not UTC Z")
+                    if execution_time is not None and expiry <= execution_time:
+                        errors.append(
+                            f"Riesgo residual crítico/alto: la excepción ya había expirado en executed_at_utc: índice {index}."
+                        )
                 except (ValueError, TypeError, AttributeError):
                     errors.append(
                         f"Riesgo residual crítico/alto: expires_at_utc debe ser ISO 8601 UTC terminado en Z: índice {index}."
