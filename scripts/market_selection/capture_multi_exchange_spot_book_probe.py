@@ -16,11 +16,27 @@ from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 from urllib.parse import urlencode
 
-MAX_BYTES = 5 * 1024 * 1024
+MAX_BYTES = 5 * 1024 * 1024  # Internal defensive cap, not an exchange requirement.
 TIMEOUT_SECONDS = 12
 SCHEMA_VERSION = "multi-exchange-spot-book-probe-v1"
 
 # The quote differs where a venue's public spot market uses USD rather than USDT.
+class ResponseTooLarge(ValueError):
+    """A bounded read observed more bytes than the configured internal cap."""
+    def __init__(self, observed: bytes, content_length: str | None):
+        self.observed_bytes = len(observed)
+        self.content_length = content_length
+        self.prefix_sha256 = hashlib.sha256(observed).hexdigest()
+        super().__init__(f"response exceeded internal {MAX_BYTES}-byte cap; observed at least {len(observed)} bytes")
+
+def read_bounded(response: object) -> tuple[bytes, str | None]:
+    headers = getattr(response, "headers", None)
+    content_length = headers.get("Content-Length") if headers is not None else None
+    raw = response.read(MAX_BYTES + 1)  # type: ignore[attr-defined]
+    if len(raw) > MAX_BYTES:
+        raise ResponseTooLarge(raw, content_length)
+    return raw, content_length
+
 MARKETS = (
     {"asset": "BTC", "okx": "BTC-USDT", "bybit": "BTCUSDT", "coinbase": "BTC-USD", "kraken": "XBTUSD"},
     {"asset": "ETH", "okx": "ETH-USDT", "bybit": "ETHUSDT", "coinbase": "ETH-USD", "kraken": "ETHUSD"},
@@ -86,7 +102,8 @@ def extract_top_of_book(exchange: str, payload: object) -> tuple[object, object,
 def capture_one(spec: dict[str, str]) -> dict[str, object]:
     record: dict[str, object] = {
         **spec, "request_started_at_utc": now_utc(), "captured_at_utc": None,
-        "http_status": None, "response_bytes": None, "response_sha256": None,
+        "http_status": None, "response_bytes": None, "response_bytes_observed": None,
+        "response_limit_bytes": MAX_BYTES, "content_length_header": None, "oversize_prefix_sha256": None, "response_sha256": None,
         "response_base64": None, "parsed_json": None, "source_timestamp_raw": None,
         "bids_count": None, "asks_count": None, "best_bid": None, "best_ask": None,
         "capture_status": "FAIL", "error_type": None, "error_message": None,
@@ -96,11 +113,9 @@ def capture_one(spec: dict[str, str]) -> dict[str, object]:
     try:
         with urlopen(request, timeout=TIMEOUT_SECONDS) as response:
             status = getattr(response, "status", None)
-            raw = response.read(MAX_BYTES + 1)
-        if len(raw) > MAX_BYTES:
-            raise ValueError(f"response exceeded {MAX_BYTES} byte safety limit")
+            raw, content_length = read_bounded(response)
         record.update(http_status=status, captured_at_utc=now_utc(),
-            response_bytes=len(raw), response_sha256=hashlib.sha256(raw).hexdigest(),
+            response_bytes=len(raw), response_bytes_observed=len(raw), content_length_header=content_length, response_sha256=hashlib.sha256(raw).hexdigest(),
             response_base64=base64.b64encode(raw).decode("ascii"))
         try:
             payload = json.loads(raw.decode("utf-8"))
@@ -122,6 +137,23 @@ def capture_one(spec: dict[str, str]) -> dict[str, object]:
         record["captured_at_utc"] = now_utc()
         record["error_type"] = type(exc).__name__
         record["error_message"] = str(exc)[:300]
+        if isinstance(exc, ResponseTooLarge):
+            record["response_bytes_observed"] = exc.observed_bytes
+            record["content_length_header"] = exc.content_length
+            record["oversize_prefix_sha256"] = exc.prefix_sha256
+        if isinstance(exc, HTTPError):
+            try:
+                body = exc.read(MAX_BYTES + 1)
+                record["response_bytes_observed"] = len(body)
+                record["content_length_header"] = exc.headers.get("Content-Length") if exc.headers else None
+                if len(body) > MAX_BYTES:
+                    record["oversize_prefix_sha256"] = hashlib.sha256(body).hexdigest()
+                else:
+                    record["response_bytes"] = len(body)
+                    record["response_sha256"] = hashlib.sha256(body).hexdigest()
+                    record["response_base64"] = base64.b64encode(body).decode("ascii")
+            except OSError:
+                pass
     return record
 
 
