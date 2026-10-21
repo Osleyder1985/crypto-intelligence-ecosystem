@@ -17,7 +17,7 @@ from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 from urllib.parse import urlencode
 
-MAX_BYTES = 5 * 1024 * 1024
+MAX_BYTES = 5 * 1024 * 1024  # Internal defensive cap, not an ISO/Binance requirement.
 TIMEOUT_SECONDS = 12
 SCHEMA_VERSION = "binance-regional-rest-diagnostic-v1"
 VENUES = (
@@ -35,6 +35,22 @@ VENUES = (
 ASSETS = ("BTC", "ETH", "SOL")
 QUOTE_PREFERENCE = ("USDT",)
 
+class ResponseTooLarge(ValueError):
+    """A bounded read observed more bytes than the configured internal cap."""
+    def __init__(self, observed: bytes, content_length: str | None):
+        self.observed_bytes = len(observed)
+        self.content_length = content_length
+        self.prefix_sha256 = hashlib.sha256(observed).hexdigest()
+        super().__init__(f"response exceeded internal {MAX_BYTES}-byte cap; observed at least {len(observed)} bytes")
+
+def read_bounded(response: object) -> tuple[bytes, str | None]:
+    headers = getattr(response, "headers", None)
+    content_length = headers.get("Content-Length") if headers is not None else None
+    raw = response.read(MAX_BYTES + 1)  # type: ignore[attr-defined]
+    if len(raw) > MAX_BYTES:
+        raise ResponseTooLarge(raw, content_length)
+    return raw, content_length
+
 
 def now_utc() -> str:
     return datetime.now(timezone.utc).isoformat(timespec="milliseconds").replace("+00:00", "Z")
@@ -47,9 +63,7 @@ def request_json(url: str) -> dict[str, object]:
     })
     with urlopen(request, timeout=TIMEOUT_SECONDS) as response:
         status = getattr(response, "status", None)
-        raw = response.read(MAX_BYTES + 1)
-    if len(raw) > MAX_BYTES:
-        raise ValueError(f"response exceeded {MAX_BYTES} byte safety limit")
+        raw, content_length = read_bounded(response)
     if status != 200:
         raise ValueError(f"expected HTTP 200, received {status}")
     payload = json.loads(raw.decode("utf-8"))
@@ -62,7 +76,8 @@ def capture_endpoint(venue: dict[str, str], kind: str, url: str, asset: str | No
     record: dict[str, object] = {
         "venue": venue["venue"], "kind": kind, "asset": asset, "url": url,
         "request_started_at_utc": now_utc(), "captured_at_utc": None,
-        "http_status": None, "response_bytes": None, "response_sha256": None,
+        "http_status": None, "response_bytes": None, "response_bytes_observed": None,
+        "response_limit_bytes": MAX_BYTES, "content_length_header": None, "oversize_prefix_sha256": None, "response_sha256": None,
         "response_base64": None, "capture_status": "FAIL",
         "error_type": None, "error_message": None, "parsed_summary": None,
     }
@@ -72,7 +87,7 @@ def capture_endpoint(venue: dict[str, str], kind: str, url: str, asset: str | No
         payload = result["payload"]
         record.update(
             http_status=result["http_status"], captured_at_utc=now_utc(),
-            response_bytes=len(raw), response_sha256=hashlib.sha256(raw).hexdigest(),
+            response_bytes=len(raw), response_bytes_observed=len(raw), content_length_header=content_length, response_sha256=hashlib.sha256(raw).hexdigest(),
             response_base64=base64.b64encode(raw).decode("ascii"),
         )
         if kind == "server_time":
@@ -127,11 +142,20 @@ def capture_endpoint(venue: dict[str, str], kind: str, url: str, asset: str | No
         record["captured_at_utc"] = now_utc()
         record["error_type"] = type(exc).__name__
         record["error_message"] = str(exc)[:300]
+        if isinstance(exc, ResponseTooLarge):
+            record["response_bytes_observed"] = exc.observed_bytes
+            record["content_length_header"] = exc.content_length
+            record["oversize_prefix_sha256"] = exc.prefix_sha256
         if isinstance(exc, HTTPError):
             record["http_status"] = exc.code
             try:
                 body = exc.read(MAX_BYTES + 1)
-                if len(body) <= MAX_BYTES:
+                record["response_bytes_observed"] = len(body)
+                record["content_length_header"] = exc.headers.get("Content-Length") if exc.headers else None
+                if len(body) > MAX_BYTES:
+                    record["oversize_prefix_sha256"] = hashlib.sha256(body).hexdigest()
+                    record["error_message"] = f"HTTP {exc.code} error body exceeded internal {MAX_BYTES}-byte cap; observed at least {len(body)} bytes"
+                elif len(body) <= MAX_BYTES:
                     record["response_bytes"] = len(body)
                     record["response_sha256"] = hashlib.sha256(body).hexdigest()
                     record["response_base64"] = base64.b64encode(body).decode("ascii")
