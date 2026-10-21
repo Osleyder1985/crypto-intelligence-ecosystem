@@ -2,30 +2,39 @@
 
 ## Provenance and status
 
-The current `MAX_BYTES = 5 * 1024 * 1024` value is an internal defensive implementation parameter (5 MiB = 5,242,880 bytes). It is not an ISO/IEC requirement or a Binance/other-exchange API requirement. The project has not established that 5 MiB is optimal for any of these endpoints.
+The former global `MAX_BYTES = 5 * 1024 * 1024` (5 MiB / 5,242,880 bytes) had no documented ISO/IEC or exchange-specific basis. It was an internal defensive implementation parameter, and the project had not established that it was optimal. It has now been replaced by provisional endpoint-class limits based on measured public responses. These are engineering choices, not ISO or provider requirements.
 
 Official references consulted:
 - Binance Spot REST API: https://github.com/binance/binance-spot-api-docs/blob/master/rest-api.md
 - Binance market-data-only endpoints: https://github.com/binance/binance-spot-api-docs/blob/master/faqs/market_data_only.md
+- Coinbase Exchange product book endpoint: https://docs.cdp.coinbase.com/exchange/reference/exchangerestapi_getproductbook
 - ISO/IEC 25010:2023: https://www.iso.org/standard/78176.html
 - ISO/IEC 27001: https://www.iso.org/standard/27001
 
-These references do not establish a universal 5 MiB HTTP response limit for these capture scripts. ISO standards are not cited as the source of this number.
+These references do not prescribe the numeric limits below.
 
-## Current status: provisional, pending measured evidence
+## Provisional endpoint-class limits
 
-Do not interpret the current value as approved or empirically validated. It is retained temporarily while evidence is collected because removing a bound before implementing and testing a replacement could expose the capture jobs to unbounded response reads. That operational concern does not justify 5 MiB specifically.
+| Capture class | Limit | Evidence from GitHub Actions | Rationale |
+|---|---:|---:|---|
+| Binance server time, filtered exchange metadata, and depth limit 20 | 64 KiB (65,536 bytes) | Largest successful response in the measured run was 15,197 bytes (filtered exchange metadata); books were 1,287–1,337 bytes | About 4.3x headroom over the largest measured response |
+| OKX, Bybit, and Kraken order-book probes in this script | 64 KiB (65,536 bytes) | Successful books were 1,285–1,456 bytes; Bybit returned 96-byte HTTP 403 error bodies in the observed run | About 45x headroom over the largest successful measured book |
+| Coinbase Exchange `/products/{product_id}/book?level=2` | 2 MiB (2,097,152 bytes) | BTC/USD 1,080,547 bytes; ETH/USD 485,460 bytes; SOL/USD 322,672 bytes | About 1.94x headroom over the largest measured level-2 book |
 
-The capture summaries print, per endpoint, the configured limit, the complete response byte count when available, the observed lower bound for oversized responses, and the declared `Content-Length` when supplied. The uploaded JSON artifact remains the detailed evidence source. Compare raw response sizes across repeated successful captures before selecting a replacement. One successful sample is not enough to establish a safe upper bound.
+Evidence sources:
+- Binance diagnostic: https://github.com/Osleyder1985/crypto-intelligence-ecosystem/actions/runs/39673248108
+- Multi-exchange probe: https://github.com/Osleyder1985/crypto-intelligence-ecosystem/actions/runs/39673248104
+
+These are single-run observations, not guaranteed maxima or statistical percentiles. The new limits are **provisional**, must be monitored across repeated captures, and should be revised if valid responses exceed them. In particular, Coinbase level-2 returns an aggregated book whose size can vary; its 2 MiB limit is a bounded-read safeguard, not a guarantee that every future snapshot will fit.
 
 ## Runtime behavior
 
-The clients read at most `MAX_BYTES + 1` bytes to detect an oversized response without buffering the full body. An over-limit response remains a failure; a truncated prefix is never parsed or treated as a successful capture. Evidence records the configured cap, observed lower-bound byte count, declared `Content-Length` when provided, and SHA-256 of the bounded prefix. The full response hash/bytes are populated only when the complete response fits the cap. This avoids retaining an oversized partial body as Base64.
+The clients read at most the endpoint-specific limit plus one byte to detect an oversized response without buffering the full body. An over-limit response remains a failure; a truncated prefix is never parsed or treated as a successful capture. Evidence records the configured limit, observed lower-bound byte count, declared `Content-Length` when provided, and SHA-256 of the bounded prefix. The full response hash and Base64 body are populated only when the complete response fits the cap. This avoids retaining an oversized partial body as Base64.
 
-`Content-Length` is diagnostic only: it may be absent or inaccurate, so enforcement is based on bytes actually read. The byte count for an oversized response is explicitly a lower bound (`MAX_BYTES + 1`), not the total response size.
+`Content-Length` is diagnostic only: it may be absent or inaccurate, so enforcement is based on bytes actually read. The byte count for an oversized response is explicitly a lower bound (limit + 1), not the total response size.
 
 ## Reassessment rule
 
-Before changing the cap, retain reproducible observations per endpoint (URL/path and query parameters, timestamp, status, declared length, observed bytes, response hash where complete, and prefix hash for overflow), verify request scope against the provider's official API contract, and evaluate memory, artifact size, and operational needs. If the response can be narrowed using documented API parameters while preserving required data, prefer the narrower request.
+Retain reproducible observations per endpoint (URL/path and query parameters, timestamp, status, declared length, observed bytes, response hash where complete, and prefix hash for overflow). Verify request scope against the provider's official API contract and evaluate memory, artifact size, and operational needs. If the response can be narrowed using documented API parameters while preserving required data, prefer the narrower request.
 
-Choose endpoint-specific limits from documented response scope and measured payloads with an explicit safety margin, then test exact-boundary and over-limit behavior. If measurements are not sufficient to support a number, keep the value explicitly provisional rather than claiming it is justified. Any replacement threshold is an internal engineering decision unless an official source explicitly states otherwise.
+The selected limits are internal and provisional. Collect repeated samples across normal market conditions, track maximum and percentile sizes, test exact-boundary and over-limit behavior, and adjust the limits with an explicit safety margin. Do not attribute any threshold to a standard or exchange without an explicit source.
