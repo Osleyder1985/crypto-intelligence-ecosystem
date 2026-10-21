@@ -41,6 +41,10 @@ class BatchCaptureTests(unittest.TestCase):
         self.assertEqual(record["response_bytes"], len(raw))
         self.assertEqual(record["response_sha256"], hashlib.sha256(raw).hexdigest())
         self.assertEqual(json.loads(raw), record["parsed_json"])
+        self.assertIsNone(record["source_event_at_utc"])
+        self.assertIsNone(record["source_timestamp_field"])
+        self.assertIsNone(record["source_timestamp_semantics"])
+        self.assertIsNotNone(record["captured_at_utc"])
 
     def test_non_200_response_fails_and_retains_evidence(self):
         with patch("scripts.market_selection.capture_public_market_batch.urlopen", return_value=FakeResponse({"message": "bad"}, 503)):
