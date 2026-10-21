@@ -26,6 +26,17 @@
 7. **Tamaño de orden:** derivarlo del caso de uso documentado y contrastarlo con los filtros oficiales vigentes del símbolo. No utilizar valores predeterminados escogidos para forzar `PASS`.
 8. **Estados separados:** disponibilidad, integridad de captura, frescura, liquidez, slippage, comisiones y riesgo del activo no se deben colapsar en una sola puntuación.
 
+## Fuentes oficiales para la prueba de fallback multi-exchange
+
+| Proveedor / dato | Fuente oficial | Qué respalda | Qué NO demuestra |
+|---|---|---|---|
+| OKX Spot: libro de órdenes | [API V5 — Order book](https://www.okx.com/docs-v5/en/#order-book-trading-market-data-get-order-book) | Endpoint público de libros, instrumento, niveles y timestamp de generación | Acceso garantizado desde cada región ni liquidez ejecutable |
+| Bybit Spot: libro de órdenes | [V5 — Get Orderbook](https://bybit-exchange.github.io/docs/v5/market/orderbook) | `GET /v5/market/orderbook`, categoría spot, símbolo, bids/asks y campos temporales/secuencia | Profundidad completa ni ausencia de restricciones regionales |
+| Coinbase Exchange: libro de órdenes | [Exchange REST API — Get product book](https://docs.cdp.coinbase.com/exchange/reference/exchangerestapi_getproductbook) | Snapshot público de libro por producto y niveles | Equivalencia de cotización con USDT ni acceso para todas las cuentas/regiones |
+| Kraken Spot: profundidad | [Spot REST API — Depth](https://docs.kraken.com/api/docs/rest-api/get-order-book/) | Endpoint público de profundidad por par | Sincronización con los otros exchanges ni suficiencia de profundidad |
+
+La prueba inicial captura BTC, ETH y SOL, pero usa cotización USDT en OKX/Bybit y USD en Coinbase Exchange/Kraken. Por tanto, los precios no deben compararse como si fueran el mismo par cotizado sin normalizar la moneda de cotización. El resultado `PASS` solo significa que la respuesta pública pasó validación estructural básica; no aprueba comisiones, frescura bajo una política autorizada, slippage ni elegibilidad regional.
+
 ## Fuentes todavía no integradas al prototipo
 
 El Issue #7 enumera OKX, Bybit, MEXC, Gate y Bitget como exchanges comparativos. Su inclusión requiere un registro separado por proveedor que cite la documentación oficial vigente de endpoints spot, semántica de datos, filtros, tarifas, límites, timestamps y restricciones geográficas aplicables. No se les atribuyen endpoints ni cobertura en este documento hasta verificar sus fuentes oficiales y añadir pruebas de contrato.
@@ -44,3 +55,14 @@ Por ejecución:
 - limitaciones y fuentes oficiales consultadas.
 
 Una captura pública puntual no prueba estabilidad de volumen, profundidad histórica, calidad futura de API, disponibilidad regional ni rentabilidad. Esas afirmaciones requieren evidencia adicional diseñada para la pregunta concreta.
+
+
+## Diagnóstico de acceso regional: Binance.com y Binance.US
+
+La prueba automatizada `capture_binance_regional_rest_diagnostic.py` consulta dos servicios oficiales distintos:
+- Binance.com, endpoint público de datos de mercado `https://data-api.binance.vision`, documentado en [Market Data Only URLs](https://github.com/binance/binance-spot-api-docs/blob/master/faqs/market_data_only.md).
+- Binance.US, API oficial `https://api.binance.us`, documentada en [Binance.US API documentation](https://github.com/binance-us/binance-us-api-docs).
+
+Para cada servicio registra hora del servidor, metadatos de mercado y snapshots para BTC/ETH/SOL, seleccionando un par spot disponible en orden de preferencia USDT, USD y USDC. Conserva el estado HTTP, cuerpo de error cuando se pueda leer, SHA-256, respuesta original codificada y resumen parseado. Un símbolo inexistente se registra como `NOT_AVAILABLE`, no como captura correcta.
+
+Esta comparación distingue accesibilidad REST pública de acceso WebSocket y elegibilidad de trading. No atribuye automáticamente un HTTP 451 a una causa concreta ni intenta eludir restricciones regionales. La ejecución debe revisarse como evidencia puntual y no como aprobación de Binance para operar.

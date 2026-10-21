@@ -1,0 +1,51 @@
+name: Binance regional REST diagnostic
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    paths:
+      - "scripts/market_selection/capture_binance_regional_rest_diagnostic.py"
+      - "tests/market_selection/test_capture_binance_regional_rest_diagnostic.py"
+      - ".github/workflows/binance-regional-rest-diagnostic.yml"
+  workflow_dispatch:
+  schedule:
+    - cron: "17 */6 * * *"
+
+permissions:
+  contents: read
+
+jobs:
+  offline-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Run offline contract tests
+        run: python -m unittest discover -s tests/market_selection -p 'test_capture_binance_regional_rest_diagnostic.py' -v
+
+  live-public-diagnostic:
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Probe official public REST endpoints
+        id: capture
+        continue-on-error: true
+        run: python -m scripts.market_selection.capture_binance_regional_rest_diagnostic
+      - name: Upload diagnostic evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: binance-regional-rest-diagnostic
+          path: artifacts/binance-regional-rest-diagnostic.json
+          if-no-files-found: error
+          retention-days: 14
+      - name: Report diagnostic status
+        if: steps.capture.outcome != 'success'
+        run: echo "One or more official public Binance REST probes failed; inspect the retained artifact."
