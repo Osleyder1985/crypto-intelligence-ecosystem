@@ -12,19 +12,27 @@
 4. No convertir un dato ausente, inválido, vencido o no comparable en un resultado positivo. Usar `INDETERMINATE` cuando la evidencia no permita concluir.
 5. Los límites cuantitativos deben aprobarse antes de observar los resultados que se evaluarán con ellos; no ajustarlos retrospectivamente para favorecer un activo o proveedor.
 
-## Registro de decisiones que requieren aprobación del propietario
+## Registro de decisiones, fuentes oficiales y criterios internos
 
-| ID | Decisión | Evidencia necesaria | Mientras siga pendiente |
+**Regla normativa:** no se atribuirán a ISO ni a Binance límites numéricos que esas fuentes no establezcan explícitamente. ISO/IEC 25010 aporta un modelo de calidad para definir y evaluar características del producto; ISO/IEC 27001 trata la gestión de seguridad basada en riesgos. Ninguna se utilizará como fuente de una latencia universal para libros de mercado. Las velocidades de publicación de un stream Binance no equivalen a una garantía de latencia extremo a extremo.
+
+Fuentes oficiales de referencia:
+- ISO/IEC 25010:2023: https://www.iso.org/standard/78176.html
+- ISO/IEC 27001:2022: https://www.iso.org/standard/27001
+- Binance Spot API y WebSocket: https://github.com/binance/binance-spot-api-docs
+- Binance Spot Commission FAQ: https://github.com/binance/binance-spot-api-docs/blob/master/faqs/commission_faq.md
+
+| ID | Decisión / requisito | Evidencia verificable | Mientras falte evidencia |
 |---|---|---|---|
-| D18-01 | Umbral de frescura por proveedor y tipo de dato | Semántica documentada del timestamp de origen, granularidad y limitaciones oficiales | `source_freshness=INDETERMINATE` |
-| D18-02 | Tolerancia de reloj y tratamiento de timestamps futuros | Supuesto operativo explícito, fuente de sincronización y escenarios de prueba | Timestamp futuro o no interpretable no puede pasar |
-| D18-03 | Tratamiento de timestamp ausente o malformado | Contrato del proveedor y fixtures reproducibles | `source_freshness=INDETERMINATE` |
-| D18-04 | Fuente y aplicabilidad de comisiones | Página/API oficial, fecha de consulta, maker/taker, nivel de cuenta, mercado y condiciones | `fees=INDETERMINATE` |
-| D18-05 | Antigüedad máxima aceptable de la evidencia de tarifas | Política de revalidación y detección de tarifas obsoletas | No usar tarifas obsoletas como verificadas |
-| D18-06 | Escenarios y tamaños de orden de referencia | Universo de pares, tamaños/unidades, lado de operación y objetivo de comparación | No presentar coste total comparable |
-| D18-07 | Tratamiento de profundidad incompleta | Límites de profundidad de cada fuente y escenarios fuera del libro observado | Coste/slippage no extrapolable; resultado indeterminado cuando afecte a la conclusión |
+| D18-01 | Determinar si cada fuente proporciona timestamp de origen y qué significa | Documento oficial/versionado, campo exacto, unidad, semántica y payload original de ejemplo | `source_freshness=INDETERMINATE` si no puede acreditarse la edad del dato |
+| D18-02 | Establecer la validez temporal del reloj y el tratamiento de timestamps futuros | Fuente/método de sincronización, medición de incertidumbre y pruebas reproducibles. Cualquier límite interno debe justificarse por contexto, mediciones y riesgo; no atribuirlo a ISO/Binance sin cita expresa | No marcar `PASS` si la validez temporal no está demostrada |
+| D18-03 | Tratar timestamps ausentes, malformados o incoherentes | Contrato oficial y fixtures para ausencia, formato inválido, orden temporal imposible y eventos fuera de secuencia | Rechazo de entrada o `INDETERMINATE`; nunca corregir silenciosamente |
+| D18-04 | Verificar comisiones aplicables | Fuente oficial por símbolo/cuenta y tipo de operación, hora UTC de consulta, parámetros, componentes/descuentos, respuesta y hash; distinguir dato público de tarifa efectiva de la cuenta | `fees=INDETERMINATE` |
+| D18-05 | Definir cuándo revalidar la evidencia de tarifas | Documentación de vigencia si existe, comportamiento del endpoint, frecuencia de cambio observada y contexto de uso. No asumir un plazo universal de 24 h | No tratar evidencia como vigente si no puede verificarse su aplicabilidad actual |
+| D18-06 | Definir escenarios y tamaños de orden comparables | Requisito de producto/uso, unidad (base/cotizada), lado, tipo de orden y filtros oficiales del símbolo; escenarios predefinidos antes de evaluar resultados | No presentar coste total comparable |
+| D18-07 | Tratar profundidad parcial e insuficiente | Límite de niveles del proveedor, cantidad cubierta/no cubierta y simulación de consumo reproducible | No extrapolar slippage ni declarar ejecutable la orden completa |
 
-Este registro no fija valores de frescura, tolerancia, tamaños ni tarifas. La aprobación debe registrar responsable autorizado, fecha UTC, justificación y versión de la política.
+Los valores internos que eventualmente se necesiten deben incluir justificación, datos representativos, método, muestra, limitaciones, evaluación de riesgo, versión y aprobación responsable antes de evaluar activos. Si una fuente oficial no prescribe una cifra, no se inventará una cifra para aparentar conformidad.
 
 ## Contrato mínimo de evidencia de tarifas
 
@@ -70,12 +78,13 @@ Los umbrales y la clasificación exacta `FAIL` frente a `INDETERMINATE` deben qu
 
 ## Condiciones de cierre del Issue #18
 
-- [ ] Decisiones D18-01 a D18-07 aprobadas y versionadas.
+- [ ] Contratos y fuentes oficiales de D18-01 a D18-07 verificados y versionados; cualquier criterio interno adicional está justificado por el contexto, mediciones reproducibles y evaluación de riesgo (no atribuido a ISO/Binance sin evidencia).
 - [ ] Capturador conserva por separado el timestamp de origen y el de captura, cuando estén disponibles.
 - [ ] Tarifas proceden de fuentes oficiales y su aplicabilidad está documentada.
 - [ ] Fixtures cubren datos ausentes, obsoletos, inválidos y profundidad insuficiente.
 - [ ] Pruebas reproducibles ejecutadas en el commit identificado y resultados CI registrados.
 - [ ] Un ejemplo de evidencia incompleta produce `INDETERMINATE`.
+- [ ] Los umbrales internos, si son necesarios, se fijan antes de evaluar los datos y documentan racional, muestra, limitaciones y aprobación; no se presentan como límites normativos sin fuente explícita.
 - [ ] Informe de evaluación declara versiones, configuración, límites y componentes no evaluables.
 
 **Limitación:** este documento organiza las decisiones y pruebas pendientes. No es aprobación económica, no prueba por sí solo la implementación y no demuestra preparación para producción ni conformidad ISO.
