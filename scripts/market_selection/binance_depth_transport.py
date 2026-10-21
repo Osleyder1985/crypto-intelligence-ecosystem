@@ -66,7 +66,7 @@ def _open_public_stream(symbol: str, timeout_seconds: float) -> Any:
         import websocket
     except ImportError as exc:
         raise RuntimeError(
-            "live capture requires the optional 'websocket-client' package"
+            "live capture requires: python -m pip install -r requirements-market-data.txt"
         ) from exc
     url = f"{WS_BASE}/{symbol.lower()}@depth@100ms"
     return websocket.create_connection(url, timeout=timeout_seconds, enable_multithread=False)
