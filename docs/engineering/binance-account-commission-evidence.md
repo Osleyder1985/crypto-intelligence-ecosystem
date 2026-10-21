@@ -12,8 +12,8 @@ Desde un entorno donde el usuario esté autorizado a consultar ese endpoint y el
 
 ```bash
 set +x
-read -r -s -p "Binance API key: " BINANCE_API_KEY; printf '\\n'
-read -r -s -p "Binance API secret: " BINANCE_API_SECRET; printf '\\n'
+read -r -s -p "Binance API key: " BINANCE_API_KEY; printf '\n'
+read -r -s -p "Binance API secret: " BINANCE_API_SECRET; printf '\n'
 export BINANCE_API_KEY BINANCE_API_SECRET
 python scripts/market_selection/capture_binance_account_commission_evidence.py \
   --symbol BTCUSDT \
