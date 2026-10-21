@@ -3,7 +3,7 @@
 - **Estado:** propuesta para revisión; no aprobado como línea base.
 - **Issue rector:** [#11](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/issues/11)
 - **Versión documental:** 0.1.0-draft
-- **Rama:** `docs/issue-11-marco-maestro`
+- **Línea base actual:** `main` (el documento se desarrolló inicialmente en `docs/issue-11-marco-maestro`).
 - **Idioma de trabajo:** español; se conservan los nombres técnicos normalizados.
 - **Última revisión de fuentes normativas:** 2026-10-19.
 
