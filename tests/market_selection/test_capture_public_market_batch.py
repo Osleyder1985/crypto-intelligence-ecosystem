@@ -41,6 +41,20 @@ class BatchCaptureTests(unittest.TestCase):
         self.assertEqual(record["response_bytes"], len(raw))
         self.assertEqual(record["response_sha256"], hashlib.sha256(raw).hexdigest())
         self.assertEqual(json.loads(raw), record["parsed_json"])
+        self.assertIsNone(record["source_event_at_utc"])
+        self.assertIsNone(record["source_timestamp_field"])
+        self.assertIsNone(record["source_timestamp_semantics"])
+        self.assertIsNotNone(record["captured_at_utc"])
+
+    def test_binance_depth_sequence_id_is_not_event_timestamp(self):
+        # Binance depth lastUpdateId is a sequence identifier, not an event-time timestamp.
+        with patch("scripts.market_selection.capture_public_market_batch.urlopen", return_value=FakeResponse({"lastUpdateId": 123456, "bids": [], "asks": []})):
+            record = request_capture("BTC_USDT", "binance_depth", "https://example.invalid")
+        self.assertEqual(record["capture_status"], "PASS")
+        self.assertEqual(record["parsed_json"]["lastUpdateId"], 123456)
+        self.assertIsNone(record["source_event_at_utc"])
+        self.assertIsNone(record["source_timestamp_field"])
+        self.assertIsNone(record["source_timestamp_semantics"])
 
     def test_non_200_response_fails_and_retains_evidence(self):
         with patch("scripts.market_selection.capture_public_market_batch.urlopen", return_value=FakeResponse({"message": "bad"}, 503)):
