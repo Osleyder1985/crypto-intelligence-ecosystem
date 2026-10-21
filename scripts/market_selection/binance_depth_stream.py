@@ -209,3 +209,30 @@ def synchronize_snapshot_with_events(snapshot: Any, buffered_events: Any) -> dic
         "bids": _serialize_levels(bids, "bids"),
         "asks": _serialize_levels(asks, "asks"),
     }
+
+
+def freshness_observation_from_sync(
+    sync_result: Any, received_at_utc: Any, evaluation_time_utc: Any
+) -> dict[str, str]:
+    """Adapt a synchronized book to the selector freshness contract.
+
+    received_at_utc must be recorded by the network client when it receives
+    the final applied event; it is never inferred from event time. Thresholds and
+    PASS/FAIL evaluation remain the responsibility of selector.evaluate_freshness.
+    """
+    if not isinstance(sync_result, Mapping) or sync_result.get("status") != "SYNCHRONIZED":
+        raise ValueError("freshness requires a SYNCHRONIZED book")
+    source_time = sync_result.get("last_event_time_utc")
+    if not isinstance(source_time, str) or not source_time.strip():
+        raise ValueError("synchronized book must include last_event_time_utc")
+    for value, field in (
+        (received_at_utc, "received_at_utc"),
+        (evaluation_time_utc, "evaluation_time_utc"),
+    ):
+        if not isinstance(value, str) or not value.strip():
+            raise ValueError(f"{field} must be an explicit ISO-8601 timestamp")
+    return {
+        "source_timestamp_utc": source_time,
+        "captured_at_utc": received_at_utc,
+        "evaluation_time_utc": evaluation_time_utc,
+    }
