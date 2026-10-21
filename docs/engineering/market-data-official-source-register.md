@@ -55,3 +55,14 @@ Por ejecución:
 - limitaciones y fuentes oficiales consultadas.
 
 Una captura pública puntual no prueba estabilidad de volumen, profundidad histórica, calidad futura de API, disponibilidad regional ni rentabilidad. Esas afirmaciones requieren evidencia adicional diseñada para la pregunta concreta.
+
+
+## Diagnóstico de acceso regional: Binance.com y Binance.US
+
+La prueba automatizada `capture_binance_regional_rest_diagnostic.py` consulta dos servicios oficiales distintos:
+- Binance.com, endpoint público de datos de mercado `https://data-api.binance.vision`, documentado en [Market Data Only URLs](https://github.com/binance/binance-spot-api-docs/blob/master/faqs/market_data_only.md).
+- Binance.US, API oficial `https://api.binance.us`, documentada en [Binance.US API documentation](https://github.com/binance-us/binance-us-api-docs).
+
+Para cada servicio registra hora del servidor, metadatos de mercado y snapshots para BTC/ETH/SOL, seleccionando un par spot disponible en orden de preferencia USDT, USD y USDC. Conserva el estado HTTP, cuerpo de error cuando se pueda leer, SHA-256, respuesta original codificada y resumen parseado. Un símbolo inexistente se registra como `NOT_AVAILABLE`, no como captura correcta.
+
+Esta comparación distingue accesibilidad REST pública de acceso WebSocket y elegibilidad de trading. No atribuye automáticamente un HTTP 451 a una causa concreta ni intenta eludir restricciones regionales. La ejecución debe revisarse como evidencia puntual y no como aprobación de Binance para operar.
