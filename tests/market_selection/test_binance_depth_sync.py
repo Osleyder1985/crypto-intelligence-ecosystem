@@ -99,6 +99,26 @@ class SnapshotSynchronizationTests(unittest.TestCase):
         self.assertEqual(result["status"], "RESYNC_REQUIRED")
         self.assertIsNone(result["bids"])
 
+    def test_freshness_adapter_keeps_source_and_receive_times_separate(self):
+        from scripts.market_selection.binance_depth_stream import freshness_observation_from_sync
+        result = synchronize_snapshot_with_events(snapshot(), [event(first=101, final=102)])
+        observation = freshness_observation_from_sync(
+            result, "2026-10-21T12:00:02Z", "2026-10-21T12:00:05Z"
+        )
+        self.assertEqual(observation["source_timestamp_utc"], result["last_event_time_utc"])
+        self.assertEqual(observation["captured_at_utc"], "2026-10-21T12:00:02Z")
+        self.assertNotEqual(observation["source_timestamp_utc"], observation["captured_at_utc"])
+
+    def test_freshness_adapter_rejects_unsynchronized_book(self):
+        from scripts.market_selection.binance_depth_stream import freshness_observation_from_sync
+        with self.assertRaisesRegex(ValueError, "SYNCHRONIZED"):
+            freshness_observation_from_sync({"status": "RESYNC_REQUIRED"}, "2026-10-21T12:00:02Z", "2026-10-21T12:00:05Z")
+
+    def test_freshness_adapter_requires_receive_and_evaluation_times(self):
+        from scripts.market_selection.binance_depth_stream import freshness_observation_from_sync
+        result = synchronize_snapshot_with_events(snapshot(), [event(first=101, final=102)])
+        with self.assertRaisesRegex(ValueError, "received_at_utc"):
+            freshness_observation_from_sync(result, None, "2026-10-21T12:00:05Z")
     def test_rejects_malformed_event_in_buffer(self):
         with self.assertRaisesRegex(ValueError, "event type"):
             synchronize_snapshot_with_events(snapshot(), [{"e": "trade"}])
