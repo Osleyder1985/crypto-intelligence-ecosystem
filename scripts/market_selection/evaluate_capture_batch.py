@@ -4,9 +4,9 @@ import argparse, base64, hashlib, json, math
 from pathlib import Path
 from typing import Any
 try:
-    from .selector import depth_quote, estimate_slippage_bps, spread_bps
+    from .selector import depth_quote, estimate_slippage_bps, evaluate_freshness, spread_bps
 except ImportError:  # Support direct CLI execution from this directory.
-    from selector import depth_quote, estimate_slippage_bps, spread_bps
+    from selector import depth_quote, estimate_slippage_bps, evaluate_freshness, spread_bps
 
 SCHEMA = "public-market-batch-evaluation-v1"
 PROVIDERS = ("pionex", "binance_exchange_info", "binance_depth")
@@ -32,6 +32,54 @@ def _one(records, market, provider):
 
 def _num(v):
     return isinstance(v, (int, float)) and not isinstance(v, bool) and math.isfinite(v)
+
+
+def _live_freshness(artifact: dict[str, Any], symbol: str, config: dict[str, Any]):
+    """Evaluate a live stream observation only under an explicitly approved policy."""
+    observations = artifact.get("live_depth_observations")
+    if not isinstance(observations, list):
+        return "INDETERMINATE", {}, "no live source-event timestamp is attached to the batch artifact; capture time is not a substitute"
+    matches = [item for item in observations if isinstance(item, dict) and item.get("symbol") == symbol]
+    if len(matches) != 1:
+        return "INDETERMINATE", {}, f"expected exactly one live depth observation for {symbol}; found {len(matches)}"
+    capture = matches[0]
+    if capture.get("status") != "SYNCHRONIZED" or capture.get("read_only") is not True:
+        return "INDETERMINATE", {}, "live depth capture is not a synchronized read-only book"
+    policy = config.get("freshness_policy")
+    required = ("version", "approval_ref", "max_source_lag_seconds", "max_snapshot_age_seconds", "max_clock_skew_ms")
+    if not isinstance(policy, dict) or policy.get("approval_status") != "APPROVED":
+        return "INDETERMINATE", {}, "freshness policy has not been explicitly approved"
+    if any(policy.get(key) is None for key in required) or not isinstance(policy.get("version"), str) or not policy["version"].strip() or not isinstance(policy.get("approval_ref"), str) or not policy["approval_ref"].strip():
+        return "INDETERMINATE", {}, "approved freshness policy is missing version, approval reference, or thresholds"
+    skew = capture.get("clock_skew_ms")
+    if not _num(skew):
+        return "INDETERMINATE", {}, "clock skew evidence is missing or invalid"
+    if not _num(policy["max_clock_skew_ms"]) or policy["max_clock_skew_ms"] < 0:
+        return "INDETERMINATE", {}, "approved maximum clock skew is invalid"
+    if abs(skew) > policy["max_clock_skew_ms"]:
+        return "FAIL", {"clock_skew_ms": skew}, "client/provider clock skew exceeds the approved limit"
+    observation = capture.get("freshness_observation")
+    if not isinstance(observation, dict):
+        return "INDETERMINATE", {}, "live capture has no freshness observation"
+    try:
+        evaluated = evaluate_freshness(observation, {
+            "max_source_lag_seconds": policy["max_source_lag_seconds"],
+            "max_snapshot_age_seconds": policy["max_snapshot_age_seconds"],
+        })
+    except (TypeError, ValueError, OverflowError) as exc:
+        return "INDETERMINATE", {}, f"live freshness timestamps are invalid or inconsistent: {exc}"
+    metrics = {
+        "source_lag_seconds": evaluated["source_lag_seconds"],
+        "snapshot_age_seconds": evaluated["snapshot_age_seconds"],
+        "clock_skew_ms": skew,
+        "freshness_policy_version": policy["version"],
+        "freshness_policy_approval_ref": policy["approval_ref"],
+    }
+    return evaluated["status"], metrics, (
+        "live source-event freshness satisfies the approved policy"
+        if evaluated["status"] == "PASS"
+        else "live source-event freshness exceeds an approved age limit"
+    )
 
 def evaluate_batch(artifact: dict[str, Any], config: dict[str, Any] | None = None) -> dict[str, Any]:
     config = {} if config is None else config
@@ -62,9 +110,14 @@ def evaluate_batch(artifact: dict[str, Any], config: dict[str, Any] | None = Non
                   "binance_spot_market":"INDETERMINATE", "spread":"NOT_RUN", "depth":"NOT_RUN",
                   "slippage":"NOT_RUN", "source_freshness":"INDETERMINATE", "fees":"INDETERMINATE"}
         metrics, reasons = {}, [
-            "Source-event freshness is INDETERMINATE: the captured Binance depth payload has no source event timestamp; capture time is not a substitute.",
             "Trading fees and total execution cost are INDETERMINATE: no verified account-applicable official fee schedule is included in this artifact.",
         ]
+        freshness_status, freshness_metrics, freshness_reason = _live_freshness(artifact, bsym, config)
+        status["source_freshness"] = freshness_status
+        metrics.update(freshness_metrics)
+        if freshness_status != "PASS":
+            reasons.append(f"Source freshness is {freshness_status}: {freshness_reason}.")
+
         pdata = pionex.get("data")
         syms = pdata.get("symbols") if isinstance(pdata, dict) else None
         matches = [s for s in syms if isinstance(s, dict) and s.get("symbol") == market] if isinstance(syms, list) else []
@@ -161,7 +214,7 @@ def evaluate_batch(artifact: dict[str, Any], config: dict[str, Any] | None = Non
             "markets_evaluated":len(results),"markets":results,"decision_status":"INDETERMINATE",
             "orders_submitted":False,"network_requests_made":False,
             "limitations":["Snapshot metrics only; no execution guarantee.","Depth is limited to captured levels.",
-                           "Source freshness and fees remain INDETERMINATE.","PASS applies only to a named dimension and supplied snapshot/configuration."]}
+                           "Source freshness requires a synchronized live observation and explicitly approved policy; fees remain INDETERMINATE without account-applicable official evidence.","PASS applies only to a named dimension and supplied snapshot/configuration."]}
 
 def main():
     parser=argparse.ArgumentParser(description=__doc__)
