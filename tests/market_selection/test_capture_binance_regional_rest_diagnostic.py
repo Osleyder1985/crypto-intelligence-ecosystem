@@ -26,6 +26,23 @@ class BinanceRegionalRestDiagnosticTests(unittest.TestCase):
         self.assertIn("restricted location", record["error_message"])
         self.assertIsNotNone(record["response_sha256"])
 
+    def test_exchange_info_query_is_bounded_to_required_symbols(self):
+        from scripts.market_selection.capture_binance_regional_rest_diagnostic import capture_venue
+        with patch("scripts.market_selection.capture_binance_regional_rest_diagnostic.capture_endpoint", side_effect=[
+            {"kind": "server_time", "capture_status": "PASS"},
+            {"kind": "exchange_info", "capture_status": "FAIL", "parsed_summary": None},
+            {"kind": "order_book", "capture_status": "NOT_AVAILABLE"},
+            {"kind": "order_book", "capture_status": "NOT_AVAILABLE"},
+            {"kind": "order_book", "capture_status": "NOT_AVAILABLE"},
+        ]) as mocked:
+            capture_venue(VENUES[0])
+        exchange_url = mocked.call_args_list[1].args[2]
+        self.assertIn("symbols=", exchange_url)
+        self.assertIn("BTCUSDT", exchange_url)
+        self.assertIn("ETHUSDT", exchange_url)
+        self.assertIn("SOLUSDT", exchange_url)
+        self.assertNotIn("exchangeInfo\"", exchange_url)
+
     def test_server_time_schema(self):
         response = {"serverTime": 123456789}
         fake = {"http_status": 200, "raw": b'{"serverTime":123456789}', "payload": response}
