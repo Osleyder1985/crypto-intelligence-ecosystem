@@ -1,6 +1,6 @@
 # Índice de ingeniería
 
-**Estado del conjunto:** propuesta en revisión mediante [PR #12](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/pull/12). Ninguno de estos documentos se considera línea base aprobada hasta completar la revisión y recibir autorización expresa.
+**Estado del conjunto:** documentos versionados en `main`; su presencia en la rama principal no equivale por sí sola a aprobación formal de requisitos, decisiones normativas ni arquitectura. Los documentos marcados como borrador/propuesta siguen sujetos a decisión y trazabilidad mediante Issues/PR.
 
 ## Documentos
 
