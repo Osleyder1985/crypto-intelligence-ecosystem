@@ -41,6 +41,7 @@ def evaluate_batch(artifact: dict[str, Any], config: dict[str, Any] | None = Non
     if artifact.get("overall_status") != "PASS" or not isinstance(universe, list) or not universe or not isinstance(records, list):
         raise ValueError("batch artifact must be PASS with non-empty universe and records")
     results = []
+    seen_market_ids, seen_pionex_symbols, seen_binance_symbols = set(), set(), set()
     for spec in universe:
         if not isinstance(spec, dict):
             raise ValueError("universe entries must be objects")
@@ -48,6 +49,15 @@ def evaluate_batch(artifact: dict[str, Any], config: dict[str, Any] | None = Non
         base, quote = spec.get("base_asset"), spec.get("quote_asset")
         if not all(isinstance(x, str) and x for x in (market, bsym, base, quote)):
             raise ValueError("market symbols and base/quote must be non-empty strings")
+        if market in seen_market_ids:
+            raise ValueError(f"duplicate market_id in universe: {market}")
+        if market in seen_pionex_symbols:
+            raise ValueError(f"duplicate Pionex symbol in universe: {market}")
+        if bsym in seen_binance_symbols:
+            raise ValueError(f"duplicate Binance symbol in universe: {bsym}")
+        seen_market_ids.add(market)
+        seen_pionex_symbols.add(market)
+        seen_binance_symbols.add(bsym)
         pionex = _one(records, market, "pionex")
         info = _one(records, market, "binance_exchange_info")
         depth = _one(records, market, "binance_depth")
