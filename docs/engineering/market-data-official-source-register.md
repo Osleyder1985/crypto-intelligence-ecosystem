@@ -13,7 +13,12 @@
 | Binance: API pública de datos de mercado | [Market Data Only URLs](https://github.com/binance/binance-spot-api-docs/blob/master/faqs/market-data-only.md) | Endpoints públicos de datos de mercado que no requieren API key | Disponibilidad permanente, latencia end-to-end o ausencia de límites |
 | Binance Spot: filtros de símbolos | [Filters](https://github.com/binance/binance-spot-api-docs/blob/master/filters.md) | Semántica de filtros del mercado, que debe consultarse para restricciones de cantidad/precio/notional aplicables | Tamaño de orden de referencia para el producto; el filtro del exchange no sustituye el requisito de uso |
 | Binance Spot: comisiones | [Commission FAQ](https://github.com/binance/binance-spot-api-docs/blob/master/faqs/commission_faq.md) | Métodos oficiales para consultar/calcular comisiones y factores que pueden afectar el resultado | Una tasa universal fija aplicable a toda cuenta, símbolo, orden o promoción |
+| Binance Spot: evidencia de comisión de cuenta por símbolo | [Commission FAQ — `GET /api/v3/account/commission`](https://github.com/binance/binance-spot-api-docs/blob/master/faqs/commission_faq.md) | Tasas actuales de la cuenta para el símbolo consultado y componentes `standard`, `tax`, `special` y descuento documentados; capturador opcional `scripts/market_selection/capture_binance_account_commission_evidence.py` | No demuestra tarifa de Pionex, vigencia futura, ni coste total sin lado/tipo de orden, tamaño, profundidad y contexto de uso |
 | Pionex: listado de símbolos | [Common Symbols API](https://www.pionex.com/docs/api-docs/trade-api/common) | `GET /api/v1/common/symbols`, parámetros de símbolo/tipo y campos documentados como timestamp, tipo, base/cotizada y habilitación | Acceso regional/de cuenta, liquidez, rentabilidad ni estado futuro del mercado |
+
+## Captura de evidencia de comisiones por cuenta
+
+El capturador opcional de Binance Spot documentado en [`binance-account-commission-evidence.md`](binance-account-commission-evidence.md) consulta `GET /api/v3/account/commission` con una solicitud firmada y no coloca órdenes. La prueba estructural offline no requiere credenciales. Una ejecución real necesita credenciales de lectura autorizadas y un entorno permitido; nunca deben guardarse en el repositorio ni en artefactos. Hasta que exista una respuesta real, archivada y aplicable al símbolo/cuenta objetivo, la dimensión de comisiones permanece `INDETERMINATE`. La captura de Binance no resuelve tarifas de Pionex.
 
 ## Semántica aplicada en el código
 
