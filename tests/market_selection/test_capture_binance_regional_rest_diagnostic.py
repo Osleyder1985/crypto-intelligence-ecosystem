@@ -51,9 +51,9 @@ class BinanceRegionalRestDiagnosticTests(unittest.TestCase):
             def __enter__(self): return self
             def __exit__(self, *args): return False
             def read(self, size=-1): return self.body[:size]
-        with patch("scripts.market_selection.capture_binance_regional_rest_diagnostic.urlopen", return_value=FakeResponse(b"x" * MAX_BYTES)):
+        with patch("scripts.market_selection.capture_binance_regional_rest_diagnostic.urlopen", return_value=FakeResponse(b"{}" + b" " * (MAX_BYTES - 2))):
             self.assertEqual(len(request_json("https://example.invalid")["raw"]), MAX_BYTES)
-        large = FakeResponse(b"x" * (MAX_BYTES + 1))
+        large = FakeResponse(b"{}" + b" " * (MAX_BYTES - 1))
         large.headers = {"Content-Length": str(MAX_BYTES + 1)}
         with patch("scripts.market_selection.capture_binance_regional_rest_diagnostic.urlopen", return_value=large):
             with self.assertRaises(ResponseTooLarge) as caught:
