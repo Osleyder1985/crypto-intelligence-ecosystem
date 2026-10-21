@@ -236,7 +236,7 @@ def main() -> int:
     print(json.dumps({
         "artifact": str(path), "overall_status": artifact["overall_status"],
         "venue_status": artifact["venue_status"],
-        "records": [{k: r.get(k) for k in ("venue", "kind", "asset", "capture_status", "http_status", "error_type", "error_message", "parsed_summary")} for r in artifact["records"]],
+        "records": [{k: r.get(k) for k in ("venue", "kind", "asset", "capture_status", "http_status", "response_bytes", "response_bytes_observed", "response_limit_bytes", "content_length_header", "error_type", "error_message", "parsed_summary")} for r in artifact["records"]],
     }, ensure_ascii=False, indent=2))
     return 0 if artifact["overall_status"] == "PASS" else 1
 
