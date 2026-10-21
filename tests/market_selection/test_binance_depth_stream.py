@@ -66,7 +66,7 @@ class BinanceDepthEventContractTests(unittest.TestCase):
     def test_classifies_sequence_gap_as_resynchronization_required(self):
         result = classify_depth_event(103, event(U=105, u=106))
         self.assertEqual(result["state"], GAP)
-        self.assertIn("re-synchronized", result["reason"])
+        self.assertIn("starts after", result["reason"])
 
     def test_requires_nonnegative_integer_local_update_id(self):
         with self.assertRaisesRegex(ValueError, "last_applied_update_id"):
