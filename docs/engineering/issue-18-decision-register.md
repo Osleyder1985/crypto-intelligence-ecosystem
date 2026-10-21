@@ -79,3 +79,21 @@ Los umbrales y la clasificación exacta `FAIL` frente a `INDETERMINATE` deben qu
 - [ ] Informe de evaluación declara versiones, configuración, límites y componentes no evaluables.
 
 **Limitación:** este documento organiza las decisiones y pruebas pendientes. No es aprobación económica, no prueba por sí solo la implementación y no demuestra preparación para producción ni conformidad ISO.
+
+
+## Hallazgo técnico verificado: contrato temporal del libro
+
+El capturador actual consulta un snapshot REST de profundidad de Binance (/api/v3/depth). El artefacto conserva la hora local de captura, mientras que el payload de profundidad contiene lastUpdateId; el proyecto no debe interpretar ese identificador de secuencia como un timestamp. Por eso los campos source_event_at_utc, source_timestamp_field y source_timestamp_semantics quedan explícitamente vacíos y la frescura sigue siendo INDETERMINATE.
+
+La documentación oficial de Binance describe un flujo WebSocket de diferencias de profundidad (<symbol>@depth) cuyos eventos incluyen E (event time) y los identificadores de actualización U/u. Referencia: https://developers.binance.com/docs/binance-spot-api-docs/web-socket-streams#diff-depth-stream. Esto identifica una vía técnica posible, pero no autoriza a asignar automáticamente E al snapshot REST existente.
+
+### Contrato propuesto para una futura implementación
+
+1. Verificar el contrato vigente de producción de Binance y la semántica exacta de E, U y u antes de codificarlo.
+2. Construir un libro local coherente siguiendo el procedimiento oficial de sincronización entre snapshot REST y eventos WebSocket; registrar el último evento aplicado y detectar huecos/reconexiones.
+3. Preservar separadamente el tiempo de recepción UTC del cliente, el timestamp del evento del proveedor, el campo de origen y su semántica documentada.
+4. Marcar el libro como no confiable tras una pérdida de secuencia o reconexión hasta resincronizarlo. No inferir frescura solo porque siga llegando tráfico de red.
+5. Añadir fixtures reproducibles para evento ausente/malformado, timestamp futuro, lag excesivo, secuencia perdida, reconexión y libro no sincronizado.
+6. Mantener source_freshness=INDETERMINATE hasta que el contrato y los límites D18-01/D18-02 estén aprobados.
+
+Esta alternativa requiere un capturador de libro incremental y pruebas de sincronización; no es un cambio de una sola línea en el evaluador actual. Los límites cuantitativos siguen pendientes y no se fijan en este documento.
