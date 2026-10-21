@@ -2,7 +2,7 @@
 
 - **Estado:** inventario preliminar de la rama auditada; no constituye una decisión de licencia ni asesoramiento legal.
 - **Issue:** [#20 — Licencia, derechos de distribución y dependencias](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/issues/20).
-- **Base examinada:** rama de la PR #12, HEAD `d4be18627b4dfaa8b1f782f560d691709bf64090`; repetir el inventario después de integrar cambios adicionales y antes de una release.
+- **Base examinada:** instantánea de la rama de la PR #12 revisada el 2026-10-20; repetir el inventario después de integrar cambios adicionales y antes de una release.
 
 ## 1. Hallazgos reproducibles
 
