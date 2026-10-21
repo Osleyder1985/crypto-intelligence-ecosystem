@@ -87,7 +87,7 @@ def capture_endpoint(venue: dict[str, str], kind: str, url: str, asset: str | No
         payload = result["payload"]
         record.update(
             http_status=result["http_status"], captured_at_utc=now_utc(),
-            response_bytes=len(raw), response_bytes_observed=len(raw), content_length_header=content_length, response_sha256=hashlib.sha256(raw).hexdigest(),
+            response_bytes=len(raw), response_bytes_observed=len(raw), content_length_header=result.get("content_length"), response_sha256=hashlib.sha256(raw).hexdigest(),
             response_base64=base64.b64encode(raw).decode("ascii"),
         )
         if kind == "server_time":
