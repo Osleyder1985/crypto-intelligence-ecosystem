@@ -16,7 +16,8 @@ from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 from urllib.parse import urlencode
 
-MAX_BYTES = 64 * 1024  # Provisional cap for bounded top-book endpoints; latest observed max was 1,456 bytes.\nCOINBASE_MAX_BYTES = 2 * 1024 * 1024  # Level-2 snapshot; latest BTC sample was 1,080,547 bytes.
+MAX_BYTES = 64 * 1024  # Provisional cap for bounded top-book endpoints; latest observed max was 1,456 bytes.
+COINBASE_MAX_BYTES = 2 * 1024 * 1024  # Level-2 snapshot; latest BTC sample was 1,080,547 bytes.
 TIMEOUT_SECONDS = 12
 SCHEMA_VERSION = "multi-exchange-spot-book-probe-v1"
 
