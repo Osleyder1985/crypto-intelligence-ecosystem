@@ -34,7 +34,7 @@ jobs:
       - name: Install optional public WebSocket client
         run: python -m pip install -r requirements-market-data.txt
       - name: Capture synchronized public depth and clock evidence
-        run: python scripts/market_selection/capture_binance_live_depth_evidence.py
+        run: python -m scripts.market_selection.capture_binance_live_depth_evidence
       - name: Validate evidence contract and abstention
         if: always()
         run: |
