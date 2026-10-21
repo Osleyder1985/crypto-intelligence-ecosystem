@@ -10,6 +10,7 @@ import base64
 import hashlib
 import json
 import sys
+import math
 from datetime import datetime, timezone
 from pathlib import Path
 from urllib.error import HTTPError, URLError
@@ -37,7 +38,10 @@ def request_capture(market_id: str, provider: str, url: str) -> dict[str, object
         "request_started_at_utc": now_utc(), "captured_at_utc": None,
         # The current endpoints do not provide a verified event timestamp in this capture contract.
         # Keep provenance explicit; capture time must never be treated as source-event time.
-        "source_event_at_utc": None, "source_timestamp_field": None,
+        "source_event_at_utc": None,
+        "source_response_at_utc": None,
+        "source_response_timestamp_status": "NOT_PROVIDED",
+        "source_timestamp_field": None,
         "source_timestamp_semantics": None,
         "http_status": None, "response_bytes": None, "response_sha256": None,
         "response_base64": None, "parsed_json": None, "capture_status": "FAIL",
@@ -65,6 +69,28 @@ def request_capture(market_id: str, provider: str, url: str) -> dict[str, object
             record.update(error_type=type(exc).__name__, error_message="response was not valid UTF-8 JSON")
             return record
         record["parsed_json"] = parsed
+        if provider == "pionex":
+            # Pionex documents this top-level timestamp in milliseconds as response metadata.
+            # It is not a market-data event timestamp and must not populate source_event_at_utc.
+            record["source_timestamp_field"] = "timestamp"
+            record["source_timestamp_semantics"] = (
+                "Pionex Common Symbols API response timestamp in epoch milliseconds; "
+                "response metadata time, not an order-book event timestamp"
+            )
+            timestamp = parsed.get("timestamp") if isinstance(parsed, dict) else None
+            if isinstance(timestamp, int) and not isinstance(timestamp, bool) and timestamp >= 0:
+                try:
+                    record["source_response_at_utc"] = (
+                        datetime.fromtimestamp(timestamp / 1000, timezone.utc)
+                        .isoformat(timespec="milliseconds").replace("+00:00", "Z")
+                    )
+                    record["source_response_timestamp_status"] = "VALID"
+                except (OverflowError, OSError, ValueError):
+                    record["source_response_timestamp_status"] = "INVALID"
+            elif timestamp is None:
+                record["source_response_timestamp_status"] = "MISSING"
+            else:
+                record["source_response_timestamp_status"] = "INVALID"
         if status != 200:
             record.update(error_type="UnexpectedHTTPStatus", error_message=f"expected HTTP 200, received {status}")
             return record
