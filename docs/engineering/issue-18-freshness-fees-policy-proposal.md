@@ -21,24 +21,41 @@ Hasta que el propietario apruebe una versión fechada de esta política, el eval
 
 La sincronización del libro (secuencia `U/u`, snapshot y ausencia de huecos) es una condición de integridad, no una medida de frescura temporal. La edad de evento, la edad desde recepción y la continuidad de la sesión son dimensiones distintas.
 
-## 3. Decisiones que requieren aprobación explícita
+## 3. Base normativa y decisiones de diseño
 
-Los valores numéricos siguientes son **propuestas iniciales para discusión**, no valores desplegados ni aprobados.
+**No se atribuyen umbrales numéricos a ISO ni a Binance si sus fuentes oficiales no los establecen.** La versión anterior de esta propuesta incluía 2.000 ms, 1.000 ms, 24 horas y tamaños de 10/100/1.000 USDT como sugerencias internas sin respaldo normativo documentado. Se retiran como valores recomendados.
 
-| ID | Decisión | Propuesta para revisión | Qué pasa si no se aprueba |
+### Fuentes oficiales aplicables
+
+- **ISO/IEC 25010:2023 — modelo de calidad del producto:** https://www.iso.org/standard/78176.html. Proporciona características y un marco para especificar, medir y evaluar calidad y criterios de aceptación; no prescribe un SLA universal de frescura de libros de Binance ni importes de órdenes para este proyecto.
+- **ISO/IEC 27001:2022 — sistema de gestión de seguridad de la información:** https://www.iso.org/standard/27001. Aporta un marco de gestión de riesgos y controles de seguridad; no fija tolerancias de latencia de mercado ni caducidad universal de tarifas.
+- **Documentación oficial de Binance Spot API y streams:** https://github.com/binance/binance-spot-api-docs. En `web-socket-streams.md`, Binance documenta para Diff. Depth Stream el tiempo de evento `E`, los identificadores `U/u`, y las velocidades de actualización publicadas (1.000 ms o 100 ms para los streams JSON descritos). Estas velocidades describen la publicación/actualización del stream, no una garantía de latencia extremo a extremo, edad máxima del dato en el cliente ni umbral de aceptación del ecosistema.
+- **Comisiones oficiales de Binance Spot:** https://github.com/binance/binance-spot-api-docs/blob/master/faqs/commission_faq.md y endpoint documentado `GET /api/v3/account/commission`. La respuesta de tarifas debe obtenerse para el símbolo y la cuenta relevantes; `POST /api/v3/order/test` con `computeCommissionRates` puede aportar estimación específica de los parámetros de una orden de prueba. Una consulta pública genérica no equivale necesariamente a la tarifa real de la cuenta.
+
+### Registro de requisitos y decisiones
+
+| ID | Requisito verificable | Evidencia y criterio | Si falta evidencia |
 |---|---|---|---|
-| D18-01 | Edad máxima de evento para libro WebSocket de profundidad | 2.000 ms en el instante de evaluación, siempre que el reloj supere la comprobación D18-02 | `source_freshness=INDETERMINATE` |
-| D18-02 | Tolerancia máxima de desfase reloj cliente/proveedor | 2.000 ms; fuente y método de estimación deben quedar registrados | `source_freshness=INDETERMINATE` |
-| D18-03 | Antigüedad máxima desde la recepción del último evento aplicado | 1.000 ms para una observación de libro en vivo; requiere conexión sincronizada y sin huecos | `source_freshness=INDETERMINATE` |
-| D18-04 | Edad máxima del documento oficial de tarifas | 24 h desde la consulta para tarifa dinámica; consultar fuente oficial en cada ejecución económica | `fees=INDETERMINATE` si no se actualiza o no se conserva la respuesta |
-| D18-05 | Tamaños de orden de referencia para comparar coste | Escenarios cotizados de 10, 100 y 1.000 USDT, convertidos a cantidad base al precio medio fechado; cubrir compra y venta | Coste comparativo no ejecutado/indeterminado |
-| D18-06 | Alcance de tarifa | Spot, maker y taker por separado; nivel de cuenta aplicable, descuento, activo de pago y condiciones; retiros/red solo cuando el flujo de producto los incluya | `fees=INDETERMINATE` |
-| D18-07 | Profundidad insuficiente | Si no cubre el 100 % del tamaño de referencia, no publicar slippage como si la orden completa fuera ejecutable; conservar cantidad no cubierta | Coste total `INDETERMINATE` para ese escenario |
-| D18-08 | Política de timestamps ausentes/malformados/futuros | Ausente o malformado: `INDETERMINATE`; evento futuro más allá de tolerancia aprobada: `INDETERMINATE`; nunca corregir silenciosamente | Sin excepción implícita |
-| D18-09 | Comparación entre exchanges | No agregar costes con distintas monedas, niveles de cuenta, ventanas o conceptos de tarifa; mostrar componentes y supuestos por separado | Comparación global `INDETERMINATE` |
+| D18-01 | Identificar tiempo de evento, recepción y evaluación por separado | Payload oficial de Binance y reloj de recepción local; conservar los valores originales y su unidad | Frescura `INDETERMINATE` |
+| D18-02 | Validar integridad temporal del reloj utilizado | Documentar fuente, método de sincronización y medición de incertidumbre/desfase; el límite de aceptación debe derivarse del contexto de uso y pruebas, no atribuirse a ISO/Binance | Frescura `INDETERMINATE` si no se puede demostrar la validez temporal |
+| D18-03 | Aplicar correctamente el protocolo de libro local | Seguir el procedimiento oficial de snapshot + eventos, IDs `U/u`, descartes y detección de huecos | Libro no sincronizado o `RESYNC_REQUIRED`: no evaluar como libro válido |
+| D18-04 | Definir el requisito operativo de frescura para el caso de uso | Medir latencia y edad con capturas representativas, distribución/percentiles, condiciones de red, comportamiento ante desconexión y riesgo del uso; registrar fuente y justificación de cualquier umbral interno | No declarar `PASS` hasta que exista criterio aprobado y evidencia suficiente |
+| D18-05 | Calcular coste para tamaños relevantes al producto | Los tamaños deben venir de requisitos del producto/usuario y restricciones oficiales del símbolo (`exchangeInfo` filters), no de importes arbitrarios | Escenario no definido: coste comparativo `INDETERMINATE` |
+| D18-06 | Obtener comisión aplicable al símbolo y tipo de orden | Endpoint oficial de comisión por cuenta/símbolo o respuesta `computeCommissionRates` para los parámetros evaluados; registrar descuentos, componentes y errores | Comisiones `INDETERMINATE` |
+| D18-07 | No extrapolar más allá de la profundidad observada | Mostrar cantidad solicitada, cantidad cubierta y remanente; no afirmar ejecutabilidad total si el libro capturado no cubre la orden | Coste total `INDETERMINATE` para la orden completa |
+| D18-08 | Rechazar timestamps ausentes, inválidos o inconsistentes | Pruebas de límites derivadas del contrato temporal y política aprobada; conservar error original | `INDETERMINATE`, sin corregir silenciosamente |
+| D18-09 | Comparar costes homogéneos | Mismo mercado/unidad, tipo de ejecución, tamaño, ventana temporal, componentes de tarifa y supuestos declarados | No agregar; comparación `INDETERMINATE` |
 
-El propietario debe aprobar, modificar o rechazar cada propuesta antes de que se cambie el estado a política aprobada. La implementación puede añadir validaciones y conservar evidencia sin asumir esa aprobación.
+### Cómo se fijará cualquier umbral interno
 
+Un umbral que no venga prescrito por una fuente oficial solo podrá proponerse tras:
+1. definir el contexto de uso y el daño potencial de datos atrasados;
+2. recopilar mediciones reproducibles bajo condiciones representativas;
+3. documentar método, muestra, distribución y limitaciones;
+4. justificar el valor de aceptación respecto al riesgo y los objetivos del producto;
+5. versionar y aprobar el criterio, con trazabilidad a evidencia y pruebas.
+
+Esto es una decisión de ingeniería y gestión de riesgo del proyecto, no un requisito numérico de ISO ni un SLA de Binance. Hasta que exista esa base, no se inventará un valor de aceptación: el estado será `INDETERMINATE`.
 ## 4. Evidencia de tarifas por ejecución
 
 Para cada fuente oficial y mercado evaluado, el artefacto debe conservar:
@@ -71,10 +88,10 @@ El resultado económico global debe seguir `INDETERMINATE` si ocurre cualquiera 
 
 - política sin aprobar o configuración sin identificador/versión aprobados;
 - timestamp de evento, recepción o evaluación ausente, inválido o temporalmente inconsistente;
-- reloj fuera de tolerancia o sin evidencia para evaluar esa tolerancia;
+- calidad del reloj insuficiente o ausencia de un criterio interno justificado y aprobado para interpretar la frescura;
 - sesión no sincronizada, desconexión, hueco de secuencia o evento inválido;
 - tarifa desconocida, vencida, no oficial o no aplicable al nivel de cuenta/escenario;
-- libro truncado o insuficiente para cubrir el tamaño de referencia;
+- libro truncado o insuficiente para cubrir el tamaño requerido por el escenario de producto;
 - unidad, mercado, horizonte o definición de coste no comparable.
 
 Un resultado `PASS` en integridad de captura no levanta ninguno de estos bloqueos.
@@ -84,22 +101,26 @@ Un resultado `PASS` en integridad de captura no levanta ninguno de estos bloqueo
 La suite debe incluir y preservar casos para:
 
 - timestamp de evento ausente, malformado, futuro y obsoleto;
-- desfase de reloj por debajo, en el límite y por encima del umbral aprobado;
+- calidad temporal del reloj insuficiente, incluyendo pruebas de los límites definidos por una política justificada y aprobada (sin inventar límites normativos);
 - evento fresco pero recepción/captura vieja y el caso inverso;
 - sesión desconectada, secuencia con hueco y libro sincronizado con evento fresco;
-- tarifa desconocida, oficial obsoleta, nivel de cuenta incompatible y tarifa configurada a cero sin evidencia;
-- profundidad insuficiente para cada tamaño de orden, incluyendo cantidad no cubierta;
+- tarifa ausente, error de endpoint, nivel de cuenta/símbolo incompatible y tarifa configurada a cero sin evidencia oficial;
+- profundidad insuficiente para los tamaños de orden definidos por requisitos del producto y filtros oficiales del símbolo, incluyendo cantidad no cubierta;
 - moneda/unidad no comparable y retiro no aplicable;
 - repetición de la evaluación sobre el mismo artefacto/configuración, con resultado idéntico.
 
 Las pruebas con reloj simulado validan la lógica, no sustituyen evidencia de una sesión real. La ejecución en vivo debe ser explícita, acotada, de solo lectura y guardar artefacto saneado, SHA de código, configuración, hora UTC y limitaciones.
+
+## 7.1 Trazabilidad de las fuentes
+
+Las fuentes oficiales determinan el formato y comportamiento documentado de la API, el mecanismo de obtención de tarifas y el marco de calidad/gestión. No se debe inferir de ellas una garantía que no expresan. Antes de usar una URL como evidencia, registrar fecha/hora de consulta UTC, versión/revisión del documento cuando esté disponible, endpoint/mercado y hash del artefacto obtenido. La documentación puede cambiar; volver a consultarla al ejecutar la evaluación.
 
 ## 8. Evidencia actual y trabajo restante
 
 Ya existen un adaptador Binance WebSocket de solo lectura, sincronización snapshot + eventos, detección de huecos, captura separada de tiempo de evento/recepción y pruebas offline. Eso demuestra lógica de contrato bajo fixtures; **no demuestra que se haya ejecutado una captura en vivo ni que las tarifas de la cuenta estén verificadas**.
 
 Para cerrar el Issue #18 se requieren conjuntamente:
-- decisión del propietario sobre D18-01 a D18-09, registrada con fecha y versión;
+- requisitos de frescura y tamaños de escenarios derivados del contexto del producto, mediciones y filtros oficiales; cualquier umbral interno debe estar justificado y aprobado, sin atribuirlo a ISO/Binance;
 - implementación enlazada a esa política aprobada;
 - ejecución de pruebas y artefactos reproducibles;
 - evidencia real de captura en vivo cuando el criterio requiera frescura operativa;
