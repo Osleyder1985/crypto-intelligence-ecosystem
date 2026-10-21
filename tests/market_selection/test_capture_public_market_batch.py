@@ -42,9 +42,31 @@ class BatchCaptureTests(unittest.TestCase):
         self.assertEqual(record["response_sha256"], hashlib.sha256(raw).hexdigest())
         self.assertEqual(json.loads(raw), record["parsed_json"])
         self.assertIsNone(record["source_event_at_utc"])
-        self.assertIsNone(record["source_timestamp_field"])
-        self.assertIsNone(record["source_timestamp_semantics"])
+        self.assertEqual(record["source_timestamp_field"], "timestamp")
+        self.assertIn("response timestamp", record["source_timestamp_semantics"])
+        self.assertIsNone(record["source_response_at_utc"])
+        self.assertEqual(record["source_response_timestamp_status"], "MISSING")
         self.assertIsNotNone(record["captured_at_utc"])
+
+    def test_pionex_response_timestamp_is_normalized_separately_from_market_event_time(self):
+        payload = {"result": True, "timestamp": 1792610282496, "data": {"symbols": []}}
+        with patch("scripts.market_selection.capture_public_market_batch.urlopen", return_value=FakeResponse(payload)):
+            record = request_capture("BTC_USDT", "pionex", "https://example.invalid")
+        self.assertEqual(record["capture_status"], "PASS")
+        self.assertEqual(record["source_response_at_utc"], "2026-10-21T19:18:02.496Z")
+        self.assertEqual(record["source_response_timestamp_status"], "VALID")
+        self.assertEqual(record["source_timestamp_field"], "timestamp")
+        self.assertIn("response timestamp", record["source_timestamp_semantics"])
+        self.assertIsNone(record["source_event_at_utc"])
+
+    def test_pionex_invalid_response_timestamp_is_not_normalized(self):
+        payload = {"result": True, "timestamp": "not-a-timestamp", "data": {"symbols": []}}
+        with patch("scripts.market_selection.capture_public_market_batch.urlopen", return_value=FakeResponse(payload)):
+            record = request_capture("BTC_USDT", "pionex", "https://example.invalid")
+        self.assertEqual(record["capture_status"], "PASS")
+        self.assertIsNone(record["source_response_at_utc"])
+        self.assertEqual(record["source_response_timestamp_status"], "INVALID")
+        self.assertIsNone(record["source_event_at_utc"])
 
     def test_binance_depth_sequence_id_is_not_event_timestamp(self):
         # Binance depth lastUpdateId is a sequence identifier, not an event-time timestamp.

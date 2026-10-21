@@ -20,7 +20,7 @@
 1. **Captura vs. calidad:** `capture_status=PASS` significa que la respuesta HTTP se recibió y se pudo parsear bajo el contrato de captura; no significa que la observación de mercado sea válida para una decisión económica.
 2. **Hora de captura vs. hora de origen:** se registran por separado. No rellenar un timestamp de origen ausente con la hora local de captura.
 3. **Binance REST depth:** `lastUpdateId` se trata como identificador de secuencia, no como hora de mercado. Sin evidencia temporal suficiente, `source_freshness=INDETERMINATE`.
-4. **Pionex common symbols:** el campo `timestamp` del sobre de respuesta debe validarse según la documentación y preservarse en la unidad original antes de normalizarlo. Si no está presente o no es interpretable, no se inventa.
+4. **Pionex common symbols:** el campo `timestamp` del sobre se normaliza como `source_response_at_utc` después de validarse como entero en milisegundos; el estado `VALID`/`MISSING`/`INVALID` se registra explícitamente. No se copia a `source_event_at_utc`, porque es timestamp de respuesta y no timestamp de evento del libro. Si no está presente o no es interpretable, no se inventa.
 5. **Comisiones:** sin respuesta oficial aplicable al símbolo/cuenta/tipo de operación y condiciones relevantes, `fees=INDETERMINATE`.
 6. **Profundidad limitada:** registrar el límite solicitado y el número real de niveles; no extrapolar más allá de la profundidad observada.
 7. **Tamaño de orden:** derivarlo del caso de uso documentado y contrastarlo con los filtros oficiales vigentes del símbolo. No utilizar valores predeterminados escogidos para forzar `PASS`.
