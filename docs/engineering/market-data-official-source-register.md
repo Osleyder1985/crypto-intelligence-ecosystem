@@ -66,3 +66,12 @@ La prueba automatizada `capture_binance_regional_rest_diagnostic.py` consulta do
 Para cada servicio registra hora del servidor, metadatos de mercado y snapshots para BTC/ETH/SOL, solicitando solo los pares BTCUSDT, ETHUSDT y SOLUSDT para evitar descargar el catálogo completo de símbolos. Conserva el estado HTTP, cuerpo de error cuando se pueda leer, SHA-256, respuesta original codificada y resumen parseado. Un símbolo inexistente se registra como `NOT_AVAILABLE`, no como captura correcta.
 
 Esta comparación distingue accesibilidad REST pública de acceso WebSocket y elegibilidad de trading. No atribuye automáticamente un HTTP 451 a una causa concreta ni intenta eludir restricciones regionales. La ejecución debe revisarse como evidencia puntual y no como aprobación de Binance para operar.
+
+
+## Endpoint oficial de streaming público de Binance
+
+La captura sincronizada de profundidad utiliza ambos hosts de datos públicos documentados por Binance:
+- REST snapshot: `https://data-api.binance.vision/api/v3/depth`.
+- WebSocket market-data-only: `wss://data-stream.binance.vision:443/ws`.
+
+Referencia oficial: [Market Data Only URLs](https://github.com/binance/binance-spot-api-docs/blob/master/faqs/market_data_only.md) y [WebSocket Market Streams](https://github.com/binance/binance-spot-api-docs/blob/master/web-socket-streams.md). Binance documenta estos hosts para datos públicos de mercado; no proporcionan streams de datos de usuario. La selección del host no elude restricciones: se usa el endpoint oficial destinado a datos de mercado y se conserva la evidencia de respuesta. La sincronización solo se declara si el snapshot REST y los eventos de profundidad pasan el protocolo de secuencia existente.
