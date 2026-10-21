@@ -1,7 +1,7 @@
 # Matriz de cierre verificable de criterios de aceptación — Issues #7 y #13
 
 - **Estado:** propuesta de verificación; no aprobada como línea base.
-- **Rama/PR de trabajo:** `docs/issue-11-marco-maestro`, [PR #12](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/pull/12).
+- **Línea base actual:** `main`; la matriz se incorporó originalmente mediante [PR #12](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/pull/12).
 - **Issues fuente:** [#7 — Selección reproducible de mercados spot](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/issues/7) y [#13 — Requisitos analíticos](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/issues/13).
 - **Especificación metodológica para Issue #7:** [metodología reproducible de selección spot](spot-market-selection-methodology.md).
 - **Propósito:** descomponer criterios y entregables en evidencias, métodos de verificación y decisiones pendientes. Esta matriz no declara que el producto exista, que un criterio esté satisfecho ni que un Issue pueda cerrarse.
