@@ -283,8 +283,6 @@ class BatchEvaluatorTests(unittest.TestCase):
     def test_wrong_schema_rejected(self):
         a=fixture(); a["schema_version"]="public-market-capture-v1"
         with self.assertRaises(ValueError): evaluate_batch(a)
-if __name__=="__main__": unittest.main()
-
     def test_missing_source_event_timestamp_keeps_freshness_indeterminate(self):
         artifact = fixture()
         # The captured Binance depth response exposes lastUpdateId, not a verified
@@ -302,3 +300,4 @@ if __name__=="__main__": unittest.main()
         self.assertTrue(any("no verified account-applicable official fee schedule" in reason for reason in market["reasons"]))
         self.assertEqual(evaluate_batch(artifact)["decision_status"], "INDETERMINATE")
 
+if __name__=="__main__": unittest.main()
