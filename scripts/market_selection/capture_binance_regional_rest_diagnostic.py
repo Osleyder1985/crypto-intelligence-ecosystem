@@ -17,7 +17,7 @@ from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 from urllib.parse import urlencode
 
-MAX_BYTES = 5 * 1024 * 1024  # Internal defensive cap, not an ISO/Binance requirement.
+MAX_BYTES = 64 * 1024  # Provisional internal cap; latest observed maximum was 15,197 bytes.
 TIMEOUT_SECONDS = 12
 SCHEMA_VERSION = "binance-regional-rest-diagnostic-v1"
 VENUES = (
