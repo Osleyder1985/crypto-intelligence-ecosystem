@@ -4,6 +4,7 @@
 - **Issue principal:** [#7 — Selección reproducible de exchanges y pares spot por liquidez](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/issues/7).
 - **Relación:** [Issue #13 — Evaluación histórica, ranking, eventos y liquidez](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/issues/13).
 - **Matriz de criterios:** [matriz de cierre verificable #7/#13](acceptance-closure-matrix-issues-7-13.md).
+- **Registro de fuentes:** [fuentes oficiales y límites semánticos](market-data-official-source-register.md).
 - **Límite:** análisis de solo lectura. Esta especificación no consulta APIs, no contiene resultados de mercado y no autoriza operaciones reales.
 
 ## 1. Propósito y principios
@@ -363,3 +364,8 @@ El spread observado en ese snapshot de Binance es aproximadamente `0.001218 bps`
 La ejecución [tests #39365452000](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/actions/runs/39365452000) terminó en `success`; el log confirma `Ran 53 tests` y `OK`. La [validación de trazabilidad #39365451982](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/actions/runs/39365451982) también terminó en `success`.
 
 **Alcance de esta evidencia:** confirma que los endpoints públicos respondieron y que los campos listados estaban presentes en esa captura. No confirma acceso a la cuenta/región del usuario, disponibilidad futura, comisiones efectivas, retirada/redes, suficiencia de liquidez para una orden no especificada, riesgo fundamental del activo ni rentabilidad. El artefacto de CI conserva los bytes originales en Base64 y sus hashes para poder reproducir la verificación mientras no expire.
+
+
+## 16. Registro de fuentes oficiales y límites semánticos
+
+El registro inicial de fuentes oficiales y las conclusiones permitidas/prohibidas por endpoint está en [Registro de fuentes oficiales para selección de mercados spot](market-data-official-source-register.md). El registro no declara que se haya verificado un mercado real: la ejecución de CI debe consultarse por separado y el resultado económico sigue `INDETERMINATE` mientras falten evidencia temporal y tarifas aplicables.
