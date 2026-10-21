@@ -84,6 +84,18 @@ class ReadinessManifestTests(unittest.TestCase):
         }]
         self.assertTrue(any("expires_at_utc debe ser ISO 8601 UTC" in e for e in validate_manifest(manifest)))
 
+    def test_expired_high_risk_exception_is_rejected_at_execution_time(self):
+        manifest = valid_manifest()
+        manifest["residual_risks"] = [{
+            "severity": "critical",
+            "status": "approved_exception",
+            "approved_by": "release-authority",
+            "justification": "temporary documented mitigation",
+            "expires_at_utc": "2026-10-19T23:59:59Z",
+        }]
+        errors = validate_manifest(manifest)
+        self.assertTrue(any("ya había expirado en executed_at_utc" in e for e in errors))
+
     def test_non_object_root_is_rejected(self):
         self.assertTrue(validate_manifest([]))
 
