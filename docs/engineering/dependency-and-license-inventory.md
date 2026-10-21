@@ -2,13 +2,13 @@
 
 - **Estado:** inventario preliminar de la rama auditada; no constituye una decisión de licencia ni asesoramiento legal.
 - **Issue:** [#20 — Licencia, derechos de distribución y dependencias](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/issues/20).
-- **Base examinada:** árbol de archivos del PR #12, HEAD fee835bc9d1cb722646ebcc2b30e76e58f1b7362; el alcance del PR #15 debe reevaluarse al preparar la línea base integrada.
+- **Base examinada:** rama de la PR #12, HEAD `d4be18627b4dfaa8b1f782f560d691709bf64090`; repetir el inventario después de integrar cambios adicionales y antes de una release.
 
 ## 1. Hallazgos reproducibles
 
 - En el árbol examinado no aparece un archivo raíz LICENSE, COPYING, NOTICE, pyproject.toml, requirements.txt, Pipfile, poetry.lock, uv.lock ni package.json.
 - Los módulos Python visibles de captura, selección y validación usan principalmente módulos de la biblioteca estándar en los archivos revisados; no se observó un manifiesto de dependencias Python de terceros en esta rama.
-- Los workflows de GitHub Actions referencian acciones externas mediante etiquetas de versión, entre ellas actions/checkout@v4, actions/setup-python@v5 y actions/upload-artifact@v4. Deben registrarse por separado de las dependencias de ejecución del producto.
+- Los workflows de GitHub Actions de esta rama fijan `actions/checkout` a `11bd71901bbe5b1630ceea73d27597364c9af683` (v4.2.2), `actions/setup-python` a `a26af69be951a213d495a4c3e4e4022e16d87065` (v5.6.0) y `actions/upload-artifact` a `ea165f8d65b6e75b540449e92b4886f43607fa02` (v4.6.2). Son dependencias de CI y deben inventariarse por separado de las dependencias de ejecución del producto.
 - La ausencia de un archivo de licencia explícito no significa que el contenido sea de dominio público ni que exista permiso general de reutilización o redistribución.
 
 ## 2. Inventario por componente
@@ -17,7 +17,7 @@
 |---|---|---|
 | Código Python del prototipo | Sin manifiesto de paquetes detectado en el árbol del PR #12 | Confirmar el árbol integrado completo y generar inventario automatizado al incorporar nuevos paquetes |
 | Biblioteca estándar de Python | Imports visibles en módulos y pruebas; versiones de Python declaradas en CI | Registrar versión/runtime objetivo y validar compatibilidad |
-| GitHub Actions | checkout@v4, setup-python@v5, upload-artifact@v4 en workflows | Registrar repositorio de origen, versión/commit, licencia y política de actualización; valorar pinning por SHA |
+| GitHub Actions | Los workflows auditados fijan checkout v4.2.2, setup-python v5.6.0 y upload-artifact v4.6.2 mediante SHA completos | Registrar repositorio de origen, SHA/versión, licencia y política de actualización; verificar los SHA al actualizar y mantener Dependabot habilitado |
 | Documentación y contenido | No se encontró licencia raíz explícita en el árbol auditado | Decidir derechos de código, documentación, marcas, capturas y contribuciones |
 | Dependencias de ramas aún no integradas | El alcance y los archivos pueden diferir de esta instantánea | Repetir inventario en la línea base candidata a release |
 
