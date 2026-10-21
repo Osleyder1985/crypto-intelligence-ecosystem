@@ -24,7 +24,7 @@ jobs:
         with:
           python-version: "3.12"
       - name: Run offline contract tests
-        run: python -m unittest tests.market_selection.test_capture_multi_exchange_spot_book_probe -v
+        run: python -m unittest discover -s tests/market_selection -p 'test_capture_multi_exchange_spot_book_probe.py' -v
 
   live-public-capture:
     if: github.event_name != 'pull_request'
