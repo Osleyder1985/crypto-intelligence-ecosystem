@@ -173,6 +173,17 @@ def synchronize_snapshot_with_events(snapshot: Any, buffered_events: Any) -> dic
             }
         _apply_levels(bids, event["b"])
         _apply_levels(asks, event["a"])
+        if not bids or not asks or max(bids) >= min(asks):
+            return {
+                "status": "RESYNC_REQUIRED",
+                "reason": "applied event produced an empty, locked, or crossed order book",
+                "snapshot_last_update_id": snapshot_id,
+                "last_applied_update_id": last_id,
+                "applied_event_count": applied,
+                "last_event_time_utc": last_event_time_utc,
+                "bids": None,
+                "asks": None,
+            }
         last_id = decision["final_update_id"]
         last_event_time_utc = decision["event_time_utc"]
         applied += 1
