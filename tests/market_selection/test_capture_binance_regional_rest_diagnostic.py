@@ -61,7 +61,7 @@ class BinanceRegionalRestDiagnosticTests(unittest.TestCase):
         info = {"capture_status": "PASS", "parsed_summary": {"available_asset_pairs": {"BTC": "BTCUSDT", "ETH": None, "SOL": None}}}
         with patch("scripts.market_selection.capture_binance_regional_rest_diagnostic.capture_endpoint", side_effect=[
             {"capture_status": "PASS"}, info,
-            {"capture_status": "PASS", "parsed_summary": {"best_bid": "1", "best_ask": "2"}},
+            {"kind": "order_book", "capture_status": "PASS", "parsed_summary": {"best_bid": "1", "best_ask": "2"}},
             {"capture_status": "NOT_AVAILABLE"}, {"capture_status": "NOT_AVAILABLE"},
         ]) as mocked:
             records = capture_venue(VENUES[0])
