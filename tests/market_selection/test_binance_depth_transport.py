@@ -126,6 +126,10 @@ class BinanceDepthTransportTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "positive"):
             capture_once("BTCUSDT", websocket_factory=lambda *_: FakeSocket([]), max_messages=0)
 
+    def test_rejects_symbol_outside_safe_ascii_market_symbol(self):
+        with self.assertRaisesRegex(ValueError, "2-30 ASCII"):
+            capture_once("BTC/USDT", websocket_factory=lambda *_: FakeSocket([]))
+
 
 if __name__ == "__main__":
     unittest.main()
