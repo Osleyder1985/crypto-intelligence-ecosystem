@@ -62,26 +62,24 @@ jobs:
           assert len(artifact["universe"]) == 3
           assert len({item["pionex_symbol"] for item in artifact["universe"]}) == 3
           PY
-      - name: Evaluate batch twice and compare outputs
+      - name: Evaluate batch twice and compare outputs without an unapproved scenario
         run: |
           set -euo pipefail
           python scripts/market_selection/evaluate_capture_batch.py --artifact artifacts/public-market-capture-batch.json --output artifacts/batch-evaluation-1.json
           python scripts/market_selection/evaluate_capture_batch.py --artifact artifacts/public-market-capture-batch.json --output artifacts/batch-evaluation-2.json
           cmp --silent artifacts/batch-evaluation-1.json artifacts/batch-evaluation-2.json
-          cat > artifacts/scenario.json <<'JSON'
-          {"max_spread_bps":5,"depth_band_bps":10,"min_depth_quote":10000,"order_size_base":0.01,"max_slippage_bps":10}
-          JSON
-          python scripts/market_selection/evaluate_capture_batch.py --artifact artifacts/public-market-capture-batch.json --config artifacts/scenario.json --output artifacts/scenario-evaluation-1.json
-          python scripts/market_selection/evaluate_capture_batch.py --artifact artifacts/public-market-capture-batch.json --config artifacts/scenario.json --output artifacts/scenario-evaluation-2.json
-          cmp --silent artifacts/scenario-evaluation-1.json artifacts/scenario-evaluation-2.json
           python - <<'PY'
           import json
           from pathlib import Path
-          result=json.loads(Path("artifacts/scenario-evaluation-1.json").read_text(encoding="utf-8"))
-          assert result["markets_evaluated"] == 3 and result["decision_status"] == "INDETERMINATE"
-          assert result["orders_submitted"] is False and result["network_requests_made"] is False
+          result = json.loads(Path("artifacts/batch-evaluation-1.json").read_text(encoding="utf-8"))
+          assert result["markets_evaluated"] == 3
+          assert result["decision_status"] == "INDETERMINATE"
+          assert result["orders_submitted"] is False
+          assert result["network_requests_made"] is False
           assert result["config_approved"] is False
           assert all(m["dimension_status"]["capture_integrity"] == "PASS" for m in result["markets"])
+          assert all(m["dimension_status"]["source_freshness"] == "INDETERMINATE" for m in result["markets"])
+          assert all(m["dimension_status"]["fees"] == "INDETERMINATE" for m in result["markets"])
           PY
       - name: Upload capture and evaluation evidence
         if: always()
