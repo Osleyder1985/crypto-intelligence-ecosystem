@@ -38,7 +38,7 @@ class FakeResponse:
 
 class CommissionEvidenceTests(unittest.TestCase):
     def test_signed_url_signs_exact_query_and_contains_no_secret(self):
-        url = build_signed_url("BTCUSDT", "not-for-output", 123456789, "https://example.invalid")
+        url = build_signed_url("BTCUSDT", "not-for-output", 123456789)
         parsed = urlparse(url)
         query = parse_qs(parsed.query)
         expected = hmac.new(b"not-for-output", b"symbol=BTCUSDT&timestamp=123456789", hashlib.sha256).hexdigest()
@@ -101,7 +101,7 @@ class CommissionEvidenceTests(unittest.TestCase):
     def test_http_error_does_not_persist_error_body_or_secrets(self):
         from urllib.error import HTTPError
         def fail(*_args, **_kwargs):
-            raise HTTPError("https://example.invalid", 451, "restricted", {}, None)
+            raise HTTPError("https://api.binance.com", 451, "restricted", {}, None)
         result = capture_commission_evidence("BTCUSDT", "key", "secret", timestamp_ms=1, opener=fail)
         self.assertEqual(result["http_status"], 451)
         self.assertEqual(result["commission_evidence_status"], "INDETERMINATE")
