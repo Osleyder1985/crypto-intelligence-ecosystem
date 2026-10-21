@@ -15,6 +15,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
+from urllib.parse import urlencode
 
 MAX_BYTES = 5 * 1024 * 1024
 TIMEOUT_SECONDS = 12
@@ -32,7 +33,7 @@ VENUES = (
     },
 )
 ASSETS = ("BTC", "ETH", "SOL")
-QUOTE_PREFERENCE = ("USDT", "USD", "USDC")
+QUOTE_PREFERENCE = ("USDT",)
 
 
 def now_utc() -> str:
@@ -142,9 +143,11 @@ def capture_endpoint(venue: dict[str, str], kind: str, url: str, asset: str | No
 
 def capture_venue(venue: dict[str, str]) -> list[dict[str, object]]:
     base = venue["base_url"]
+    symbol_filter = json.dumps([f"{asset}USDT" for asset in ASSETS], separators=(",", ":"))
+    exchange_info_url = f"{base}/api/v3/exchangeInfo?" + urlencode({"symbols": symbol_filter})
     records = [
         capture_endpoint(venue, "server_time", f"{base}/api/v3/time"),
-        capture_endpoint(venue, "exchange_info", f"{base}/api/v3/exchangeInfo"),
+        capture_endpoint(venue, "exchange_info", exchange_info_url),
     ]
     info = records[1].get("parsed_summary")
     available = info.get("available_asset_pairs", {}) if isinstance(info, dict) else {}
