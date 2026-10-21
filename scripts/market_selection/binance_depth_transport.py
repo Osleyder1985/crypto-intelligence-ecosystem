@@ -101,7 +101,6 @@ def capture_once(
     session = DepthBookSession()
     session.begin_resync(normalized_symbol)
     snapshot: dict[str, Any] | None = None
-    events_after_snapshot = 0
     resync_attempts = 0
     messages = 0
     try:
@@ -122,7 +121,6 @@ def capture_once(
             if action.get("action") != "BUFFERED":
                 if action.get("action") == "RESYNC_REQUIRED":
                     snapshot = None
-                    events_after_snapshot = 0
                 continue
 
             if snapshot is None:
@@ -130,12 +128,20 @@ def capture_once(
                     break
                 snapshot = snapshot_fetcher(normalized_symbol, timeout_seconds)
                 resync_attempts += 1
-                events_after_snapshot = 0
                 continue
 
-            events_after_snapshot += 1
-            if events_after_snapshot < 1:
+            snapshot_id = snapshot["lastUpdateId"]
+            first_update_id = event["U"]
+            final_update_id = event["u"]
+            if final_update_id <= snapshot_id:
+                # The REST snapshot is newer than this event. Keep buffering
+                # until a later event bridges snapshot_id + 1.
                 continue
+            if first_update_id > snapshot_id + 1:
+                session.begin_resync(normalized_symbol)
+                snapshot = None
+                continue
+
             installed = session.install_snapshot(snapshot)
             if installed["state"] == SYNCHRONIZED:
                 evaluation_time = clock()
@@ -162,7 +168,6 @@ def capture_once(
             if installed["state"] == RESYNC_REQUIRED:
                 session.begin_resync(normalized_symbol)
                 snapshot = None
-                events_after_snapshot = 0
 
         raise RuntimeError(
             "capture did not synchronize within configured bounds "
