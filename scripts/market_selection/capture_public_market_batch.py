@@ -35,6 +35,10 @@ def request_capture(market_id: str, provider: str, url: str) -> dict[str, object
     record: dict[str, object] = {
         "market_id": market_id, "provider": provider, "url": url,
         "request_started_at_utc": now_utc(), "captured_at_utc": None,
+        # The current endpoints do not provide a verified event timestamp in this capture contract.
+        # Keep provenance explicit; capture time must never be treated as source-event time.
+        "source_event_at_utc": None, "source_timestamp_field": None,
+        "source_timestamp_semantics": None,
         "http_status": None, "response_bytes": None, "response_sha256": None,
         "response_base64": None, "parsed_json": None, "capture_status": "FAIL",
         "error_type": None, "error_message": None,
