@@ -8,7 +8,7 @@
 
 ## Uso manual
 
-Desde un entorno donde el usuario esté autorizado a consultar ese endpoint y el servicio oficial sea accesible:
+Desde un entorno donde el usuario esté autorizado a consultar ese endpoint y el servicio oficial de Binance sea accesible. El capturador solo envía credenciales a `https://api.binance.com`; no permite cambiar el host de destino:
 
 ```bash
 export BINANCE_API_KEY='...'
