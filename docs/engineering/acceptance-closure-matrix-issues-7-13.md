@@ -4,6 +4,7 @@
 - **Línea base actual:** `main`; la matriz se incorporó originalmente mediante [PR #12](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/pull/12).
 - **Issues fuente:** [#7 — Selección reproducible de mercados spot](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/issues/7) y [#13 — Requisitos analíticos](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/issues/13).
 - **Especificación metodológica para Issue #7:** [metodología reproducible de selección spot](spot-market-selection-methodology.md).
+- **Registro de fuentes oficiales:** [endpoints y límites semánticos](market-data-official-source-register.md).
 - **Propósito:** descomponer criterios y entregables en evidencias, métodos de verificación y decisiones pendientes. Esta matriz no declara que el producto exista, que un criterio esté satisfecho ni que un Issue pueda cerrarse.
 - **Regla de decisión:** PASS solo se permite cuando el criterio, la fuente de datos, el entorno/versiones, el procedimiento, el resultado y el artefacto reproducible estén registrados y el umbral haya sido aprobado antes de evaluar. Si falta umbral, fuente o evidencia, el estado es **PENDIENTE**, no PASS.
 - **Responsabilidad:** los roles indicados son propuestas funcionales. No hay personas responsables nominadas ni decisiones de aceptación delegadas por este documento.
@@ -113,3 +114,8 @@ No se exige guardar datos cuya redistribución esté prohibida; en tal caso, reg
 - La matriz es una propuesta de verificación interna y requiere revisión humana/adversarial.
 - El CI documental no prueba rendimiento del producto, liquidez real de mercado, exactitud predictiva ni conformidad ISO.
 - No se asume que la información histórica de profundidad esté disponible en un proveedor; cuando no exista, la captura propia solo sirve desde su fecha de inicio.
+
+
+## 3. Estado del registro de fuentes
+
+Se añadió un registro inicial de fuentes oficiales para los adaptadores actuales Binance Spot y Pionex. Esto mejora la trazabilidad documental, pero no satisface por sí solo los criterios 7-M01–7-M08: faltan capturas reproducibles con evaluación por dimensión, cobertura comparativa de los exchanges propuestos y evidencia aplicable de frescura, comisiones y riesgo del activo. Los criterios siguen Pendientes hasta aportar los artefactos y pruebas definidos en esta matriz.
