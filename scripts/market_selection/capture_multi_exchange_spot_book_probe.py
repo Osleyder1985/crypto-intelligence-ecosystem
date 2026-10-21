@@ -16,31 +16,23 @@ from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 from urllib.parse import urlencode
 
-MAX_BYTES = 64 * 1024  # Provisional cap for bounded top-book endpoints; latest observed max was 1,456 bytes.
-COINBASE_MAX_BYTES = 2 * 1024 * 1024  # Level-2 snapshot; latest BTC sample was 1,080,547 bytes.
 TIMEOUT_SECONDS = 12
 SCHEMA_VERSION = "multi-exchange-spot-book-probe-v1"
 
 # The quote differs where a venue's public spot market uses USD rather than USDT.
-class ResponseTooLarge(ValueError):
-    """A bounded read observed more bytes than the endpoint's internal cap."""
-    def __init__(self, observed: bytes, content_length: str | None, limit_bytes: int):
-        self.observed_bytes = len(observed)
-        self.content_length = content_length
-        self.limit_bytes = limit_bytes
-        self.prefix_sha256 = hashlib.sha256(observed).hexdigest()
-        super().__init__(f"response exceeded internal {limit_bytes}-byte cap; observed at least {len(observed)} bytes")
+READ_CHUNK_BYTES = 64 * 1024  # Read buffer size only; not a response-size limit.
 
-def response_limit_for(spec: dict[str, str]) -> int:
-    return COINBASE_MAX_BYTES if spec["exchange"] == "coinbase_exchange" else MAX_BYTES
-
-def read_bounded(response: object, limit_bytes: int = MAX_BYTES) -> tuple[bytes, str | None]:
+def read_complete(response: object) -> tuple[bytes, str | None]:
+    """Read the entire HTTP body in chunks; chunk size does not cap total bytes."""
     headers = getattr(response, "headers", None)
     content_length = headers.get("Content-Length") if headers is not None else None
-    raw = response.read(limit_bytes + 1)  # type: ignore[attr-defined]
-    if len(raw) > limit_bytes:
-        raise ResponseTooLarge(raw, content_length, limit_bytes)
-    return raw, content_length
+    chunks: list[bytes] = []
+    while True:
+        chunk = response.read(READ_CHUNK_BYTES)  # type: ignore[attr-defined]
+        if not chunk:
+            break
+        chunks.append(chunk)
+    return b"".join(chunks), content_length
 
 MARKETS = (
     {"asset": "BTC", "okx": "BTC-USDT", "bybit": "BTCUSDT", "coinbase": "BTC-USD", "kraken": "XBTUSD"},
@@ -108,18 +100,17 @@ def capture_one(spec: dict[str, str]) -> dict[str, object]:
     record: dict[str, object] = {
         **spec, "request_started_at_utc": now_utc(), "captured_at_utc": None,
         "http_status": None, "response_bytes": None, "response_bytes_observed": None,
-        "response_limit_bytes": response_limit_for(spec), "content_length_header": None, "oversize_prefix_sha256": None, "response_sha256": None,
+        "response_limit_bytes": None, "content_length_header": None, "oversize_prefix_sha256": None, "response_sha256": None,
         "response_base64": None, "parsed_json": None, "source_timestamp_raw": None,
         "bids_count": None, "asks_count": None, "best_bid": None, "best_ask": None,
         "capture_status": "FAIL", "error_type": None, "error_message": None,
     }
-    limit_bytes = response_limit_for(spec)
     request = Request(spec["url"], headers={"Accept": "application/json",
         "User-Agent": "crypto-intelligence-ecosystem-multi-exchange-probe/1.0"})
     try:
         with urlopen(request, timeout=TIMEOUT_SECONDS) as response:
             status = getattr(response, "status", None)
-            raw, content_length = read_bounded(response, limit_bytes)
+            raw, content_length = read_complete(response)
         record.update(http_status=status, captured_at_utc=now_utc(),
             response_bytes=len(raw), response_bytes_observed=len(raw), content_length_header=content_length, response_sha256=hashlib.sha256(raw).hexdigest(),
             response_base64=base64.b64encode(raw).decode("ascii"))
@@ -143,22 +134,14 @@ def capture_one(spec: dict[str, str]) -> dict[str, object]:
         record["captured_at_utc"] = now_utc()
         record["error_type"] = type(exc).__name__
         record["error_message"] = str(exc)[:300]
-        if isinstance(exc, ResponseTooLarge):
-            record["response_bytes_observed"] = exc.observed_bytes
-            record["response_limit_bytes"] = exc.limit_bytes
-            record["content_length_header"] = exc.content_length
-            record["oversize_prefix_sha256"] = exc.prefix_sha256
         if isinstance(exc, HTTPError):
             try:
-                body = exc.read(limit_bytes + 1)
+                body = read_complete(exc)[0]
                 record["response_bytes_observed"] = len(body)
                 record["content_length_header"] = exc.headers.get("Content-Length") if exc.headers else None
-                if len(body) > limit_bytes:
-                    record["oversize_prefix_sha256"] = hashlib.sha256(body).hexdigest()
-                else:
-                    record["response_bytes"] = len(body)
-                    record["response_sha256"] = hashlib.sha256(body).hexdigest()
-                    record["response_base64"] = base64.b64encode(body).decode("ascii")
+                record["response_bytes"] = len(body)
+                record["response_sha256"] = hashlib.sha256(body).hexdigest()
+                record["response_base64"] = base64.b64encode(body).decode("ascii")
             except OSError:
                 pass
     return record
