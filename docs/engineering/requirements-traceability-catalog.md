@@ -240,7 +240,7 @@ Esta vista es el **orden de planificación propuesto** de los requisitos de prod
 
 ### Cobertura de NFR
 
-Los NFR-001–NFR-018 se mantienen en sus tablas por atributo de calidad. **No están ordenados por prioridad**, porque el catálogo aún no les asigna una prioridad ni una fase primaria aprobadas. Para completar el orden de todo el catálogo, la siguiente revisión debe asignarles fase primaria, prioridad justificada y criterio de aceptación medible; no se infiere una prioridad a partir del nombre del atributo.
+Los NFR-001–NFR-018 sí cuentan con un índice de planificación propuesto en la sección 12, ordenado por fase primaria y prioridad propuesta. Esta clasificación es preliminar y no aprobada; no debe confundirse con aceptación de línea base. Los criterios medibles, condiciones de prueba y responsables siguen pendientes. La sección 13 ordena los requisitos de producto (REQ-P), mientras que la sección 12 proporciona la vista equivalente para NFR.
 
 ### Reglas de lectura
 
