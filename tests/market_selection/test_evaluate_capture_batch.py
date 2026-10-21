@@ -248,6 +248,23 @@ class BatchEvaluatorTests(unittest.TestCase):
         self.assertEqual(market["dimension_status"]["fees"],"INDETERMINATE")
         self.assertEqual(market["dimension_status"]["source_freshness"],"INDETERMINATE")
 
+    def test_boolean_book_values_are_indeterminate(self):
+        cases = (
+            ("bids", [[True, "10"], ["99.98", "10"]]),
+            ("asks", [["100.01", False], ["100.02", "10"]]),
+        )
+        for side, levels in cases:
+            with self.subTest(side=side):
+                a = fixture()
+                payload = a["records"][2]["parsed_json"]
+                payload[side] = levels
+                a["records"][2] = rec("BTC_USDT", "binance_depth", payload)
+                market = evaluate_batch(a)["markets"][0]
+                self.assertEqual(market["dimension_status"]["spread"], "INDETERMINATE")
+                self.assertEqual(market["dimension_status"]["depth"], "INDETERMINATE")
+                self.assertEqual(market["dimension_status"]["slippage"], "INDETERMINATE")
+                self.assertTrue(any("invalid book level" in reason for reason in market["reasons"]))
+
     def test_duplicate_provider_record_rejected(self):
         a=fixture(); a["records"].append(a["records"][0])
         with self.assertRaises(ValueError): evaluate_batch(a)
