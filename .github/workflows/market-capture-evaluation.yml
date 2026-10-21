@@ -1,0 +1,126 @@
+name: Reproducible market capture evaluation
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  scope:
+    runs-on: ubuntu-latest
+    outputs:
+      applicable: ${{ steps.detect.outputs.applicable }}
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - id: detect
+        run: |
+          if [ -f scripts/market_selection/evaluate_capture.py ] && [ -f tests/market_selection/test_evaluate_capture.py ]; then echo "applicable=true" >> "$GITHUB_OUTPUT"; else echo "applicable=false" >> "$GITHUB_OUTPUT"; fi
+  test-market-capture-evaluation:
+    needs: scope
+    if: needs.scope.outputs.applicable == 'true'
+    name: Test offline capture evaluation
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - name: Set up Python
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: "3.12"
+      - name: Run offline unit tests
+        run: python -m unittest discover -s tests/market_selection -p "test_*.py" -v
+      - name: Build deterministic synthetic capture fixture
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json
+          import sys
+          from pathlib import Path
+          sys.path.insert(0, "tests/market_selection")
+          from test_evaluate_capture import fixture
+          out = Path("capture/public-market-capture.json")
+          out.parent.mkdir(parents=True, exist_ok=True)
+          out.write_text(json.dumps(fixture(), ensure_ascii=False, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+          print("fixture_type=synthetic_test_data")
+          print(f"artifact={out}")
+          PY
+      - name: Evaluate synthetic fixture twice and compare outputs
+        run: |
+          set -euo pipefail
+          python scripts/market_selection/evaluate_capture.py --artifact capture/public-market-capture.json --output evaluation-1.json
+          python scripts/market_selection/evaluate_capture.py --artifact capture/public-market-capture.json --output evaluation-2.json
+          cmp --silent evaluation-1.json evaluation-2.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          result = json.loads(Path("evaluation-1.json").read_text(encoding="utf-8"))
+          assert result["schema_version"] == "public-market-evaluation-v1"
+          assert result["decision_status"] == "INDETERMINATE"
+          assert result["orders_submitted"] is False
+          assert result["network_requests_made"] is False
+          assert result["dimension_status"]["capture_integrity"] == "PASS"
+          assert result["dimension_status"]["pionex_availability"] == "PASS"
+          assert result["dimension_status"]["binance_spot_market"] == "PASS"
+          print(json.dumps({
+              "fixture_type": "synthetic_test_data",
+              "decision_status": result["decision_status"],
+              "dimension_status": result["dimension_status"],
+              "metrics": result["metrics"],
+              "orders_submitted": result["orders_submitted"],
+              "network_requests_made": result["network_requests_made"],
+              "two_runs_identical": True
+          }, indent=2, sort_keys=True))
+          PY
+      - name: Evaluate explicit non-approved scenario twice
+        run: |
+          set -euo pipefail
+          cat > scenario.json <<'JSON'
+          {
+            "max_spread_bps": 5,
+            "depth_band_bps": 10,
+            "min_depth_quote": 10000,
+            "order_size_base": 0.01,
+            "max_slippage_bps": 10
+          }
+          JSON
+          python scripts/market_selection/evaluate_capture.py --artifact capture/public-market-capture.json --config scenario.json --output scenario-evaluation-1.json
+          python scripts/market_selection/evaluate_capture.py --artifact capture/public-market-capture.json --config scenario.json --output scenario-evaluation-2.json
+          cmp --silent scenario-evaluation-1.json scenario-evaluation-2.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          result = json.loads(Path("scenario-evaluation-1.json").read_text(encoding="utf-8"))
+          metrics = result["metrics"]
+          assert result["decision_status"] == "INDETERMINATE"
+          assert result["orders_submitted"] is False
+          assert result["network_requests_made"] is False
+          assert "min_side_depth_quote" in metrics
+          assert "buy_execution" in metrics and "sell_execution" in metrics
+          assert result["dimension_status"]["spread"] in {"PASS", "FAIL"}
+          assert result["dimension_status"]["depth"] in {"PASS", "FAIL"}
+          assert result["dimension_status"]["slippage"] in {"PASS", "FAIL", "INDETERMINATE"}
+          print(json.dumps({
+              "fixture_type": "synthetic_test_data",
+              "scenario_thresholds_approved": False,
+              "decision_status": result["decision_status"],
+              "dimension_status": result["dimension_status"],
+              "depth_band_bps": metrics["depth_band_bps"],
+              "min_side_depth_quote": metrics["min_side_depth_quote"],
+              "buy_execution": metrics["buy_execution"],
+              "sell_execution": metrics["sell_execution"],
+              "two_runs_identical": True
+          }, indent=2, sort_keys=True))
+          PY
+      - name: Preserve deterministic evaluation report
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: synthetic-capture-evaluation-report
+          path: |
+            evaluation-1.json
+            scenario.json
+            scenario-evaluation-1.json
+            capture/public-market-capture.json
+          retention-days: 14
