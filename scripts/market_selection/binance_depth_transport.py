@@ -84,10 +84,9 @@ def capture_once(
 ) -> dict[str, Any]:
     """Capture one synchronized book with strict message/resync bounds.
 
-    Events are buffered before a REST snapshot. At least one event received
-    after each snapshot is buffered before synchronization is attempted, so
-    post-snapshot updates can bridge the snapshot update ID. A sequence gap
-    discards the book and restarts the snapshot+buffer cycle.
+    Events are buffered around a REST snapshot. The buffer is retained until
+    an event bridges snapshot update ID + 1; stale events are skipped and a
+    sequence gap discards the book and restarts the snapshot+buffer cycle.
     """
     if not isinstance(symbol, str) or not symbol.strip():
         raise ValueError("symbol must be a non-empty string")
@@ -128,7 +127,6 @@ def capture_once(
                     break
                 snapshot = snapshot_fetcher(normalized_symbol, timeout_seconds)
                 resync_attempts += 1
-                continue
 
             snapshot_id = snapshot["lastUpdateId"]
             first_update_id = event["U"]
