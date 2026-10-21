@@ -4,7 +4,7 @@ from urllib.error import HTTPError
 from io import BytesIO
 
 from scripts.market_selection.capture_multi_exchange_spot_book_probe import (
-    SCHEMA_VERSION, MAX_BYTES, ResponseTooLarge, build_requests, capture_one, extract_top_of_book,
+    SCHEMA_VERSION, MAX_BYTES, COINBASE_MAX_BYTES, ResponseTooLarge, build_requests, capture_one, extract_top_of_book, response_limit_for,
 )
 
 
@@ -44,6 +44,15 @@ class MultiExchangeSpotBookProbeTests(unittest.TestCase):
         self.assertEqual(bids[0][0], "100")
         self.assertEqual(asks[0][0], "101")
         self.assertEqual(timestamp, "2026-10-21T00:00:00Z")
+
+    def test_response_limits_are_endpoint_specific_and_evidence_based(self):
+        specs = build_requests()
+        coinbase = next(s for s in specs if s["exchange"] == "coinbase_exchange")
+        okx = next(s for s in specs if s["exchange"] == "okx")
+        self.assertEqual(response_limit_for(coinbase), COINBASE_MAX_BYTES)
+        self.assertEqual(response_limit_for(okx), MAX_BYTES)
+        self.assertEqual(MAX_BYTES, 64 * 1024)
+        self.assertEqual(COINBASE_MAX_BYTES, 2 * 1024 * 1024)
 
     def test_response_limit_records_exact_boundary_and_overflow(self):
         class FakeResponse:
