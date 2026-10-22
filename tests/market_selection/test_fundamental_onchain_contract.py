@@ -142,6 +142,20 @@ class FundamentalOnchainContractTests(unittest.TestCase):
         self.assertEqual(metric["status"], "NOT_APPLICABLE")
         self.assertIsNone(metric["value"])
 
+    def test_quantitative_metric_rejects_categorical_value(self):
+        with self.assertRaisesRegex(ValueError, "quantitative metric values must be numeric"):
+            validate_observation(obs(value="one hundred"))
+
+    def test_fraction_outside_unit_interval_is_rejected(self):
+        value = obs(metric_id="distribution.holder_concentration", unit="fraction", value=1.5)
+        with self.assertRaisesRegex(ValueError, "between 0 and 1"):
+            validate_observation(value)
+
+    def test_applicable_metric_can_be_not_applicable_only_with_reason(self):
+        value = obs(status="NOT_APPLICABLE", value=None, applicability_override_reason="Asset has no token unlock schedule by design.")
+        result = validate_observation(value)
+        self.assertEqual(result["status"], "NOT_APPLICABLE")
+
 
 if __name__ == "__main__":
     unittest.main()
