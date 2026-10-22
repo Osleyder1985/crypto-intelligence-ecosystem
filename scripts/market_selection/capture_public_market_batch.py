@@ -17,7 +17,6 @@ from urllib.error import HTTPError, URLError
 from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 
-MAX_BYTES = 5 * 1024 * 1024
 TIMEOUT_SECONDS = 12
 SCHEMA_VERSION = "public-market-capture-batch-v1"
 # Deliberately small, explicit starter universe. This is not a liquidity ranking.
@@ -54,9 +53,9 @@ def request_capture(market_id: str, provider: str, url: str) -> dict[str, object
     try:
         with urlopen(request, timeout=TIMEOUT_SECONDS) as response:
             status = getattr(response, "status", None)
-            raw = response.read(MAX_BYTES + 1)
-        if len(raw) > MAX_BYTES:
-            raise ValueError(f"response exceeded {MAX_BYTES} byte safety limit")
+            # Preserve the complete provider response. Do not truncate or reject data at an arbitrary byte threshold.
+            # Actual limits are the provider, network, and available runtime resources—not a project-defined cap.
+            raw = response.read()
         record.update({
             "http_status": status, "captured_at_utc": now_utc(),
             "response_bytes": len(raw),
