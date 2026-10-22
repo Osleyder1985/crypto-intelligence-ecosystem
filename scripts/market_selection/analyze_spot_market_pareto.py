@@ -13,7 +13,10 @@ from decimal import Decimal, InvalidOperation
 from pathlib import Path
 from typing import Any
 
-from scripts.market_selection.provider_license_gate import evaluate_artifact_use
+try:
+    from scripts.market_selection.provider_license_gate import evaluate_artifact_use
+except ModuleNotFoundError:
+    from provider_license_gate import evaluate_artifact_use
 
 QUOTE_SCHEMA = "multi-exchange-spot-quote-volume-v1"
 BOOK_SCHEMA = "multi-exchange-spot-book-probe-v1"
