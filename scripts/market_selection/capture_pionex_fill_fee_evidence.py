@@ -15,6 +15,8 @@ from urllib.error import HTTPError, URLError
 from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 
+from scripts.market_selection.provider_license_gate import evaluate_provider_use
+
 BASE_URL = "https://api.pionex.com"
 PATH = "/api/v1/trade/fills"
 SCHEMA = "pionex-spot-fill-fee-evidence-v1"
@@ -125,7 +127,10 @@ def build_evidence(payload: object, raw: bytes, symbol: str, quote_currency: str
     }
 
 
-def capture(symbol: str, quote_currency: str, start_ms: int, end_ms: int, api_key: str, api_secret: str, timeout: float = 20.0) -> dict[str, object]:
+def capture(symbol: str, quote_currency: str, start_ms: int, end_ms: int, api_key: str, api_secret: str, timeout: float = 20.0, authorization_record: dict | None = None) -> dict[str, object]:
+    assessment = evaluate_provider_use("pionex_spot_account_data", "internal_analysis", authorization_record)
+    if assessment["decision"] != "ALLOW":
+        raise PermissionError("Pionex private-account capture blocked by provider authorization gate: " + ",".join(assessment["reason_codes"]))
     if not symbol or not symbol.isascii() or not quote_currency or not quote_currency.isascii():
         raise ValueError("symbol and quote currency must be non-empty ASCII strings")
     if start_ms < 0 or end_ms <= start_ms:
@@ -152,6 +157,7 @@ def capture(symbol: str, quote_currency: str, start_ms: int, end_ms: int, api_ke
         raise RuntimeError("Pionex response was not valid UTF-8 JSON; body omitted") from None
     evidence = build_evidence(payload, raw, symbol, quote_currency, start_ms, end_ms, now_utc())
     evidence["http_status"] = status
+    evidence["provider_use_assessment"] = assessment
     return evidence
 
 
@@ -162,14 +168,18 @@ def main() -> int:
     parser.add_argument("--start-ms", required=True, type=int, help="Inclusive fill timestamp in milliseconds")
     parser.add_argument("--end-ms", required=True, type=int, help="Exclusive fill timestamp in milliseconds")
     parser.add_argument("--output", required=True)
+    parser.add_argument("--authorization-record", required=True, help="Local JSON authorization record; do not commit account consent or private data")
     args = parser.parse_args()
     api_key, api_secret = os.environ.get("PIONEX_API_KEY", ""), os.environ.get("PIONEX_API_SECRET", "")
     if not api_key or not api_secret:
         print("PIONEX_API_KEY and PIONEX_API_SECRET environment variables are required.", file=sys.stderr)
         return 2
     try:
-        evidence = capture(args.symbol, args.quote_currency, args.start_ms, args.end_ms, api_key, api_secret)
-    except (ValueError, RuntimeError) as exc:
+        authorization_record = json.loads(Path(args.authorization_record).read_text(encoding="utf-8"))
+        if not isinstance(authorization_record, dict):
+            raise ValueError("authorization record must be a JSON object")
+        evidence = capture(args.symbol, args.quote_currency, args.start_ms, args.end_ms, api_key, api_secret, authorization_record=authorization_record)
+    except (ValueError, RuntimeError, PermissionError, OSError, json.JSONDecodeError) as exc:
         print(str(exc), file=sys.stderr)
         return 1
     path = Path(args.output)
