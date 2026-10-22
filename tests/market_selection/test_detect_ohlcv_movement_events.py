@@ -70,7 +70,7 @@ class OHLCVMovementEventTests(unittest.TestCase):
     def test_open_candle_is_not_used_as_return_or_volume_baseline(self):
         rows = [candle(0, "100", "100"), candle(1, "100", "100"),
                 candle(2, "10000", "100000", closed=False), candle(3, "100", "100"),
-                candle(4, "120", "100")]
+                candle(4, "101", "100")]
         result = analyze_movement_events(artifact(rows), 2, 5, 3)
         self.assertEqual(result["sample"]["excluded_open_or_unconfirmed_count"], 1)
         self.assertEqual(result["data_quality_status"], "INCOMPLETE")
