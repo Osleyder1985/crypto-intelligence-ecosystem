@@ -23,10 +23,22 @@ class MultiExchangeSpotBookProbeTests(unittest.TestCase):
             "reviewed_by": "offline-test-fixture",
         }
 
-    def test_missing_authorization_blocks_before_network(self):
-        spec = build_requests()[0]
+    def test_missing_authorization_blocks_before_network_for_every_venue(self):
         with patch("scripts.market_selection.capture_multi_exchange_spot_book_probe.urlopen", side_effect=AssertionError("network must not be called")):
-            result = capture_one(spec)
+            for spec in build_requests():
+                with self.subTest(exchange=spec["exchange"], symbol=spec["symbol"]):
+                    result = capture_one(spec)
+                    self.assertEqual(result["capture_status"], "BLOCKED")
+                    self.assertEqual(result["provider_use_assessment"]["decision"], "BLOCK")
+
+    def test_authorization_outside_provider_or_use_scope_blocks_before_network(self):
+        spec = build_requests()[0]
+        provider_id = PROVIDER_IDS[spec["exchange"]]
+        bad_record = self.authorization_record(provider_id)
+        bad_record["authorized_use_cases"] = ["live_technical_test"]
+        records = {provider_id: bad_record}
+        with patch("scripts.market_selection.capture_multi_exchange_spot_book_probe.urlopen", side_effect=AssertionError("network must not be called")):
+            result = capture_one(spec, records)
         self.assertEqual(result["capture_status"], "BLOCKED")
         self.assertEqual(result["provider_use_assessment"]["decision"], "BLOCK")
 
