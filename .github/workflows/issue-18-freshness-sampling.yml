@@ -1,0 +1,98 @@
+name: Issue 18 freshness sampling (read-only)
+on:
+  schedule:
+    - cron: "23 */6 * * *"
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  sample:
+    name: Capture and preserve public freshness observations
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+      - name: Capture public market data (read-only)
+        run: python scripts/market_selection/capture_public_market_batch.py
+      - name: Build freshness observations from source timestamps
+        env:
+          GITHUB_RUN_ID: ${{ github.run_id }}
+          GITHUB_RUN_ATTEMPT: ${{ github.run_attempt }}
+          GITHUB_SHA: ${{ github.sha }}
+        run: |
+          python - <<'PY'
+          import json
+          import os
+          from datetime import datetime, timezone
+          from pathlib import Path
+
+          source = Path("artifacts/public-market-capture-batch.json")
+          artifact = json.loads(source.read_text(encoding="utf-8"))
+          if artifact.get("schema_version") != "public-market-capture-batch-v1":
+              raise SystemExit("Unexpected capture schema")
+          if artifact.get("overall_status") != "PASS":
+              raise SystemExit("Public capture failed; refusing to publish a PASS freshness sample")
+          if artifact.get("expected_record_count") != artifact.get("actual_record_count") or artifact.get("actual_record_count") != 12:
+              raise SystemExit("Capture record count mismatch")
+          observations = []
+          for record in artifact["records"]:
+              if record.get("provider") != "pionex_depth":
+                  continue
+              if record.get("capture_status") != "PASS" or record.get("http_status") != 200:
+                  raise SystemExit(f"Depth capture failed for {record.get('market_id')}")
+              update = record.get("source_market_update_at_utc")
+              response = record.get("source_response_at_utc")
+              captured = record.get("captured_at_utc")
+              if not update or not response or not captured:
+                  raise SystemExit(f"Required timestamp missing for {record.get('market_id')}")
+              def parse(value):
+                  return datetime.fromisoformat(value.replace("Z", "+00:00"))
+              data = record.get("parsed_json", {}).get("data", {})
+              observations.append({
+                  "market_id": record["market_id"],
+                  "source_timestamp_field": record.get("source_timestamp_field"),
+                  "source_timestamp_semantics": record.get("source_timestamp_semantics"),
+                  "source_market_update_at_utc": update,
+                  "source_response_at_utc": response,
+                  "captured_at_utc": captured,
+                  "response_minus_update_ms": round((parse(response) - parse(update)).total_seconds() * 1000, 3),
+                  "capture_minus_response_ms": round((parse(captured) - parse(response)).total_seconds() * 1000, 3),
+                  "bids_returned": len(data.get("bids", [])),
+                  "asks_returned": len(data.get("asks", [])),
+                  "response_sha256": record.get("response_sha256"),
+                  "response_bytes": record.get("response_bytes"),
+              })
+          if len(observations) != 3:
+              raise SystemExit(f"Expected three Pionex Spot depth observations, got {len(observations)}")
+          result = {
+              "schema_version": "issue-18-freshness-sample-v1",
+              "created_at_utc": datetime.now(timezone.utc).isoformat(timespec="milliseconds").replace("+00:00", "Z"),
+              "github_run_id": os.environ["GITHUB_RUN_ID"],
+              "github_run_attempt": os.environ["GITHUB_RUN_ATTEMPT"],
+              "github_commit_sha": os.environ["GITHUB_SHA"],
+              "capture_created_at_utc": artifact.get("created_at_utc"),
+              "capture_status": "PASS",
+              "decision_status": "INDETERMINATE",
+              "sample_count": len(observations),
+              "observations": observations,
+              "limitations": [
+                  "A source update timestamp is not a universal age guarantee for every book level.",
+                  "This is one short public REST sample, not a production SLA or a freshness threshold.",
+                  "No orders are submitted and no fee or economic decision is inferred.",
+              ],
+          }
+          out = Path("artifacts/issue-18-freshness-sample.json")
+          out.write_text(json.dumps(result, ensure_ascii=False, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+          print(json.dumps({"sample_count": result["sample_count"], "decision_status": result["decision_status"], "output": str(out)}))
+          PY
+      - name: Upload immutable freshness evidence
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: issue-18-freshness-sample-${{ github.run_id }}-${{ github.run_attempt }}
+          path: artifacts/
+          if-no-files-found: error
+          retention-days: 90
