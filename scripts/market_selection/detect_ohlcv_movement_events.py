@@ -1,6 +1,11 @@
 """Detect descriptive price/turnover events using only closed candles and prior-window baselines."""
 from __future__ import annotations
 
+try:
+    from scripts.market_selection.provider_license_gate import evaluate_artifact_use
+except ModuleNotFoundError:
+    from provider_license_gate import evaluate_artifact_use
+
 import argparse
 import base64
 import hashlib
@@ -76,6 +81,9 @@ def next_open(open_ms, interval):
 def analyze_movement_events(artifact, lookback_bars, return_threshold_pct, volume_ratio_threshold):
     if not isinstance(artifact, dict) or artifact.get("schema_version") != INPUT_SCHEMA:
         raise ValueError(f"expected schema_version {INPUT_SCHEMA}")
+    provider_use = evaluate_artifact_use(artifact, "internal_analysis")
+    if provider_use["decision"] != "ALLOW":
+        raise PermissionError("OHLCV movement analysis blocked before use: " + ",".join(provider_use["reason_codes"]))
     integrity = verify_pages(artifact)
     market = artifact.get("market")
     if not isinstance(market, dict) or market.get("market_type") != "SPOT":

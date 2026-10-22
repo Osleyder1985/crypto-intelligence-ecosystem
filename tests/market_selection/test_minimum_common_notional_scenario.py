@@ -3,12 +3,20 @@ import hashlib
 import json
 import unittest
 
+from scripts.market_selection.provider_license_gate import ASSESSMENT_SCHEMA_VERSION, POLICY_VERSION
+
 from scripts.market_selection.analyze_minimum_common_notional_scenario import analyze_artifact
 
 
 def rec(market, provider, payload):
     raw = json.dumps(payload, separators=(",", ":")).encode()
+    provider_id = "pionex_spot_market_data" if provider.startswith("pionex") else "binance_spot_market_data"
     return {
+        "provider_use_assessment": {"schema_version": ASSESSMENT_SCHEMA_VERSION, "policy_version": POLICY_VERSION,
+            "provider_id": provider_id, "use_case": "persistent_storage", "decision": "ALLOW",
+            "reason_codes": ["EXPLICIT_AUTHORIZATION_RECORD_VALIDATED"],
+            "authorization": {"authorized_use_cases": ["persistent_storage", "internal_analysis"],
+                              "authorization_record_sha256": "b" * 64}},
         "market_id": market, "provider": provider, "capture_status": "PASS", "http_status": 200,
         "response_base64": base64.b64encode(raw).decode(),
         "response_sha256": hashlib.sha256(raw).hexdigest(), "response_bytes": len(raw),
@@ -80,6 +88,12 @@ class MinimumCommonNotionalTests(unittest.TestCase):
         self.assertEqual(item["scenario_computation_status"], "INDETERMINATE")
         self.assertGreater(item["pionex"]["buy"]["uncovered_base"], 0)
         self.assertIsNone(item["pionex"]["static_snapshot_round_trip_cost_quote"])
+
+    def test_missing_internal_analysis_scope_blocks_before_use(self):
+        a = fixture()
+        a["records"][0]["provider_use_assessment"]["authorization"]["authorized_use_cases"] = ["persistent_storage"]
+        with self.assertRaisesRegex(PermissionError, "blocked before use"):
+            analyze_artifact(a)
 
     def test_tampered_metadata_hash_fails_closed(self):
         a = fixture()

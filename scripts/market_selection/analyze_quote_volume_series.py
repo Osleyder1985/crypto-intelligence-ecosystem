@@ -9,6 +9,11 @@ from datetime import datetime, timezone
 from decimal import Decimal, InvalidOperation
 from pathlib import Path
 
+try:
+    from scripts.market_selection.provider_license_gate import evaluate_artifact_use
+except ModuleNotFoundError:
+    from provider_license_gate import evaluate_artifact_use
+
 
 SCHEMA_VERSION = "multi-exchange-spot-quote-volume-v1"
 OUTPUT_SCHEMA_VERSION = "quote-volume-series-analysis-v1"
@@ -101,6 +106,10 @@ def analyze_artifacts(paths) -> dict:
     loaded = [load_artifact(Path(path)) for path in paths]
     if not loaded:
         raise ValueError("at least one input artifact is required")
+    for artifact in loaded:
+        provider_use = evaluate_artifact_use(artifact, "internal_analysis")
+        if provider_use["decision"] != "ALLOW":
+            raise PermissionError("quote-volume analysis blocked before use: " + ",".join(provider_use["reason_codes"]))
     loaded.sort(key=lambda item: (parse_utc(item["created_at_utc"]), item["path"]))
 
     grouped = {}

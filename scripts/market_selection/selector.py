@@ -3,6 +3,10 @@ from __future__ import annotations
 
 import math
 from datetime import datetime
+try:
+    from scripts.market_selection.provider_license_gate import evaluate_artifact_use
+except ModuleNotFoundError:
+    from provider_license_gate import evaluate_artifact_use
 from typing import Any
 
 VALID_STATES = {"PASS", "FAIL", "INDETERMINATE", "NOT_APPLICABLE", "NOT_RUN"}
@@ -161,6 +165,12 @@ def evaluate_market(observation: dict[str, Any], config: dict[str, Any]) -> dict
         return _result(states, metrics, reasons, "FAIL" if states["market_type"] == "FAIL" else "INDETERMINATE")
 
     states["market_type"] = "PASS"
+    provider_use = evaluate_artifact_use(observation, "internal_analysis")
+    if provider_use["decision"] != "ALLOW":
+        reasons.extend(provider_use["reason_codes"])
+        result = _result(states, metrics, reasons, "INDETERMINATE")
+        result["provider_use_assessment"] = provider_use
+        return result
     if missing_config:
         reasons.append("missing required configuration: " + ", ".join(missing_config))
 
@@ -272,7 +282,9 @@ def evaluate_market(observation: dict[str, Any], config: dict[str, Any]) -> dict
         decision = "FAIL"
     else:
         decision = "PASS"
-    return _result(states, metrics, reasons, decision)
+    result = _result(states, metrics, reasons, decision)
+    result["provider_use_assessment"] = provider_use
+    return result
 
 
 def _result(states: dict[str, str], metrics: dict[str, Any], reasons: list[str], decision: str) -> dict[str, Any]:

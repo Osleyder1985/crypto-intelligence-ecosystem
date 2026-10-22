@@ -10,6 +10,11 @@ from pathlib import Path
 from typing import Any
 
 try:
+    from scripts.market_selection.provider_license_gate import evaluate_artifact_use
+except ModuleNotFoundError:
+    from provider_license_gate import evaluate_artifact_use
+
+try:
     from .analyze_depth_cost_curves import PUBLIC_FEE_REFERENCE
 except ImportError:
     from analyze_depth_cost_curves import PUBLIC_FEE_REFERENCE
@@ -141,6 +146,9 @@ def _binance_constraints(symbol: dict[str, Any]) -> tuple[Decimal, Decimal, Deci
 def analyze_artifact(artifact: dict[str, Any]) -> dict[str, Any]:
     if not isinstance(artifact, dict) or artifact.get("schema_version") != "public-market-capture-batch-v1" or artifact.get("overall_status") != "PASS":
         raise ValueError("input must be a PASS public-market-capture-batch-v1 artifact")
+    provider_use = evaluate_artifact_use(artifact, "internal_analysis")
+    if provider_use["decision"] != "ALLOW":
+        raise PermissionError("minimum-notional analysis blocked before use: " + ",".join(provider_use["reason_codes"]))
     universe, records = artifact.get("universe"), artifact.get("records")
     if not isinstance(universe, list) or not isinstance(records, list):
         raise ValueError("artifact universe and records must be arrays")

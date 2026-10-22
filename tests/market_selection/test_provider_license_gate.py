@@ -3,6 +3,8 @@ import unittest
 
 from scripts.market_selection.provider_license_gate import (
     SCHEMA_VERSION,
+    POLICY_VERSION,
+    evaluate_artifact_use,
     evaluate_provider_use,
 )
 
@@ -20,6 +22,37 @@ BASE = {
 
 
 class ProviderLicenseGateTests(unittest.TestCase):
+    def test_authorization_evidence_includes_policy_version_scope_and_record_hash(self):
+        result = evaluate_provider_use("coingecko_api", "internal_analysis", BASE)
+        self.assertEqual(result["policy_version"], POLICY_VERSION)
+        self.assertEqual(result["authorization"]["authorized_use_cases"], ["internal_analysis"])
+        self.assertRegex(result["authorization"]["authorization_record_sha256"], r"^[0-9a-f]{64}$")
+
+    def test_artifact_use_requires_explicit_downstream_scope(self):
+        record = dict(BASE, provider_id="binance_spot_market_data", authorized_use_cases=["persistent_storage", "internal_analysis"])
+        capture = evaluate_provider_use("binance_spot_market_data", "persistent_storage", record)
+        allowed = evaluate_artifact_use({"provider_use_assessment": capture}, "internal_analysis")
+        self.assertEqual(allowed["decision"], "ALLOW")
+        record["authorized_use_cases"] = ["persistent_storage"]
+        capture = evaluate_provider_use("binance_spot_market_data", "persistent_storage", record)
+        blocked = evaluate_artifact_use({"provider_use_assessment": capture}, "internal_analysis")
+        self.assertEqual(blocked["decision"], "BLOCK")
+        self.assertIn("DOWNSTREAM_USE_CASE_NOT_EXPLICITLY_AUTHORIZED", blocked["reason_codes"])
+
+    def test_downstream_consumer_blocks_unreviewed_provider_even_with_claimed_allow(self):
+        forged = {"schema_version": "crypto-provider-use-assessment-v1", "policy_version": POLICY_VERSION,
+                  "provider_id": "unknown_feed", "use_case": "persistent_storage", "decision": "ALLOW",
+                  "authorization": {"authorized_use_cases": ["internal_analysis"], "authorization_record_sha256": "b" * 64}}
+        result = evaluate_artifact_use({"provider_use_assessment": forged}, "internal_analysis")
+        self.assertEqual(result["decision"], "BLOCK")
+        self.assertIn("PROVIDER_NOT_REVIEWED", result["reason_codes"])
+
+    def test_technical_test_permission_does_not_authorize_internal_analysis(self):
+        capture = evaluate_provider_use("binance_spot_market_data", "live_technical_test")
+        result = evaluate_artifact_use({"provider_use_assessment": capture}, "internal_analysis")
+        self.assertEqual(result["decision"], "BLOCK")
+        self.assertIn("AUTHORIZATION_EVIDENCE_MISSING_FOR_DOWNSTREAM_USE", result["reason_codes"])
+
     def test_binance_only_allows_live_technical_test_by_baseline(self):
         allowed = evaluate_provider_use("binance_spot_market_data", "live_technical_test")
         self.assertEqual(allowed["decision"], "ALLOW")

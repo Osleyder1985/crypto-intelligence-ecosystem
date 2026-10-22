@@ -2,6 +2,7 @@ import base64
 import hashlib
 import unittest
 
+from scripts.market_selection.provider_license_gate import ASSESSMENT_SCHEMA_VERSION, POLICY_VERSION
 from scripts.market_selection.detect_ohlcv_movement_events import analyze_movement_events
 
 
@@ -18,7 +19,11 @@ def candle(i, close, quote_volume, *, closed=True):
 def artifact(rows):
     raw = b"synthetic preserved response body"
     return {
-        "schema_version": "binance-spot-ohlcv-capture-v1", "overall_status": "PASS",
+        "schema_version": "binance-spot-ohlcv-capture-v1",
+        "provider_use_assessment": {"schema_version": ASSESSMENT_SCHEMA_VERSION, "policy_version": POLICY_VERSION,
+            "provider_id": "binance_spot_market_data", "use_case": "internal_analysis", "decision": "ALLOW",
+            "reason_codes": ["EXPLICIT_AUTHORIZATION_RECORD_VALIDATED"],
+            "authorization": {"authorized_use_cases": ["internal_analysis"], "authorization_record_sha256": "b" * 64}}, "overall_status": "PASS",
         "market": {"exchange": "binance", "market_type": "SPOT", "symbol_native": "BTCUSDT", "interval": "1h"},
         "pages": [{"capture_status": "PASS", "response_base64": base64.b64encode(raw).decode("ascii"),
                    "response_bytes": len(raw), "response_sha256": hashlib.sha256(raw).hexdigest()}],
@@ -27,6 +32,12 @@ def artifact(rows):
 
 
 class OHLCVMovementEventTests(unittest.TestCase):
+    def test_missing_authorization_blocks_analysis(self):
+        source = artifact([candle(0, "100", "100"), candle(1, "101", "100")])
+        source.pop("provider_use_assessment")
+        with self.assertRaisesRegex(PermissionError, "blocked before use"):
+            analyze_movement_events(source, 2, 5, 3)
+
     def test_price_move_uses_previous_closed_close_and_explicit_threshold(self):
         result = analyze_movement_events(artifact([
             candle(0, "100", "100"), candle(1, "101", "100"),

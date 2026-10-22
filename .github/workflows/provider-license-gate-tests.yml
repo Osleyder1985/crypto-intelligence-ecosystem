@@ -6,11 +6,15 @@ on:
       - "scripts/market_selection/provider_license_gate.py"
       - "tests/market_selection/test_provider_license_gate.py"
       - "tests/market_selection/test_provider_license_enforcement.py"
+      - "scripts/market_selection/capture_binance_account_commission_evidence.py"
       - "tests/market_selection/test_capture_binance_account_commission_evidence.py"
+      - "scripts/market_selection/capture_pionex_fill_fee_evidence.py"
       - "scripts/market_selection/binance_public.py"
       - "scripts/market_selection/pionex_public.py"
       - "tests/market_selection/test_data_contract_and_binance.py"
       - "tests/market_selection/test_pionex_public.py"
+      - "scripts/market_selection/capture_multi_exchange_spot_book_probe.py"
+      - "tests/market_selection/test_capture_multi_exchange_spot_book_probe.py"
       - "scripts/market_selection/capture_multi_exchange_spot_ticker_probe.py"
       - "tests/market_selection/test_capture_multi_exchange_spot_ticker_probe.py"
       - "scripts/market_selection/capture_binance_spot_ohlcv.py"
@@ -19,16 +23,26 @@ on:
       - "tests/market_selection/test_capture_binance_regional_rest_diagnostic.py"
       - "scripts/market_selection/binance_depth_transport.py"
       - "tests/market_selection/test_binance_depth_transport.py"
-      - "scripts/market_selection/capture_binance_account_commission_evidence.py"
-      - "scripts/market_selection/capture_pionex_fill_fee_evidence.py"
-      - "scripts/market_selection/binance_public.py"
-      - "scripts/market_selection/pionex_public.py"
-      - "tests/market_selection/test_data_contract_and_binance.py"
-      - "tests/market_selection/test_pionex_public.py"
-      - "scripts/market_selection/capture_multi_exchange_spot_ticker_probe.py"
-      - "tests/market_selection/test_capture_multi_exchange_spot_ticker_probe.py"
-      - "scripts/market_selection/capture_multi_exchange_spot_book_probe.py"
-      - "tests/market_selection/test_capture_multi_exchange_spot_book_probe.py"
+      - "scripts/market_selection/research_report.py"
+      - "tests/market_selection/test_research_report.py"
+      - "scripts/market_selection/selector.py"
+      - "tests/market_selection/test_selector.py"
+      - "scripts/market_selection/analyze_depth_cost_curves.py"
+      - "tests/market_selection/test_analyze_depth_cost_curves.py"
+      - "scripts/market_selection/analyze_quote_volume_series.py"
+      - "tests/market_selection/test_analyze_quote_volume_series.py"
+      - "scripts/market_selection/analyze_spot_market_pareto.py"
+      - "tests/market_selection/test_analyze_spot_market_pareto.py"
+      - "scripts/market_selection/analyze_minimum_common_notional_scenario.py"
+      - "tests/market_selection/test_minimum_common_notional_scenario.py"
+      - "scripts/market_selection/analyze_ohlcv_risk_profile.py"
+      - "tests/market_selection/test_analyze_ohlcv_risk_profile.py"
+      - "scripts/market_selection/detect_ohlcv_movement_events.py"
+      - "tests/market_selection/test_detect_ohlcv_movement_events.py"
+      - "scripts/market_selection/analyze_support_resistance.py"
+      - "tests/market_selection/test_analyze_support_resistance.py"
+      - "scripts/market_selection/research_evidence_integration.py"
+      - "tests/market_selection/test_research_evidence_integration.py"
       - ".github/workflows/provider-license-gate-tests.yml"
   push:
     branches: [main]
@@ -37,7 +51,40 @@ on:
       - "tests/market_selection/test_provider_license_gate.py"
       - "tests/market_selection/test_provider_license_enforcement.py"
       - "scripts/market_selection/capture_binance_account_commission_evidence.py"
+      - "tests/market_selection/test_capture_binance_account_commission_evidence.py"
       - "scripts/market_selection/capture_pionex_fill_fee_evidence.py"
+      - "scripts/market_selection/binance_public.py"
+      - "scripts/market_selection/pionex_public.py"
+      - "tests/market_selection/test_data_contract_and_binance.py"
+      - "tests/market_selection/test_pionex_public.py"
+      - "scripts/market_selection/capture_multi_exchange_spot_book_probe.py"
+      - "tests/market_selection/test_capture_multi_exchange_spot_book_probe.py"
+      - "scripts/market_selection/capture_multi_exchange_spot_ticker_probe.py"
+      - "tests/market_selection/test_capture_multi_exchange_spot_ticker_probe.py"
+      - "scripts/market_selection/capture_binance_spot_ohlcv.py"
+      - "tests/market_selection/test_capture_binance_spot_ohlcv.py"
+      - "scripts/market_selection/capture_binance_regional_rest_diagnostic.py"
+      - "tests/market_selection/test_capture_binance_regional_rest_diagnostic.py"
+      - "scripts/market_selection/binance_depth_transport.py"
+      - "tests/market_selection/test_binance_depth_transport.py"
+      - "scripts/market_selection/research_report.py"
+      - "tests/market_selection/test_research_report.py"
+      - "scripts/market_selection/selector.py"
+      - "tests/market_selection/test_selector.py"
+      - "scripts/market_selection/analyze_depth_cost_curves.py"
+      - "tests/market_selection/test_analyze_depth_cost_curves.py"
+      - "scripts/market_selection/analyze_quote_volume_series.py"
+      - "tests/market_selection/test_analyze_quote_volume_series.py"
+      - "scripts/market_selection/analyze_spot_market_pareto.py"
+      - "tests/market_selection/test_analyze_spot_market_pareto.py"
+      - "scripts/market_selection/analyze_minimum_common_notional_scenario.py"
+      - "tests/market_selection/test_minimum_common_notional_scenario.py"
+      - "scripts/market_selection/analyze_ohlcv_risk_profile.py"
+      - "tests/market_selection/test_analyze_ohlcv_risk_profile.py"
+      - "scripts/market_selection/detect_ohlcv_movement_events.py"
+      - "tests/market_selection/test_detect_ohlcv_movement_events.py"
+      - "scripts/market_selection/analyze_support_resistance.py"
+      - "tests/market_selection/test_analyze_support_resistance.py"
       - ".github/workflows/provider-license-gate-tests.yml"
 
 permissions:
@@ -51,7 +98,7 @@ jobs:
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97d
         with:
           python-version: "3.12"
-      - name: Run provider license gate tests
+      - name: Run provider license gate and authorized-consumer tests
         run: |
           python -m unittest discover -s tests/market_selection -p "test_provider_license_*.py" -v
           python -m unittest discover -s tests/market_selection -p "test_capture_multi_exchange_spot_book_probe.py" -v
@@ -62,3 +109,13 @@ jobs:
           python -m unittest discover -s tests/market_selection -p "test_capture_binance_spot_ohlcv.py" -v
           python -m unittest discover -s tests/market_selection -p "test_capture_binance_regional_rest_diagnostic.py" -v
           python -m unittest discover -s tests/market_selection -p "test_binance_depth_transport.py" -v
+          python -m unittest discover -s tests/market_selection -p "test_research_report.py" -v
+          python -m unittest discover -s tests/market_selection -p "test_selector.py" -v
+          python -m unittest discover -s tests/market_selection -p "test_analyze_depth_cost_curves.py" -v
+          python -m unittest discover -s tests/market_selection -p "test_analyze_quote_volume_series.py" -v
+          python -m unittest discover -s tests/market_selection -p "test_analyze_spot_market_pareto.py" -v
+          python -m unittest discover -s tests/market_selection -p "test_minimum_common_notional_scenario.py" -v
+          python -m unittest discover -s tests/market_selection -p "test_analyze_ohlcv_risk_profile.py" -v
+          python -m unittest discover -s tests/market_selection -p "test_detect_ohlcv_movement_events.py" -v
+          python -m unittest discover -s tests/market_selection -p "test_analyze_support_resistance.py" -v
+          python -m unittest discover -s tests/market_selection -p "test_research_evidence_integration.py" -v

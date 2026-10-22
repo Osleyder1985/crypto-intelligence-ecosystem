@@ -5,12 +5,20 @@ import tempfile
 import unittest
 from pathlib import Path
 
+from scripts.market_selection.provider_license_gate import ASSESSMENT_SCHEMA_VERSION, POLICY_VERSION
+
 from scripts.market_selection.analyze_spot_market_pareto import analyze_files
 
 
 def raw_record(exchange, asset, symbol, payload, **fields):
     raw = json.dumps(payload, separators=(",", ":")).encode()
+    provider_ids = {"binance":"binance_spot_market_data","pionex":"pionex_spot_market_data","okx":"okx_spot_market_data","bybit":"bybit_spot_market_data","mexc":"mexc_spot_market_data","gate":"gate_spot_market_data","bitget":"bitget_spot_market_data"}
     return {
+        "provider_use_assessment": {"schema_version": ASSESSMENT_SCHEMA_VERSION, "policy_version": POLICY_VERSION,
+            "provider_id": provider_ids[exchange], "use_case": "persistent_storage", "decision": "ALLOW",
+            "reason_codes": ["EXPLICIT_AUTHORIZATION_RECORD_VALIDATED"],
+            "authorization": {"authorized_use_cases": ["persistent_storage", "internal_analysis"],
+                              "authorization_record_sha256": "b" * 64}},
         "exchange": exchange, "asset": asset, "symbol": symbol,
         "capture_status": "PASS", "http_status": 200,
         "captured_at_utc": "2026-10-22T15:57:45.000Z", "source_timestamp_raw": 1792684670000,
@@ -92,6 +100,12 @@ class ExploratoryParetoTests(unittest.TestCase):
         self.assertIn("quote_volume_unit_not_documented", by_id["pionex:BTC"]["exclusion_reasons"])
         self.assertEqual(by_id["bybit:BTC"]["candidate_status"], "INDETERMINATE")
         self.assertEqual(out["frontier_by_asset"][0]["frontier_market_ids"], ["binance:BTC"])
+
+    def test_missing_internal_analysis_scope_blocks_before_use(self):
+        quote, book = fixtures()
+        quote["records"][0]["provider_use_assessment"]["authorization"]["authorized_use_cases"] = ["persistent_storage"]
+        with self.assertRaisesRegex(PermissionError, "blocked before use"):
+            self._run(quote, book)
 
     def test_tampered_response_hash_fails_closed(self):
         quote, book = fixtures()

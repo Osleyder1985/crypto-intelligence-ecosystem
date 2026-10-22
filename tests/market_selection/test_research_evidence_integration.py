@@ -1,4 +1,5 @@
 import unittest
+from scripts.market_selection.provider_license_gate import ASSESSMENT_SCHEMA_VERSION, POLICY_VERSION
 
 from scripts.market_selection.research_evidence_integration import enrich_research_report
 from scripts.market_selection.external_event_evidence import INPUT_SCHEMA
@@ -37,6 +38,12 @@ def methodology():
 def report():
     return {
         "schema_version": "crypto-asset-research-report-v1",
+        "source_artifact": {"provider_use_assessment": {
+            "schema_version": ASSESSMENT_SCHEMA_VERSION, "policy_version": POLICY_VERSION,
+            "provider_id": "binance_spot_market_data", "use_case": "internal_analysis", "decision": "ALLOW",
+            "reason_codes": ["EXPLICIT_AUTHORIZATION_RECORD_VALIDATED"],
+            "authorization": {"authorized_use_cases": ["internal_analysis"], "authorization_record_sha256": "b" * 64},
+        }},
         "decision_status": "INDETERMINATE",
         "horizons": {h: {"status": "INDETERMINATE", "conclusion": "INDETERMINATE", "reason_codes": []} for h in ("short", "medium", "long")},
         "limitations": [],
@@ -109,6 +116,16 @@ class ResearchEvidenceIntegrationTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "duplicate event_id"):
             enrich_research_report(
                 report(), events=[item, item], observations=[], methodology=methodology(),
+                asset={"stable_id": "example-asset", "category": "smart_contract_token"},
+                evaluation_as_of="2026-10-21T00:00:00Z",
+            )
+
+    def test_missing_provider_authorization_blocks_evidence_integration(self):
+        invalid = report()
+        invalid.pop("source_artifact")
+        with self.assertRaisesRegex(PermissionError, "blocked before use"):
+            enrich_research_report(
+                invalid, events=[], observations=[], methodology=methodology(),
                 asset={"stable_id": "example-asset", "category": "smart_contract_token"},
                 evaluation_as_of="2026-10-21T00:00:00Z",
             )
