@@ -28,11 +28,11 @@ Workflow: [Multi-exchange Spot quote-volume probe #39777588072](https://github.c
 
 Los valores se expresan en USDT solo cuando la semántica oficial del campo lo respalda. En Pionex se conserva el `amount` bruto, pero se marca `INDETERMINATE` porque la OpenAPI pública no define inequívocamente su unidad; no usarlo para comparar o rankear turnover:
 
-| ETH/USDT | 747,853,881.40297200 | 399,855,019.22415134 | INDETERMINATE (403) | 223,899,206 | 354,009,552.97876 | 153,921,805.8293 | INDETERMINATE (amount=452,122,292.61975092; unidad no documentada) |
-|---|---:|---:|---:|---:|---:|---:|---:|
+| Par | Binance | OKX | Bybit | MEXC | Gate | Bitget | Pionex |
+|---|---:|---:|---:|---:|---:|---:|---|
 | BTC/USDT | 1,850,653,961.12149870 | 623,948,411.148934552 | INDETERMINATE (403) | 529,563,572.28 | 1,016,564,575.3342165 | 382,658,936.756441 | INDETERMINATE (amount=2,690,638,425.45706367; unidad no documentada) |
 | ETH/USDT | 747,853,881.40297200 | 399,855,019.22415134 | INDETERMINATE (403) | 223,899,206 | 354,009,552.97876 | 153,921,805.8293 | INDETERMINATE (amount=452,122,292.61975092; unidad no documentada) |
-| SOL/USDT | 231,856,434.14443000 | 68,857,917.3333594 | INDETERMINATE (403) | 70,275,763.63 | 97,436,005.46428 | 41,066,662.7077 | INDETERMINATE (amount=INDETERMINATE (amount=42,216,316.01; unidad no documentada)379989; unidad no documentada) |
+| SOL/USDT | 231,856,434.14443000 | 68,857,917.3333594 | INDETERMINATE (403) | 70,275,763.63 | 97,436,005.46428 | 41,066,662.7077 | INDETERMINATE (amount=42,216,316.01379989; unidad no documentada) |
 
 ## Lectura correcta de esta muestra
 
