@@ -85,13 +85,14 @@ def request_capture(market_id: str, provider: str, url: str) -> dict[str, object
             record.update(error_type=type(exc).__name__, error_message="response was not valid UTF-8 JSON")
             return record
         record["parsed_json"] = parsed
-        if provider == "pionex":
+        if provider in ("pionex", "pionex_depth"):
             # Pionex documents this top-level timestamp in milliseconds as response metadata.
-            # It is not a market-data event timestamp and must not populate source_event_at_utc.
+            # It is distinct from data.updateTime and local capture time.
             record["source_timestamp_field"] = "timestamp"
+            endpoint_name = "Common Symbols" if provider == "pionex" else "market depth"
             record["source_timestamp_semantics"] = (
-                "Pionex Common Symbols API response timestamp in epoch milliseconds; "
-                "response metadata time, not an order-book event timestamp"
+                f"Pionex {endpoint_name} API response timestamp in epoch milliseconds; "
+                "response metadata time, not the order-book update timestamp"
             )
             timestamp = parsed.get("timestamp") if isinstance(parsed, dict) else None
             if isinstance(timestamp, int) and not isinstance(timestamp, bool) and timestamp >= 0:
