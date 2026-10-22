@@ -1,0 +1,53 @@
+name: Binance live capture to research report E2E
+
+on:
+  pull_request:
+    paths:
+      - "scripts/market_selection/capture_binance_spot_research.py"
+      - "scripts/market_selection/capture_binance_spot_ohlcv.py"
+      - "scripts/market_selection/research_report.py"
+      - "tests/market_selection/test_capture_binance_spot_research.py"
+      - ".github/workflows/binance-live-capture-report-e2e.yml"
+  push:
+    branches: [main]
+    paths:
+      - "scripts/market_selection/capture_binance_spot_research.py"
+      - "scripts/market_selection/capture_binance_spot_ohlcv.py"
+      - "scripts/market_selection/research_report.py"
+      - "tests/market_selection/test_capture_binance_spot_research.py"
+      - ".github/workflows/binance-live-capture-report-e2e.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  offline-contract-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97d
+        with:
+          python-version: "3.12"
+      - name: Test metadata and pipeline contracts
+        run: python -m unittest discover -s tests/market_selection -p "test_capture_binance_spot_research.py" -v
+
+  live-smoke-read-only:
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97d
+        with:
+          python-version: "3.12"
+      - name: Run tiny public market capture and report smoke test
+        run: |
+          python -m scripts.market_selection.capture_binance_spot_research \
+            --symbol BTCUSDT --asset-id BTC --interval 1h \
+            --start-time-ms "$(python -c 'import datetime; d=datetime.datetime.now(datetime.timezone.utc).replace(minute=0,second=0,microsecond=0)-datetime.timedelta(hours=6); print(int(d.timestamp()*1000))')" \
+            --end-time-ms "$(python -c 'import datetime; d=datetime.datetime.now(datetime.timezone.utc).replace(minute=0,second=0,microsecond=0); print(int(d.timestamp()*1000))')" \
+            --config configs/technical-descriptive-baseline.json \
+            --capture-output artifacts/binance-live-capture.json \
+            --report-output artifacts/binance-live-report.json
+          python -c 'import json; r=json.load(open("artifacts/binance-live-report.json")); assert r["decision_status"] == "INDETERMINATE"; assert r["orders_submitted"] is False'
