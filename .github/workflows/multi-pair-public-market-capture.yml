@@ -106,6 +106,7 @@ jobs:
           assert all(book["fee_cost_included"] is False for book in curves["books"])
           assert all(book["order_size_selected"] is False for book in curves["books"])
           assert all(book["public_fee_reference_overlay"]["effective_account_fee_verified"] is False for book in curves["books"])
+          assert all(book["public_fee_reference_overlay"]["observed_at_utc"] == "2026-10-22" for book in curves["books"])
           assert all(point["slippage_plus_public_fee_reference_bps_per_fill"] >= point["slippage_bps_vs_mid"] for book in curves["books"] for side in ("buy_consuming_asks", "sell_consuming_bids") for point in book["execution_cost_curve"][side])
           assert all(len(book["execution_cost_curve"]["buy_consuming_asks"]) == book["levels_returned"]["asks"] for book in curves["books"])
           assert all(len(book["execution_cost_curve"]["sell_consuming_bids"]) == book["levels_returned"]["bids"] for book in curves["books"])

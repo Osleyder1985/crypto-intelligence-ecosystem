@@ -20,7 +20,7 @@ Cada punto incluye `slippage_plus_public_fee_reference_bps_per_fill`, una suma i
 - Pionex Spot: 0,050% maker/taker (5 bps), [tarifas oficiales](https://www.pionex.com/es/fees).
 - Binance Spot, Regular User: 0,100% maker/taker (10 bps), [tarifas oficiales](https://www.binance.com/es-LA/fee/trading).
 
-La salida conserva `effective_account_fee_verified=false`. El overlay no aplica VIP, descuentos BNB, promociones de símbolo, componentes fiscales/especiales, moneda de comisión ni redondeos. No es un coste total round-trip y no se debe interpretar como tarifa efectiva del usuario. Se ofrece solo como escenario público de referencia para que el impacto de usar una tarifa base sea visible.
+La salida conserva `effective_account_fee_verified=false` y `observed_at_utc=2026-10-22` para fechar la consulta de estas tarifas públicas. El overlay no aplica VIP, descuentos BNB, promociones de símbolo, componentes fiscales/especiales, moneda de comisión ni redondeos. No es un coste total round-trip y no se debe interpretar como tarifa efectiva del usuario. Se ofrece solo como escenario público de referencia para que el impacto de usar una tarifa base sea visible.
 
 ## Interpretación
 
