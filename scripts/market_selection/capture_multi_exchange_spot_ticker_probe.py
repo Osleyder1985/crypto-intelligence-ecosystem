@@ -43,6 +43,9 @@ def build_requests():
     return requests
 
 def extract_quote_volume(exchange, payload):
+    if exchange == "gate":
+        if not isinstance(payload, list) or not payload: raise ValueError("Gate response has no ticker")
+        return payload[0].get("quote_volume"), payload[0].get("time"), "quote_volume: quote-currency turnover"
     if not isinstance(payload, dict): raise ValueError("top-level response must be an object")
     if exchange == "binance": return payload.get("quoteVolume"), payload.get("closeTime"), "quoteVolume: quote-asset turnover over rolling 24h"
     if exchange == "okx":
@@ -57,9 +60,6 @@ def extract_quote_volume(exchange, payload):
         if not isinstance(rows,list) or not rows: raise ValueError("Bybit response has no ticker list")
         return rows[0].get("turnover24h"), payload.get("time"), "turnover24h: quote-currency turnover for Spot"
     if exchange == "mexc": return payload.get("quoteVolume"), payload.get("closeTime"), "quoteVolume: quote-asset volume when supplied by endpoint"
-    if exchange == "gate":
-        if not isinstance(payload,list) or not payload: raise ValueError("Gate response has no ticker")
-        return payload[0].get("quote_volume"), payload[0].get("time"), "quote_volume: quote-currency turnover"
     if exchange == "bitget":
         if payload.get("code") != "00000": raise ValueError("Bitget response code was not 00000")
         rows = payload.get("data")
