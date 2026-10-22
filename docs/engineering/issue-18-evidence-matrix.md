@@ -2,7 +2,8 @@
 
 - **Issue:** [#18 — Frescura, comisiones y coste total](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/issues/18)
 - **Fecha de consolidación:** 2026-10-22 UTC.
-- **Estado global:** INDETERMINATE; Issue permanece abierto.
+- **Estado del Issue:** CERRADO para el alcance adoptado de investigación comparativa pública Spot mediante [PR #103](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/pull/103), fusionado en `1c78c0c73869df2bc7fa39ac49ffc0d367895d4b`.
+- **Estado de una decisión económica individual:** sigue siendo `INDETERMINATE` cuando falten datos críticos. El cierre del Issue no declara frescura de cada captura, rentabilidad, tarifas efectivas de cuenta ni habilitación para operar.
 - **Regla:** una captura técnicamente válida, un hash correcto o una curva calculable no bastan para certificar frescura, tarifa efectiva o coste de ejecución.
 
 ## Matriz de aceptación
