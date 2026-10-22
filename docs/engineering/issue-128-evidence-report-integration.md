@@ -2,7 +2,7 @@
 
 ## Estado y alcance
 
-Esta entrega añade una capa de composición offline sobre `crypto-asset-research-report-v1`. Valida e incorpora registros de eventos externos, observaciones fundamentales/on-chain y metodología versionada mediante los contratos existentes de los Issues #132, #134 y #133.
+Esta entrega añade una capa de composición offline sobre `crypto-asset-research-report-v2`. Valida e incorpora registros de eventos externos, observaciones fundamentales/on-chain y metodología versionada mediante los contratos existentes de los Issues #132, #134 y #133.
 
 ## Entrada
 
