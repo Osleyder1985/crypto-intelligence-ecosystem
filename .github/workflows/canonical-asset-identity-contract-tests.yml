@@ -1,0 +1,28 @@
+name: Canonical crypto asset identity contract tests
+
+on:
+  pull_request:
+    paths:
+      - "scripts/market_selection/canonical_asset_identity.py"
+      - "tests/market_selection/test_canonical_asset_identity.py"
+      - ".github/workflows/canonical-asset-identity-contract-tests.yml"
+  push:
+    branches: [main]
+    paths:
+      - "scripts/market_selection/canonical_asset_identity.py"
+      - "tests/market_selection/test_canonical_asset_identity.py"
+      - ".github/workflows/canonical-asset-identity-contract-tests.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  contract-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97d
+        with:
+          python-version: "3.12"
+      - name: Run canonical identity contract tests
+        run: python -m unittest discover -s tests/market_selection -p "test_canonical_asset_identity.py" -v
