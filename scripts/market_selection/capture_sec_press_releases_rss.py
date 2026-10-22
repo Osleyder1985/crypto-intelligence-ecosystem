@@ -79,6 +79,21 @@ def _child_text(element: ET.Element, name: str) -> str | None:
     return None
 
 
+def _read_to_eof(stream: Any) -> tuple[bytes, Exception | None]:
+    """Read every available byte without a size cap, retaining bytes before a read error."""
+    chunks: list[bytes] = []
+    while True:
+        try:
+            chunk = stream.read(65536)
+        except (URLError, TimeoutError, OSError) as exc:
+            return b"".join(chunks), exc
+        if not chunk:
+            return b"".join(chunks), None
+        if not isinstance(chunk, (bytes, bytearray)):
+            return b"".join(chunks), TypeError("response stream returned a non-bytes chunk")
+        chunks.append(bytes(chunk))
+
+
 def _safe_headers(headers: Any) -> dict[str, str]:
     if headers is None or not hasattr(headers, "items"):
         return {}
@@ -221,6 +236,7 @@ def _response_capture(
         "raw_response_bytes": len(raw),
         "raw_response_sha256": hashlib.sha256(raw).hexdigest(),
         "raw_response_base64": base64.b64encode(raw).decode("ascii"),
+        "capture_truncated": False,
         "provider_policy_assessments": state["provider_policy_assessments"],
         "provider_use_assessment": state["provider_use_assessment"],
         "persistent_storage_assessment": state["persistent_storage_assessment"],
@@ -266,19 +282,24 @@ def _request(
     try:
         response = opener(request, timeout=timeout_seconds)
     except HTTPError as exc:
-        raw = exc.read()  # Preserve the complete error body too.
+        raw, read_error = _read_to_eof(exc)
         headers = _safe_headers(exc.headers)
+        status = "HTTP_ERROR_BODY_TRUNCATED" if read_error else "HTTP_ERROR"
+        reasons = ["HTTP_STATUS_NOT_SUCCESS"]
+        errors = [{"error_type": "HTTPError", "reason_code": "HTTP_STATUS_NOT_SUCCESS"}]
+        if read_error:
+            reasons.append("HTTP_ERROR_BODY_READ_FAILED")
+            errors.append({"error_type": type(read_error).__name__, "reason_code": "HTTP_ERROR_BODY_READ_FAILED"})
         result = _response_capture(
-            schema, state, captured_at, requested_url, int(exc.code),
-            headers, raw, "HTTP_ERROR",
-            errors=[{"error_type": "HTTPError", "reason_code": "HTTP_STATUS_NOT_SUCCESS"}],
+            schema, state, captured_at, requested_url, int(exc.code), headers, raw, status, errors=errors,
         )
+        result["reason_codes"] = reasons
+        result["capture_truncated"] = read_error is not None
         return result, raw, int(exc.code), headers
     except (URLError, TimeoutError, OSError) as exc:
-        result = _blocked_result(schema, state, captured_at, [], requested_url)
+        result = _blocked_result(schema, state, captured_at, ["NETWORK_REQUEST_FAILED"], requested_url)
         result["capture_status"] = "NETWORK_ERROR"
         result["network_request_made"] = True
-        result["reason_codes"] = ["NETWORK_REQUEST_FAILED"]
         result["errors"] = [{"error_type": type(exc).__name__, "reason_code": "NETWORK_REQUEST_FAILED"}]
         return result, None, None, {}
 
@@ -288,18 +309,20 @@ def _request(
             status_code = response.getcode()
         status_code = int(status_code)
         headers = _safe_headers(getattr(response, "headers", None))
-        try:
-            raw = response.read()  # Read to EOF; no local response-size cap.
-        except (URLError, TimeoutError, OSError) as exc:
-            result = _blocked_result(schema, state, captured_at, ["NETWORK_RESPONSE_READ_FAILED"], requested_url)
-            result["capture_status"] = "NETWORK_ERROR"
-            result["network_request_made"] = True
-            result["errors"] = [{"error_type": type(exc).__name__, "reason_code": "NETWORK_RESPONSE_READ_FAILED"}]
-            return result, None, None, {}
+        raw, read_error = _read_to_eof(response)
     finally:
         close = getattr(response, "close", None)
         if callable(close):
             close()
+
+    if read_error:
+        result = _response_capture(
+            schema, state, captured_at, requested_url, status_code, headers, raw, "NETWORK_ERROR",
+            errors=[{"error_type": type(read_error).__name__, "reason_code": "NETWORK_RESPONSE_READ_FAILED"}],
+        )
+        result["reason_codes"] = ["NETWORK_RESPONSE_READ_FAILED"]
+        result["capture_truncated"] = True
+        return result, raw, status_code, headers
 
     if status_code != 200:
         result = _response_capture(
