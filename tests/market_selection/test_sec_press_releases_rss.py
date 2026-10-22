@@ -303,7 +303,7 @@ class SecPressReleaseConnectorTests(unittest.TestCase):
             article = capture_sec_press_release_article(
                 feed["feed_items"][0]["link"], record, self.user_agent, 5,
                 captured_at="2026-10-22T12:31:00Z",
-                opener=Mock(return_value=FakeResponse(article_raw)),
+                opener=Mock(return_value=FakeResponse(article_raw, headers={"Content-Type": "text/html"})),
             )
             with self.assertRaisesRegex(ValueError, "ticker-only matching is forbidden"):
                 promote_sec_press_release_to_event(
