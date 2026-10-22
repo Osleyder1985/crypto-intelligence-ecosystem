@@ -14,6 +14,7 @@
 | [Captura histórica OHLCV Binance Spot — Issue #13](issue-13-binance-historical-ohlcv-capture.md) | Adaptador paginado, ventanas UTC, respuestas originales, hashes, detección de huecos y velas cerradas | Primera fuente implementada; solo Binance Spot |
 | [Perfil descriptivo de riesgo OHLCV — Issue #13](issue-13-ohlcv-risk-profile.md) | Retornos observados, volatilidad por vela, drawdown de cierres y controles de huecos | Descriptivo; no predice ni rankea |
 | [Eventos de movimiento OHLCV — Issue #13](issue-13-ohlcv-movement-events.md) | Detección parametrizada de movimientos y anomalías de turnover sin usar velas futuras | Descriptivo; causalidad no establecida |
+| [Contrato de evidencia de noticias/eventos — Issue #132](issue-132-event-evidence-contract.md) | Normaliza procedencia, timestamps, identidad estable, deduplicación conservadora y asociación temporal sin afirmar causalidad | Propuesta técnica; no descarga noticias ni prueba causalidad |
 | [Eventos de soporte y resistencia — Issue #13](issue-13-support-resistance-events.md) | Pivotes confirmados, zonas, toques, rechazos e invalidaciones con disponibilidad temporal explícita | Heurística OHLCV; no predice reacción del precio |
 | [Historial y comparación de evaluaciones — Issue #13](issue-13-evaluation-history-records.md) | Registros locales inmutables con SHA-256 y comparación conservadora de evaluaciones | Prototipo local; no sustituye persistencia central |
 | [Análisis de series de turnover Spot 24 h — Issue #7](issue-7-quote-volume-series-analysis.md) | Verifica integridad y compara capturas repetidas de turnover móvil sin umbrales ni ranking | Herramienta descriptiva; requiere serie representativa |
@@ -48,6 +49,7 @@
 - [#11 — Issue rector del marco maestro](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/issues/11)
 - [#13 — Evaluación histórica, ranking, análisis de eventos, liquidez y soportes/resistencias](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/issues/13)
 - [#18 — Frescura, comisiones y coste total](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/issues/18)
+- [#132 — Noticias y eventos externos como posibles detonantes](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/issues/132)
 
 ## Reglas de mantenimiento
 
