@@ -134,10 +134,11 @@ def analyze_artifacts(paths) -> dict:
         values = [(item, value) for item, value in valid_rows if value is not None and item["capture_status"] == "PASS" and item["integrity_status"] == "VERIFIED"]
         units = sorted({item["quote_volume_unit"] for item, _ in values if item["quote_volume_unit"] is not None})
         semantics = sorted({item["volume_semantics"] for item, _ in values if item["volume_semantics"] is not None})
-        comparable = len(units) == 1 and len(semantics) == 1 and len(values) >= 2
+        all_semantics_present = all(item["quote_volume_unit"] is not None and item["volume_semantics"] is not None for item, _ in values)
+        comparable = len(units) == 1 and len(semantics) == 1 and all_semantics_present and len(values) >= 2
         if len(values) < 2:
             comparison_status = "INSUFFICIENT_VALID_SAMPLES"
-        elif len(units) != 1 or len(semantics) != 1:
+        elif len(units) != 1 or len(semantics) != 1 or not all_semantics_present:
             comparison_status = "INDETERMINATE_INCOMPATIBLE_SEMANTICS_OR_UNITS"
         else:
             comparison_status = "DESCRIPTIVE_COMPARISON_ONLY"

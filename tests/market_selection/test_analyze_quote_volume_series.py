@@ -77,6 +77,17 @@ class QuoteVolumeSeriesTests(unittest.TestCase):
         self.assertEqual(result["series"][0]["comparison_status"], "INDETERMINATE_INCOMPATIBLE_SEMANTICS_OR_UNITS")
         self.assertEqual(result["series"][0]["consecutive_deltas"], [])
 
+
+    def test_missing_semantics_does_not_allow_comparison(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            a = write_artifact(Path(tmp) / "a.json", "2026-10-22T00:00:00Z",
+                               [record(volume="100", captured="2026-10-22T00:00:00Z")])
+            b = write_artifact(Path(tmp) / "b.json", "2026-10-22T06:00:00Z",
+                               [record(volume="110", captured="2026-10-22T06:00:00Z", semantics=None)])
+            result = analyze_artifacts([a, b])
+        self.assertEqual(result["series"][0]["comparison_status"], "INDETERMINATE_INCOMPATIBLE_SEMANTICS_OR_UNITS")
+        self.assertEqual(result["series"][0]["consecutive_deltas"], [])
+
     def test_tampered_hash_fails_closed(self):
         with tempfile.TemporaryDirectory() as tmp:
             path = write_artifact(Path(tmp) / "bad.json", "2026-10-22T00:00:00Z",
