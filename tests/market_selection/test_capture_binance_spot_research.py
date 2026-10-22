@@ -153,5 +153,86 @@ class BinanceSpotResearchCaptureTests(unittest.TestCase):
                 capture_and_build_report(symbol="BTCUSDT", interval="1h", start_time_ms=0, end_time_ms_exclusive=3_600_000, config=config, base_asset_ticker="ETH")
 
 
+    def test_optional_canonical_identity_evidence_is_bound_to_exact_market_metadata(self):
+        metadata_hash = "a" * 64
+        metadata = {
+            "base_asset": "BTC", "quote_asset": "USDT", "symbol_status": "TRADING",
+            "is_spot_trading_allowed": True,
+            "captured_exchange_info": {"capture_status": "PASS", "response_sha256": metadata_hash},
+        }
+        artifact = {"market": {}}
+        report = {
+            "horizons": {"short": {"reason_codes": []}},
+            "data_quality": {"status": "COMPLETE", "dimensions": {}},
+            "limitations": [],
+        }
+        identity = {
+            "schema_version": "crypto-canonical-asset-identity-v1",
+            "ticker": "BTC",
+            "chain_namespace": "bip122",
+            "chain_reference": "000000000019d6689c085ae165831e93",
+            "asset_namespace": "slip44",
+            "asset_reference": "0",
+            "provider": "controlled-fixture",
+            "source_url": "https://example.org/identity.json",
+            "evidence_sha256": "b" * 64,
+            "captured_at": "2026-10-22T12:00:00Z",
+            "observed_at": "2026-10-22T11:59:00Z",
+            "market_mapping": {
+                "exchange": "BINANCE", "symbol": "BTCUSDT",
+                "base_asset_ticker": "BTC", "exchange_info_sha256": metadata_hash,
+            },
+        }
+        with patch("scripts.market_selection.capture_binance_spot_research.capture_exchange_info", return_value=metadata), \
+             patch("scripts.market_selection.capture_binance_spot_research.capture_history", return_value=artifact), \
+             patch("scripts.market_selection.capture_binance_spot_research.build_research_report", return_value=report):
+            _, result = capture_and_build_report(
+                symbol="BTCUSDT", interval="1h", start_time_ms=0,
+                end_time_ms_exclusive=3_600_000, config={}, base_asset_ticker="BTC",
+                identity_evidence=identity,
+            )
+        self.assertEqual(result["canonical_asset_identity_status"], "RESOLVED")
+        self.assertEqual(result["canonical_asset_identity"]["canonical_asset_id"],
+                         "bip122:000000000019d6689c085ae165831e93/slip44:0")
+        self.assertEqual(result["canonical_asset_identity_evidence_status"], "STRUCTURE_VALIDATED_NOT_AUTHENTICATED")
+        self.assertEqual(result["canonical_asset_identity_market_mapping_status"], "MATCHED_TO_CAPTURED_BINANCE_METADATA")
+        self.assertEqual(result["asset_identity_status"], "INDETERMINATE")
+        self.assertEqual(result["data_quality"]["status"], "INCOMPLETE_OR_UNVERIFIED")
+        self.assertFalse(result["orders_submitted"])
+
+    def test_rejects_canonical_identity_evidence_for_different_market_mapping(self):
+        metadata_hash = "a" * 64
+        metadata = {
+            "base_asset": "BTC", "quote_asset": "USDT", "symbol_status": "TRADING",
+            "is_spot_trading_allowed": True,
+            "captured_exchange_info": {"capture_status": "PASS", "response_sha256": metadata_hash},
+        }
+        identity = {
+            "schema_version": "crypto-canonical-asset-identity-v1",
+            "ticker": "BTC", "chain_namespace": "bip122",
+            "chain_reference": "000000000019d6689c085ae165831e93",
+            "asset_namespace": "slip44", "asset_reference": "0",
+            "provider": "controlled-fixture", "source_url": "https://example.org/identity.json",
+            "evidence_sha256": "b" * 64, "captured_at": "2026-10-22T12:00:00Z",
+            "observed_at": "2026-10-22T11:59:00Z",
+            "market_mapping": {
+                "exchange": "BINANCE", "symbol": "ETHUSDT",
+                "base_asset_ticker": "BTC", "exchange_info_sha256": metadata_hash,
+            },
+        }
+        with patch("scripts.market_selection.capture_binance_spot_research.capture_exchange_info", return_value=metadata), \
+             patch("scripts.market_selection.capture_binance_spot_research.capture_history", return_value={"market": {}}), \
+             patch("scripts.market_selection.capture_binance_spot_research.build_research_report", return_value={
+                 "horizons": {}, "data_quality": {"status": "COMPLETE", "dimensions": {}}, "limitations": []
+             }):
+            with self.assertRaisesRegex(ValueError, "does not match captured Binance metadata"):
+                capture_and_build_report(
+                    symbol="BTCUSDT", interval="1h", start_time_ms=0,
+                    end_time_ms_exclusive=3_600_000, config={}, base_asset_ticker="BTC",
+                    identity_evidence=identity,
+                )
+
+
+
 if __name__ == "__main__":
     unittest.main()
