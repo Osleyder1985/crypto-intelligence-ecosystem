@@ -53,7 +53,7 @@ La integridad del cuerpo recibido y la autorización para usar los datos son con
 
 ## Inventario de entrypoints de red auditados
 
-La revisión recursiva de los archivos Python del repositorio identificó los siguientes entrypoints de red. Los módulos analíticos, contratos, validadores de calidad y ensambladores de informes son offline; no contienen llamadas HTTP/WebSocket directas.
+La revisión recursiva de los archivos Python del repositorio identificó los siguientes entrypoints de red. Los módulos analíticos, contratos, validadores de calidad y ensambladores de informes no contienen llamadas HTTP/WebSocket directas; los puntos de entrada que consumen artefactos ahora también verifican que la evidencia de captura autorice explícitamente `internal_analysis`.
 
 | Entry point | Proveedor / transporte | Caso de uso comprobado antes de red |
 |---|---|---|
@@ -72,6 +72,25 @@ La revisión recursiva de los archivos Python del repositorio identificó los si
 | `capture_public_market_data.request_capture` | Proveedores públicos declarados por configuración | Caso declarado; gate antes de `urlopen` |
 | `binance_public.BinancePublicSpotReader` / `_default_http_get` | Binance REST exchangeInfo/depth | `internal_analysis` por defecto |
 | `pionex_public.PionexPublicSpotReader` / `_default_http_get` | Pionex REST symbols | `internal_analysis` por defecto |
+
+
+### Consumidores de artefactos y uso interno
+
+La política se versiona como `1.1.0`. Cada evaluación autorizada incluye el hash canónico del registro de autorización y la lista explícita de casos autorizados, sin exponer secretos. `evaluate_artifact_use` rechaza artefactos antiguos sin versión/política, capturas permitidas solo como `live_technical_test`, registros sin hash o registros cuyo alcance no incluye el uso solicitado.
+
+Los siguientes consumidores bloquean antes de analizar si el artefacto no contiene evidencia válida de autorización para `internal_analysis`:
+
+- `research_report.build_research_report`
+- `selector.evaluate_market`
+- `analyze_ohlcv_risk_profile.analyze_artifact`
+- `detect_ohlcv_movement_events.analyze_movement_events`
+- `analyze_support_resistance.analyze_support_resistance`
+- `analyze_depth_cost_curves.analyze_artifact`
+- `analyze_quote_volume_series.analyze_artifacts`
+- `analyze_spot_market_pareto.analyze_files`
+- `analyze_minimum_common_notional_scenario.analyze_artifact`
+
+Los cálculos matemáticos puros y helpers de parsing no abren conexiones; el control se coloca en la frontera que convierte artefactos de proveedor en análisis o decisiones. La evidencia almacenada es una comprobación de política del software, no prueba de autenticidad de documentos ni dictamen legal.
 
 **Controles transversales:** el gate se evalúa tanto en los coordinadores como en los entrypoints de bajo nivel que abren conexiones. Los rechazos se producen antes de `urlopen` o `websocket.create_connection`. Los usos de `live_technical_test` permitidos por la política no equivalen a licencia comercial, autorización de redistribución ni elegibilidad regional. La evidencia de un registro aprobado sigue requiriendo verificación humana de los términos oficiales y del alcance real.
 
