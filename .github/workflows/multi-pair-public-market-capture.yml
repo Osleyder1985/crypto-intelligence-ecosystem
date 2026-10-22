@@ -28,6 +28,7 @@ jobs:
       - run: python -m unittest discover -s tests/market_selection -p "test_evaluate_capture_batch.py" -v
       - run: python -m unittest discover -s tests/market_selection -p "test_analyze_depth_cost_curves.py" -v
       - run: python -m unittest discover -s tests/market_selection -p "test_issue18_live_freshness.py" -v
+      - run: python -m unittest discover -s tests/market_selection -p "test_minimum_common_notional_scenario.py" -v
   capture-offline:
     name: Test multi-pair capture offline
     needs: scope
@@ -85,6 +86,9 @@ jobs:
           python scripts/market_selection/evaluate_capture_batch.py --artifact artifacts/public-market-capture-batch.json --output artifacts/batch-evaluation-1.json
           python scripts/market_selection/evaluate_capture_batch.py --artifact artifacts/public-market-capture-batch.json --output artifacts/batch-evaluation-2.json
           cmp --silent artifacts/batch-evaluation-1.json artifacts/batch-evaluation-2.json
+          python scripts/market_selection/analyze_minimum_common_notional_scenario.py --artifact artifacts/public-market-capture-batch.json --output artifacts/minimum-common-notional-1.json
+          python scripts/market_selection/analyze_minimum_common_notional_scenario.py --artifact artifacts/public-market-capture-batch.json --output artifacts/minimum-common-notional-2.json
+          cmp --silent artifacts/minimum-common-notional-1.json artifacts/minimum-common-notional-2.json
           python scripts/market_selection/analyze_depth_cost_curves.py --artifact artifacts/public-market-capture-batch.json --output artifacts/depth-cost-curves-1.json
           python scripts/market_selection/analyze_depth_cost_curves.py --artifact artifacts/public-market-capture-batch.json --output artifacts/depth-cost-curves-2.json
           cmp --silent artifacts/depth-cost-curves-1.json artifacts/depth-cost-curves-2.json
@@ -100,6 +104,12 @@ jobs:
           assert all(m["dimension_status"]["capture_integrity"] == "PASS" for m in result["markets"])
           assert all(m["dimension_status"]["source_freshness"] == "INDETERMINATE" for m in result["markets"])
           assert all(m["dimension_status"]["fees"] == "INDETERMINATE" for m in result["markets"])
+          scenario = json.loads(Path("artifacts/minimum-common-notional-1.json").read_text(encoding="utf-8"))
+          assert scenario["schema_version"] == "minimum-common-notional-reference-v1"
+          assert scenario["decision_status"] == "INDETERMINATE"
+          assert len(scenario["results"]) == 3
+          assert all(item["orders_submitted"] is False for item in scenario["results"])
+          assert all(item["account_effective_fee_verified"] is False for item in scenario["results"])
           curves = json.loads(Path("artifacts/depth-cost-curves-1.json").read_text(encoding="utf-8"))
           assert curves["schema_version"] == "public-depth-cost-curves-v1"
           assert curves["decision_status"] == "INDETERMINATE"
