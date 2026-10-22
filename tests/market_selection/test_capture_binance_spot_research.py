@@ -85,11 +85,11 @@ class BinanceSpotResearchCaptureTests(unittest.TestCase):
         raw = json.dumps(exchange_info_payload(status="BREAK")).encode()
         with patch("scripts.market_selection.capture_binance_spot_research.urlopen", return_value=FakeResponse(raw)):
             with self.assertRaisesRegex(ValueError, "not in TRADING"):
-                capture_exchange_info("BTCUSDT")
+                capture_exchange_info("BTCUSDT", use_case="live_technical_test")
         raw = json.dumps(exchange_info_payload(spot=False)).encode()
         with patch("scripts.market_selection.capture_binance_spot_research.urlopen", return_value=FakeResponse(raw)):
             with self.assertRaisesRegex(ValueError, "not explicitly marked"):
-                capture_exchange_info("BTCUSDT")
+                capture_exchange_info("BTCUSDT", use_case="live_technical_test")
 
     def test_pipeline_preserves_source_and_never_promotes_investment_decision(self):
         from scripts.market_selection.capture_binance_spot_ohlcv import SCHEMA_VERSION
@@ -148,7 +148,7 @@ class BinanceSpotResearchCaptureTests(unittest.TestCase):
         payload["large_extension_field"] = "x" * (6 * 1024 * 1024)
         raw = json.dumps(payload, separators=(",", ":")).encode("utf-8")
         with patch("scripts.market_selection.capture_binance_spot_research.urlopen", return_value=FakeResponse(raw, chunk_size=8191)):
-            out = capture_exchange_info("BTCUSDT")
+            out = capture_exchange_info("BTCUSDT", use_case="live_technical_test")
         evidence = out["captured_exchange_info"]
         restored = base64.b64decode(evidence["response_base64"], validate=True)
         self.assertGreater(len(raw), 5 * 1024 * 1024)
