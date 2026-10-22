@@ -35,66 +35,59 @@ def read_complete(response: object) -> tuple[bytes, str | None]:
     return b"".join(chunks), content_length
 
 MARKETS = (
-    {"asset": "BTC", "okx": "BTC-USDT", "bybit": "BTCUSDT", "coinbase": "BTC-USD", "kraken": "XBTUSD"},
-    {"asset": "ETH", "okx": "ETH-USDT", "bybit": "ETHUSDT", "coinbase": "ETH-USD", "kraken": "ETHUSD"},
-    {"asset": "SOL", "okx": "SOL-USDT", "bybit": "SOLUSDT", "coinbase": "SOL-USD", "kraken": "SOLUSD"},
+    {"asset": "BTC", "pionex": "BTC_USDT", "binance": "BTCUSDT", "okx": "BTC-USDT", "bybit": "BTCUSDT", "mexc": "BTCUSDT", "gate": "BTC_USDT", "bitget": "BTCUSDT"},
+    {"asset": "ETH", "pionex": "ETH_USDT", "binance": "ETHUSDT", "okx": "ETH-USDT", "bybit": "ETHUSDT", "mexc": "ETHUSDT", "gate": "ETH_USDT", "bitget": "ETHUSDT"},
+    {"asset": "SOL", "pionex": "SOL_USDT", "binance": "SOLUSDT", "okx": "SOL-USDT", "bybit": "SOLUSDT", "mexc": "SOLUSDT", "gate": "SOL_USDT", "bitget": "SOLUSDT"},
 )
-
 
 def now_utc() -> str:
     return datetime.now(timezone.utc).isoformat(timespec="milliseconds").replace("+00:00", "Z")
-
 
 def build_requests() -> list[dict[str, str]]:
     requests = []
     for market in MARKETS:
         asset = market["asset"]
         requests.extend([
-            {"exchange": "okx", "asset": asset, "symbol": market["okx"],
-             "url": "https://www.okx.com/api/v5/market/books?" + urlencode({"instId": market["okx"], "sz": "20"})},
-            {"exchange": "bybit", "asset": asset, "symbol": market["bybit"],
-             "url": "https://api.bybit.com/v5/market/orderbook?" + urlencode({"category": "spot", "symbol": market["bybit"], "limit": "50"})},
-            {"exchange": "coinbase_exchange", "asset": asset, "symbol": market["coinbase"],
-             "url": f"https://api.exchange.coinbase.com/products/{market['coinbase']}/book?level=2"},
-            {"exchange": "kraken", "asset": asset, "symbol": market["kraken"],
-             "url": "https://api.kraken.com/0/public/Depth?" + urlencode({"pair": market["kraken"], "count": "20"})},
+            {"exchange": "binance", "asset": asset, "symbol": market["binance"], "url": "https://data-api.binance.vision/api/v3/depth?" + urlencode({"symbol": market["binance"], "limit": "100"})},
+            {"exchange": "okx", "asset": asset, "symbol": market["okx"], "url": "https://www.okx.com/api/v5/market/books?" + urlencode({"instId": market["okx"], "sz": "20"})},
+            {"exchange": "bybit", "asset": asset, "symbol": market["bybit"], "url": "https://api.bybit.com/v5/market/orderbook?" + urlencode({"category": "spot", "symbol": market["bybit"], "limit": "50"})},
+            {"exchange": "mexc", "asset": asset, "symbol": market["mexc"], "url": "https://api.mexc.com/api/v3/depth?" + urlencode({"symbol": market["mexc"], "limit": "100"})},
+            {"exchange": "gate", "asset": asset, "symbol": market["gate"], "url": "https://api.gateio.ws/api/v4/spot/order_book?" + urlencode({"currency_pair": market["gate"], "limit": "20", "with_id": "true"})},
+            {"exchange": "bitget", "asset": asset, "symbol": market["bitget"], "url": "https://api.bitget.com/api/v3/market/orderbook?" + urlencode({"category": "SPOT", "symbol": market["bitget"], "limit": "100"})},
+            {"exchange": "pionex", "asset": asset, "symbol": market["pionex"], "url": "https://api.pionex.com/api/v1/market/depth?" + urlencode({"symbol": market["pionex"], "limit": "100"})},
         ])
     return requests
 
-
 def extract_top_of_book(exchange: str, payload: object) -> tuple[object, object, object]:
-    """Return bids, asks, source timestamp without normalizing away raw provenance."""
+    """Return bids, asks, and documented source time where available."""
     if not isinstance(payload, dict):
         raise ValueError("top-level response must be an object")
+    if exchange in ("binance", "mexc"):
+        return payload.get("bids"), payload.get("asks"), None
     if exchange == "okx":
-        if payload.get("code") != "0":
-            raise ValueError("OKX response code was not 0")
+        if payload.get("code") != "0": raise ValueError("OKX response code was not 0")
         rows = payload.get("data")
-        if not isinstance(rows, list) or not rows:
-            raise ValueError("OKX response has no order book")
+        if not isinstance(rows, list) or not rows: raise ValueError("OKX response has no order book")
         book = rows[0]
         return book.get("bids"), book.get("asks"), book.get("ts")
     if exchange == "bybit":
-        if payload.get("retCode") != 0:
-            raise ValueError("Bybit retCode was not 0")
+        if payload.get("retCode") != 0: raise ValueError("Bybit retCode was not 0")
         result = payload.get("result")
-        if not isinstance(result, dict):
-            raise ValueError("Bybit response has no result object")
-        return result.get("b"), result.get("a"), result.get("ts")
-    if exchange == "coinbase_exchange":
-        return payload.get("bids"), payload.get("asks"), payload.get("time")
-    if exchange == "kraken":
-        if payload.get("error"):
-            raise ValueError("Kraken response reports API errors")
-        result = payload.get("result")
-        if not isinstance(result, dict) or not result:
-            raise ValueError("Kraken response has no result object")
-        book = next(iter(result.values()))
-        if not isinstance(book, dict):
-            raise ValueError("Kraken order book is malformed")
-        return book.get("bids"), book.get("asks"), None
+        if not isinstance(result, dict): raise ValueError("Bybit response has no result object")
+        return result.get("b"), result.get("a"), result.get("cts", result.get("ts"))
+    if exchange == "gate":
+        return payload.get("bids"), payload.get("asks"), payload.get("update")
+    if exchange == "bitget":
+        if payload.get("code") != "00000": raise ValueError("Bitget response code was not 00000")
+        data = payload.get("data")
+        if not isinstance(data, dict): raise ValueError("Bitget response has no data object")
+        return data.get("b"), data.get("a"), data.get("ts")
+    if exchange == "pionex":
+        if payload.get("result") is not True: raise ValueError("Pionex response result was not true")
+        data = payload.get("data")
+        if not isinstance(data, dict): raise ValueError("Pionex response has no data object")
+        return data.get("bids"), data.get("asks"), data.get("updateTime")
     raise ValueError(f"unsupported exchange: {exchange}")
-
 
 def capture_one(spec: dict[str, str]) -> dict[str, object]:
     record: dict[str, object] = {
@@ -158,13 +151,13 @@ def capture_batch() -> dict[str, object]:
         "records": records,
         "exchange_status": {
             exchange: ("PASS" if any(r["exchange"] == exchange and r["capture_status"] == "PASS" for r in records) else "FAIL")
-            for exchange in ("okx", "bybit", "coinbase_exchange", "kraken")
+            for exchange in ("binance", "okx", "bybit", "mexc", "gate", "bitget", "pionex")
         },
         "overall_status": "PASS" if all(r["capture_status"] == "PASS" for r in records) else "PARTIAL",
         "limitations": [
             "Snapshots are point-in-time observations, not synchronized streaming books.",
-            "Quote currencies differ: OKX/Bybit use USDT; Coinbase Exchange/Kraken use USD.",
-            "Snapshot depth and API timestamps have venue-specific semantics; raw responses are retained.",
+            "Snapshot depth and API timestamps have venue-specific semantics; Binance and MEXC REST depth do not provide an event timestamp.",
+            "Provider depth limits differ and snapshots do not represent the complete order book.",
             "PASS means a parseable public order-book response only, not adequate liquidity, low slippage, fee approval, or regional trading eligibility.",
             "No orders are submitted and no credentials are used.",
         ],
