@@ -79,7 +79,7 @@ def resolve_asset_identity(
         requested_chain = _text(requested_chain, "requested_identifier.chain_id")
     requested = {"type": identifier_type, "value": identifier_value, "chain_id": requested_chain}
 
-    market_base = market.get("base_asset") or market.get("asset_id")
+    market_base = market.get("base_asset")
     market_base = market_base.strip() if isinstance(market_base, str) and market_base.strip() else None
     if identifier_type == "symbol" and market_base:
         mapping_status = "VERIFIED" if market_base.casefold() == identifier_value.casefold() else "MISMATCH"
@@ -195,6 +195,9 @@ def resolve_asset_identity(
             "reason_codes": ["MARKET_BASE_SYMBOL_CONFLICTS_WITH_IDENTITY_EVIDENCE"],
         }
 
+    if identifier_type == "contract_address" and requested_chain is None:
+        return _unresolved(requested, mapping_status, "CHAIN_ID_REQUIRED_FOR_CONTRACT_ADDRESS")
+
     matches = False
     if identifier_type == "symbol":
         matches = identifier_value.casefold() == symbol.casefold()
@@ -206,6 +209,19 @@ def resolve_asset_identity(
         matches = bool(contract_address) and identifier_value == contract_address
         if requested_chain is None or requested_chain != chain_id:
             matches = False
+
+    if mapping_status != "VERIFIED":
+        return {
+            "schema_version": SCHEMA_VERSION,
+            "requested_identifier": requested,
+            "asset_identity_status": "INDETERMINATE",
+            "canonical_asset_identity_status": "NOT_RESOLVED",
+            "market_base_asset_mapping_status": mapping_status,
+            "resolution_status": "NOT_RESOLVED",
+            "stable_id": None,
+            "identity_evidence": sanitized_evidence,
+            "reason_codes": ["MARKET_BASE_MAPPING_NOT_VERIFIED"],
+        }
 
     if not matches:
         return {
