@@ -4,6 +4,8 @@
 - [Contrato de evidencia de eventos externos (Issue #132)](issue-132-event-evidence-contract.md)
 - [Contrato de validación metodológica por horizonte (Issue #133)](issue-133-methodology-contract.md)
 - [Contrato del orquestador de informes de investigación (Issue #130)](issue-130-research-report-contract.md)
+- [Auditoría de brechas de implementación (Issue #128)](issue-128-implementation-gap-audit.md)
+- [Objetivo de investigación integral de criptoactivos (Issue #128)](issue-128-end-to-end-asset-research.md)
 - [Integración de evidencias en informes (Issue #128)](issue-128-evidence-report-integration.md)
 - [Captura Binance Spot e informe de investigación E2E (Issue #128)](issue-128-binance-live-capture-report-e2e.md)
 - [Política de puertas de licencia de proveedores (Issue #128)](issue-128-provider-license-gates.md)
