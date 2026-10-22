@@ -15,7 +15,7 @@ from scripts.market_selection.fundamental_onchain_contract import evaluate_obser
 from scripts.market_selection.methodology_contract import validate_methodology
 from scripts.market_selection.provider_license_gate import evaluate_artifact_use
 
-REPORT_SCHEMA = "crypto-asset-research-report-v1"
+REPORT_SCHEMA = "crypto-asset-research-report-v2"
 BUNDLE_SCHEMA = "crypto-research-evidence-bundle-v1"
 
 
