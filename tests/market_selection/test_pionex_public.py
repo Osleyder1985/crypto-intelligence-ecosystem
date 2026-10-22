@@ -5,6 +5,7 @@ import hashlib
 import json
 import sys
 import unittest
+from unittest.mock import patch
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -21,12 +22,51 @@ def response(symbol="BTC_USDT", enabled=True, market_type="SPOT", base="BTC", qu
     return json.dumps({"result": True, "timestamp": timestamp, "data": {"symbols": symbols}}).encode()
 
 
+class ChunkedHTTPResponse:
+    status = 200
+
+    def __init__(self, body: bytes):
+        self.body = body
+        self.offset = 0
+        self.read_sizes = []
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *args):
+        return False
+
+    def read(self, size=-1):
+        self.read_sizes.append(size)
+        if size is None or size < 0:
+            chunk = self.body[self.offset:]
+            self.offset = len(self.body)
+            return chunk
+        chunk = self.body[self.offset:self.offset + size]
+        self.offset += len(chunk)
+        return chunk
+
+
 class PionexPublicSpotReaderTests(unittest.TestCase):
     def make_reader(self, payload, calls=None):
         return pionex_public.PionexPublicSpotReader(
             http_get=lambda url, timeout: (calls.append(url) if calls is not None else None) or payload,
             clock=lambda: "2026-10-19T00:00:01Z",
         )
+
+    def test_response_larger_than_five_mib_is_fully_read_and_parsed(self):
+        payload = json.loads(response())
+        payload["padding"] = "x" * (5 * 1024 * 1024 + 128)
+        raw = json.dumps(payload, separators=(",", ":")).encode()
+        transport = ChunkedHTTPResponse(raw)
+        with patch.object(pionex_public, "urlopen", return_value=transport):
+            transported = pionex_public._default_http_get("https://example.invalid", 10.0)
+        self.assertEqual(transported, raw)
+        self.assertGreater(len(transport.read_sizes), 1)
+        self.assertTrue(all(size == 64 * 1024 for size in transport.read_sizes))
+        result = self.make_reader(transported).check_spot_symbol("BTC_USDT")
+        self.assertEqual(result["availability_status"], "confirmed")
+        self.assertEqual(result["payload_sha256"], hashlib.sha256(raw).hexdigest())
 
     def test_exact_enabled_spot_pair_is_confirmed(self):
         raw = response()
