@@ -41,6 +41,7 @@ EVENT_SOURCE_REGISTRY = {
             "reviewed_at": None,
             "allowed_use_cases": [],
             "user_agent_required": True,
+            "user_agent_policy": "Caller must supply an operator-reviewed User-Agent; this code cannot verify SEC classification.",
             "max_requests_per_second": 10,
             "max_requests_per_invocation": 1,
             "parallel_requests": False,
@@ -89,11 +90,20 @@ def validate_source_entry(entry: dict) -> dict:
     if source_id != provider_id:
         raise ValueError("source_id and provider_id must match for runtime policy lookup")
     source_type = _non_empty(entry.get("source_type"), "source_type")
-    _https_url(entry.get("source_url"), "source_url")
-    _https_url(entry.get("terms_url"), "terms_url")
+    source_url = _https_url(entry.get("source_url"), "source_url")
+    terms_url = _https_url(entry.get("terms_url"), "terms_url")
+    if source_id == "sec_press_releases":
+        if source_type != "REGULATORY":
+            raise ValueError("SEC press releases must remain classified as REGULATORY")
+        if source_url != "https://www.sec.gov/news/pressreleases.rss":
+            raise ValueError("SEC feed URL must match the reviewed official RSS URL")
+        if terms_url != "https://www.sec.gov/about/developer-resources":
+            raise ValueError("SEC terms URL must match the reviewed official developer-resources URL")
     hosts = entry.get("allowed_article_hosts")
     if not isinstance(hosts, list) or not hosts or any(not isinstance(host, str) or not host.strip() for host in hosts):
         raise ValueError("allowed_article_hosts must be a non-empty list of hostnames")
+    if source_id == "sec_press_releases" and not set(hosts).issubset({"www.sec.gov", "sec.gov"}):
+        raise ValueError("SEC article host allowlist may contain only sec.gov hosts")
     status = _non_empty(entry.get("status"), "status")
     if status not in SOURCE_STATUSES:
         raise ValueError(f"unsupported source status: {status}")
