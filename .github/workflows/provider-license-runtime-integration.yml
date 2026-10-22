@@ -6,9 +6,11 @@ on:
       - "scripts/market_selection/provider_license_gate.py"
       - "scripts/market_selection/capture_binance_spot_ohlcv.py"
       - "scripts/market_selection/capture_public_market_batch.py"
+      - "scripts/market_selection/capture_public_market_data.py"
       - "tests/market_selection/test_provider_license_gate.py"
       - "tests/market_selection/test_capture_binance_spot_ohlcv.py"
       - "tests/market_selection/test_capture_public_market_batch.py"
+      - "tests/market_selection/test_public_market_capture.py"
       - ".github/workflows/provider-license-runtime-integration.yml"
   push:
     branches: [main]
@@ -37,3 +39,4 @@ jobs:
           python -m unittest discover -s tests/market_selection -p "test_provider_license_gate.py" -v
           python -m unittest discover -s tests/market_selection -p "test_capture_binance_spot_ohlcv.py" -v
           python -m unittest discover -s tests/market_selection -p "test_capture_public_market_batch.py" -v
+          python -m unittest discover -s tests/market_selection -p "test_public_market_capture.py" -v
