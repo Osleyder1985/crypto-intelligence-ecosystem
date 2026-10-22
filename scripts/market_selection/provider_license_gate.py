@@ -15,6 +15,7 @@ SUPPORTED_USE_CASES = {
 }
 BASELINE_POLICY = {
     "binance_spot_market_data": {u: ("ALLOW_TECHNICAL_TEST_ONLY" if u == "live_technical_test" else "REQUIRES_APPROVAL") for u in SUPPORTED_USE_CASES},
+    "binance_us_market_data": {u: ("ALLOW_TECHNICAL_TEST_ONLY" if u == "live_technical_test" else "REQUIRES_APPROVAL") for u in SUPPORTED_USE_CASES},
     "pionex_spot_market_data": {u: "REQUIRES_APPROVAL" for u in SUPPORTED_USE_CASES},
     "defillama_api": {u: "BLOCK_PENDING_WRITTEN_AUTHORIZATION" for u in SUPPORTED_USE_CASES},
     "coingecko_api": {u: "REQUIRES_PLAN_AND_SCOPE_APPROVAL" for u in SUPPORTED_USE_CASES},
