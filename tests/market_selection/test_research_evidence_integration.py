@@ -1,5 +1,12 @@
+import base64
+import copy
+import hashlib
 import unittest
-from scripts.market_selection.provider_license_gate import ASSESSMENT_SCHEMA_VERSION, POLICY_VERSION
+from unittest.mock import patch
+from scripts.market_selection.provider_license_gate import (
+    ASSESSMENT_SCHEMA_VERSION, POLICY_VERSION, SCHEMA_VERSION as AUTH_SCHEMA_VERSION, evaluate_provider_use,
+)
+from scripts.market_selection.event_source_registry import EVENT_SOURCE_REGISTRY, source_entry_sha256
 
 from scripts.market_selection.research_evidence_integration import enrich_research_report
 from scripts.market_selection.external_event_evidence import INPUT_SCHEMA
@@ -35,6 +42,33 @@ def methodology():
     }
 
 
+def approved_event_source():
+    entry = copy.deepcopy(EVENT_SOURCE_REGISTRY["sources"]["sec_press_releases"])
+    terms = b"synthetic SEC terms fixture for integration tests"
+    entry.update({
+        "status": "APPROVED",
+        "terms_sha256": hashlib.sha256(terms).hexdigest(),
+        "terms_content_base64": base64.b64encode(terms).decode("ascii"),
+        "reviewed_by": "offline-test-fixture",
+        "reviewed_at": "2026-10-22T00:00:00Z",
+        "allowed_use_cases": ["internal_analysis", "persistent_storage"],
+    })
+    return entry
+
+
+def event_authorization(entry):
+    return {
+        "schema_version": AUTH_SCHEMA_VERSION,
+        "provider_id": "sec_press_releases",
+        "status": "APPROVED",
+        "authorized_use_cases": ["internal_analysis", "persistent_storage"],
+        "terms_url": entry["terms_url"],
+        "terms_sha256": entry["terms_sha256"],
+        "reviewed_by": "offline-test-fixture",
+        "reviewed_at": "2026-10-22T00:00:00Z",
+    }
+
+
 def report():
     return {
         "schema_version": "crypto-asset-research-report-v2",
@@ -42,7 +76,7 @@ def report():
             "schema_version": ASSESSMENT_SCHEMA_VERSION, "policy_version": POLICY_VERSION,
             "provider_id": "binance_spot_market_data", "use_case": "internal_analysis", "decision": "ALLOW",
             "reason_codes": ["EXPLICIT_AUTHORIZATION_RECORD_VALIDATED"],
-            "authorization": {"authorized_use_cases": ["internal_analysis"], "authorization_record_sha256": "b" * 64},
+            "authorization": {"authorized_use_cases": ["internal_analysis", "persistent_storage"], "authorization_record_sha256": "b" * 64},
         }},
         "decision_status": "INDETERMINATE",
         "horizons": {h: {"status": "INDETERMINATE", "conclusion": "INDETERMINATE", "reason_codes": []} for h in ("short", "medium", "long")},
@@ -53,37 +87,53 @@ def report():
 
 
 def event():
+    entry = approved_event_source()
+    record = event_authorization(entry)
+    internal = evaluate_provider_use("sec_press_releases", "internal_analysis", record)
+    storage = evaluate_provider_use("sec_press_releases", "persistent_storage", record)
     return {
         "schema_version": INPUT_SCHEMA,
         "event_id": "event-1",
         "title": "Protocol update",
         "event_type": "PROTOCOL_UPDATE",
-        "source": {"source_type": "PRIMARY_OFFICIAL", "url": "https://example.org/update", "publisher": "Example"},
+        "source": {
+            "source_type": "REGULATORY",
+            "url": "https://www.sec.gov/news/press-release/example",
+            "publisher": "U.S. Securities and Exchange Commission",
+        },
         "published_at": "2026-10-20T10:00:00Z",
         "captured_at": "2026-10-20T10:01:00Z",
         "entities": [{"id_type": "coingecko_id", "id": "example-asset"}],
-        "evidence": [{"url": "https://example.org/update", "claim": "An update was announced"}],
+        "evidence": [{"url": "https://www.sec.gov/news/press-release/example", "claim": "An update was announced"}],
         "capture_method": "fixture",
         "content_sha256": "a" * 64,
-        "license_notes": "Review pending",
+        "license_notes": "Synthetic test authorization; no real source approval.",
         "metadata": {},
+        "source_id": "sec_press_releases",
+        "provider_id": "sec_press_releases",
+        "source_registry_status": "APPROVED",
+        "source_registry_entry_sha256": source_entry_sha256(entry),
+        "provider_use_assessment": internal,
+        "persistent_storage_assessment": storage,
+        "provider_policy_assessments": [internal, storage],
     }
 
 
 class ResearchEvidenceIntegrationTests(unittest.TestCase):
     def test_integrates_contracts_without_promoting_investment_decision(self):
-        enriched = enrich_research_report(
-            report(),
-            events=[{
-                "event": event(),
-                "target_entity": {"id_type": "coingecko_id", "id": "example-asset"},
-                "movement_window": {"start": "2026-10-20T09:00:00Z", "end": "2026-10-20T11:00:00Z"},
-            }],
-            observations=[],
-            methodology=methodology(),
-            asset={"stable_id": "example-asset", "category": "smart_contract_token"},
-            evaluation_as_of="2026-10-21T00:00:00Z",
-        )
+        with patch.dict(EVENT_SOURCE_REGISTRY["sources"], {"sec_press_releases": approved_event_source()}):
+            enriched = enrich_research_report(
+                report(),
+                events=[{
+                    "event": event(),
+                    "target_entity": {"id_type": "coingecko_id", "id": "example-asset"},
+                    "movement_window": {"start": "2026-10-20T09:00:00Z", "end": "2026-10-20T11:00:00Z"},
+                }],
+                observations=[],
+                methodology=methodology(),
+                asset={"stable_id": "example-asset", "category": "smart_contract_token"},
+                evaluation_as_of="2026-10-21T00:00:00Z",
+            )
         self.assertEqual(enriched["decision_status"], "INDETERMINATE")
         self.assertEqual(enriched["external_event_evidence"]["assessments"][0]["causality_label"], "TEMPORAL_ASSOCIATION")
         self.assertFalse(enriched["external_event_evidence"]["causality_claimed"])
@@ -95,18 +145,19 @@ class ResearchEvidenceIntegrationTests(unittest.TestCase):
     def test_rejects_event_captured_after_historical_cutoff_as_eligible(self):
         ev = event()
         ev["captured_at"] = "2026-10-22T10:01:00Z"
-        enriched = enrich_research_report(
-            report(),
-            events=[{
-                "event": ev,
-                "target_entity": {"id_type": "coingecko_id", "id": "example-asset"},
-                "movement_window": {"start": "2026-10-20T09:00:00Z", "end": "2026-10-20T11:00:00Z"},
-            }],
-            observations=[],
-            methodology=methodology(),
-            asset={"stable_id": "example-asset", "category": "smart_contract_token"},
-            evaluation_as_of="2026-10-21T00:00:00Z",
-        )
+        with patch.dict(EVENT_SOURCE_REGISTRY["sources"], {"sec_press_releases": approved_event_source()}):
+            enriched = enrich_research_report(
+                report(),
+                events=[{
+                    "event": ev,
+                    "target_entity": {"id_type": "coingecko_id", "id": "example-asset"},
+                    "movement_window": {"start": "2026-10-20T09:00:00Z", "end": "2026-10-20T11:00:00Z"},
+                }],
+                observations=[],
+                methodology=methodology(),
+                asset={"stable_id": "example-asset", "category": "smart_contract_token"},
+                evaluation_as_of="2026-10-21T00:00:00Z",
+            )
         self.assertEqual(enriched["external_event_evidence"]["assessments"][0]["status"], "NOT_AVAILABLE_AS_OF")
         self.assertEqual(enriched["decision_status"], "INDETERMINATE")
 
@@ -114,11 +165,12 @@ class ResearchEvidenceIntegrationTests(unittest.TestCase):
         item = {"event": event(), "target_entity": {"id_type": "coingecko_id", "id": "example-asset"},
                 "movement_window": {"start": "2026-10-20T09:00:00Z", "end": "2026-10-20T11:00:00Z"}}
         with self.assertRaisesRegex(ValueError, "duplicate event_id"):
-            enrich_research_report(
-                report(), events=[item, item], observations=[], methodology=methodology(),
-                asset={"stable_id": "example-asset", "category": "smart_contract_token"},
-                evaluation_as_of="2026-10-21T00:00:00Z",
-            )
+            with patch.dict(EVENT_SOURCE_REGISTRY["sources"], {"sec_press_releases": approved_event_source()}):
+                enrich_research_report(
+                    report(), events=[item, item], observations=[], methodology=methodology(),
+                    asset={"stable_id": "example-asset", "category": "smart_contract_token"},
+                    evaluation_as_of="2026-10-21T00:00:00Z",
+                )
 
     def test_missing_provider_authorization_blocks_evidence_integration(self):
         invalid = report()
