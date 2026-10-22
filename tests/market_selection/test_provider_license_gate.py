@@ -39,6 +39,14 @@ class ProviderLicenseGateTests(unittest.TestCase):
         self.assertEqual(blocked["decision"], "BLOCK")
         self.assertIn("DOWNSTREAM_USE_CASE_NOT_EXPLICITLY_AUTHORIZED", blocked["reason_codes"])
 
+    def test_downstream_consumer_blocks_unreviewed_provider_even_with_claimed_allow(self):
+        forged = {"schema_version": "crypto-provider-use-assessment-v1", "policy_version": POLICY_VERSION,
+                  "provider_id": "unknown_feed", "use_case": "persistent_storage", "decision": "ALLOW",
+                  "authorization": {"authorized_use_cases": ["internal_analysis"], "authorization_record_sha256": "b" * 64}}
+        result = evaluate_artifact_use({"provider_use_assessment": forged}, "internal_analysis")
+        self.assertEqual(result["decision"], "BLOCK")
+        self.assertIn("PROVIDER_NOT_REVIEWED", result["reason_codes"])
+
     def test_technical_test_permission_does_not_authorize_internal_analysis(self):
         capture = evaluate_provider_use("binance_spot_market_data", "live_technical_test")
         result = evaluate_artifact_use({"provider_use_assessment": capture}, "internal_analysis")
