@@ -87,6 +87,6 @@ Cada observación usa `crypto-fundamental-observation-v1` y contiene:
 
 ## 6. Limitaciones pendientes
 
-Esta entrega crea catálogo/contrato, validación offline y tests sintéticos. **No implementa todavía adaptadores que consulten proveedores, no verifica licencias por sí misma, no crea historial de capturas reales y no se integra aún con el informe de #130.** Las métricas de concentración, unlocks, auditoría, reservas y seguridad requieren fuentes específicas y resolución de entidad por activo.
+Esta entrega crea catálogo/contrato, validación offline y 17 tests sintéticos. **No implementa todavía adaptadores que consulten proveedores, no verifica licencias por sí misma, no crea historial de capturas reales y no se integra aún con el informe de #130.** Las métricas de concentración, unlocks, auditoría, reservas y seguridad requieren fuentes específicas y resolución de entidad por activo.
 
 Para cerrar #134 faltan adaptadores aprobados, fixtures reales reproducibles, manejo de reorgs y datos contradictorios de proveedores, controles de cobertura y calidad, integración en el informe E2E y pruebas anti-look-ahead con capturas históricas verificables.
