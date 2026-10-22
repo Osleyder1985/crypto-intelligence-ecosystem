@@ -47,7 +47,7 @@ class ProviderLicenseEnforcementTests(unittest.TestCase):
                 venue, "server_time", "https://data-api.binance.vision/api/v3/time"
             )
         self.assertEqual(result["capture_status"], "BLOCKED")
-        self.assertEqual(result["provider_use_assessment"]["decision"], "BLOCKED" if False else "BLOCK")
+        self.assertEqual(result["provider_use_assessment"]["decision"], "BLOCK")
 
     def test_gate_allows_only_explicitly_classified_technical_test_by_default(self) -> None:
         from scripts.market_selection.provider_license_gate import evaluate_provider_use
