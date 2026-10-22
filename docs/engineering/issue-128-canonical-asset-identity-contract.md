@@ -20,7 +20,7 @@ If identity coordinates are missing, the result is `NOT_RESOLVED` with explicit 
 
 ## Current Binance integration
 
-The Binance Spot capture in PR #139 verifies the base ticker reported for the exact market symbol, but deliberately retains `canonical_asset_identity_status=NOT_RESOLVED`. This identity contract is a separate building block; it is not yet wired into the report orchestrator and does not upgrade the current report to resolved identity.
+The Binance Spot capture in PR #139 verifies the base ticker reported for the exact market symbol, but deliberately retains `canonical_asset_identity_status=NOT_RESOLVED`. The follow-on integration PR #141 accepts an optional identity-evidence JSON record and checks its declared market mapping against the captured Binance symbol, base ticker, and exchangeInfo SHA-256. It reports coordinate completeness separately from source authenticity; even when coordinates are complete, product-level identity remains INDETERMINATE until the provider claim and chain/token mapping are independently verified.
 
 ## Tests and limitations
 
