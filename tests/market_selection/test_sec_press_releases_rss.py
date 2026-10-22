@@ -245,6 +245,19 @@ class SecPressReleaseConnectorTests(unittest.TestCase):
         self.assertEqual(result["raw_response_bytes"], len(raw))
         self.assertEqual(base64.b64decode(result["raw_response_base64"]), raw)
 
+    def test_unexpected_article_content_type_preserves_body_but_cannot_be_promoted(self):
+        raw = b'{"not":"an article"}'
+        with self.approved_registry() as registry:
+            result = capture_sec_press_release_article(
+                "https://www.sec.gov/news/press-release/example",
+                authorization_record(registry["sec_press_releases"]), self.user_agent, 5,
+                captured_at=self.captured_at,
+                opener=Mock(return_value=FakeResponse(raw, headers={"Content-Type": "application/json"})),
+            )
+        self.assertEqual(result["capture_status"], "CONTENT_TYPE_UNEXPECTED")
+        self.assertEqual(base64.b64decode(result["raw_response_base64"]), raw)
+        self.assertIn("ARTICLE_CONTENT_TYPE_UNEXPECTED", result["reason_codes"])
+
     def test_article_url_outside_allowlist_is_blocked_before_network(self):
         with self.approved_registry() as registry:
             opener = Mock()
