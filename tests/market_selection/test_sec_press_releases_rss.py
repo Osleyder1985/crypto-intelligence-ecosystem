@@ -320,6 +320,17 @@ class SecPressReleaseConnectorTests(unittest.TestCase):
                 captured_at="2026-10-22T12:31:00Z",
                 opener=Mock(return_value=FakeResponse(article_raw, headers={"Content-Type": "text/html"})),
             )
+            with self.assertRaisesRegex(ValueError, "evidence_record_base64 is required"):
+                promote_sec_press_release_to_event(
+                    feed, feed["feed_items"][0]["item_id"], article, "REGULATORY_ENFORCEMENT",
+                    "Claim grounded in captured source.",
+                    {
+                        "status": "APPROVED",
+                        "reviewed_by": "offline-test-fixture",
+                        "reviewed_at": "2026-10-22T12:32:00Z",
+                        "entities": [{"id_type": "project_id", "id": "registry:example-project"}],
+                    },
+                )
             with self.assertRaisesRegex(ValueError, "ticker-only matching is forbidden"):
                 promote_sec_press_release_to_event(
                     feed, feed["feed_items"][0]["item_id"], article, "REGULATORY_ENFORCEMENT",
@@ -328,8 +339,8 @@ class SecPressReleaseConnectorTests(unittest.TestCase):
                         "status": "APPROVED",
                         "reviewed_by": "offline-test-fixture",
                         "reviewed_at": "2026-10-22T12:32:00Z",
-                    "evidence_record_base64": base64.b64encode(b"synthetic reviewed entity mapping evidence").decode("ascii"),
-                    "evidence_record_sha256": hashlib.sha256(b"synthetic reviewed entity mapping evidence").hexdigest(),
+                        "evidence_record_base64": base64.b64encode(b"synthetic reviewed entity mapping evidence").decode("ascii"),
+                        "evidence_record_sha256": hashlib.sha256(b"synthetic reviewed entity mapping evidence").hexdigest(),
                         "entities": [{"id_type": "symbol", "id": "BTC"}],
                     },
                 )
