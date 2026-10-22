@@ -22,3 +22,21 @@ El prototipo de sondeo abarca los siete venues del alcance inicial: Binance (ref
 - La profundidad solicitada está limitada por los parámetros documentados; no equivale al libro completo.
 - No se capturan credenciales, no se envían órdenes y no se emite ranking.
 - `PASS` significa respuesta pública estructuralmente válida. La selección requiere además volumen histórico, estabilidad, costes, disponibilidad, riesgo del activo y reglas/umbrales aprobados.
+
+## Primera captura integrada tras PR #104 — 2026-10-22
+
+Workflow: [Multi-exchange spot book probe #39776977998](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/actions/runs/39776977998). Artefacto: [multi-exchange-spot-book-probe](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/actions/runs/39776977998/artifacts/12424827345). La ejecución y sus tests offline terminaron en `success`; la captura de mercado tuvo `overall_status=PARTIAL`.
+
+| Exchange | Capturas PASS | Observación |
+|---|---:|---|
+| Binance | 3/3 | HTTP 200; 100 bids y 100 asks por activo; REST depth no contiene timestamp de evento. |
+| OKX | 3/3 | HTTP 200; 20 bids y 20 asks por activo; timestamp del proveedor presente. |
+| Bybit | 0/3 | HTTP 403 para BTC/ETH/SOL en el runner de CI; acceso no confirmado en ese entorno. |
+| MEXC | 3/3 | HTTP 200; 100 bids y 100 asks por activo; REST depth no contiene timestamp de evento. |
+| Gate | 3/3 | HTTP 200; 20 bids y 20 asks por activo; `update` presente. |
+| Bitget | 3/3 | HTTP 200; 100 bids y 100 asks por activo; timestamp del proveedor presente. |
+| Pionex | 3/3 | HTTP 200; 100 bids y 100 asks por activo; `data.updateTime` presente. |
+
+Resultado: **18/21 respuestas PASS**, **3/21 FAIL** por HTTP 403 de Bybit. No se cambia a un dominio alternativo ni se intenta eludir una restricción geográfica o de acceso. La respuesta 403 se trata como falta de accesibilidad en ese entorno, no como prueba de que el mercado o el exchange no existan. La captura es secuencial, no sincronizada; los precios y timestamps no deben interpretarse como una comparación simultánea ni como liquidez histórica.
+
+Durante la revisión se detectó que el capturador conservaba el tipo y mensaje de `HTTPError` pero omitía su código HTTP en el campo `http_status`. El cambio correctivo registra `exc.code` y añade una regresión para HTTP 451; la captura anterior sigue siendo evidencia original inalterada.

@@ -87,7 +87,7 @@ class MultiExchangeSpotBookProbeTests(unittest.TestCase):
         with patch("scripts.market_selection.capture_multi_exchange_spot_book_probe.urlopen", side_effect=error):
             result = capture_one(spec)
         self.assertEqual(result["capture_status"], "FAIL")
-        self.assertEqual(result["http_status"], None)
+        self.assertEqual(result["http_status"], 451)
         self.assertEqual(result["error_type"], "HTTPError")
         self.assertIn("restricted", result["error_message"])
 
