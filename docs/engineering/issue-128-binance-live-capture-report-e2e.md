@@ -15,7 +15,7 @@ Referencia oficial: https://github.com/binance/binance-spot-api-docs/blob/master
 ```bash
 python -m scripts.market_selection.capture_binance_spot_research \
   --symbol BTCUSDT \
-  --asset-id BTC \
+  --base-asset-ticker BTC \
   --interval 1h \
   --start-time-ms 1792540800000 \
   --end-time-ms 1792562400000 \
@@ -32,7 +32,7 @@ Los timestamps son ejemplos de sintaxis: antes de una ejecución real, calcular 
 - Reutiliza la captura OHLCV que preserva cuerpo de cada página, hash, tamaño, normalización, huecos y duplicados.
 - No impone un máximo local de bytes; sigue leyendo cada respuesta hasta EOF. Los límites operativos del proveedor, límites de página y ventanas temporales solicitadas se documentan por separado.
 - No deduce la identidad a partir de dividir el ticker; utiliza `baseAsset` devuelto por exchangeInfo para el par exacto.
-- El ticker base no equivale a un identificador global canónico de token. Mapeos entre activos envueltos, cadenas y proveedores siguen sin resolverse.
+- El ticker base no equivale a un identificador global canónico de token. El informe marca `market_base_asset_mapping_status=VERIFIED`, pero mantiene `asset_identity_status=INDETERMINATE`, `canonical_asset_identity_status=NOT_RESOLVED` y calidad `INCOMPLETE_OR_UNVERIFIED` hasta resolver un identificador estable cross-provider. Mapeos entre activos envueltos, cadenas y proveedores siguen sin resolverse.
 - Registra `license_review_status=REQUIRES_PRODUCT_SPECIFIC_REVIEW`. Documentación de endpoint no implica una licencia comercial general; evaluar condiciones aplicables antes de persistencia/redistribución comercial.
 - No usa credenciales, no accede a cuentas privadas, no coloca órdenes.
 - La decisión y los horizontes corto/medio/largo permanecen `INDETERMINATE`; captura real no es evidencia de rentabilidad ni un pronóstico.
@@ -43,4 +43,4 @@ El workflow ejecuta tests offline con respuestas simuladas para validar preserva
 
 ## Limitaciones
 
-No integra noticias, fundamentales/on-chain ni una licencia de datos comerciales. No realiza selección automática de un par cuando un activo tiene múltiples pares. El usuario/componente llamador debe especificar el símbolo nativo exacto y un `asset-id` igual al `baseAsset` resuelto. La cobertura real del intervalo puede ser `PARTIAL`; no se ocultan velas faltantes.
+No integra noticias, fundamentales/on-chain ni una licencia de datos comerciales. No realiza selección automática de un par cuando un activo tiene múltiples pares. El usuario/componente llamador debe especificar el símbolo nativo exacto y un `base-asset-ticker` igual al `baseAsset` resuelto. No se acepta un ID global pretendiendo que el ticker lo representa. La cobertura real del intervalo puede ser `PARTIAL`; no se ocultan velas faltantes.
