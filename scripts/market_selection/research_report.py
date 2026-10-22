@@ -91,10 +91,6 @@ def build_research_report(
     requested_asset_id = _require_text(requested_asset_id, "requested_asset_id")
     normalized_asset = requested_asset_id
     config = _validate_config(config)
-    downstream_use = evaluate_artifact_use(artifact, "internal_analysis")
-    if downstream_use["decision"] != "ALLOW":
-        raise PermissionError("research report blocked before analysis: " + ",".join(downstream_use["reason_codes"]))
-
     # Do not infer base-asset identity from a concatenated market symbol such as BTCUSDT.
     observed_asset = market.get("asset_id") or market.get("base_asset")
     if isinstance(observed_asset, str) and observed_asset.strip():
@@ -106,6 +102,10 @@ def build_research_report(
         identity_status = "VERIFIED"
     else:
         identity_status = "INDETERMINATE"
+
+    downstream_use = evaluate_artifact_use(artifact, "internal_analysis")
+    if downstream_use["decision"] != "ALLOW":
+        raise PermissionError("research report blocked before analysis: " + ",".join(downstream_use["reason_codes"]))
 
     if source_bytes is None:
         source_bytes = (
