@@ -88,7 +88,8 @@ def identity_evidence():
             "url": "https://example.invalid/registry/bitcoin",
             "publisher": "Synthetic fixture only",
             "captured_at": "2026-10-22T00:00:00Z",
-            "content_sha256": "c" * 64,
+            "content_sha256": hashlib.sha256(b"synthetic identity registry content").hexdigest(),
+            "content_base64": base64.b64encode(b"synthetic identity registry content").decode("ascii"),
         },
     }
 
