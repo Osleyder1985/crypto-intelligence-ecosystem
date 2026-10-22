@@ -1,9 +1,7 @@
 import base64
 import copy
-from datetime import datetime, timezone
 import hashlib
 import io
-import json
 import unittest
 from unittest.mock import Mock, patch
 from urllib.error import HTTPError
@@ -17,8 +15,6 @@ from scripts.market_selection.capture_sec_press_releases_rss import (
 )
 from scripts.market_selection.event_source_registry import (
     EVENT_SOURCE_REGISTRY,
-    REGISTRY_SCHEMA_VERSION,
-    get_source,
     validate_source_entry,
 )
 from scripts.market_selection.provider_license_gate import SCHEMA_VERSION as AUTH_SCHEMA_VERSION
@@ -230,7 +226,7 @@ class SecPressReleaseConnectorTests(unittest.TestCase):
         self.assertEqual(item["timestamp_status"], "MISSING_PUBLISHED_AT")
 
     def test_midstream_read_error_preserves_all_bytes_received_before_failure(self):
-        raw = rss_bytes()
+        raw = rss_bytes().replace(b"Fixture summary, not a real event.", b"x" * 200000)
         cutoff = 100000
         with self.approved_registry() as registry:
             response = FakeResponse(raw, error_after_bytes=cutoff)
