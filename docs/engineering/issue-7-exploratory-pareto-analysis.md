@@ -23,6 +23,24 @@
 - La frontera se calcula por activo y venue. No es un ranking de activos ni una recomendación de inversión; no hay score ponderado, causalidad, predicción ni órdenes.
 - Para que el producto declare elegibilidad, el propietario debe aprobar gates, ventanas, tamaños de referencia, política de frescura y tratamiento de faltantes mediante una decisión versionada.
 
+## Resultado de referencia con capturas reales — 2026-10-22
+
+Artefactos de entrada:
+- [Turnover 24 h, workflow #39809696897 / artefacto #12439416760](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/actions/runs/39809696897/artifacts/12439416760), creado a las 15:57:49.948Z.
+- [Libro Spot, workflow #39809697313 / artefacto #12438867580](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/actions/runs/39809697313/artifacts/12438867580), creado a las 15:57:52.682Z.
+
+El cálculo de referencia con los cuatro objetivos descritos produjo 15 vectores utilizables (cinco venues por activo) y seis observaciones excluidas: Bybit por HTTP 403 y Pionex por unidad de turnover no documentada. Las fronteras exploratorias observadas fueron:
+
+| Activo | Venues no dominados en esta captura | Venues dominados en esta captura |
+|---|---|---|
+| BTC/USDT | Binance, MEXC | Bitget, Gate, OKX |
+| ETH/USDT | Binance, Bitget, MEXC | Gate, OKX |
+| SOL/USDT | Binance, Bitget, MEXC | Gate, OKX |
+
+La frontera no es un orden entre los venues listados ni una recomendación. Binance y MEXC, por ejemplo, intercambian ventajas en BTC: Binance muestra mayor turnover y spread menor en el snapshot; MEXC muestra mayor notional visible en ambos lados. Para ETH y SOL, Bitget/MEXC aportan dimensiones de profundidad que impiden que Binance los domine en todas las métricas.
+
+El desfase entre capturas de ticker y libro para los 15 candidatos estuvo entre aproximadamente 2.388 y 3.085 ms. No se interpreta como garantía de sincronización: no existe una tolerancia temporal aprobada, y la semántica/frescura del timestamp de origen difiere por venue. La decisión global permanece \`INDETERMINATE\`, aunque el cálculo de frontera sea reproducible.
+
 ## Uso
 
 \`\`\`bash
