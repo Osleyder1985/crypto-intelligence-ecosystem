@@ -337,6 +337,9 @@ def enrich_research_report(
         "External events must pass source-registry approval plus provider authorization for internal analysis and persistent storage. These controls enforce recorded policy but do not prove legal authority, source completeness, or predictive value."
     )
     output["limitations"].append(
+        "Fundamental/on-chain observations remain supplied, contract-validated inputs; this integration does not fetch them or prove their source authority."
+    )
+    output["limitations"].append(
         "Methodology contract validity is not a backtest result; no predictive performance, calibrated confidence, or investment recommendation is claimed."
     )
     output["network_requests_made"] = False
