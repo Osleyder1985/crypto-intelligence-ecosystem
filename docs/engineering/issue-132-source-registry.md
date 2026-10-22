@@ -31,7 +31,7 @@ Antes de activar una fuente se debe completar y versionar al menos:
 - Semántica de publicación, actualización, corrección y retirada; zona horaria y si el timestamp lo declara la fuente o se observa al capturar.
 - Método de captura, reloj de sistema, hora de captura, hash de bytes originales cuando sea legal y técnicamente posible, y retención.
 - Métricas operativas: última captura correcta, retraso observado, huecos, duplicados, errores, cambios de esquema y fecha de última revisión.
-- Estado explícito: `PROPOSED`, `TERMS_PENDING`, `APPROVED`, `SUSPENDED` o `RETIRED`.
+- Estado explícito: `PROPOSED`, `TERMS_PENDING`, `APPROVED`, `SUSPENDED`, `RETIRED` o `REJECTED`.
 
 ## Reglas de evidencia y cobertura
 
