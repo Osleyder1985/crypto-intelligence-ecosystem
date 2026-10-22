@@ -215,25 +215,25 @@ def capture_history(
             candles.extend(normalized)
             stop_reason = "DUPLICATE_SOURCE_TIMESTAMPS"
             break
-        if cursor_end is not None and any(timestamp > cursor_end for timestamp in page_times):
-            end_time_boundary_violations.extend(
-                {"page_index": page_index, "requested_end_time_ms": cursor_end, "returned_source_time_ms": timestamp}
-                for timestamp in page_times if timestamp > cursor_end
-            )
-            page["normalization_status"] = "FAIL"
-            page["normalization_error"] = "response contains source timestamps later than the requested endTime"
-            candles.extend(normalized)
-            pagination_progress_status = "FAIL"
-            stop_reason = "END_TIME_BOUNDARY_VIOLATION"
-            break
         page_oldest = page_times[0]
         duplicate_times.update(set(page_times) & seen_times)
+        end_time_boundary_violations.extend(
+            {"page_index": page_index, "requested_end_time_ms": cursor_end, "returned_source_time_ms": timestamp}
+            for timestamp in page_times if cursor_end is not None and timestamp > cursor_end
+        )
         if previous_page_oldest is not None and page_oldest >= previous_page_oldest:
             pagination_progress_status = "FAIL"
             page["normalization_status"] = "FAIL"
             page["normalization_error"] = "backward pagination did not move to older source timestamps"
             candles.extend(normalized)
             stop_reason = "PAGINATION_NO_PROGRESS"
+            break
+        if cursor_end is not None and any(timestamp > cursor_end for timestamp in page_times):
+            page["normalization_status"] = "FAIL"
+            page["normalization_error"] = "response contains source timestamps later than the requested endTime"
+            candles.extend(normalized)
+            pagination_progress_status = "FAIL"
+            stop_reason = "END_TIME_BOUNDARY_VIOLATION"
             break
         page["normalization_status"] = "PASS"
         page["normalized_candle_count"] = len(normalized)
@@ -297,6 +297,7 @@ def capture_history(
         "coverage": {
             "pages_captured": len(pages), "captured_candle_rows": len(candles),
             "unique_source_timestamps": len(set(timestamps)), "duplicate_source_time_ms": sorted(duplicate_times),
+            "end_time_boundary_violations": end_time_boundary_violations,
             "observed_timestamp_gaps": gaps,
             "oldest_source_time_ms": min(timestamps) if timestamps else None,
             "newest_source_time_ms": max(timestamps) if timestamps else None,
