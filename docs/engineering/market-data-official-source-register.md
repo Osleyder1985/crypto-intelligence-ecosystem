@@ -104,3 +104,18 @@ La captura sincronizada de profundidad utiliza ambos hosts de datos públicos do
 - WebSocket market-data-only: `wss://data-stream.binance.vision:443/ws`.
 
 Referencia oficial: [Market Data Only URLs](https://github.com/binance/binance-spot-api-docs/blob/master/faqs/market_data_only.md) y [WebSocket Market Streams](https://github.com/binance/binance-spot-api-docs/blob/master/web-socket-streams.md). Binance documenta estos hosts para datos públicos de mercado; no proporcionan streams de datos de usuario. La selección del host no elude restricciones: se usa el endpoint oficial destinado a datos de mercado y se conserva la evidencia de respuesta. La sincronización solo se declara si el snapshot REST y los eventos de profundidad pasan el protocolo de secuencia existente.
+
+
+## Fuentes oficiales de velas históricas OHLCV — Issue #13
+
+| Proveedor | Fuente oficial | Semántica/limitación documentada |
+|---|---|---|
+| Binance Spot | [Kline/Candlestick data](https://github.com/binance/binance-spot-api-docs/blob/master/rest-api.md#klinecandlestick-data) y [Market Data Only URLs](https://github.com/binance/binance-spot-api-docs/blob/master/faqs/market_data_only.md) | `GET /api/v3/klines`, campos OHLC, volumen base y quote asset volume; máximo 1000 por petición; timestamps REST en ms por defecto. |
+| OKX Spot | [Candlesticks](https://www.okx.com/docs-v5/en/#order-book-trading-market-data-get-candlesticks) / [History Candlesticks](https://www.okx.com/docs-v5/en/#order-book-trading-market-data-get-candlesticks-history) | `confirm=0/1` diferencia velas incompletas/completas; hasta 300 por petición y múltiples convenciones de barra UTC+8/UTC+0. |
+| Bybit Spot | [Get Kline](https://bybit-exchange.github.io/docs/v5/market/kline) | `category=spot`, timestamps ms, máximo 1000; respuesta en orden inverso y la vela actual puede estar incompleta. |
+| MEXC Spot | [Kline/Candlestick Data](https://mexcdevelop.github.io/apidocs/spot_v3_en/) | `GET /api/v3/klines`, OHLC, volumen base y quote asset volume; máximo 1000. |
+| Gate Spot | [Market K-line chart](https://www.gate.com/docs/developers/apiv4/en/spot/) | `GET /api/v4/spot/candlesticks`, máximo 1000; `from`/`to` en segundos y mutuamente incompatibles con `limit`. |
+| Bitget Spot | [Market Data — Get Kline](https://www.bitget.com/docs/catalog/market/market-data) | `GET /api/v3/market/candles` hasta 1000; histórico separado con rango de consulta de hasta 90 días y límites de página documentados. |
+| Pionex Spot | [Get Klines](https://pionex-doc.gitbook.io/apidocs/restful/markets/get-klines) | `GET /api/v1/market/klines`, `time` en ms, OHLC y volumen; hasta 500 por petición, no se documenta un campo separado de quote turnover en la respuesta consultada. |
+
+No se deben combinar las velas de estos proveedores sin normalizar intervalos, zona horaria, cierre confirmado, unidad y semántica de volumen. El histórico de velas no equivale a histórico del libro ni de trades. Ver [matriz de fuentes OHLCV](issue-13-historical-candle-source-matrix.md).
