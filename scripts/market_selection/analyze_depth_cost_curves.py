@@ -91,7 +91,54 @@ def _curve(levels: list[tuple[Decimal, Decimal]], mid: Decimal, side: str, fee_r
     return curve
 
 
-def analyze_depth_record(record: dict[str, Any], market_id: str, venue: str) -> dict[str, Any]:
+def _extract_symbol_constraints(records: list[dict[str, Any]], market_id: str, binance_symbol: str, base_asset: str, quote_asset: str) -> dict[str, dict[str, Any]]:
+    result: dict[str, dict[str, Any]] = {}
+    for provider, venue in (("pionex", "pionex"), ("binance_exchange_info", "binance")):
+        matches = [r for r in records if r.get("market_id") == market_id and r.get("provider") == provider]
+        if len(matches) != 1:
+            result[venue] = {"status": "INDETERMINATE", "reason": f"expected exactly one {provider} record; found {len(matches)}"}
+            continue
+        payload = _verified_payload(matches[0])
+        if venue == "pionex":
+            data = payload.get("data")
+            symbols = data.get("symbols") if isinstance(data, dict) else None
+            found = [x for x in symbols if isinstance(x, dict) and x.get("symbol") == market_id] if isinstance(symbols, list) else []
+            if len(found) != 1:
+                result[venue] = {"status": "INDETERMINATE", "reason": f"expected exactly one Pionex symbol; found {len(found)}"}
+                continue
+            item = found[0]
+            fields = ("type", "baseCurrency", "quoteCurrency", "enable", "basePrecision", "quotePrecision",
+                      "amountPrecision", "minAmount", "minTradeSize", "maxTradeSize", "minTradeDumping",
+                      "maxTradeDumping", "buyCeiling", "sellFloor")
+            detail = {key: item.get(key) for key in fields if key in item}
+            identity_ok = item.get("type") == "SPOT" and item.get("baseCurrency") == base_asset and item.get("quoteCurrency") == quote_asset
+            enabled = item.get("enable") is True
+            status = "PASS" if identity_ok and enabled else ("FAIL" if not identity_ok or item.get("enable") is False else "INDETERMINATE")
+            result[venue] = {"status": status, "symbol": market_id, "fields": detail,
+                             "order_type_semantics": "Pionex distinguishes limit-size fields from market-sell dumping fields; order type must be specified before validating a size"}
+        else:
+            symbols = payload.get("symbols")
+            found = [x for x in symbols if isinstance(x, dict) and x.get("symbol") == binance_symbol] if isinstance(symbols, list) else []
+            if len(found) != 1:
+                result[venue] = {"status": "INDETERMINATE", "reason": f"expected exactly one Binance symbol; found {len(found)}"}
+                continue
+            item = found[0]
+            filters = item.get("filters")
+            identity_ok = item.get("baseAsset") == base_asset and item.get("quoteAsset") == quote_asset
+            trading_ok = item.get("status") == "TRADING" and item.get("isSpotTradingAllowed") is True
+            status = "PASS" if identity_ok and trading_ok and isinstance(filters, list) else ("FAIL" if not identity_ok or not trading_ok else "INDETERMINATE")
+            result[venue] = {
+                "status": status, "symbol": binance_symbol,
+                "status_field": item.get("status"), "isSpotTradingAllowed": item.get("isSpotTradingAllowed"),
+                "baseAsset": item.get("baseAsset"), "quoteAsset": item.get("quoteAsset"),
+                "filters": filters if isinstance(filters, list) else None,
+                "filter_types": [f.get("filterType") for f in filters if isinstance(f, dict)] if isinstance(filters, list) else [],
+                "order_type_semantics": "Use MARKET_LOT_SIZE/NOTIONAL for market-order checks and LOT_SIZE/PRICE_FILTER for applicable limit-order checks; do not infer eligibility without order type and size",
+            }
+    return result
+
+
+def analyze_depth_record(record: dict[str, Any], market_id: str, venue: str, symbol_constraints: dict[str, Any] | None = None) -> dict[str, Any]:
     payload = _verified_payload(record)
     data = payload.get("data") if venue == "pionex" else payload
     if not isinstance(data, dict):
@@ -110,6 +157,8 @@ def analyze_depth_record(record: dict[str, Any], market_id: str, venue: str) -> 
         "source_response_at_utc": record.get("source_response_at_utc"),
         "source_market_update_at_utc": record.get("source_market_update_at_utc"),
         "levels_returned": {"bids": len(bids), "asks": len(asks)},
+        "symbol_constraints": symbol_constraints or {"status": "INDETERMINATE", "reason": "symbol metadata was not provided"},
+        "order_size_eligibility": "INDETERMINATE",
         "best_bid": float(best_bid),
         "best_ask": float(best_ask),
         "mid": float(mid),
@@ -146,11 +195,12 @@ def analyze_artifact(artifact: dict[str, Any]) -> dict[str, Any]:
         market = spec.get("pionex_symbol") if isinstance(spec, dict) else None
         if not isinstance(market, str) or not market:
             raise ValueError("universe entry is missing pionex_symbol")
+        constraints = _extract_symbol_constraints(records, market, spec.get("binance_symbol", ""), spec.get("base_asset", ""), spec.get("quote_asset", ""))
         for provider, venue in (("pionex_depth", "pionex"), ("binance_depth", "binance")):
             matches = [r for r in records if r.get("market_id") == market and r.get("provider") == provider]
             if len(matches) != 1:
                 raise ValueError(f"expected exactly one {provider} record for {market}; found {len(matches)}")
-            books.append(analyze_depth_record(matches[0], market, venue))
+            books.append(analyze_depth_record(matches[0], market, venue, constraints[venue]))
     return {
         "schema_version": SCHEMA,
         "source_schema_version": artifact["schema_version"],
