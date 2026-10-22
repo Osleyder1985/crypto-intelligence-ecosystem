@@ -88,3 +88,10 @@ La vista ordenada y el mapeo primario de cada requisito de producto se mantienen
 ### Cobertura del motor cuantitativo
 
 La Fase 5 incluye, como mínimo, REQ-P-004, REQ-P-005, REQ-P-009, REQ-P-012–REQ-P-017 y REQ-P-020–REQ-P-026. También depende de identidad/calidad de datos (Fase 2), plataforma central (Fase 4), control de trabajos y frescura (Fase 4) y validación integral (Fase 7). La memoria y la monitorización operativa no sustituyen la validación fuera de muestra ni las pruebas anti-look-ahead.
+
+
+## Flujo E2E de investigación por activo — dependencia prioritaria
+
+El [Issue #128](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/issues/128) y la [especificación de flujo](issue-128-end-to-end-asset-research.md) concretan la integración de los componentes analíticos. La fase no se declara terminada hasta que una prueba E2E demuestre entrada de activo, expediente histórico, análisis de movimientos y posibles detonantes, soportes/resistencias, evaluación independiente de corto/medio/largo plazo, persistencia y resultado reproducible.
+
+**Puerta de salida:** evidencia archivada de tests E2E y de integración, manejo de cobertura insuficiente, anti-look-ahead, integridad de capturas, trazabilidad de fuentes, validación temporal y resultado `INDETERMINATE` cuando corresponda. La documentación por sí sola no cierra la fase.
