@@ -32,9 +32,9 @@ En 12 observaciones Pionex REST de cuatro ejecuciones CI, response − data.upda
 
 Para Binance Spot REST, el snapshot de profundidad contiene lastUpdateId, bids y asks, pero no un timestamp de evento de mercado. lastUpdateId es un identificador de secuencia, no una hora. Por tanto, este snapshot no basta por sí solo para calcular edad temporal absoluta.
 
-## Política propuesta
+## Política adoptada para investigación pública Spot
 
-La propuesta fail-closed está documentada en [Política propuesta de frescura y coste](issue-18-proposed-decision-policy.md). Define estados y evidencia requerida sin fijar valores numéricos inventados; sigue pendiente de aprobación del responsable del producto.
+La política fail-closed está adoptada como baseline del modo de investigación pública Spot en [Política de frescura y coste](issue-18-proposed-decision-policy.md). No inventa un umbral universal: la frescura absoluta no demostrable permanece `INDETERMINATE`; las tarifas públicas son referencias y las tarifas privadas solo son requisito para análisis personalizado de cuenta; el tamaño por defecto se expresa mediante curvas de profundidad, no un nominal comercial inventado.
 
 ## Bloqueos de cierre reales
 

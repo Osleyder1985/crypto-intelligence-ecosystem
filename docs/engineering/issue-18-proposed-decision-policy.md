@@ -1,6 +1,7 @@
 # Política propuesta de frescura y coste — Issue #18
 
-- **Estado:** PROPUESTA; pendiente de aprobación explícita del responsable del producto.
+- **Estado:** ADOPTADA COMO POLÍTICA BASE DEL MODO DE INVESTIGACIÓN PÚBLICA SPOT.
+- **Alcance:** análisis comparativo público y reproducible; no evalúa rentabilidad personalizada de una cuenta ni autoriza ejecución.
 - **Fecha:** 2026-10-22 UTC.
 - **Ámbito:** comparación analítica de mercados Spot con datos públicos. No habilita ejecución de órdenes.
 - **Regla de gobierno:** no inventar umbrales ni atribuirlos a ISO, Binance o Pionex cuando sus fuentes no los prescriben.
