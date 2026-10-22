@@ -1,0 +1,96 @@
+name: Pionex Spot OHLCV history capture
+on:
+  pull_request:
+    paths:
+      - scripts/market_selection/capture_pionex_spot_ohlcv.py
+      - tests/market_selection/test_capture_pionex_spot_ohlcv.py
+      - .github/workflows/pionex-spot-ohlcv-capture.yml
+  push:
+    branches: [main]
+    paths:
+      - scripts/market_selection/capture_pionex_spot_ohlcv.py
+      - .github/workflows/pionex-spot-ohlcv-capture.yml
+  workflow_dispatch:
+    inputs:
+      symbol:
+        description: Exact native Pionex Spot symbol
+        required: true
+        default: BTC_USDT
+        type: string
+      interval:
+        description: Official Pionex interval (1M means one minute)
+        required: true
+        default: 1D
+        type: choice
+        options:
+          - 1M
+          - 5M
+          - 15M
+          - 30M
+          - 60M
+          - 4H
+          - 8H
+          - 12H
+          - 1D
+permissions:
+  contents: read
+jobs:
+  offline-tests:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+      - name: Run Pionex OHLCV tests without network access
+        run: python -m unittest discover -s tests/market_selection -p 'test_capture_pionex_spot_ohlcv.py' -v
+  live-capture:
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      PIONEX_SYMBOL: ${{ github.event_name == 'workflow_dispatch' && inputs.symbol || 'BTC_USDT' }}
+      PIONEX_INTERVAL: ${{ github.event_name == 'workflow_dispatch' && inputs.interval || '1D' }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+      - name: Capture all Pionex history available from the public endpoint
+        run: |
+          python scripts/market_selection/capture_pionex_spot_ohlcv.py \
+            --symbol "$PIONEX_SYMBOL" \
+            --interval "$PIONEX_INTERVAL" \
+            --output artifacts/pionex-spot-ohlcv.json
+      - name: Summarize capture quality
+        if: always()
+        run: |
+          if [ -f artifacts/pionex-spot-ohlcv.json ]; then
+            python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+          data = json.loads(Path("artifacts/pionex-spot-ohlcv.json").read_text(encoding="utf-8"))
+          coverage = data.get("coverage", {})
+          lines = [
+              "## Pionex Spot OHLCV capture",
+              f"- Overall status: {data.get('overall_status')}",
+              f"- Analysis readiness: {data.get('analysis_readiness_status')}",
+              f"- Symbol/interval: {data.get('market', {}).get('symbol_native')} / {data.get('market', {}).get('interval_native')}",
+              f"- Pages: {coverage.get('pages_captured')}; candle rows: {coverage.get('captured_candle_rows')}",
+              f"- Stop reason: {coverage.get('stop_reason')}",
+              f"- History completeness: {coverage.get('history_completeness_status')}",
+          ]
+          with open(os.environ["GITHUB_STEP_SUMMARY"], "a", encoding="utf-8") as stream:
+              stream.write("\n".join(lines) + "\n")
+          PY
+          fi
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always()
+        with:
+          name: pionex-spot-ohlcv
+          path: artifacts/pionex-spot-ohlcv.json
+          if-no-files-found: ignore
+          retention-days: 90
