@@ -112,6 +112,12 @@ def build_research_report(
     else:
         if not isinstance(source_bytes, bytes):
             raise ValueError("source_bytes must be bytes when provided")
+        try:
+            decoded_source = json.loads(source_bytes.decode("utf-8"))
+        except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+            raise ValueError("source_bytes must contain the same UTF-8 JSON artifact") from exc
+        if decoded_source != artifact:
+            raise ValueError("source_bytes do not match the supplied artifact object")
         hash_basis = "RAW_SOURCE_FILE_BYTES"
 
     risk = analyze_artifact(artifact)
