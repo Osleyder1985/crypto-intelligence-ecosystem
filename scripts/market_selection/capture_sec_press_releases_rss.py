@@ -117,7 +117,7 @@ def _authorization_state(
 
     if source.get("user_agent_required"):
         if not isinstance(user_agent, str) or not user_agent.strip() or "\r" in user_agent or "\n" in user_agent:
-            blockers.append("CLASSIFIED_USER_AGENT_REQUIRED")
+            blockers.append("USER_AGENT_REQUIRED")
     if isinstance(timeout_seconds, bool) or not isinstance(timeout_seconds, (int, float)) or timeout_seconds <= 0:
         blockers.append("INVALID_TIMEOUT_SECONDS")
 
@@ -332,7 +332,16 @@ def _parse_rss(raw: bytes) -> list[dict]:
 
 def _approved_article_url(source: dict, article_url: str) -> bool:
     parsed = urlsplit(article_url)
-    return parsed.scheme == "https" and parsed.hostname in set(source["allowed_article_hosts"])
+    try:
+        return (
+            parsed.scheme == "https"
+            and parsed.hostname in set(source["allowed_article_hosts"])
+            and parsed.port in (None, 443)
+            and parsed.username is None
+            and parsed.password is None
+        )
+    except ValueError:
+        return False
 
 
 def capture_sec_press_releases_rss(
@@ -437,6 +446,9 @@ def promote_sec_press_release_to_event(
         raise ValueError("feed and article captures must both be PASS")
     if feed_capture.get("source_registry_status") != "APPROVED" or article_capture.get("source_registry_status") != "APPROVED":
         raise ValueError("source registry must be approved for both captures")
+    current_registry_hash = source_entry_sha256(source)
+    if feed_capture.get("source_registry_entry_sha256") != current_registry_hash or article_capture.get("source_registry_entry_sha256") != current_registry_hash:
+        raise ValueError("source registry changed after capture; recapture under the current reviewed entry")
     for capture, name in ((feed_capture, "feed_capture"), (article_capture, "article_capture")):
         if capture.get("provider_use_assessment", {}).get("decision") != "ALLOW":
             raise ValueError(f"{name} does not authorize internal_analysis")
