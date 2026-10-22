@@ -2,9 +2,9 @@
 
 ## Alcance
 
-El comando aplica la puerta de uso del proveedor antes de la primera petición de red. Por defecto, `--use-case internal_analysis` queda bloqueado si no se proporciona un registro explícito aprobado; el smoke CI declara `--use-case live_technical_test`, que solo habilita una prueba técnica y no concede derechos comerciales.
+El comando aplica la puerta de uso del proveedor antes de la primera petición de red. `--use-case internal_analysis` requiere un registro explícito aprobado; el smoke CI con `--use-case live_technical_test` solo habilita captura técnica y **no puede producir un informe de análisis interno**. El flujo bloquea esa transición salvo que el artefacto y su alcance autoricen `internal_analysis`.
 
-El comando `scripts.market_selection.capture_binance_spot_research` conecta los dos bloques existentes: captura OHLCV real de solo lectura y composición del informe `crypto-asset-research-report-v1`.
+El comando `scripts.market_selection.capture_binance_spot_research` conecta los dos bloques existentes: captura OHLCV real de solo lectura y composición del informe `crypto-asset-research-report-v2`.
 
 Usa únicamente endpoints públicos documentados de Binance Spot:
 - `GET /api/v3/exchangeInfo?symbol=...` en `https://data-api.binance.vision`, para resolver `baseAsset`, `quoteAsset`, estado y permiso spot del símbolo nativo exacto.
@@ -28,13 +28,15 @@ python -m scripts.market_selection.capture_binance_spot_research \
 
 Los timestamps son ejemplos de sintaxis: antes de una ejecución real, calcular límites UTC alineados al intervalo. La ventana es semiabierta `[start, end)`; no se deben usar los valores de ejemplo como ventana actual.
 
+Para generar un informe interno, la ejecución debe proporcionar `--authorization-record` con un registro real revisado y `--identity-evidence` con evidencia canónica única y revisada; también debe declarar `--asset-id-type` y `--asset-chain-id` cuando corresponda. Sin estos archivos, el informe permanece bloqueado o parcial, según el control que falte.
+
 ## Evidencia y garantías
 
 - Preserva cuerpo completo de exchangeInfo en Base64, número exacto de bytes, SHA-256, URL y timestamps de solicitud/captura.
 - Reutiliza la captura OHLCV que preserva cuerpo de cada página, hash, tamaño, normalización, huecos y duplicados.
 - No impone un máximo local de bytes; sigue leyendo cada respuesta hasta EOF. Los límites operativos del proveedor, límites de página y ventanas temporales solicitadas se documentan por separado.
 - No deduce la identidad a partir de dividir el ticker; utiliza `baseAsset` devuelto por exchangeInfo para el par exacto.
-- El ticker base no equivale a un identificador global canónico de token. El informe marca `market_base_asset_mapping_status=VERIFIED`, pero mantiene `asset_identity_status=INDETERMINATE`, `canonical_asset_identity_status=NOT_RESOLVED` y calidad `INCOMPLETE_OR_UNVERIFIED` hasta resolver un identificador estable cross-provider. Mapeos entre activos envueltos, cadenas y proveedores siguen sin resolverse.
+- El ticker base no equivale a un identificador global canónico de token. Sin `--identity-evidence`, el informe marca `market_base_asset_mapping_status=VERIFIED` si corresponde, pero mantiene `asset_identity_status=INDETERMINATE`, `canonical_asset_identity_status=NOT_RESOLVED` y calidad `INCOMPLETE_OR_UNVERIFIED`. La evidencia canónica debe ser única, revisada y preservar los bytes fuente para comprobar su hash; la autoridad del origen requiere revisión humana.
 - Registra `license_review_status=REQUIRES_PRODUCT_SPECIFIC_REVIEW`. Documentación de endpoint no implica una licencia comercial general; evaluar condiciones aplicables antes de persistencia/redistribución comercial.
 - No usa credenciales, no accede a cuentas privadas, no coloca órdenes.
 - La decisión y los horizontes corto/medio/largo permanecen `INDETERMINATE`; captura real no es evidencia de rentabilidad ni un pronóstico.
