@@ -19,7 +19,11 @@ La evidencia actual es exploratoria: cuatro capturas de turnover móvil de 24 h 
 - **Tercer snapshot de libro:** [workflow #39809697313](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/actions/runs/39809697313), [artefacto #12438867580](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/actions/runs/39809697313/artifacts/12438867580). Los 21 cuerpos se verificaron; 18/21 snapshots válidos; 6.757 s entre primera y última respuesta. Los snapshots no están sincronizados y los límites de niveles difieren por proveedor.
 - Los artefactos y el análisis detallado están documentados en [observaciones de turnover](issue-7-quote-volume-observations.md) y [capturas de libro](issue-7-multi-exchange-probe.md).
 
-**Consecuencia para el ADR:** esta evidencia refuerza la viabilidad de publicar métricas vectoriales descriptivas, pero no autoriza una clasificación definitiva. La cobertura temporal, los 403, la unidad de Pionex, la frescura absoluta de algunos libros y la falta de tamaños/umbrales aprobados mantienen los criterios 7-M01/7-M02 en estado parcial. La propuesta sigue sin aprobar.
+**Consecuencia para el ADR:** esta evidencia refuerza la viabilidad de publicar métricas vectoriales descriptivas, pero no autoriza una clasificación definitiva. La cobertura temporal, los 403, la unidad de Pionex, la frescura absoluta de algunos libros y la falta de tamaños/umbrales aprobados mantienen los criterios 7-M01/7-M02 en estado parcial.
+
+La fase exploratoria recomendada ya tiene una implementación en [PR #125](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/pull/125), integrada en el commit `2206882d0a84e763ffff7cac81b01e8c827831b1`: `scripts/market_selection/analyze_spot_market_pareto.py`. Verifica los cuerpos originales y calcula una frontera por activo con cuatro dimensiones (turnover, spread y profundidad bid/ask) sin pesos ni umbrales. Sobre los artefactos de las 15:57Z produjo 15 vectores estructuralmente utilizables y excluyó seis observaciones (Bybit HTTP 403 y Pionex con unidad de turnover indeterminada). La frontera de esa captura fue BTC: Binance/MEXC; ETH: Binance/Bitget/MEXC; SOL: Binance/Bitget/MEXC.
+
+Este resultado es un perfil de Pareto de snapshots, no una decisión de elegibilidad ni un ranking de activos. Los timestamps de origen no son uniformes, las capturas no están sincronizadas y la política de frescura no está aprobada. Por ello, **el ADR sigue como PROPUESTA NO APROBADA**; la implementación no sustituye la aprobación del propietario ni cierra el Issue #7.
 
 ## Decisión propuesta
 
