@@ -34,13 +34,13 @@ class FakeResponse:
 class BatchCaptureTests(unittest.TestCase):
     def test_default_universe_is_explicit_and_small(self):
         self.assertEqual([m[0] for m in DEFAULT_MARKETS], ["BTC_USDT", "ETH_USDT", "SOL_USDT"])
-        self.assertEqual(len(build_requests(DEFAULT_MARKETS)), 9)
+        self.assertEqual(len(build_requests(DEFAULT_MARKETS)), 12)
 
-    def test_request_matrix_has_three_providers_per_market(self):
+    def test_request_matrix_captures_market_identity_and_both_depth_sources(self):
         requests = build_requests(DEFAULT_MARKETS)
         for market, _, _, _ in DEFAULT_MARKETS:
             selected = [r for r in requests if r[0] == market]
-            self.assertEqual([r[1] for r in selected], ["pionex", "binance_exchange_info", "binance_depth"])
+            self.assertEqual([r[1] for r in selected], ["pionex", "pionex_depth", "binance_exchange_info", "binance_depth"])
 
     def test_capture_preserves_raw_bytes_and_hash(self):
         with patch("scripts.market_selection.capture_public_market_batch.urlopen", return_value=FakeResponse({"result": True})):
@@ -92,6 +92,31 @@ class BatchCaptureTests(unittest.TestCase):
         self.assertEqual(record["source_response_timestamp_status"], "INVALID")
         self.assertIsNone(record["source_event_at_utc"])
 
+    def test_pionex_depth_update_time_is_normalized_separately(self):
+        payload = {
+            "result": True,
+            "timestamp": 1792610400000,
+            "data": {"updateTime": 1792610399123, "bids": [["100", "2"]], "asks": [["101", "3"]]},
+        }
+        with patch("scripts.market_selection.capture_public_market_batch.urlopen", return_value=FakeResponse(payload)):
+            record = request_capture("BTC_USDT", "pionex_depth", "https://example.invalid")
+        self.assertEqual(record["capture_status"], "PASS")
+        self.assertEqual(record["source_market_update_at_utc"], "2026-10-21T19:19:59.123Z")
+        self.assertEqual(record["source_market_update_timestamp_status"], "VALID")
+        self.assertEqual(record["source_timestamp_field"], "data.updateTime")
+        self.assertIn("order-book update timestamp", record["source_timestamp_semantics"])
+        self.assertEqual(record["source_response_at_utc"], "2026-10-21T19:20:00.000Z")
+        self.assertIsNone(record["source_event_at_utc"])
+
+    def test_pionex_depth_missing_update_time_stays_missing(self):
+        payload = {"result": True, "timestamp": 1792610400000, "data": {"bids": [], "asks": []}}
+        with patch("scripts.market_selection.capture_public_market_batch.urlopen", return_value=FakeResponse(payload)):
+            record = request_capture("BTC_USDT", "pionex_depth", "https://example.invalid")
+        self.assertEqual(record["capture_status"], "PASS")
+        self.assertIsNone(record["source_market_update_at_utc"])
+        self.assertEqual(record["source_market_update_timestamp_status"], "MISSING")
+        self.assertEqual(record["source_timestamp_field"], "data.updateTime")
+
     def test_binance_depth_sequence_id_is_not_event_timestamp(self):
         # Binance depth lastUpdateId is a sequence identifier, not an event-time timestamp.
         with patch("scripts.market_selection.capture_public_market_batch.urlopen", return_value=FakeResponse({"lastUpdateId": 123456, "bids": [], "asks": []})):
@@ -110,12 +135,12 @@ class BatchCaptureTests(unittest.TestCase):
         self.assertIsNotNone(record["response_sha256"])
 
     def test_batch_schema_and_expected_record_count(self):
-        payloads = [FakeResponse({"ok": True}) for _ in range(9)]
+        payloads = [FakeResponse({"ok": True}) for _ in range(12)]
         with patch("scripts.market_selection.capture_public_market_batch.urlopen", side_effect=payloads):
             artifact = capture_batch()
         self.assertEqual(artifact["schema_version"], SCHEMA_VERSION)
-        self.assertEqual(artifact["expected_record_count"], 9)
-        self.assertEqual(artifact["actual_record_count"], 9)
+        self.assertEqual(artifact["expected_record_count"], 12)
+        self.assertEqual(artifact["actual_record_count"], 12)
         self.assertEqual(artifact["overall_status"], "PASS")
 
     def test_empty_or_duplicate_market_universe_rejected(self):
