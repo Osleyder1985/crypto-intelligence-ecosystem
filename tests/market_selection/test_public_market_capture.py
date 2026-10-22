@@ -72,7 +72,7 @@ class PublicCaptureTests(unittest.TestCase):
     def test_non_object_json_is_not_accepted_as_a_valid_capture(self):
         raw = b'[]'
         with patch.object(capture, "urlopen", return_value=FakeResponse(raw)):
-            result = capture.request_capture("pionex", "https://api.pionex.com/test")
+            result = capture.request_capture("pionex", "https://api.pionex.com/test", authorization_records={"pionex_spot_market_data": TEST_PIONEX_AUTHORIZATION})
         self.assertEqual(result["capture_status"], "FAIL")
         self.assertEqual(result["error_type"], "InvalidResponseSchema")
         self.assertEqual(result["response_sha256"], hashlib.sha256(raw).hexdigest())
@@ -80,7 +80,7 @@ class PublicCaptureTests(unittest.TestCase):
     def test_invalid_json_is_not_accepted(self):
         raw = b'{broken'
         with patch.object(capture, "urlopen", return_value=FakeResponse(raw)):
-            result = capture.request_capture("pionex", "https://api.pionex.com/test")
+            result = capture.request_capture("pionex", "https://api.pionex.com/test", authorization_records={"pionex_spot_market_data": TEST_PIONEX_AUTHORIZATION})
         self.assertEqual(result["capture_status"], "FAIL")
         self.assertEqual(result["error_type"], "JSONDecodeError")
         self.assertEqual(result["response_sha256"], hashlib.sha256(raw).hexdigest())
