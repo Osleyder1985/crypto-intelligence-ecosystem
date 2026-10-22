@@ -20,7 +20,7 @@ except ModuleNotFoundError:
     from provider_license_gate import SUPPORTED_USE_CASES
 
 REGISTRY_SCHEMA_VERSION = "crypto-event-source-registry-v1"
-SOURCE_STATUSES = {"PROPOSED", "TERMS_PENDING", "APPROVED", "REJECTED"}
+SOURCE_STATUSES = {"PROPOSED", "TERMS_PENDING", "APPROVED", "SUSPENDED", "RETIRED", "REJECTED"}
 _SOURCE_SHA256 = re.compile(r"^[0-9a-fA-F]{64}$")
 
 EVENT_SOURCE_REGISTRY = {
