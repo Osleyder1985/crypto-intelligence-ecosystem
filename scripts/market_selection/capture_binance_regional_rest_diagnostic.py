@@ -17,6 +17,8 @@ from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 from urllib.parse import urlencode
 
+from scripts.market_selection.provider_license_gate import evaluate_provider_use
+
 TIMEOUT_SECONDS = 12
 SCHEMA_VERSION = "binance-regional-rest-diagnostic-v1"
 VENUES = (
@@ -78,6 +80,15 @@ def capture_endpoint(venue: dict[str, str], kind: str, url: str, asset: str | No
         "response_base64": None, "capture_status": "FAIL",
         "error_type": None, "error_message": None, "parsed_summary": None,
     }
+    provider_id = "binance_us_market_data" if venue["venue"] == "binance_us" else "binance_spot_market_data"
+    assessment = evaluate_provider_use(provider_id, "live_technical_test")
+    record["provider_use_assessment"] = assessment
+    if assessment["decision"] != "ALLOW":
+        record["capture_status"] = "BLOCKED"
+        record["error_type"] = "PermissionError"
+        record["error_message"] = "provider use blocked before network request: " + ";".join(assessment["reason_codes"])
+        record["captured_at_utc"] = now_utc()
+        return record
     try:
         result = request_json(url)
         raw = result["raw"]

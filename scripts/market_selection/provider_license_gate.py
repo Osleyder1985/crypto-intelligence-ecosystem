@@ -15,6 +15,7 @@ SUPPORTED_USE_CASES = {
 }
 BASELINE_POLICY = {
     "binance_spot_market_data": {u: ("ALLOW_TECHNICAL_TEST_ONLY" if u == "live_technical_test" else "REQUIRES_APPROVAL") for u in SUPPORTED_USE_CASES},
+    "binance_us_market_data": {u: ("ALLOW_TECHNICAL_TEST_ONLY" if u == "live_technical_test" else "REQUIRES_APPROVAL") for u in SUPPORTED_USE_CASES},
     "pionex_spot_market_data": {u: "REQUIRES_APPROVAL" for u in SUPPORTED_USE_CASES},
     "defillama_api": {u: "BLOCK_PENDING_WRITTEN_AUTHORIZATION" for u in SUPPORTED_USE_CASES},
     "coingecko_api": {u: "REQUIRES_PLAN_AND_SCOPE_APPROVAL" for u in SUPPORTED_USE_CASES},
@@ -45,7 +46,7 @@ def evaluate_provider_use(provider_id: str, use_case: str, authorization_record:
                 "use_case":use_case,"decision":"BLOCK","reason_codes":["PROVIDER_NOT_REVIEWED"],
                 "authorization_evidence_status":"NOT_PROVIDED"}
     baseline_status = baseline[use_case]
-    if provider_id == "binance_spot_market_data" and use_case == "live_technical_test" and authorization_record is None:
+    if provider_id in {"binance_spot_market_data", "binance_us_market_data"} and use_case == "live_technical_test" and authorization_record is None:
         return {"schema_version":"crypto-provider-use-assessment-v1","provider_id":provider_id,
                 "use_case":use_case,"decision":"ALLOW","reason_codes":["TECHNICAL_TEST_ONLY"],
                 "authorization_evidence_status":"NOT_A_COMMERCIAL_LICENSE"}

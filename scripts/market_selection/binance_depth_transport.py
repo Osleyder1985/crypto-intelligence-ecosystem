@@ -14,6 +14,8 @@ from urllib.error import HTTPError, URLError
 from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 
+from scripts.market_selection.provider_license_gate import evaluate_provider_use
+
 from scripts.market_selection.binance_depth_session import (
     RESYNC_REQUIRED,
     SYNCHRONIZED,
@@ -36,6 +38,9 @@ def fetch_public_depth_snapshot(
     symbol: str, timeout_seconds: float = DEFAULT_TIMEOUT_SECONDS
 ) -> dict[str, Any]:
     """Fetch one public REST depth snapshot; reject HTTP and malformed responses."""
+    assessment = evaluate_provider_use("binance_spot_market_data", "live_technical_test")
+    if assessment["decision"] != "ALLOW":
+        raise PermissionError("Binance provider use blocked before REST snapshot: " + ";".join(assessment["reason_codes"]))
     query = urlencode({"symbol": symbol.upper(), "limit": 1000})
     request = Request(
         f"{REST_BASE}?{query}",
@@ -92,6 +97,9 @@ def capture_once(
         raise ValueError("symbol must be a non-empty string")
     if timeout_seconds <= 0 or max_messages < 1 or max_resync_attempts < 1:
         raise ValueError("timeout and capture bounds must be positive")
+    assessment = evaluate_provider_use("binance_spot_market_data", "live_technical_test")
+    if assessment["decision"] != "ALLOW":
+        raise PermissionError("Binance provider use blocked before WebSocket connection: " + ";".join(assessment["reason_codes"]))
     normalized_symbol = symbol.strip().upper()
     if not re.fullmatch(r"[A-Z0-9]{2,30}", normalized_symbol):
         raise ValueError("symbol must contain only 2-30 ASCII letters or digits")
