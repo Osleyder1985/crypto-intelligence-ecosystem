@@ -50,6 +50,20 @@ El capturador opcional de Binance Spot documentado en [`binance-account-commissi
 
 La prueba inicial captura BTC, ETH y SOL, pero usa cotización USDT en OKX/Bybit y USD en Coinbase Exchange/Kraken. Por tanto, los precios no deben compararse como si fueran el mismo par cotizado sin normalizar la moneda de cotización. El resultado `PASS` solo significa que la respuesta pública pasó validación estructural básica; no aprueba comisiones, frescura bajo una política autorizada, slippage ni elegibilidad regional.
 
+## Fuentes oficiales de tickers de 24 h para Issue #7
+
+| Proveedor | Fuente oficial | Campo usado como turnover cotizado | Límite |
+|---|---|---|---|
+| Binance Spot | [REST API — 24hr ticker](https://github.com/binance/binance-spot-api-docs/blob/master/rest-api.md#24hr-ticker-price-change-statistics) | `quoteVolume` | Ticker móvil de 24 h; no equivale a estabilidad histórica. |
+| OKX Spot | [API V5 — Get ticker](https://www.okx.com/docs-v5/en/#order-book-trading-market-data-get-tickers) | `volCcy24h` | Conservar unidad y semántica Spot; no confundir con `vol24h` base. |
+| Bybit Spot | [V5 — Get Tickers](https://bybit-exchange.github.io/docs/v5/market/tickers) | `turnover24h` | Respuesta puede fallar por accesibilidad del entorno; no inferir cero. |
+| MEXC Spot | [Spot API — 24hr Ticker](https://mexcdevelop.github.io/apidocs/spot_v3_en/) | `quoteVolume` | La documentación muestra que el campo puede ser `null`; ausencia no es cero. |
+| Gate Spot | [API v4 — Spot tickers](https://www.gate.com/docs/developers/apiv4/en/spot/) | `quote_volume` | Ticker puntual; unidad y par deben permanecer asociados. |
+| Bitget Spot | [Market Data — Get Tickers](https://www.bitget.com/docs/catalog/market/market-data) | `turnover24h` | Ticker puntual; no sustituye datos de velas o serie histórica. |
+| Pionex Spot | [Get 24hr Ticker](https://pionex-doc.gitbook.io/apidocs/restful/markets/get-24hr-ticker) | `amount` | Importe negociado de 24 h; conservar símbolo/cotización y campo bruto. |
+
+El capturador conserva respuestas originales, hashes, timestamps y valores brutos. Una captura móvil de 24 h no prueba estabilidad en ventanas mayores. Para esa conclusión se requiere una serie de observaciones fechadas con cobertura, huecos y comparabilidad evaluados.
+
 ## Estado del prototipo de sondeo multi-exchange
 
 El prototipo captura libros públicos Spot de Binance, OKX, Bybit, MEXC, Gate, Bitget y Pionex para BTC/USDT, ETH/USDT y SOL/USDT. La cobertura está respaldada por contratos de respuesta probados offline y preservación del payload original con SHA-256. Es evidencia técnica de sondeo, no la matriz final de selección de mercados del Issue #7.
