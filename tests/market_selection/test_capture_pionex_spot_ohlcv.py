@@ -73,6 +73,13 @@ class PionexOhlcvCaptureTests(unittest.TestCase):
         self.assertTrue(all("base_volume" not in c and "quote_volume" not in c for c in out["candles"]))
         self.assertTrue(all(c["timestamp_role_status"].startswith("INDETERMINATE") for c in out["candles"]))
 
+    def test_response_after_requested_end_time_is_partial(self):
+        page = make_page([kline(240000)])
+        out = capture_history("BTC_USDT", "1M", end_time_ms=239999, page_fetcher=lambda _: page)
+        self.assertEqual(out["overall_status"], "PARTIAL")
+        self.assertEqual(out["coverage"]["stop_reason"], "END_TIME_BOUNDARY_VIOLATION")
+        self.assertEqual(out["coverage"]["end_time_boundary_violations"][0]["returned_source_time_ms"], 240000)
+
     def test_provider_history_limit_is_preserved_as_partial(self):
         error = make_page([], status=400, payload={"result": False, "code": "MARKET_INVALID_TIME", "message": "history limit"})
         out = capture_history("BTC_USDT", "1D", page_fetcher=lambda _: error)
