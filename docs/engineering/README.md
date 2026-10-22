@@ -21,6 +21,7 @@
 | [Observaciones de volumen cotizado 24 h — Issue #7](issue-7-quote-volume-observations.md) | Capturas reales comparadas para 21 combinaciones venue/par; 15 valores por captura comparables como turnover cotizado con la semántica actual | Evidencia exploratoria; no demuestra estabilidad histórica ni constituye ranking |
 | [Sondeo de libros Spot de siete exchanges — Issue #7](issue-7-multi-exchange-probe.md) | Captura read-only de BTC/ETH/SOL cotizados en USDT para Binance, OKX, Bybit, MEXC, Gate, Bitget y Pionex | Cobertura técnica parcial; no es selección de mercado ni aprobación de liquidez |
 | [Metodología de selección spot](spot-market-selection-methodology.md) | Contrato de datos, fórmulas, controles de calidad y decisión reproducible por par | Especificación propuesta |
+| [Contrato de metodología por horizonte — Issue #133](issue-133-methodology-contract.md) | Horizontes versionados, costes explícitos, walk-forward/out-of-sample y controles anti-leakage | Contrato de validación; no es estrategia aprobada ni modelo predictivo |
 | [Evidencia de comisiones Pionex Spot por fills — Issue #18](pionex-fill-fee-evidence.md) | Captura read-only de comisiones históricas por fill; omite IDs y cuerpo privado, marca 100 fills como potencialmente truncados | Herramienta probada; evidencia privada pendiente |
 | [Política fail-closed — Issue #18](issue-18-proposed-decision-policy.md) | Semántica temporal, estados de frescura, comisiones y tamaños sin umbrales inventados | Adoptada para investigación pública Spot; no habilita ejecución |
 | [Matriz consolidada de evidencia — Issue #18](issue-18-evidence-matrix.md) | Evidencia, alcance adoptado y límites del modo de investigación pública | Consolidación; decisión económica INDETERMINATE cuando falten datos críticos |
@@ -47,6 +48,7 @@
 - [#10 — Evaluación de alojamiento y costes](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/issues/10)
 - [#11 — Issue rector del marco maestro](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/issues/11)
 - [#13 — Evaluación histórica, ranking, análisis de eventos, liquidez y soportes/resistencias](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/issues/13)
+- [#133 — Metodologías versionadas para corto, medio y largo plazo](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/issues/133)
 - [#18 — Frescura, comisiones y coste total](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/issues/18)
 
 ## Reglas de mantenimiento
