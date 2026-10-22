@@ -13,12 +13,14 @@ SCHEMA = "public-depth-cost-curves-v1"
 PUBLIC_FEE_REFERENCE = {
     "pionex": {
         "rate_bps_per_fill": Decimal("5"),
-        "source": "https://www.pionex.com/es/fees",
+        "source": "https://www.pionex.com/en-US/fees",
+        "observed_at_utc": "2026-10-22",
         "schedule": "public Spot maker/taker 0.050% reference",
     },
     "binance": {
         "rate_bps_per_fill": Decimal("10"),
-        "source": "https://www.binance.com/es-LA/fee/trading",
+        "source": "https://www.binance.com/en/fee/trading",
+        "observed_at_utc": "2026-10-22",
         "schedule": "Regular User Spot maker/taker 0.100% reference",
     },
 }
@@ -116,6 +118,7 @@ def analyze_depth_record(record: dict[str, Any], market_id: str, venue: str) -> 
             "rate_bps_per_fill": float(fee_reference["rate_bps_per_fill"]),
             "schedule": fee_reference["schedule"],
             "source": fee_reference["source"],
+            "observed_at_utc": fee_reference["observed_at_utc"],
             "effective_account_fee_verified": False,
             "meaning": "illustrative per-fill overlay only; not an account-specific or total round-trip fee",
         },
