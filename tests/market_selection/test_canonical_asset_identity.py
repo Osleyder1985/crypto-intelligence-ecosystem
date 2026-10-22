@@ -1,3 +1,5 @@
+import base64
+import hashlib
 import unittest
 
 from scripts.market_selection.canonical_asset_identity import (
@@ -27,7 +29,8 @@ def evidence(*, asset_type="NATIVE_ASSET", symbol="BTC", stable_id="registry:bit
             "url": "https://example.invalid/registry/item",
             "publisher": "Synthetic fixture only",
             "captured_at": "2026-10-22T00:00:00Z",
-            "content_sha256": "a" * 64,
+            "content_sha256": hashlib.sha256(b"synthetic identity registry content").hexdigest(),
+            "content_base64": base64.b64encode(b"synthetic identity registry content").decode("ascii"),
         },
     }
 
@@ -95,6 +98,12 @@ class CanonicalAssetIdentityTests(unittest.TestCase):
         )
         self.assertEqual(result["canonical_asset_identity_status"], "CONFLICT")
         self.assertEqual(result["market_base_asset_mapping_status"], "MISMATCH")
+
+    def test_source_hash_must_match_preserved_source_bytes(self):
+        invalid = evidence()
+        invalid["source"]["content_sha256"] = "f" * 64
+        with self.assertRaisesRegex(ValueError, "does not match content_base64"):
+            resolve_asset_identity({"type": "symbol", "value": "BTC"}, {"base_asset": "BTC"}, invalid)
 
     def test_bad_source_hash_and_schema_are_rejected(self):
         invalid_hash = evidence()
