@@ -183,8 +183,13 @@ def capture_and_build_report(
     }
     report["network_requests_made"] = True
     report["orders_submitted"] = False
+    identity_limitation = (
+        "Canonical identity is based on the supplied reviewed evidence; source authority, scope, and aliases still require human review."
+        if report["canonical_asset_identity_status"] == "VERIFIED"
+        else "This pipeline resolves the base ticker from Binance exchangeInfo only; it does not establish a globally unique token identity across chains, wrapped assets, or other providers."
+    )
     report["limitations"] = list(report.get("limitations", [])) + [
-        "This pipeline resolves the base ticker from Binance exchangeInfo; it does not establish a globally unique token identity across chains, wrapped assets, or other providers.",
+        identity_limitation,
         "Public endpoint documentation establishes technical availability, not a blanket commercial licence. Review applicable terms before commercial persistence, display, export, or redistribution.",
         "The pipeline performs read-only GET requests only. It never submits orders or uses trading credentials.",
     ]
