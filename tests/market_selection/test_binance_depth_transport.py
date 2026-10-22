@@ -56,6 +56,19 @@ class BinanceDepthTransportTests(unittest.TestCase):
             _open_public_stream("BTCUSDT", 3.0)
         self.assertEqual(calls, [("wss://data-stream.binance.vision:443/ws/btcusdt@depth@100ms", {"timeout": 3.0, "enable_multithread": False})])
 
+    def test_low_level_websocket_entrypoint_blocks_before_socket_creation(self):
+        calls = []
+        fake_websocket = SimpleNamespace(create_connection=lambda url, **kwargs: calls.append((url, kwargs)))
+        with (
+            patch("scripts.market_selection.binance_depth_transport.evaluate_provider_use", return_value={
+                "decision": "BLOCK", "reason_codes": ["AUTHORIZATION_RECORD_MISSING"]
+            }),
+            patch.dict(sys.modules, {"websocket": fake_websocket}),
+        ):
+            with self.assertRaisesRegex(PermissionError, "blocked before WebSocket connection"):
+                _open_public_stream("BTCUSDT", 3.0)
+        self.assertEqual(calls, [])
+
     def test_capture_returns_synchronized_read_only_book_and_closes_socket(self):
         socket = FakeSocket([
             event(101, 102, b=[["100", "1"]]),
