@@ -103,7 +103,14 @@ def _authorization_state(
     blockers: list[str] = []
 
     if source["status"] != "APPROVED":
-        blockers.append("SOURCE_TERMS_PENDING" if source["status"] in {"PROPOSED", "TERMS_PENDING"} else "SOURCE_REJECTED")
+        status_reason = {
+            "PROPOSED": "SOURCE_TERMS_PENDING",
+            "TERMS_PENDING": "SOURCE_TERMS_PENDING",
+            "SUSPENDED": "SOURCE_SUSPENDED",
+            "RETIRED": "SOURCE_RETIRED",
+            "REJECTED": "SOURCE_REJECTED",
+        }.get(source["status"], "SOURCE_NOT_APPROVED")
+        blockers.append(status_reason)
     if not set(source["allowed_use_cases"]).issuperset(_REQUIRED_USE_CASES):
         blockers.append("SOURCE_USE_CASES_NOT_APPROVED")
 
