@@ -99,7 +99,7 @@ def event():
         "source": {
             "source_type": "REGULATORY",
             "url": "https://www.sec.gov/news/press-release/example",
-            "publisher": "U.S. Securities and Exchange Commission",
+            "publisher": entry["display_name"],
         },
         "published_at": "2026-10-20T10:00:00Z",
         "captured_at": "2026-10-20T10:01:00Z",
