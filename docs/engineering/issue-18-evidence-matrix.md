@@ -1,0 +1,38 @@
+# Matriz consolidada de evidencia — Issue #18
+
+- **Issue:** [#18 — Frescura, comisiones y coste total](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/issues/18)
+- **Fecha de consolidación:** 2026-10-22 UTC.
+- **Estado global:** INDETERMINATE; Issue permanece abierto.
+- **Regla:** una captura técnicamente válida, un hash correcto o una curva calculable no bastan para certificar frescura, tarifa efectiva o coste de ejecución.
+
+## Matriz de aceptación
+
+| Criterio | Evidencia/implementación | Estado | Qué falta para cerrar |
+|---|---|---|---|
+| Semántica temporal por proveedor, fuente oficial y UTC de captura separados | [Semántica temporal Binance](binance-market-data-timestamp-semantics.md), [mediciones Pionex](issue-18-pionex-timing-measurements.md), [ISO](issue-18-data-quality-standards.md) | **Documentado** | La semántica de Binance REST no ofrece timestamp de evento en el snapshot; no se puede declarar frescura absoluta de ese snapshot. |
+| No atribuir umbrales inventados a ISO/Binance | ISO 8601 normaliza representación; ISO/IEC 25012 es modelo de calidad contextual; docs oficiales de Binance describen IDs y límites, no un SLA universal de frescura | **Documentado** | Si se necesita un SLA interno, debe fijarse a partir del horizonte de uso, mediciones representativas, incertidumbre de reloj y riesgo; necesita aprobación formal. |
+| Evidencia temporal medida y reproducible | Artefactos CI [39725519816](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/actions/runs/39725519816/artifacts/12402698227), [39725727132](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/actions/runs/39725727132/artifacts/12403295302), [39726272598](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/actions/runs/39726272598/artifacts/12402498544), [39727842880](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/actions/runs/39727842880/artifacts/12404105933) | **Parcial** | 12 observaciones en cuatro ejecuciones y una ventana corta no bastan para aprobar un SLA de producción ni cubrir colas de latencia/degradación. |
+| Respuestas completas sin límite arbitrario de bytes | [PR #76](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/pull/76) elimina topes totales de bytes; [PR #80](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/pull/80) usa máximos documentados de profundidad | **Implementado y probado** | Siguen aplicando límites de consulta, rate limits, timeouts, capacidad de almacenamiento y el máximo de niveles que el proveedor documenta. |
+| Curvas de spread/impacto/slippage reproducibles | [PR #81](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/pull/81), análisis determinista sobre todos los niveles recibidos | **Implementado y probado** | La curva es descriptiva del snapshot; no garantiza ejecución ni liquidez sostenible. |
+| Tarifas públicas con fuente, tipo y fecha | [PR #82](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/pull/82), [PR #84](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/pull/84), tarifas oficiales Pionex/Binance consultadas 2026-10-22 | **Referencia disponible** | No equivale a tarifa efectiva de cuenta. VIP, descuentos, promociones por símbolo, componentes fiscales/especiales y activo de comisión pueden cambiar el coste. |
+| Comisión efectiva Binance por cuenta/símbolo | Capturador read-only para GET /api/v3/account/commission, PR #72 | **Pendiente de evidencia privada** | Requiere credenciales autorizadas de solo lectura y ejecutar la captura fuera de este chat; no compartir secretos aquí. |
+| Comisión efectiva Pionex por cuenta/símbolo | Revisión del OpenAPI público; no se encontró endpoint documentado equivalente a Binance. Los registros de fills pueden exponer comisión efectivamente cobrada | **Pendiente de evidencia privada** | Se necesita evidencia de la tarifa aplicable en la cuenta o fills representativos; no inferirla desde la tarifa pública/VIP. |
+| Escenario de tamaño basado en restricciones oficiales | [PR #87](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/pull/87), [PR #88](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/pull/88), [PR #89](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/pull/89) derivan un escenario de frontera, round-trip y bps normalizados | **Parcial / INDETERMINATE** | La documentación Pionex no especifica la unidad de minAmount; la cantidad calculada se conserva como referencia bajo hipótesis, no como mínimo ejecutable verificado. Los Issues #7/#13 no definen tamaño comercial típico ni criterio de aceptación. |
+| Coste total, incluidos retiros cuando corresponda | Escenario estático combina spread/impacto y tarifa pública por dos fills | **Parcial** | No incluye tarifa efectiva de cuenta, redondeo/activo de comisión ni retiro/red. Si la estrategia transfiere activos entre exchanges, hacen falta tarifas oficiales por moneda/red, mínimos y restricciones de depósito/retiro. |
+| Fixtures para ausencia, dato stale, fee desconocida/obsoleta y profundidad insuficiente | Pruebas existentes del evaluador y [PR #85](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/pull/85) añade nueve casos de puerta de frescura live | **Implementado y probado** | Las pruebas validan la lógica con límites sintéticos; no aprueban umbrales de producción. |
+| Artefactos y decisión reproducible | CI captura 12 registros, valida hashes, ejecuta evaluadores dos veces y compara JSON; los PR #80–#89 y los artefactos enlazados documentan evidencia | **Implementado y probado** | La salida económica permanece INDETERMINATE si faltan política, tarifas efectivas o reglas de producto. |
+
+## Resultado del muestreo temporal disponible
+
+En 12 observaciones Pionex REST de cuatro ejecuciones CI, response − data.updateTime varió de **167 a 416 ms** y captura local − response de **13 a 47 ms**. Es una muestra exploratoria de unos 24 minutos, no una distribución de producción ni un límite de aceptación. Los datos y las limitaciones están documentados en [Mediciones observadas de frescura](issue-18-freshness-observations-2026-10-22.md).
+
+Para Binance Spot REST, el snapshot de profundidad contiene lastUpdateId, bids y asks, pero no un timestamp de evento de mercado. lastUpdateId es un identificador de secuencia, no una hora. Por tanto, este snapshot no basta por sí solo para calcular edad temporal absoluta.
+
+## Bloqueos de cierre reales
+
+1. **Política de frescura aprobada:** el dueño del producto debe decidir el horizonte operativo y riesgo tolerable después de mediciones representativas; no existe un umbral numérico universal que pueda atribuirse a ISO o Binance.
+2. **Tarifas efectivas de cuenta:** falta evidencia privada aplicable de Binance y Pionex. Las tarifas públicas son referencias, no sustitutos.
+3. **Tamaño y criterio de aceptación del producto:** los Issues #7/#13 piden tamaños de referencia pero no definen un nominal comercial típico, horizonte ni pérdida/coste tolerable. El escenario de mínimos públicos no sustituye esa decisión.
+4. **Retiros/transfers:** solo si el producto mueve fondos entre exchanges, añadir tarifa por moneda/red y mínimos/restricciones vigentes.
+
+No cerrar Issue #18 mientras cualquiera de estos datos sea esencial para la decisión solicitada. No se han enviado órdenes y no se declara conformidad/certificación ISO.
