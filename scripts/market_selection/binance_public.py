@@ -12,7 +12,6 @@ from urllib.parse import urlencode
 from data_contract import CONTRACT_VERSION, sha256_hex, utc_now_iso, validate_observation
 
 PARSER_VERSION = "binance-public-v1"
-MAX_RESPONSE_BYTES = 5 * 1024 * 1024
 _SYMBOL_RE = re.compile(r"^[A-Z0-9]{5,30}$")
 
 
@@ -26,10 +25,13 @@ def _default_http_get(url: str, timeout: float) -> bytes:
         status = getattr(response, "status", 200)
         if status != 200:
             raise ExchangeReadError(f"public endpoint returned HTTP {status}")
-        payload = response.read(MAX_RESPONSE_BYTES + 1)
-    if len(payload) > MAX_RESPONSE_BYTES:
-        raise ExchangeReadError("response exceeded configured size limit")
-    return payload
+        chunks: list[bytes] = []
+        while True:
+            chunk = response.read(64 * 1024)
+            if not chunk:
+                break
+            chunks.append(chunk)
+    return b"".join(chunks)
 
 
 class BinancePublicSpotReader:
@@ -60,8 +62,6 @@ class BinancePublicSpotReader:
             raise ExchangeReadError(f"public endpoint request failed: {type(exc).__name__}") from exc
         if not isinstance(raw, bytes):
             raise ExchangeReadError("HTTP transport must return response bytes")
-        if len(raw) > MAX_RESPONSE_BYTES:
-            raise ExchangeReadError("response exceeded configured size limit")
         try:
             payload = json.loads(raw.decode("utf-8"))
         except (UnicodeDecodeError, json.JSONDecodeError) as exc:
