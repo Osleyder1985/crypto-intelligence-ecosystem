@@ -88,3 +88,46 @@ Spread en puntos básicos: `(best_ask - best_bid) / mid × 10,000`. La profundid
 6. La captura de libro complementa el turnover 24 h, pero no aporta profundidad histórica. No puede usarse para reconstruir retrospectivamente el libro ni para afirmar rentabilidad.
 
 Esta evidencia avanza 7-M02, pero no lo cierra: faltan series repetidas de libro, criterios de frescura y tamaño de referencia, tarifas aplicables y validación de cobertura.
+
+
+## Tercera captura real con top-of-book y profundidad — 2026-10-22T15:57:52.682Z
+
+- Workflow: [Multi-exchange spot book probe #39809697313](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/actions/runs/39809697313).
+- Artefacto: [multi-exchange-spot-book-probe #12438867580](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/actions/runs/39809697313/artifacts/12438867580).
+- SHA-256 del JSON descargado: `dc46398faaf3b0f89f9cfa451289f778a6b9f90f8ca2f2b93072134b591ef30d`; tamaño: 312.905 bytes.
+- Estado del workflow: `success`; estado de la captura: `PARTIAL`.
+- Integridad verificada: 21/21 cuerpos Base64 decodifican y coinciden con los tamaños y SHA-256 declarados. En las 21 respuestas, los bytes observados coinciden con los bytes preservados; no se detectó truncamiento en este artefacto.
+- 18/21 snapshots válidos; Bybit devolvió HTTP 403 para BTC/ETH/SOL. Captura secuencial en 6.757 s, no simultánea.
+- Binance, MEXC, Bitget y Pionex devolvieron 100 niveles por lado; OKX y Gate, 20 por lado. La tabla usa los primeros diez niveles por lado para una comparación descriptiva de igual número de niveles, sin afirmar que el libro completo sea equivalente.
+
+### Spread y notional visible de los primeros diez niveles
+
+Spread (bps) = `(best_ask - best_bid) / mid × 10,000`. Notional top-10 (USDT) = suma de `precio × cantidad` en los diez niveles. Son métricas de snapshot, no una promesa de ejecución ni una estimación de liquidez sostenible.
+
+| Par | Venue | Mejor bid | Mejor ask | Spread (bps) | Bid top-10 (USDT) | Ask top-10 (USDT) | Niveles recibidos bid/ask |
+|---|---|---:|---:|---:|---:|---:|---:|
+| BTC/USDT | Binance | 81,698.01 | 81,698.02 | 0.0012 | 232,522.17 | 757,076.06 | 100/100 |
+| BTC/USDT | OKX | 81,690.90 | 81,691.00 | 0.0122 | 175,456.78 | 254,840.32 | 20/20 |
+| BTC/USDT | MEXC | 81,697.90 | 81,698.14 | 0.0294 | 397,992.52 | 936,773.28 | 100/100 |
+| BTC/USDT | Gate | 81,690.40 | 81,690.50 | 0.0122 | 4,407.13 | 45,228.80 | 20/20 |
+| BTC/USDT | Bitget | 81,686.89 | 81,686.90 | 0.0012 | 139,464.29 | 84,126.94 | 100/100 |
+| BTC/USDT | Pionex | 81,687.55 | 81,687.56 | 0.0012 | 1,840,215.09 | 2,493,486.99 | 100/100 |
+| ETH/USDT | Binance | 2,399.92 | 2,399.93 | 0.0417 | 127,641.41 | 213,097.64 | 100/100 |
+| ETH/USDT | OKX | 2,399.60 | 2,399.61 | 0.0417 | 26,321.16 | 146,887.79 | 20/20 |
+| ETH/USDT | MEXC | 2,399.42 | 2,399.43 | 0.0417 | 275,993.61 | 359,574.53 | 100/100 |
+| ETH/USDT | Gate | 2,399.82 | 2,399.83 | 0.0417 | 24,436.65 | 36,885.12 | 20/20 |
+| ETH/USDT | Bitget | 2,399.70 | 2,399.71 | 0.0417 | 197,835.49 | 79,891.43 | 100/100 |
+| ETH/USDT | Pionex | 2,399.68 | 2,399.69 | 0.0417 | 1,156,750.09 | 1,071,000.89 | 100/100 |
+| SOL/USDT | Binance | 104.68 | 104.69 | 0.9552 | 1,075,218.04 | 831,510.76 | 100/100 |
+| SOL/USDT | OKX | 104.68 | 104.69 | 0.9552 | 311,840.31 | 439,983.17 | 20/20 |
+| SOL/USDT | MEXC | 104.67 | 104.68 | 0.9553 | 1,346,182.91 | 815,380.57 | 100/100 |
+| SOL/USDT | Gate | 104.68 | 104.69 | 0.9552 | 61,314.23 | 50,119.54 | 20/20 |
+| SOL/USDT | Bitget | 104.68 | 104.69 | 0.9552 | 2,005,968.43 | 1,763,253.51 | 100/100 |
+| SOL/USDT | Pionex | 104.68 | 104.69 | 0.9552 | 2,072,376.07 | 1,844,641.44 | 100/100 |
+
+### Interpretación
+
+1. El spread observado de BTC en esta captura varía entre 0.0012 y 0.0294 bps para los venues accesibles; ETH se sitúa alrededor de 0.0417 bps y SOL alrededor de 0.9552–0.9553 bps. Son valores puntuales de una captura no sincronizada, no percentiles ni umbrales de elegibilidad.
+2. El notional top-10 difiere entre venues y entre bid/ask; no se puede convertir directamente en una capacidad de ejecución sin simular la cantidad, tarifas y slippage por lado.
+3. Los snapshots no están sincronizados, y el número de niveles recibidos difiere por proveedor. Binance/MEXC no aportan timestamp de evento utilizable en el contrato documentado; su frescura absoluta permanece `INDETERMINATE`.
+4. Esta tercera captura refuerza la evidencia descriptiva de 7-M02, pero no cierra el criterio: faltan serie longitudinal, política temporal aplicable, tamaños de referencia aprobados y análisis de coste total.

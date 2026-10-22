@@ -127,3 +127,50 @@ Los porcentajes comparan dos lecturas de ventanas móviles de 24 horas. No repre
 5. Los artefactos conservan respuestas completas y hashes verificables, pero GitHub Actions tiene retención finita. La serie debe analizarse antes de expirar y almacenarse conforme a una política de retención aprobada.
 
 Esta tercera observación aumenta la trazabilidad de la muestra, pero **no cierra 7-M01**: sigue faltando una serie suficientemente larga y un criterio de estabilidad aprobado.
+
+
+## Cuarta observación real — 2026-10-22T15:57:49.948Z
+
+- Workflow: [Multi-exchange Spot quote-volume probe #39809696897](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/actions/runs/39809696897).
+- Artefacto: [multi-exchange-spot-quote-volume #12439416760](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/actions/runs/39809696897/artifacts/12439416760).
+- SHA-256 del JSON descargado: `d1fa980c4c1c97837c0b5928e3362ba482ada4e97204dd36dd5a5bfd1aad6ba0`; tamaño: 41.054 bytes.
+- Estado del workflow: `success`; estado de la captura: `PARTIAL`.
+- Integridad verificada: 21/21 respuestas decodifican desde Base64 y coinciden con el tamaño y SHA-256 registrados. 18/21 respuestas HTTP 200; 15/21 valores comparables como turnover cotizado.
+- Separación desde la tercera observación: 2 h 1 min 4.891 s. Desde la primera observación, aproximadamente 3 h 36 min 46 s; sigue siendo una muestra corta frente a una evaluación de estabilidad de varios días o regímenes.
+
+### Cambios observados entre la tercera y cuarta captura
+
+Los porcentajes comparan dos lecturas del turnover móvil de 24 horas. **No representan el volumen negociado durante las dos horas transcurridas.** Los cambios solo se calculan para los cinco venues cuyo campo tiene unidad cotizada documentada y respuesta válida; Bybit y Pionex quedan fuera.
+
+| Par | Exchange | Turnover 24 h anterior (USDT) | Turnover 24 h nuevo (USDT) | Cambio observado |
+|---|---|---:|---:|---:|
+| BTC/USDT | Binance | 1,894,194,478.79 | 1,738,168,583.78 | -8.24% |
+| ETH/USDT | Binance | 714,293,662.26 | 629,903,782.33 | -11.81% |
+| SOL/USDT | Binance | 226,662,914.69 | 207,660,538.47 | -8.38% |
+| BTC/USDT | Bitget | 367,958,461.40 | 309,602,000.39 | -15.86% |
+| ETH/USDT | Bitget | 148,897,115.47 | 138,683,839.45 | -6.86% |
+| SOL/USDT | Bitget | 39,664,546.12 | 38,571,599.71 | -2.76% |
+| BTC/USDT | Gate | 1,006,859,674.29 | 864,411,423.67 | -14.15% |
+| ETH/USDT | Gate | 336,352,911.84 | 301,079,754.95 | -10.49% |
+| SOL/USDT | Gate | 94,061,729.94 | 85,388,044.70 | -9.22% |
+| BTC/USDT | MEXC | 539,650,671.74 | 498,525,142.05 | -7.62% |
+| ETH/USDT | MEXC | 216,224,559.26 | 192,797,718.45 | -10.83% |
+| SOL/USDT | MEXC | 68,753,171.45 | 63,807,757.48 | -7.19% |
+| BTC/USDT | OKX | 623,257,465.60 | 553,133,704.06 | -11.25% |
+| ETH/USDT | OKX | 381,918,873.52 | 341,049,260.83 | -10.70% |
+| SOL/USDT | OKX | 65,701,707.62 | 58,268,645.36 | -11.31% |
+
+### Valores que siguen sin ser comparables
+
+| Par | Bybit | Pionex `amount` anterior | Pionex `amount` nuevo | Estado |
+|---|---|---:|---:|---|
+| BTC/USDT | HTTP 403 | 2,758,275,000.95 | 2,550,095,364.92 | `INDETERMINATE`: unidad no documentada |
+| ETH/USDT | HTTP 403 | 437,497,730.64 | 397,969,446.83 | `INDETERMINATE`: unidad no documentada |
+| SOL/USDT | HTTP 403 | 41,249,150.76 | 38,441,086.35 | `INDETERMINATE`: unidad no documentada |
+
+### Interpretación de la cuarta observación
+
+1. Los 15 deltas comparables son negativos en esta pareja de capturas; el rango observado es -2.76% a -15.86%. Eso describe el cambio entre dos ventanas móviles de 24 h y no permite inferir por sí solo la actividad transada en el intervalo, la causa del cambio ni la liquidez ejecutable.
+2. El turnover móvil cambia también porque las operaciones antiguas salen de la ventana de 24 horas. Las definiciones, la agregación y los tiempos de captura pueden diferir por proveedor.
+3. Bybit continúa devolviendo HTTP 403 desde el runner; no se intenta eludir esa restricción. Los tres valores Pionex se preservan, pero su unidad no se da por demostrada.
+4. Cuatro capturas en unas 3 h 37 min mejoran la evidencia descriptiva, pero no demuestran estabilidad diaria/semanal ni permiten cerrar 7-M01. El muestreo programado cada seis horas debe acumular una serie más larga; la retención de CI no equivale a almacenamiento permanente.
