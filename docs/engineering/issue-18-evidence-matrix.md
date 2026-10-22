@@ -32,15 +32,17 @@ En 12 observaciones Pionex REST de cuatro ejecuciones CI, response − data.upda
 
 Para Binance Spot REST, el snapshot de profundidad contiene lastUpdateId, bids y asks, pero no un timestamp de evento de mercado. lastUpdateId es un identificador de secuencia, no una hora. Por tanto, este snapshot no basta por sí solo para calcular edad temporal absoluta.
 
-## Política propuesta
+## Política adoptada para investigación pública Spot
 
-La propuesta fail-closed está documentada en [Política propuesta de frescura y coste](issue-18-proposed-decision-policy.md). Define estados y evidencia requerida sin fijar valores numéricos inventados; sigue pendiente de aprobación del responsable del producto.
+La política fail-closed está adoptada como baseline del modo de investigación pública Spot en [Política de frescura y coste](issue-18-proposed-decision-policy.md). No inventa un umbral universal: la frescura absoluta no demostrable permanece `INDETERMINATE`; las tarifas públicas son referencias y las tarifas privadas solo son requisito para análisis personalizado de cuenta; el tamaño por defecto se expresa mediante curvas de profundidad, no un nominal comercial inventado.
 
-## Bloqueos de cierre reales
+## Alcance de cierre
 
-1. **Política de frescura aprobada:** el dueño del producto debe decidir el horizonte operativo y riesgo tolerable después de mediciones representativas; no existe un umbral numérico universal que pueda atribuirse a ISO o Binance.
-2. **Tarifas efectivas de cuenta:** falta evidencia privada aplicable de Binance y Pionex. Para Binance ya existe capturador de `GET /api/v3/account/commission`; para Pionex, PR #93 añade captura read-only de fills. Ambos requieren ejecución autorizada fuera del chat; no compartir secretos. Las tarifas públicas son referencias, no sustitutos.
-3. **Tamaño y criterio de aceptación del producto:** los Issues #7/#13 piden tamaños de referencia pero no definen un nominal comercial típico, horizonte ni pérdida/coste tolerable. El escenario de mínimos públicos no sustituye esa decisión.
-4. **Retiros/transfers:** solo si el producto mueve fondos entre exchanges, añadir tarifa por moneda/red y mínimos/restricciones vigentes.
+La política adoptada cierra el requisito de ingeniería para el modo de investigación pública Spot sin convertir incertidumbres en resultados positivos. Los límites que dependen de datos privados o de una futura estrategia de ejecución quedan explícitamente fuera de ese modo:
 
-No cerrar Issue #18 mientras cualquiera de estos datos sea esencial para la decisión solicitada. No se han enviado órdenes y no se declara conformidad/certificación ISO.
+1. La frescura sin timestamp de origen o sin límite contextual justificable devuelve `INDETERMINATE`; no se declara SLA de producción.
+2. Las tarifas públicas son la base del comparador y no se confunden con tarifas de cuenta. Un informe personalizado deberá exigir capturas privadas read-only de Binance/Pionex.
+3. Las curvas sobre toda la profundidad visible son el escenario de tamaño por defecto. No existe un nominal comercial típico aprobado; la elegibilidad por mínimos Pionex sigue `INDETERMINATE` porque `minAmount` no tiene unidad inequívoca en la documentación consultada.
+4. Retiro/red solo entra en el coste cuando el producto incluya transferencias entre venues.
+
+Criterio de cierre del Issue: política de alcance adoptada y documentada; capturas, tarifas públicas, curvas y restricciones oficiales implementadas; pruebas reproducibles satisfactorias; casos sin evidencia crítica siguen `INDETERMINATE`; no se han enviado órdenes ni se declara conformidad/certificación ISO.
