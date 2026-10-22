@@ -10,6 +10,7 @@ from urllib.request import Request, urlopen
 from urllib.parse import urlencode
 
 from data_contract import CONTRACT_VERSION, sha256_hex, utc_now_iso, validate_observation
+from scripts.market_selection.provider_license_gate import evaluate_provider_use
 
 PARSER_VERSION = "binance-public-v1"
 _SYMBOL_RE = re.compile(r"^[A-Z0-9]{5,30}$")
@@ -19,7 +20,10 @@ class ExchangeReadError(RuntimeError):
     """A public endpoint failed or returned data outside the expected contract."""
 
 
-def _default_http_get(url: str, timeout: float) -> bytes:
+def _default_http_get(url: str, timeout: float, authorization_record: dict | None = None, use_case: str = "internal_analysis") -> bytes:
+    assessment = evaluate_provider_use("binance_spot_market_data", use_case, authorization_record)
+    if assessment["decision"] != "ALLOW":
+        raise PermissionError("Binance public reader blocked before network: " + ",".join(assessment["reason_codes"]))
     request = Request(url, headers={"Accept": "application/json", "User-Agent": "crypto-intelligence-ecosystem/0.1"})
     with urlopen(request, timeout=timeout) as response:
         status = getattr(response, "status", 200)
@@ -42,12 +46,17 @@ class BinancePublicSpotReader:
         http_get: Callable[[str, float], bytes] | None = None,
         clock: Callable[[], str] = utc_now_iso,
         timeout_seconds: float = 10.0,
+        authorization_record: dict | None = None,
+        use_case: str = "internal_analysis",
     ) -> None:
         if isinstance(timeout_seconds, bool) or not isinstance(timeout_seconds, (int, float)) or timeout_seconds <= 0:
             raise ValueError("timeout_seconds must be positive")
-        self._http_get = http_get or _default_http_get
+        self._authorization_record = authorization_record
+        self._use_case = use_case
+        self._http_get = http_get or (lambda url, timeout: _default_http_get(url, timeout, self._authorization_record, self._use_case))
         self._clock = clock
         self._timeout = float(timeout_seconds)
+        self._last_provider_assessment: dict[str, object] | None = None
 
     @staticmethod
     def _symbol(symbol: str) -> str:
@@ -56,6 +65,13 @@ class BinancePublicSpotReader:
         return symbol
 
     def _get_json(self, url: str) -> tuple[object, bytes]:
+        try:
+            assessment = evaluate_provider_use("binance_spot_market_data", self._use_case, self._authorization_record)
+        except (TypeError, ValueError) as exc:
+            raise ExchangeReadError("provider use blocked: invalid authorization record") from exc
+        self._last_provider_assessment = assessment
+        if assessment["decision"] != "ALLOW":
+            raise ExchangeReadError("provider use blocked before network: " + ",".join(assessment["reason_codes"]))
         try:
             raw = self._http_get(url, self._timeout)
         except (HTTPError, URLError, TimeoutError, OSError) as exc:
@@ -102,6 +118,7 @@ class BinancePublicSpotReader:
             "source_timestamp_utc": None,
             "limitations": ["exchangeInfo response does not provide a market-data timestamp"],
             "raw_payload_retained": False,
+            "provider_use_assessment": self._last_provider_assessment,
             "detail": detail,
         }
 
@@ -200,6 +217,7 @@ class BinancePublicSpotReader:
             "bids": bids,
             "asks": asks,
             "raw_payload_retained": False,
+            "provider_use_assessment": self._last_provider_assessment,
         }
         violations = validate_observation(record)
         # Asset metadata is intentionally unresolved until joined to the exact exchangeInfo symbol.
