@@ -17,6 +17,11 @@ from urllib.error import HTTPError, URLError
 from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 
+try:
+    from scripts.market_selection.provider_license_gate import evaluate_provider_use, SUPPORTED_USE_CASES
+except ModuleNotFoundError:  # Direct script execution puts this directory, not the repo root, on sys.path.
+    from provider_license_gate import evaluate_provider_use, SUPPORTED_USE_CASES
+
 BASE_URL = "https://api.pionex.com/api/v1/market/klines"
 DOC_URL = "https://pionex-doc.gitbook.io/apidocs/restful/markets/get-klines"
 OPENAPI_URL = "https://github.com/pionex-official/pionex-open-api/blob/main/openapi.yaml"
@@ -101,14 +106,29 @@ def build_url(symbol: str, interval: str, end_time_ms: int | None = None) -> str
     return BASE_URL + "?" + urlencode(params)
 
 
-def request_page(url: str) -> dict[str, Any]:
+def request_page(url: str, *, use_case: str = "live_technical_test", authorization_record: dict | None = None) -> dict[str, Any]:
     record: dict[str, Any] = {
         "url": url, "request_started_at_utc": utc_now(), "captured_at_utc": None,
         "http_status": None, "response_bytes": None, "response_sha256": None,
         "response_base64": None, "parsed_json": None, "capture_status": "FAIL",
         "normalization_status": "NOT_RUN", "normalization_error": None,
+        "provider_use_assessment": None,
         "error_type": None, "error_message": None,
     }
+    try:
+        assessment = evaluate_provider_use("pionex_spot_market_data", use_case, authorization_record)
+    except (TypeError, ValueError) as exc:
+        assessment = {
+            "schema_version": "crypto-provider-use-assessment-v1",
+            "provider_id": "pionex_spot_market_data", "use_case": use_case, "decision": "BLOCK",
+            "reason_codes": ["AUTHORIZATION_RECORD_INVALID"],
+            "authorization_evidence_status": "INVALID", "validation_error": str(exc),
+        }
+    record["provider_use_assessment"] = assessment
+    if assessment["decision"] != "ALLOW":
+        record.update(capture_status="BLOCKED", error_type="ProviderUseBlocked",
+                      error_message=";".join(assessment["reason_codes"]))
+        return record
     request = Request(url, headers={"Accept": "application/json", "User-Agent": "crypto-intelligence-ecosystem-pionex-ohlcv/1.0"})
     try:
         with urlopen(request, timeout=TIMEOUT_SECONDS) as response:
@@ -159,6 +179,7 @@ def capture_history(
     symbol: str, interval: str, *, end_time_ms: int | None = None,
     start_time_ms: int | None = None,
     page_fetcher: Callable[[str], dict[str, Any]] | None = None,
+    use_case: str = "live_technical_test", authorization_record: dict | None = None,
 ) -> dict[str, Any]:
     if not isinstance(symbol, str) or not symbol.strip() or symbol.strip() != symbol or any(ch.isspace() for ch in symbol):
         raise ValueError("symbol must be a non-empty native Pionex symbol without whitespace")
@@ -170,7 +191,39 @@ def capture_history(
         raise ValueError("start_time_ms must be a non-negative integer")
     if start_time_ms is not None and end_time_ms is not None and start_time_ms >= end_time_ms:
         raise ValueError("start_time_ms must be less than end_time_ms")
-    fetch_page = page_fetcher or request_page
+    try:
+        assessment = evaluate_provider_use("pionex_spot_market_data", use_case, authorization_record)
+    except (TypeError, ValueError) as exc:
+        assessment = {
+            "schema_version": "crypto-provider-use-assessment-v1",
+            "provider_id": "pionex_spot_market_data", "use_case": use_case, "decision": "BLOCK",
+            "reason_codes": ["AUTHORIZATION_RECORD_INVALID"],
+            "authorization_evidence_status": "INVALID", "validation_error": str(exc),
+        }
+    if assessment["decision"] != "ALLOW":
+        return {
+            "schema_version": SCHEMA_VERSION, "overall_status": "BLOCKED",
+            "analysis_readiness_status": "BLOCKED", "created_at_utc": utc_now(),
+            "market": {"exchange": "pionex", "market_type": "SPOT", "symbol_native": symbol, "interval_native": interval},
+            "request": {
+                "source_endpoint": BASE_URL, "official_documentation": DOC_URL, "official_openapi": OPENAPI_URL,
+                "end_time_ms_initial": end_time_ms, "start_time_ms_optional": start_time_ms,
+                "page_limit": PAGE_LIMIT, "official_page_limit_range": [1, 500],
+                "official_documented_history_limit_records": OFFICIAL_HISTORY_LIMIT_RECORDS,
+                "local_total_response_byte_limit": None, "local_total_candle_limit": None, "local_page_count_limit": None,
+                "authorization_gate": "BLOCKED_BEFORE_NETWORK",
+            },
+            "coverage": {
+                "pages_captured": 0, "captured_candle_rows": 0, "unique_source_timestamps": 0,
+                "duplicate_source_time_ms": [], "end_time_boundary_violations": [], "observed_timestamp_gaps": [],
+                "oldest_source_time_ms": None, "newest_source_time_ms": None, "stop_reason": "PROVIDER_USE_BLOCKED",
+                "provider_history_limit_reached": False, "history_completeness_status": "NOT_CAPTURED",
+                "pagination_progress_status": "NOT_RUN",
+            },
+            "pages": [], "candles": [], "provider_use_assessment": assessment,
+            "limitations": ["Capture blocked by provider-use authorization policy before any network request."],
+        }
+    fetch_page = page_fetcher or (lambda url: request_page(url, use_case=use_case, authorization_record=authorization_record))
     cursor_end = end_time_ms
     pages: list[dict[str, Any]] = []
     candles: list[dict[str, Any]] = []
@@ -283,6 +336,7 @@ def capture_history(
     overall = "PASS" if all_pages_pass and complete_stop and not duplicate_times and pagination_progress_status == "PASS" and candles and not provider_history_limit_reached else "PARTIAL"
     return {
         "schema_version": SCHEMA_VERSION, "overall_status": overall,
+        "provider_use_assessment": assessment,
         "analysis_readiness_status": "INDETERMINATE", "created_at_utc": utc_now(),
         "market": {"exchange": "pionex", "market_type": "SPOT", "symbol_native": symbol, "interval_native": interval},
         "request": {
@@ -323,9 +377,18 @@ def main() -> int:
     parser.add_argument("--interval", required=True, choices=tuple(INTERVAL_MS))
     parser.add_argument("--end-time-ms", type=int, default=None, help="Optional source timestamp cursor; omit to start at latest history")
     parser.add_argument("--start-time-ms", type=int, default=None, help="Optional lower source timestamp boundary; omit to page to provider boundary")
+    parser.add_argument("--use-case", choices=sorted(SUPPORTED_USE_CASES), default="live_technical_test")
+    parser.add_argument("--authorization-record", help="JSON authorization record for the requested provider and use-case")
     parser.add_argument("--output", default="artifacts/pionex-spot-ohlcv.json")
     args = parser.parse_args()
-    result = capture_history(args.symbol, args.interval, end_time_ms=args.end_time_ms, start_time_ms=args.start_time_ms)
+    authorization_record = None
+    if args.authorization_record:
+        try:
+            authorization_record = json.loads(Path(args.authorization_record).read_text(encoding="utf-8"))
+        except (OSError, UnicodeDecodeError, json.JSONDecodeError):
+            authorization_record = {"invalid_authorization_file": True}
+    result = capture_history(args.symbol, args.interval, end_time_ms=args.end_time_ms, start_time_ms=args.start_time_ms,
+                             use_case=args.use_case, authorization_record=authorization_record)
     output = Path(args.output)
     output.parent.mkdir(parents=True, exist_ok=True)
     output.write_text(json.dumps(result, ensure_ascii=False, indent=2, sort_keys=True) + "\n", encoding="utf-8")
@@ -334,7 +397,7 @@ def main() -> int:
         "analysis_readiness_status": result["analysis_readiness_status"],
         "pages_captured": result["coverage"]["pages_captured"],
         "captured_candle_rows": result["coverage"]["captured_candle_rows"],
-        "stop_reason": result["coverage"]["stop_reason"],
+        "stop_reason": result["coverage"]["stop_reason"], "provider_use_assessment": result.get("provider_use_assessment"),
     }, ensure_ascii=False, indent=2))
     return 0
 
