@@ -13,6 +13,8 @@ from decimal import Decimal, InvalidOperation
 from pathlib import Path
 from typing import Any
 
+from scripts.market_selection.provider_license_gate import evaluate_artifact_use
+
 QUOTE_SCHEMA = "multi-exchange-spot-quote-volume-v1"
 BOOK_SCHEMA = "multi-exchange-spot-book-probe-v1"
 OUTPUT_SCHEMA = "spot-market-exploratory-pareto-v1"
@@ -206,6 +208,10 @@ def _dominates(a: dict[str, Any], b: dict[str, Any]) -> bool:
 def analyze_files(quote_path: str | Path, book_path: str | Path) -> dict[str, Any]:
     quote = _load(quote_path, QUOTE_SCHEMA)
     book = _load(book_path, BOOK_SCHEMA)
+    for artifact in (quote, book):
+        provider_use = evaluate_artifact_use(artifact, "internal_analysis")
+        if provider_use["decision"] != "ALLOW":
+            raise PermissionError("Pareto analysis blocked before use: " + ",".join(provider_use["reason_codes"]))
     qmap = {(r["exchange"], r["asset"]): r for r in quote["records"]}
     bmap = {(r["exchange"], r["asset"]): r for r in book["records"]}
     candidates = []
