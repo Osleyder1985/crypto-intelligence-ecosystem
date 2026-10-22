@@ -16,8 +16,19 @@ from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 from urllib.parse import urlencode
 
+from scripts.market_selection.provider_license_gate import evaluate_provider_use
+
 TIMEOUT_SECONDS = 12
 SCHEMA_VERSION = "multi-exchange-spot-book-probe-v1"
+PROVIDER_IDS = {
+    "binance": "binance_spot_market_data",
+    "okx": "okx_spot_market_data",
+    "bybit": "bybit_spot_market_data",
+    "mexc": "mexc_spot_market_data",
+    "gate": "gate_spot_market_data",
+    "bitget": "bitget_spot_market_data",
+    "pionex": "pionex_spot_market_data",
+}
 
 # All requested reference pairs use USDT as quote; exact venue availability remains an observed question.
 READ_CHUNK_BYTES = 64 * 1024  # Read buffer size only; not a response-size limit.
@@ -89,7 +100,7 @@ def extract_top_of_book(exchange: str, payload: object) -> tuple[object, object,
         return data.get("bids"), data.get("asks"), data.get("updateTime")
     raise ValueError(f"unsupported exchange: {exchange}")
 
-def capture_one(spec: dict[str, str]) -> dict[str, object]:
+def capture_one(spec: dict[str, str], authorization_records: dict[str, dict] | None = None) -> dict[str, object]:
     record: dict[str, object] = {
         **spec, "request_started_at_utc": now_utc(), "captured_at_utc": None,
         "http_status": None, "response_bytes": None, "response_bytes_observed": None,
@@ -98,6 +109,27 @@ def capture_one(spec: dict[str, str]) -> dict[str, object]:
         "bids_count": None, "asks_count": None, "best_bid": None, "best_ask": None,
         "capture_status": "FAIL", "error_type": None, "error_message": None,
     }
+    provider_id = PROVIDER_IDS.get(spec["exchange"])
+    authorization_record = (authorization_records or {}).get(provider_id) if provider_id else None
+    try:
+        assessment = evaluate_provider_use(provider_id or spec["exchange"], "persistent_storage", authorization_record)
+    except (TypeError, ValueError):
+        assessment = {
+            "schema_version": "crypto-provider-use-assessment-v1",
+            "provider_id": provider_id or spec["exchange"],
+            "use_case": "persistent_storage",
+            "decision": "BLOCK",
+            "reason_codes": ["AUTHORIZATION_RECORD_INVALID"],
+            "authorization_evidence_status": "INVALID",
+        }
+    record["provider_use_assessment"] = assessment
+    if assessment["decision"] != "ALLOW":
+        record.update(
+            captured_at_utc=now_utc(), capture_status="BLOCKED",
+            error_type="PermissionError",
+            error_message="provider use blocked before network request: " + ";".join(assessment["reason_codes"]),
+        )
+        return record
     request = Request(spec["url"], headers={"Accept": "application/json",
         "User-Agent": "crypto-intelligence-ecosystem-multi-exchange-probe/1.0"})
     try:
@@ -141,8 +173,8 @@ def capture_one(spec: dict[str, str]) -> dict[str, object]:
     return record
 
 
-def capture_batch() -> dict[str, object]:
-    records = [capture_one(spec) for spec in build_requests()]
+def capture_batch(authorization_records: dict[str, dict] | None = None) -> dict[str, object]:
+    records = [capture_one(spec, authorization_records) for spec in build_requests()]
     return {
         "schema_version": SCHEMA_VERSION,
         "created_at_utc": now_utc(),
@@ -168,8 +200,18 @@ def capture_batch() -> dict[str, object]:
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output", default="artifacts/multi-exchange-spot-book-probe.json")
+    parser.add_argument("--authorization-records", help="Local JSON object keyed by provider_id; without it, all persistent captures are blocked")
     args = parser.parse_args()
-    artifact = capture_batch()
+    try:
+        authorization_records = None
+        if args.authorization_records:
+            authorization_records = json.loads(Path(args.authorization_records).read_text(encoding="utf-8"))
+            if not isinstance(authorization_records, dict) or any(not isinstance(value, dict) for value in authorization_records.values()):
+                raise ValueError("authorization records must be a JSON object mapping provider IDs to records")
+    except (OSError, ValueError, json.JSONDecodeError) as exc:
+        print("Authorization records unavailable or invalid: " + type(exc).__name__, file=sys.stderr)
+        return 2
+    artifact = capture_batch(authorization_records)
     path = Path(args.output)
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(artifact, ensure_ascii=False, indent=2, sort_keys=True) + "\n", encoding="utf-8")
