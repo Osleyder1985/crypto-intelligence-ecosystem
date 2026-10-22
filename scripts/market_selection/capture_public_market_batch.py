@@ -239,7 +239,7 @@ def main() -> int:
         "expected_record_count": artifact["expected_record_count"],
         "actual_record_count": artifact["actual_record_count"],
         "records": [
-            {key: item.get(key) for key in ("market_id", "provider", "capture_status", "http_status", "response_bytes", "response_sha256", "error_type", "error_message")}
+            {key: item.get(key) for key in ("market_id", "provider", "capture_status", "http_status", "response_bytes", "response_sha256", "provider_use_assessment", "error_type", "error_message")}
             for item in artifact["records"]
         ],
     }, ensure_ascii=False, indent=2))
