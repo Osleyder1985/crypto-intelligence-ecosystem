@@ -237,6 +237,7 @@ def analyze_files(quote_path: str | Path, book_path: str | Path) -> dict[str, An
             "market_id": f"{exchange}:{asset}", "exchange": exchange, "asset": asset,
             "symbol_native": (q or b or {}).get("symbol"),
             "quote_turnover_24h": str(qvalue) if qvalue is not None else None,
+            "quote_source_timestamp_raw": q.get("source_timestamp_raw") if q else None,
             "quote_captured_at_utc": qtime, "book_captured_at_utc": btime,
             "quote_book_capture_skew_ms": skew_ms,
             "freshness_status": "INDETERMINATE",
