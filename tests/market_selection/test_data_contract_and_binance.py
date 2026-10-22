@@ -13,6 +13,7 @@ sys.path.insert(0, str(ROOT / "scripts" / "market_selection"))
 
 import binance_public  # noqa: E402
 import data_contract  # noqa: E402
+from scripts.market_selection.provider_license_gate import SCHEMA_VERSION
 
 
 def depth_payload() -> bytes:
@@ -53,6 +54,22 @@ class ChunkedHTTPResponse:
         chunk = self.body[self.offset:self.offset + size]
         self.offset += len(chunk)
         return chunk
+
+
+BINANCE_AUTHORIZATION_RECORD = {
+    "schema_version": SCHEMA_VERSION,
+    "provider_id": "binance_spot_market_data",
+    "status": "APPROVED",
+    "authorized_use_cases": ["internal_analysis"],
+    "terms_url": "https://www.binance.com/en/terms",
+    "terms_sha256": "a" * 64,
+    "reviewed_at": "2026-10-22T00:00:00Z",
+    "reviewed_by": "offline-test-fixture",
+}
+
+
+def authorized_reader(**kwargs):
+    return authorized_reader(authorization_record=BINANCE_AUTHORIZATION_RECORD, **kwargs)
 
 
 class ContractTests(unittest.TestCase):
@@ -105,7 +122,7 @@ class ContractTests(unittest.TestCase):
 
 class BinanceReaderTests(unittest.TestCase):
     def test_depth_is_normalized_and_explicitly_indeterminate_without_source_timestamp(self) -> None:
-        reader = binance_public.BinancePublicSpotReader(
+        reader = authorized_reader(
             http_get=lambda url, timeout: depth_payload(),
             clock=lambda: "2026-10-19T12:00:00Z",
         )
@@ -124,29 +141,36 @@ class BinanceReaderTests(unittest.TestCase):
         raw = json.dumps(payload, separators=(",", ":")).encode()
         response = ChunkedHTTPResponse(raw)
         with patch.object(binance_public, "urlopen", return_value=response):
-            transported = binance_public._default_http_get("https://example.invalid", 10.0)
+            transported = binance_public._default_http_get("https://example.invalid", 10.0, BINANCE_AUTHORIZATION_RECORD)
         self.assertEqual(transported, raw)
         self.assertGreater(len(response.read_sizes), 1)
         self.assertTrue(all(size == 64 * 1024 for size in response.read_sizes))
-        reader = binance_public.BinancePublicSpotReader(http_get=lambda url, timeout: transported)
+        reader = authorized_reader(http_get=lambda url, timeout: transported)
         result = reader.fetch_spot_symbol_status("BTCUSDT")
         self.assertEqual(result["availability_status"], "confirmed")
         self.assertEqual(result["payload_sha256"], hashlib.sha256(raw).hexdigest())
 
-    def test_rejects_invalid_symbol_before_http_call(self) -> None:
+    def test_missing_authorization_blocks_before_transport(self) -> None:
         calls = []
         reader = binance_public.BinancePublicSpotReader(http_get=lambda url, timeout: calls.append(url) or depth_payload())
+        with self.assertRaisesRegex(binance_public.ExchangeReadError, "provider use blocked before network"):
+            reader.fetch_order_book("BTCUSDT")
+        self.assertEqual(calls, [])
+
+    def test_rejects_invalid_symbol_before_http_call(self) -> None:
+        calls = []
+        reader = authorized_reader(http_get=lambda url, timeout: calls.append(url) or depth_payload())
         with self.assertRaises(ValueError):
             reader.fetch_order_book("BTC/USDT")
         self.assertEqual(calls, [])
 
     def test_rejects_malformed_json(self) -> None:
-        reader = binance_public.BinancePublicSpotReader(http_get=lambda url, timeout: b"{not-json")
+        reader = authorized_reader(http_get=lambda url, timeout: b"{not-json")
         with self.assertRaisesRegex(binance_public.ExchangeReadError, "invalid UTF-8 JSON"):
             reader.fetch_order_book("BTCUSDT")
 
     def test_rejects_api_error_payload(self) -> None:
-        reader = binance_public.BinancePublicSpotReader(
+        reader = authorized_reader(
             http_get=lambda url, timeout: b'{"code":-1003,"msg":"Too many requests"}'
         )
         with self.assertRaisesRegex(binance_public.ExchangeReadError, "API error -1003"):
@@ -156,7 +180,7 @@ class BinanceReaderTests(unittest.TestCase):
         payload = json.dumps({
             "lastUpdateId": 1, "bids": [["100", "1"], ["100", "2"]], "asks": [["101", "1"]]
         }).encode()
-        reader = binance_public.BinancePublicSpotReader(http_get=lambda url, timeout: payload)
+        reader = authorized_reader(http_get=lambda url, timeout: payload)
         with self.assertRaisesRegex(binance_public.ExchangeReadError, "duplicate price"):
             reader.fetch_order_book("BTCUSDT")
 
@@ -164,12 +188,12 @@ class BinanceReaderTests(unittest.TestCase):
         payload = json.dumps({
             "lastUpdateId": 1, "bids": [["102", "1"]], "asks": [["101", "1"]]
         }).encode()
-        reader = binance_public.BinancePublicSpotReader(http_get=lambda url, timeout: payload)
+        reader = authorized_reader(http_get=lambda url, timeout: payload)
         with self.assertRaisesRegex(binance_public.ExchangeReadError, "crossed"):
             reader.fetch_order_book("BTCUSDT")
 
     def test_exact_symbol_status_confirmed(self) -> None:
-        reader = binance_public.BinancePublicSpotReader(
+        reader = authorized_reader(
             http_get=lambda url, timeout: exchange_info_payload(),
             clock=lambda: "2026-10-19T12:00:00Z",
         )
@@ -178,14 +202,14 @@ class BinanceReaderTests(unittest.TestCase):
         self.assertEqual(result["payload_sha256"], hashlib.sha256(exchange_info_payload()).hexdigest())
 
     def test_non_trading_symbol_is_unavailable(self) -> None:
-        reader = binance_public.BinancePublicSpotReader(
+        reader = authorized_reader(
             http_get=lambda url, timeout: exchange_info_payload(status="BREAK"),
             clock=lambda: "2026-10-19T12:00:00Z",
         )
         self.assertEqual(reader.fetch_spot_symbol_status("BTCUSDT")["availability_status"], "unavailable")
 
     def test_empty_exact_symbol_result_is_unavailable(self) -> None:
-        reader = binance_public.BinancePublicSpotReader(
+        reader = authorized_reader(
             http_get=lambda url, timeout: b'{"symbols":[]}',
             clock=lambda: "2026-10-19T12:00:00Z",
         )
@@ -196,7 +220,7 @@ class BinanceReaderTests(unittest.TestCase):
         def fake_get(url, timeout):
             calls.append(url)
             return exchange_info_payload() if "exchangeInfo" in url else depth_payload()
-        reader = binance_public.BinancePublicSpotReader(
+        reader = authorized_reader(
             http_get=fake_get, clock=lambda: "2026-10-19T12:00:00Z"
         )
         result = reader.fetch_market_snapshot("BTCUSDT")
@@ -213,7 +237,7 @@ class BinanceReaderTests(unittest.TestCase):
 
     def test_unavailable_symbol_does_not_fetch_order_book(self) -> None:
         calls = []
-        reader = binance_public.BinancePublicSpotReader(
+        reader = authorized_reader(
             http_get=lambda url, timeout: calls.append(url) or b'{"symbols":[]}',
             clock=lambda: "2026-10-19T12:00:00Z",
         )
