@@ -9,7 +9,10 @@ from decimal import Decimal, InvalidOperation
 from pathlib import Path
 from typing import Any
 
-from scripts.market_selection.provider_license_gate import evaluate_artifact_use
+try:
+    from scripts.market_selection.provider_license_gate import evaluate_artifact_use
+except ModuleNotFoundError:
+    from provider_license_gate import evaluate_artifact_use
 
 SCHEMA = "public-depth-cost-curves-v1"
 PUBLIC_FEE_REFERENCE = {
