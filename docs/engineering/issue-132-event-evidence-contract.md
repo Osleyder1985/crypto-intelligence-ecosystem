@@ -47,7 +47,7 @@ Limitación: las URL sindicadas o redirigidas diferentes pueden representar la m
 
 ## 5. Niveles de evidencia y causalidad
 
-La evaluación temporal puede producir `TEMPORALLY_ELIGIBLE`, `NOT_AVAILABLE_AS_OF` o `OUTSIDE_MOVEMENT_WINDOW`. Una coincidencia dentro de la ventana recibe únicamente `TEMPORAL_ASSOCIATION`; la salida fija `causality_claimed=false`.
+La evaluación requiere que el activo objetivo se suministre con un identificador estable y que coincida exactamente con uno de los identificadores del evento. Si no coincide, el estado es `ENTITY_NOT_MATCHED`. La evaluación temporal puede producir `TEMPORALLY_ELIGIBLE`, `NOT_AVAILABLE_AS_OF` o `OUTSIDE_MOVEMENT_WINDOW`. Una coincidencia dentro de la ventana recibe únicamente `TEMPORAL_ASSOCIATION`; la salida fija `causality_claimed=false`.
 
 La taxonomía global reservada es:
 
@@ -70,6 +70,6 @@ La mera precedencia temporal, una nota de prensa o la correlación de precios nu
 
 ## 7. Pruebas implementadas
 
-Los tests cubren normalización de tiempo, rechazo de entidades identificadas solo por ticker, timestamps sin zona horaria, captura anterior a publicación, duplicados con conflicto, captura posterior al corte histórico, coincidencia temporal sin afirmación causal y evento fuera de ventana.
+Los once tests cubren normalización de tiempo, rechazo de entidades identificadas solo por ticker, timestamps sin zona horaria, captura anterior a publicación, duplicados con conflicto, captura posterior al corte histórico, coincidencia temporal sin afirmación causal, evento fuera de ventana, ausencia de evidencia, activo no coincidente y preservación de registros de fuentes independientes.
 
 **Estado de validación:** los archivos y tests se han añadido a una rama GitHub. La ejecución CI debe confirmar la integración con el entorno real; hasta ese momento no se declara la entrega validada. El módulo no se ha integrado en el informe `crypto-asset-research-report-v1`, no consulta fuentes externas y no cierra por sí solo Issue #132.
