@@ -115,6 +115,22 @@ class BinanceSpotResearchCaptureTests(unittest.TestCase):
         self.assertEqual(report["pipeline"]["canonical_cross_provider_asset_id"], "NOT_RESOLVED")
         self.assertEqual(report["pipeline"]["license_review_status"], "REQUIRES_PRODUCT_SPECIFIC_REVIEW")
 
+
+    def test_preserves_complete_response_larger_than_five_mib_without_truncation(self):
+        # The pipeline has no project-imposed response-byte ceiling. This fixture
+        # verifies complete-body preservation even when a response exceeds 5 MiB.
+        payload = exchange_info_payload()
+        payload["large_extension_field"] = "x" * (6 * 1024 * 1024)
+        raw = json.dumps(payload, separators=(",", ":")).encode("utf-8")
+        with patch("scripts.market_selection.capture_binance_spot_research.urlopen", return_value=FakeResponse(raw, chunk_size=8191)):
+            out = capture_exchange_info("BTCUSDT")
+        evidence = out["captured_exchange_info"]
+        restored = base64.b64decode(evidence["response_base64"], validate=True)
+        self.assertGreater(len(raw), 5 * 1024 * 1024)
+        self.assertEqual(evidence["response_bytes"], len(raw))
+        self.assertEqual(restored, raw)
+        self.assertEqual(evidence["response_sha256"], hashlib.sha256(raw).hexdigest())
+
     def test_rejects_asset_id_that_does_not_match_resolved_base_ticker(self):
         metadata_raw = json.dumps(exchange_info_payload()).encode()
         artifact = {
