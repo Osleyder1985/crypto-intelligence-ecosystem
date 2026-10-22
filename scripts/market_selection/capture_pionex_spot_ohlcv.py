@@ -176,6 +176,7 @@ def capture_history(
     candles: list[dict[str, Any]] = []
     seen_times: set[int] = set()
     duplicate_times: set[int] = set()
+    end_time_boundary_violations: list[dict[str, int]] = []
     previous_page_oldest: int | None = None
     stop_reason: str | None = None
     provider_history_limit_reached = False
@@ -213,6 +214,17 @@ def capture_history(
             page["normalization_error"] = "duplicate source_time_ms within one page"
             candles.extend(normalized)
             stop_reason = "DUPLICATE_SOURCE_TIMESTAMPS"
+            break
+        if cursor_end is not None and any(timestamp > cursor_end for timestamp in page_times):
+            end_time_boundary_violations.extend(
+                {"page_index": page_index, "requested_end_time_ms": cursor_end, "returned_source_time_ms": timestamp}
+                for timestamp in page_times if timestamp > cursor_end
+            )
+            page["normalization_status"] = "FAIL"
+            page["normalization_error"] = "response contains source timestamps later than the requested endTime"
+            candles.extend(normalized)
+            pagination_progress_status = "FAIL"
+            stop_reason = "END_TIME_BOUNDARY_VIOLATION"
             break
         page_oldest = page_times[0]
         duplicate_times.update(set(page_times) & seen_times)
