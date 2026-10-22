@@ -41,3 +41,46 @@ Valores capturados por el campo de turnover cotizado, expresados en USDT según 
 - Gate no devolvió un timestamp de origen en el campo extraído de esta respuesta; se conserva la hora de captura y el timestamp de origen queda ausente, no inventado.
 - La dispersión entre proveedores no debe interpretarse automáticamente como discrepancia de datos: las ventanas móviles, definiciones y mecanismos de agregación pueden diferir. Antes de comparar/ordenar hay que verificar la semántica de cada campo y acumular una serie temporal.
 - Una captura aislada no permite calcular estabilidad de volumen en ventanas mayores. La tarea siguiente es recopilar ejecuciones periódicas, medir huecos/cobertura y contrastar las definiciones de volumen con datos históricos oficiales.
+
+
+## Segunda observación real y comparación exploratoria — 2026-10-22
+
+Se analizó el segundo artefacto real posterior a la integración de PR #108:
+
+- Primera observación: [workflow #39777588072, artefacto #12425146770](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/actions/runs/39777588072/artifacts/12425146770), creada a las 12:21:04.875Z.
+- Segunda observación: [workflow #39789741314, artefacto #12431375194](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/actions/runs/39789741314/artifacts/12431375194), creada a las 13:46:07.098Z.
+- Separación entre creaciones: aproximadamente 85 minutos y 2 segundos.
+- Integridad comprobada de forma local para los artefactos descargados: 21/21 respuestas de cada captura conservan un cuerpo cuya longitud coincide con `response_bytes` y cuyo SHA-256 coincide con `response_sha256`.
+- Cada captura tuvo 18/21 valores de turnover válidos y 3/21 no disponibles por HTTP 403 de Bybit. No se infiere cero ni se intenta eludir el bloqueo.
+- Las tablas comparan solo los 18 pares de observaciones válidas en ambas capturas. Los porcentajes son el cambio entre dos valores de ventana móvil de 24 h; **no son el volumen negociado durante esos 85 minutos**.
+
+| Par | Exchange | Turnover 24 h anterior (USDT) | Turnover 24 h nuevo (USDT) | Cambio observado |
+|---|---|---:|---:|---:|
+| BTC/USDT | Binance | 1,850,653,961.12 | 1,866,250,913.92 | +0.84% |
+| BTC/USDT | Bitget | 382,658,936.76 | 370,115,768.74 | -3.28% |
+| BTC/USDT | Gate | 1,016,564,575.33 | 1,004,393,827.20 | -1.20% |
+| BTC/USDT | MEXC | 529,563,572.28 | 534,833,981.15 | +1.00% |
+| BTC/USDT | OKX | 623,948,411.15 | 617,746,577.22 | -0.99% |
+| BTC/USDT | Pionex | 2,690,638,425.46 | 2,721,790,946.44 | +1.16% |
+| ETH/USDT | Binance | 747,853,881.40 | 712,928,579.49 | -4.67% |
+| ETH/USDT | Bitget | 153,921,805.83 | 149,272,959.09 | -3.02% |
+| ETH/USDT | Gate | 354,009,552.98 | 338,245,124.18 | -4.45% |
+| ETH/USDT | MEXC | 223,899,206.00 | 215,813,801.87 | -3.61% |
+| ETH/USDT | OKX | 399,855,019.22 | 381,482,848.11 | -4.59% |
+| ETH/USDT | Pionex | 452,122,292.62 | 436,290,676.13 | -3.50% |
+| SOL/USDT | Binance | 231,856,434.14 | 225,468,242.78 | -2.76% |
+| SOL/USDT | Bitget | 41,066,662.71 | 39,832,350.04 | -3.01% |
+| SOL/USDT | Gate | 97,436,005.46 | 94,451,755.79 | -3.06% |
+| SOL/USDT | MEXC | 70,275,763.63 | 68,490,770.27 | -2.54% |
+| SOL/USDT | OKX | 68,857,917.33 | 65,787,091.46 | -4.46% |
+| SOL/USDT | Pionex | 42,216,316.01 | 41,194,132.61 | -2.42% |
+
+### Interpretación
+
+1. En esta pareja de capturas, los seis venues accesibles muestran un descenso observado del turnover de ETH/USDT y SOL/USDT; BTC/USDT varía según venue. Eso describe dos ventanas móviles, no una causa ni un ranking estable.
+2. La dispersión de los cambios entre proveedores no permite concluir cuál es el mercado más líquido: las ventanas, agregación, timestamps y semántica de campos no son necesariamente idénticos.
+3. Gate no aporta timestamp de origen en estos registros; la hora de captura no sustituye a la hora del dato. Bybit continúa sin evidencia accesible desde el runner de CI.
+4. Dos observaciones separadas por unos 85 minutos siguen siendo insuficientes para estimar estabilidad a largo plazo, percentiles, comportamiento en distintos regímenes o cobertura de fallos.
+5. La siguiente verificación es analizar una serie con muchas observaciones programadas, medir huecos y cobertura por venue/par, validar semántica temporal y solo después definir reglas de comparabilidad y selección. No se asignan umbrales numéricos sin justificación y aprobación.
+
+La nueva captura se ejecutó en modo público read-only. La ejecución del workflow fue `success`, pero el resultado de captura fue `PARTIAL` debido a Bybit; ambos estados deben mantenerse separados.
