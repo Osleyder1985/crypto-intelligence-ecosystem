@@ -17,6 +17,8 @@ from urllib.error import HTTPError, URLError
 from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 
+from scripts.market_selection.provider_license_gate import evaluate_provider_use, SUPPORTED_USE_CASES
+
 TIMEOUT_SECONDS = 12
 READ_CHUNK_BYTES = 64 * 1024  # Read buffer size only; not a response-size limit.
 BINANCE_DEPTH_LIMIT = 5000  # Official GET /api/v3/depth maximum; weight 250.
@@ -48,7 +50,7 @@ def now_utc() -> str:
     return datetime.now(timezone.utc).isoformat(timespec="milliseconds").replace("+00:00", "Z")
 
 
-def request_capture(market_id: str, provider: str, url: str) -> dict[str, object]:
+def request_capture(market_id: str, provider: str, url: str, *, use_case: str = "live_technical_test", authorization_records: dict | None = None) -> dict[str, object]:
     record: dict[str, object] = {
         "market_id": market_id, "provider": provider, "url": url,
         "request_started_at_utc": now_utc(), "captured_at_utc": None,
@@ -62,9 +64,26 @@ def request_capture(market_id: str, provider: str, url: str) -> dict[str, object
         "source_timestamp_field": None,
         "source_timestamp_semantics": None,
         "http_status": None, "response_bytes": None, "response_sha256": None,
+        "provider_use_assessment": None,
         "response_base64": None, "parsed_json": None, "capture_status": "FAIL",
         "error_type": None, "error_message": None,
     }
+    provider_id = "pionex_spot_market_data" if provider.startswith("pionex") else "binance_spot_market_data"
+    authorization_record = (authorization_records or {}).get(provider_id)
+    try:
+        assessment = evaluate_provider_use(provider_id, use_case, authorization_record)
+    except (TypeError, ValueError) as exc:
+        assessment = {
+            "schema_version": "crypto-provider-use-assessment-v1",
+            "provider_id": provider_id, "use_case": use_case, "decision": "BLOCK",
+            "reason_codes": ["AUTHORIZATION_RECORD_INVALID"],
+            "authorization_evidence_status": "INVALID", "validation_error": str(exc),
+        }
+    record["provider_use_assessment"] = assessment
+    if assessment["decision"] != "ALLOW":
+        record.update(capture_status="BLOCKED", error_type="ProviderUseBlocked",
+                      error_message=";".join(assessment["reason_codes"]))
+        return record
     request = Request(url, headers={
         "Accept": "application/json",
         "User-Agent": "crypto-intelligence-ecosystem-public-batch-capture/0.1",
@@ -162,13 +181,13 @@ def build_requests(markets: tuple[tuple[str, str, str, str], ...]) -> list[tuple
     return requests
 
 
-def capture_batch(markets: tuple[tuple[str, str, str, str], ...] = DEFAULT_MARKETS) -> dict[str, object]:
+def capture_batch(markets: tuple[tuple[str, str, str, str], ...] = DEFAULT_MARKETS, *, use_case: str = "live_technical_test", authorization_records: dict | None = None) -> dict[str, object]:
     if not markets:
         raise ValueError("market universe must not be empty")
     market_ids = [item[0] for item in markets]
     if len(set(market_ids)) != len(market_ids):
         raise ValueError("market identifiers must be unique")
-    records = [request_capture(*request) for request in build_requests(markets)]
+    records = [request_capture(*request, use_case=use_case, authorization_records=authorization_records) for request in build_requests(markets)]
     expected = len(markets) * 4
     complete = len(records) == expected and all(item["capture_status"] == "PASS" for item in records)
     return {
@@ -196,9 +215,21 @@ def capture_batch(markets: tuple[tuple[str, str, str, str], ...] = DEFAULT_MARKE
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--use-case", choices=sorted(SUPPORTED_USE_CASES), default="live_technical_test")
+    parser.add_argument("--authorization-records", help="JSON object mapping provider IDs to authorization records")
     parser.add_argument("--output", default="artifacts/public-market-capture-batch.json")
     args = parser.parse_args()
-    artifact = capture_batch()
+    authorization_records = {}
+    if args.authorization_records:
+        try:
+            loaded = json.loads(Path(args.authorization_records).read_text(encoding="utf-8"))
+            if isinstance(loaded, dict):
+                authorization_records = loaded
+            else:
+                authorization_records = {"__invalid_file__": loaded}
+        except (OSError, UnicodeDecodeError, json.JSONDecodeError):
+            authorization_records = {"__invalid_file__": {"invalid": True}}
+    artifact = capture_batch(use_case=args.use_case, authorization_records=authorization_records)
     path = Path(args.output)
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(artifact, ensure_ascii=False, indent=2, sort_keys=True) + "\n", encoding="utf-8")
