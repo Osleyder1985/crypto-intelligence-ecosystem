@@ -184,8 +184,13 @@ def capture_and_build_report(
     report["data_quality"]["status"] = "INCOMPLETE_OR_UNVERIFIED"
     report["data_quality"]["dimensions"]["canonical_asset_identity"] = report["canonical_asset_identity_status"]
     for horizon in report["horizons"].values():
-        if "CANONICAL_ASSET_ID_NOT_RESOLVED" not in horizon["reason_codes"]:
-            horizon["reason_codes"].append("CANONICAL_ASSET_ID_NOT_RESOLVED")
+        identity_reason = (
+            "CANONICAL_ASSET_ID_EVIDENCE_NOT_AUTHENTICATED"
+            if report["canonical_asset_identity_status"] == "RESOLVED"
+            else "CANONICAL_ASSET_ID_NOT_RESOLVED"
+        )
+        if identity_reason not in horizon["reason_codes"]:
+            horizon["reason_codes"].append(identity_reason)
     report["pipeline"] = {
         "schema_version": PIPELINE_SCHEMA,
         "capture_artifact_sha256": hashlib.sha256(capture_raw).hexdigest(),
@@ -202,6 +207,7 @@ def capture_and_build_report(
     report["orders_submitted"] = False
     report["limitations"] = list(report.get("limitations", [])) + [
         "This pipeline resolves the base ticker from Binance exchangeInfo; it does not establish a globally unique token identity across chains, wrapped assets, or other providers.",
+        "Optional canonical identity evidence is structurally validated and bound to the captured market metadata, but provider authenticity and the claimed chain/token mapping are not independently verified.",
         "Public endpoint documentation establishes technical availability, not a blanket commercial licence. Review applicable terms before commercial persistence, display, export, or redistribution.",
         "The pipeline performs read-only GET requests only. It never submits orders or uses trading credentials.",
     ]
