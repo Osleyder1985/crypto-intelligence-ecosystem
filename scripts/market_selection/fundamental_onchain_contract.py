@@ -232,12 +232,23 @@ def validate_observation(item: object) -> dict:
     methodology_url = source.get("methodology_url")
     if methodology_url is not None:
         methodology_url = _http_url(methodology_url, "source.methodology_url")
-    published_at = parse_timestamp(item.get("published_at"), "published_at")
+    raw_published_at = item.get("published_at")
+    publication_time_status = item.get(
+        "publication_time_status", "KNOWN" if raw_published_at is not None else "UNKNOWN"
+    )
+    if publication_time_status not in {"KNOWN", "UNKNOWN", "NOT_PROVIDED"}:
+        raise ValueError("publication_time_status must be KNOWN, UNKNOWN, or NOT_PROVIDED")
+    if publication_time_status == "KNOWN":
+        published_at = parse_timestamp(raw_published_at, "published_at")
+    else:
+        if raw_published_at is not None:
+            raise ValueError("published_at must be null when publication_time_status is not KNOWN")
+        published_at = None
     observed_at = parse_timestamp(item.get("observed_at"), "observed_at")
     captured_at = parse_timestamp(item.get("captured_at"), "captured_at")
     if captured_at < observed_at:
         raise ValueError("captured_at cannot precede observed_at")
-    if published_at > captured_at:
+    if published_at is not None and published_at > captured_at:
         raise ValueError("published_at cannot be after captured_at")
     return {
         "schema_version": OBSERVATION_SCHEMA,
@@ -250,7 +261,8 @@ def validate_observation(item: object) -> dict:
         "period_start": item.get("period_start"),
         "period_end": item.get("period_end"),
         "block_height": item.get("block_height"),
-        "published_at": published_at.isoformat().replace("+00:00", "Z"),
+        "published_at": published_at.isoformat().replace("+00:00", "Z") if published_at else None,
+        "publication_time_status": publication_time_status,
         "observed_at": observed_at.isoformat().replace("+00:00", "Z"),
         "captured_at": captured_at.isoformat().replace("+00:00", "Z"),
         "source": {
@@ -281,7 +293,10 @@ def evaluate_observations(observations: list[dict], *, asset: dict, evaluation_a
     for obs in validated:
         if obs["asset"]["stable_id"].casefold() != target_id.casefold() or obs["asset"]["category"] != target_category:
             raise ValueError("all observations must match the exact target stable_id and category")
-        if any(parse_timestamp(obs[field], field) > cutoff for field in ("published_at", "observed_at", "captured_at")):
+        time_fields = ("observed_at", "captured_at")
+        if obs["published_at"] is not None:
+            time_fields = ("published_at",) + time_fields
+        if any(parse_timestamp(obs[field], field) > cutoff for field in time_fields):
             rejected_future.append(obs["observation_id"])
             continue
         groups.setdefault(obs["metric_id"], []).append(obs)
@@ -339,6 +354,95 @@ def evaluate_observations(observations: list[dict], *, asset: dict, evaluation_a
         "metrics": metrics,
         "interpretation": "No investment conclusion is computed by this contract; coverage, methodology, comparability and validation are prerequisites.",
     }
+
+
+def adapt_defillama_protocol_tvl(
+    payload: object,
+    *,
+    protocol_slug: str,
+    asset_category: str,
+    asset_stable_id: str,
+    captured_at: str,
+    mapping_evidence_url: str,
+    terms_status: str = "REVIEW_PENDING",
+) -> list[dict]:
+    """Normalize a captured DefiLlama protocol response into protocol-TVL observations.
+
+    This is an offline adapter for a previously captured response, not a network client.
+    The caller must provide evidence linking the asset to the protocol; TVL is protocol-level,
+    not a direct measure of token value or token-holder revenue.
+    """
+    import re
+    from datetime import timedelta
+
+    slug = _string(protocol_slug, "protocol_slug")
+    if not re.fullmatch(r"[a-z0-9][a-z0-9-]*", slug):
+        raise ValueError("protocol_slug must be a normalized lowercase slug")
+    category = _string(asset_category, "asset_category")
+    stable_id = _string(asset_stable_id, "asset_stable_id")
+    if category not in METRIC_CATALOG["protocol.tvl"]["categories"]:
+        raise ValueError("protocol TVL cannot be attributed to this asset category")
+    captured = parse_timestamp(captured_at, "captured_at")
+    mapping_url = _http_url(mapping_evidence_url, "mapping_evidence_url")
+    if not isinstance(payload, dict) or not isinstance(payload.get("tvl"), list):
+        raise ValueError("DefiLlama protocol payload must contain a tvl list")
+    points = {}
+    for index, point in enumerate(payload["tvl"]):
+        if not isinstance(point, dict):
+            raise ValueError(f"tvl[{index}] must be an object")
+        date = point.get("date")
+        value = point.get("totalLiquidityUSD")
+        if isinstance(date, bool) or not isinstance(date, (int, float)) or not math.isfinite(date):
+            raise ValueError(f"tvl[{index}].date must be a finite Unix timestamp in seconds")
+        if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value) or value < 0:
+            raise ValueError(f"tvl[{index}].totalLiquidityUSD must be a finite non-negative number")
+        observed = datetime.fromtimestamp(date, tz=timezone.utc)
+        if observed > captured:
+            raise ValueError("DefiLlama TVL sample timestamp cannot be after capture time")
+        timestamp = int(date)
+        if timestamp in points and points[timestamp] != value:
+            raise ValueError("conflicting DefiLlama TVL values for the same timestamp")
+        points[timestamp] = value
+
+    source_url = f"https://api.llama.fi/protocol/{slug}"
+    methodology_url = "https://defillama.com/data-definitions"
+    output = []
+    for timestamp, value in sorted(points.items()):
+        observed = datetime.fromtimestamp(timestamp, tz=timezone.utc).isoformat().replace("+00:00", "Z")
+        output.append({
+            "schema_version": OBSERVATION_SCHEMA,
+            "observation_id": f"defillama:{slug}:tvl:{timestamp}",
+            "asset": {"category": category, "stable_id": stable_id},
+            "metric_id": "protocol.tvl",
+            "status": "OBSERVED",
+            "value": float(value),
+            "unit": "usd",
+            "period_start": None,
+            "period_end": observed,
+            "block_height": None,
+            "published_at": None,
+            "publication_time_status": "UNKNOWN",
+            "observed_at": observed,
+            "captured_at": captured.isoformat().replace("+00:00", "Z"),
+            "source": {
+                "source_id": "defillama-free-api",
+                "source_type": "aggregator",
+                "url": source_url,
+                "methodology_url": methodology_url,
+                "terms_status": terms_status,
+            },
+            "quality_notes": (
+                "Protocol-level TVL from a captured response; source publication time is unknown. "
+                "TVL is not token value or token-holder revenue."
+            ),
+            "metadata": {
+                "protocol_slug": slug,
+                "mapping_evidence_url": mapping_url,
+                "mapping_status": "CALLER_SUPPLIED_REQUIRES_REVIEW",
+                "api_response_schema": "DefiLlama protocol endpoint; historical tvl array",
+            },
+        })
+    return output
 
 
 def canonical_sha256(value: object) -> str:
