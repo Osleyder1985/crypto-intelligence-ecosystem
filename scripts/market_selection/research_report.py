@@ -159,6 +159,7 @@ def build_research_report(
     input_capture_status = artifact.get("overall_status")
     analysis_quality = {
         "capture_status": input_capture_status if input_capture_status in {"PASS", "PARTIAL"} else "INDETERMINATE",
+        "canonical_asset_identity": identity_resolution["canonical_asset_identity_status"],
         "risk_profile": risk.get("data_quality_status", "INDETERMINATE"),
         "movement_events": movement.get("data_quality_status", "INDETERMINATE"),
         "support_resistance": support_resistance.get("data_quality_status", "INDETERMINATE"),
@@ -198,6 +199,11 @@ def build_research_report(
         "canonical_asset_identity_status": identity_resolution["canonical_asset_identity_status"],
         "market_base_asset_mapping_status": identity_resolution["market_base_asset_mapping_status"],
         "canonical_asset_identity": identity_resolution,
+        "asset_identity_scope": (
+            "Reviewed unique canonical identity evidence linked to market base asset."
+            if identity_status == "VERIFIED"
+            else "Market base symbol only; canonical identity is unresolved."
+        ),
         "market": {
             "exchange": exchange,
             "market_type": "SPOT",
