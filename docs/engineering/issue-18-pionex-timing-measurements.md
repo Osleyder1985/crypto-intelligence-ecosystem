@@ -29,6 +29,12 @@ La primera diferencia compara dos timestamps del proveedor. Las otras dos combin
 
 Para estas seis observaciones, los rangos fueron: respuesta−actualización **134–311 ms**, captura−actualización **188–385 ms**, captura−respuesta **48–95 ms**. Son rangos descriptivos de una muestra pequeña, no percentiles ni estimaciones de latencia de cola. No deben extrapolarse a otros símbolos, regiones, horas, cargas o endpoints.
 
+## Evolución de cobertura
+
+Los artefactos de esta nota son de la versión anterior, que solicitaba 20 niveles por lado. El capturador se actualizará para pedir los máximos documentados por proveedor: Binance Spot `GET /api/v3/depth` hasta 5000 entradas (peso 250 para ese límite) y Pionex Spot `GET /api/v1/market/depth` hasta 1000 entradas. Los nuevos artefactos deben registrar la cantidad realmente recibida. Incluso esos máximos son snapshots parciales, no un libro completo persistente.
+
+Fuentes oficiales: [Binance Spot REST API — depth](https://github.com/binance/binance-spot-api-docs/blob/master/rest-api.md) y [Pionex Get Depth](https://pionex-doc.gitbook.io/apidocs/restful/markets/get-depth).
+
 ## Limitaciones y tratamiento
 
 - Los dos artefactos contienen snapshots puntuales; no son una serie continua ni un histórico de profundidad.
