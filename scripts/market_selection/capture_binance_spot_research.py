@@ -155,6 +155,11 @@ def capture_and_build_report(
     )
     # ExchangeInfo proves only the market base ticker. Canonical identity requires
     # separate, unique, reviewed evidence linked to that base asset.
+    report["asset_identity_scope"] = (
+        "Reviewed unique canonical identity evidence linked to Binance baseAsset."
+        if report["canonical_asset_identity_status"] == "VERIFIED"
+        else "Binance pair baseAsset ticker only; canonical cross-provider identity is unresolved."
+    )
     if report["canonical_asset_identity_status"] != "VERIFIED":
         report["asset_identity_status"] = "INDETERMINATE"
         report["report_status"] = "PARTIAL"
