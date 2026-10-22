@@ -156,6 +156,21 @@ class FundamentalOnchainContractTests(unittest.TestCase):
         result = validate_observation(value)
         self.assertEqual(result["status"], "NOT_APPLICABLE")
 
+    def test_partial_and_provider_error_states_remain_explicit(self):
+        for state in ("PARTIAL", "PROVIDER_ERROR", "STALE", "CONFLICT"):
+            with self.subTest(state=state):
+                result = evaluate_observations(
+                    [obs(status=state, value=None)],
+                    asset={"category": "smart_contract_token", "stable_id": "ethereum:0xabc"},
+                    evaluation_as_of="2026-10-21T00:00:00Z",
+                )
+                self.assertEqual(result["metrics"]["supply.circulating"]["status"], state)
+                self.assertIsNone(result["metrics"]["supply.circulating"]["value"])
+
+    def test_not_applicable_for_applicable_metric_requires_reason(self):
+        with self.assertRaisesRegex(ValueError, "applicability_override_reason"):
+            validate_observation(obs(status="NOT_APPLICABLE", value=None))
+
 
 if __name__ == "__main__":
     unittest.main()
