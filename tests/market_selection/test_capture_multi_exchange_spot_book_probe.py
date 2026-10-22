@@ -10,11 +10,11 @@ from scripts.market_selection.capture_multi_exchange_spot_book_probe import (
 
 
 class MultiExchangeSpotBookProbeTests(unittest.TestCase):
-    def test_probe_covers_four_exchanges_and_three_assets(self):
+    def test_probe_covers_seven_required_exchanges_and_three_assets(self):
         requests = build_requests()
-        self.assertEqual(len(requests), 12)
+        self.assertEqual(len(requests), 21)
         self.assertEqual({r["exchange"] for r in requests},
-                         {"okx", "bybit", "coinbase_exchange", "kraken"})
+                         {"binance", "okx", "bybit", "mexc", "gate", "bitget", "pionex"})
         self.assertEqual({r["asset"] for r in requests}, {"BTC", "ETH", "SOL"})
         self.assertTrue(all(r["url"].startswith("https://") for r in requests))
 
@@ -30,21 +30,33 @@ class MultiExchangeSpotBookProbeTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             extract_top_of_book("bybit", {"retCode": 10001, "retMsg": "bad request"})
 
-    def test_kraken_response_contract(self):
-        bids, asks, timestamp = extract_top_of_book("kraken", {
-            "error": [], "result": {"XXBTZUSD": {"bids": [["100", "2", "1"]], "asks": [["101", "3", "1"]]}}
-        })
+    def test_binance_depth_has_no_source_event_timestamp(self):
+        bids, asks, timestamp = extract_top_of_book("binance", {"lastUpdateId": 123, "bids": [["100", "2"]], "asks": [["101", "3"]]})
         self.assertEqual(bids[0][0], "100")
         self.assertEqual(asks[0][0], "101")
         self.assertIsNone(timestamp)
 
-    def test_coinbase_response_contract(self):
-        bids, asks, timestamp = extract_top_of_book("coinbase_exchange", {
-            "bids": [["100", "2", 1]], "asks": [["101", "3", 1]], "time": "2026-10-21T00:00:00Z"
-        })
+    def test_mexc_depth_has_no_source_event_timestamp(self):
+        bids, asks, timestamp = extract_top_of_book("mexc", {"lastUpdateId": 123, "bids": [["100", "2"]], "asks": [["101", "3"]]})
         self.assertEqual(bids[0][0], "100")
         self.assertEqual(asks[0][0], "101")
-        self.assertEqual(timestamp, "2026-10-21T00:00:00Z")
+        self.assertIsNone(timestamp)
+
+    def test_gate_depth_timestamp_is_update_time(self):
+        bids, asks, timestamp = extract_top_of_book("gate", {"current": 200, "update": 199, "bids": [["100", "2"]], "asks": [["101", "3"]]})
+        self.assertEqual(timestamp, 199)
+
+    def test_bitget_contract(self):
+        bids, asks, timestamp = extract_top_of_book("bitget", {"code": "00000", "data": {"b": [["100", "2"]], "a": [["101", "3"]], "ts": "123"}})
+        self.assertEqual(bids[0][0], "100")
+        self.assertEqual(asks[0][0], "101")
+        self.assertEqual(timestamp, "123")
+
+    def test_pionex_uses_book_update_time_not_wrapper_time(self):
+        bids, asks, timestamp = extract_top_of_book("pionex", {"result": True, "timestamp": 500, "data": {"bids": [["100", "2"]], "asks": [["101", "3"]], "updateTime": 400}})
+        self.assertEqual(bids[0][0], "100")
+        self.assertEqual(asks[0][0], "101")
+        self.assertEqual(timestamp, 400)
 
     def test_reads_complete_valid_response_larger_than_old_cap(self):
         spec = build_requests()[0]
