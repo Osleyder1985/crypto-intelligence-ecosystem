@@ -1,0 +1,32 @@
+name: Fundamental on-chain evidence contract tests
+
+on:
+  pull_request:
+    paths:
+      - "scripts/market_selection/fundamental_onchain_contract.py"
+      - "tests/market_selection/test_fundamental_onchain_contract.py"
+      - ".github/workflows/fundamental-onchain-contract-tests.yml"
+  push:
+    branches:
+      - main
+    paths:
+      - "scripts/market_selection/fundamental_onchain_contract.py"
+      - "tests/market_selection/test_fundamental_onchain_contract.py"
+      - ".github/workflows/fundamental-onchain-contract-tests.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
+        with:
+          python-version: "3.12"
+      - name: Run fundamental/on-chain contract tests
+        run: python -m unittest discover -s tests/market_selection -p "test_fundamental_onchain_contract.py" -v
