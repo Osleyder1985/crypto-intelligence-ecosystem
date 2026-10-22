@@ -13,6 +13,8 @@ import hashlib
 import json
 from pathlib import Path
 import re
+import threading
+import time
 from urllib.error import HTTPError, URLError
 from urllib.parse import urlsplit
 from urllib.request import Request, urlopen
@@ -35,6 +37,24 @@ ARTICLE_CAPTURE_SCHEMA = "crypto-sec-article-capture-v1"
 SOURCE_ID = "sec_press_releases"
 _REQUIRED_USE_CASES = ("internal_analysis", "persistent_storage")
 _SHA256 = re.compile(r"^[0-9a-f]{64}$")
+
+
+_RATE_LOCK = threading.Lock()
+_LAST_REQUEST_MONOTONIC: float | None = None
+
+
+def _wait_for_rate_slot(max_requests_per_second: float) -> None:
+    """Enforce the source's published per-process request-start ceiling."""
+    global _LAST_REQUEST_MONOTONIC
+    interval = 1.0 / max_requests_per_second
+    with _RATE_LOCK:
+        now = time.monotonic()
+        if _LAST_REQUEST_MONOTONIC is not None:
+            delay = interval - (now - _LAST_REQUEST_MONOTONIC)
+            if delay > 0:
+                time.sleep(delay)
+                now = time.monotonic()
+        _LAST_REQUEST_MONOTONIC = now
 
 
 def _utc_now() -> str:
@@ -234,6 +254,7 @@ def _request(
     opener: Any,
     schema: str,
 ) -> tuple[dict | None, bytes | None, int | None, dict[str, str]]:
+    _wait_for_rate_slot(float(state["source"]["max_requests_per_second"]))
     request = Request(
         requested_url,
         headers={
