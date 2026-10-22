@@ -6,7 +6,7 @@ Esta entrega añade una capa de composición offline sobre `crypto-asset-researc
 
 ## Entrada
 
-- Informe existente `crypto-asset-research-report-v1`.
+- Informe existente `crypto-asset-research-report-v2`.
 - Lista de eventos; cada entrada incluye el evento `crypto-external-event-record-v1`, un identificador estable objetivo y una ventana de movimiento explícita.
 - Lista de observaciones `crypto-fundamental-observation-v1`.
 - Metodología `crypto-investment-methodology-v1`.
