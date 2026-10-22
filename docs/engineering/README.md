@@ -10,6 +10,7 @@
 | [Matriz normativa](normative-matrix.md) | Referencias, estado de verificación, aplicabilidad inicial, evidencia y decisiones pendientes | Preliminar |
 | [Catálogo de requisitos y trazabilidad](requirements-traceability-catalog.md) | Requisitos iniciales, NFR, mapa de objetivos y reglas de trazabilidad | Borrador |
 | [Matriz de cierre de aceptación #7/#13](acceptance-closure-matrix-issues-7-13.md) | Descomposición de criterios, evidencia, método de prueba y decisiones pendientes | Propuesta de verificación |
+| [Sondeo de libros Spot de siete exchanges — Issue #7](issue-7-multi-exchange-probe.md) | Captura read-only de BTC/ETH/SOL cotizados en USDT para Binance, OKX, Bybit, MEXC, Gate, Bitget y Pionex | Cobertura técnica parcial; no es selección de mercado ni aprobación de liquidez |
 | [Metodología de selección spot](spot-market-selection-methodology.md) | Contrato de datos, fórmulas, controles de calidad y decisión reproducible por par | Especificación propuesta |
 | [Evidencia de comisiones Pionex Spot por fills — Issue #18](pionex-fill-fee-evidence.md) | Captura read-only de comisiones históricas por fill; omite IDs y cuerpo privado, marca 100 fills como potencialmente truncados | Herramienta probada; evidencia privada pendiente |
 | [Política fail-closed — Issue #18](issue-18-proposed-decision-policy.md) | Semántica temporal, estados de frescura, comisiones y tamaños sin umbrales inventados | Adoptada para investigación pública Spot; no habilita ejecución |
