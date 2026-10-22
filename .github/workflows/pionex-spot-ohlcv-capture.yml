@@ -45,7 +45,7 @@ jobs:
         with:
           python-version: "3.12"
       - name: Run Pionex OHLCV tests without network access
-        run: python -m unittest tests.market_selection.test_capture_pionex_spot_ohlcv -v
+        run: python -m unittest discover -s tests/market_selection -p 'test_capture_pionex_spot_ohlcv.py' -v
   live-capture:
     if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
