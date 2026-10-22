@@ -32,6 +32,12 @@ def artifact(rows):
 
 
 class OHLCVMovementEventTests(unittest.TestCase):
+    def test_missing_authorization_blocks_analysis(self):
+        source = artifact([candle(0, "100", "100"), candle(1, "101", "100")])
+        source.pop("provider_use_assessment")
+        with self.assertRaisesRegex(PermissionError, "blocked before use"):
+            analyze_movement_events(source, 2, 5, 3)
+
     def test_price_move_uses_previous_closed_close_and_explicit_threshold(self):
         result = analyze_movement_events(artifact([
             candle(0, "100", "100"), candle(1, "101", "100"),
