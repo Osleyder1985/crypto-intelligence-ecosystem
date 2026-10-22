@@ -77,7 +77,7 @@ jobs:
           assert all(record["provider_use_assessment"]["decision"] == "ALLOW" for record in binance_records)
           print("Pionex requests blocked before network: authorization record absent.")
           print("Binance requests are limited to the live technical test baseline; no commercial rights implied.")
-
+          PY
       - name: Withhold downstream evaluation without Pionex authorization
         run: echo "Evaluation skipped: Pionex capture is blocked until an explicit, reviewed authorization record is supplied."
       - name: Upload capture and evaluation evidence
