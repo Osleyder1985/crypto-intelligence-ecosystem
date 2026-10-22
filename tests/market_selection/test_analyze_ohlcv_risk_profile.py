@@ -2,6 +2,7 @@ import base64
 import hashlib
 import unittest
 
+from scripts.market_selection.provider_license_gate import ASSESSMENT_SCHEMA_VERSION, POLICY_VERSION
 from scripts.market_selection.analyze_ohlcv_risk_profile import analyze_artifact
 
 
@@ -18,6 +19,10 @@ def artifact(rows):
     raw = b"synthetic preserved response body"
     return {
         "schema_version": "binance-spot-ohlcv-capture-v1",
+        "provider_use_assessment": {"schema_version": ASSESSMENT_SCHEMA_VERSION, "policy_version": POLICY_VERSION,
+            "provider_id": "binance_spot_market_data", "use_case": "internal_analysis", "decision": "ALLOW",
+            "reason_codes": ["EXPLICIT_AUTHORIZATION_RECORD_VALIDATED"],
+            "authorization": {"authorized_use_cases": ["internal_analysis"], "authorization_record_sha256": "b" * 64}},
         "overall_status": "PASS",
         "market": {"exchange": "binance", "market_type": "SPOT", "symbol_native": "BTCUSDT", "interval": "1h"},
         "window": {"start_time_ms_inclusive": rows[0]["open_time_ms"], "end_time_ms_exclusive": rows[-1]["open_time_ms"] + 3_600_000},
