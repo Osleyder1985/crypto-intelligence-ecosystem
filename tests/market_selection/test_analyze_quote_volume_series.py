@@ -5,13 +5,21 @@ import tempfile
 import unittest
 from pathlib import Path
 
+from scripts.market_selection.provider_license_gate import ASSESSMENT_SCHEMA_VERSION, POLICY_VERSION
+
 from scripts.market_selection.analyze_quote_volume_series import analyze_artifacts
 
 
 def record(exchange="binance", asset="BTC", symbol="BTCUSDT", volume="100", captured="2026-10-22T00:00:00Z",
            status="PASS", quote_status="VALID", unit="USDT", semantics="quoteVolume: rolling 24h quote-asset turnover"):
     raw = json.dumps({"symbol": symbol, "quoteVolume": volume}, separators=(",", ":")).encode()
+    provider_ids = {"binance":"binance_spot_market_data","pionex":"pionex_spot_market_data","okx":"okx_spot_market_data","bybit":"bybit_spot_market_data","mexc":"mexc_spot_market_data","gate":"gate_spot_market_data","bitget":"bitget_spot_market_data"}
     return {
+        "provider_use_assessment": {"schema_version": ASSESSMENT_SCHEMA_VERSION, "policy_version": POLICY_VERSION,
+            "provider_id": provider_ids[exchange], "use_case": "persistent_storage", "decision": "ALLOW",
+            "reason_codes": ["EXPLICIT_AUTHORIZATION_RECORD_VALIDATED"],
+            "authorization": {"authorized_use_cases": ["persistent_storage", "internal_analysis"],
+                              "authorization_record_sha256": "b" * 64}},
         "exchange": exchange, "asset": asset, "symbol": symbol, "quote_currency": "USDT",
         "captured_at_utc": captured, "capture_status": status, "http_status": 200 if status == "PASS" else 403,
         "quote_volume_status": quote_status, "quote_volume_raw": volume if quote_status == "VALID" else None,
@@ -32,6 +40,15 @@ def write_artifact(path, created, records):
 
 
 class QuoteVolumeSeriesTests(unittest.TestCase):
+    def test_missing_internal_analysis_scope_blocks_before_use(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = write_artifact(Path(tmp) / "a.json", "2026-10-22T00:00:00Z", [record()])
+            data = json.loads(path.read_text())
+            data["records"][0]["provider_use_assessment"]["authorization"]["authorized_use_cases"] = ["persistent_storage"]
+            path.write_text(json.dumps(data))
+            with self.assertRaisesRegex(PermissionError, "blocked before use"):
+                analyze_artifacts([path])
+
     def test_calculates_descriptive_delta_without_claiming_interval_volume(self):
         with tempfile.TemporaryDirectory() as tmp:
             first = write_artifact(Path(tmp) / "first.json", "2026-10-22T00:00:00Z",
