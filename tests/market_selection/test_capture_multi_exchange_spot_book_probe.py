@@ -59,7 +59,7 @@ class MultiExchangeSpotBookProbeTests(unittest.TestCase):
         self.assertEqual(timestamp, 400)
 
     def test_reads_complete_valid_response_larger_than_old_cap(self):
-        spec = build_requests()[0]
+        spec = build_requests()[1]
         body = json_bytes = b'{"code":"0","data":[{"bids":[["100","2"]],"asks":[["101","3"]],"ts":"123"}]}' + b" " * (READ_CHUNK_BYTES * 2)
         class FakeResponse:
             status = 200
