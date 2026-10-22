@@ -147,6 +147,7 @@ class ResearchReportTests(unittest.TestCase):
         self.assertEqual(report["canonical_asset_identity_status"], "VERIFIED")
         self.assertEqual(report["market_base_asset_mapping_status"], "VERIFIED")
         self.assertEqual(report["canonical_asset_identity"]["stable_id"], "registry:bitcoin")
+        self.assertRegex(report["canonical_asset_identity"]["identity_evidence"]["identity_evidence_record_sha256"], r"^[0-9a-f]{64}$")
         self.assertEqual(report["report_status"], "TECHNICAL_BASELINE_ASSEMBLED")
 
     def test_technical_test_capture_cannot_be_used_for_internal_analysis(self):
