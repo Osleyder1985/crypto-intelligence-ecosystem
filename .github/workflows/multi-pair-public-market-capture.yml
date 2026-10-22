@@ -27,6 +27,7 @@ jobs:
           python-version: "3.12"
       - run: python -m unittest discover -s tests/market_selection -p "test_evaluate_capture_batch.py" -v
       - run: python -m unittest discover -s tests/market_selection -p "test_analyze_depth_cost_curves.py" -v
+      - run: python -m unittest discover -s tests/market_selection -p "test_issue18_live_freshness.py" -v
   capture-offline:
     name: Test multi-pair capture offline
     needs: scope
