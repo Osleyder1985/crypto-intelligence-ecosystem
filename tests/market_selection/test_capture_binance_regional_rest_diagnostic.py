@@ -58,10 +58,15 @@ class BinanceRegionalRestDiagnosticTests(unittest.TestCase):
                     result, self.remaining = self.remaining[:size], self.remaining[size:]
                 return result
         with patch("scripts.market_selection.capture_binance_regional_rest_diagnostic.urlopen", return_value=FakeResponse()):
-            result = request_json("https://example.invalid")
+            result = request_json("https://example.invalid", provider_id="binance_spot_market_data")
         self.assertEqual(result["raw"], body)
         self.assertEqual(len(result["raw"]), len(body))
         self.assertEqual(result["content_length"], str(len(body)))
+
+    def test_low_level_request_blocks_non_test_use_before_network(self):
+        with patch("scripts.market_selection.capture_binance_regional_rest_diagnostic.urlopen", side_effect=AssertionError("network must not be called")):
+            with self.assertRaisesRegex(PermissionError, "blocked before network"):
+                request_json("https://example.invalid", provider_id="binance_spot_market_data", use_case="internal_analysis")
 
     def test_server_time_schema(self):
         response = {"serverTime": 123456789}
