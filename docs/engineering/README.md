@@ -4,6 +4,8 @@
 - [Contrato de evidencia de eventos externos (Issue #132)](issue-132-event-evidence-contract.md)
 - [Contrato de validación metodológica por horizonte (Issue #133)](issue-133-methodology-contract.md)
 - [Contrato del orquestador de informes de investigación (Issue #130)](issue-130-research-report-contract.md)
+- [Integración de evidencias en informes (Issue #128)](issue-128-evidence-report-integration.md)
+- [Política de puertas de licencia de proveedores (Issue #128)](issue-128-provider-license-gates.md)
 - [Registro de fuentes de eventos externos (Issue #132)](issue-132-source-registry.md)
 **Estado del conjunto:** documentos versionados en `main`; su presencia en la rama principal no equivale por sí sola a aprobación formal de requisitos, decisiones normativas ni arquitectura. Los documentos marcados como borrador/propuesta siguen sujetos a decisión y trazabilidad mediante Issues/PR.
 
