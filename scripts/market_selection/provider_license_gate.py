@@ -45,7 +45,7 @@ def evaluate_provider_use(provider_id: str, use_case: str, authorization_record:
                 "use_case":use_case,"decision":"BLOCK","reason_codes":["PROVIDER_NOT_REVIEWED"],
                 "authorization_evidence_status":"NOT_PROVIDED"}
     baseline_status = baseline[use_case]
-    if provider_id == "binance_spot_market_data" and use_case == "live_technical_test":
+    if provider_id == "binance_spot_market_data" and use_case == "live_technical_test" and authorization_record is None:
         return {"schema_version":"crypto-provider-use-assessment-v1","provider_id":provider_id,
                 "use_case":use_case,"decision":"ALLOW","reason_codes":["TECHNICAL_TEST_ONLY"],
                 "authorization_evidence_status":"NOT_A_COMMERCIAL_LICENSE"}
