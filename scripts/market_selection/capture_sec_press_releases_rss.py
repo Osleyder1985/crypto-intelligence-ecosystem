@@ -620,6 +620,8 @@ def promote_sec_press_release_to_event(
         "source_capture_assessments": {
             "feed": {
                 "capture_status": feed_capture["capture_status"],
+                "network_request_made": feed_capture["network_request_made"],
+                "capture_truncated": feed_capture["capture_truncated"],
                 "source_registry_status": feed_capture["source_registry_status"],
                 "source_registry_entry_sha256": feed_capture["source_registry_entry_sha256"],
                 "source_url": feed_capture["source_url"],
@@ -635,6 +637,8 @@ def promote_sec_press_release_to_event(
             },
             "article": {
                 "capture_status": article_capture["capture_status"],
+                "network_request_made": article_capture["network_request_made"],
+                "capture_truncated": article_capture["capture_truncated"],
                 "source_registry_status": article_capture["source_registry_status"],
                 "source_registry_entry_sha256": article_capture["source_registry_entry_sha256"],
                 "source_url": article_capture["source_url"],
