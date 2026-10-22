@@ -1,50 +1,86 @@
-# Índice de ingeniería
+# Issue #7 — observaciones de volumen cotizado 24 h
 
-**Estado del conjunto:** documentos versionados en `main`; su presencia en la rama principal no equivale por sí sola a aprobación formal de requisitos, decisiones normativas ni arquitectura. Los documentos marcados como borrador/propuesta siguen sujetos a decisión y trazabilidad mediante Issues/PR.
+El capturador `scripts/market_selection/capture_multi_exchange_spot_ticker_probe.py` consulta los tickers Spot públicos de Binance, OKX, Bybit, MEXC, Gate, Bitget y Pionex para BTC/USDT, ETH/USDT y SOL/USDT. Cada respuesta se conserva completa, con SHA-256, bytes, timestamp de captura y timestamp de origen cuando la fuente lo documenta. No usa credenciales ni coloca órdenes.
 
-## Documentos
+## Métrica y semántica
 
-| Documento | Propósito | Estado |
+| Venue | Campo de volumen cotizado | Límite semántico |
 |---|---|---|
-| [Marco maestro](master-framework.md) | Visión, límites, principios, gobernanza, ciclo de vida, arquitectura lógica y decisiones pendientes | Borrador |
-| [Matriz normativa](normative-matrix.md) | Referencias, estado de verificación, aplicabilidad inicial, evidencia y decisiones pendientes | Preliminar |
-| [Catálogo de requisitos y trazabilidad](requirements-traceability-catalog.md) | Requisitos iniciales, NFR, mapa de objetivos y reglas de trazabilidad | Borrador |
-| [Matriz de cierre de aceptación #7/#13](acceptance-closure-matrix-issues-7-13.md) | Descomposición de criterios, evidencia, método de prueba y decisiones pendientes | Propuesta de verificación |
-| [Observaciones de volumen cotizado 24 h — Issue #7](issue-7-quote-volume-observations.md) | Dos capturas reales comparadas para 18 combinaciones venue/par, con hashes verificados y deltas de ventanas móviles | Evidencia exploratoria; no demuestra estabilidad histórica ni constituye ranking |
-| [Sondeo de libros Spot de siete exchanges — Issue #7](issue-7-multi-exchange-probe.md) | Captura read-only de BTC/ETH/SOL cotizados en USDT para Binance, OKX, Bybit, MEXC, Gate, Bitget y Pionex | Cobertura técnica parcial; no es selección de mercado ni aprobación de liquidez |
-| [Metodología de selección spot](spot-market-selection-methodology.md) | Contrato de datos, fórmulas, controles de calidad y decisión reproducible por par | Especificación propuesta |
-| [Evidencia de comisiones Pionex Spot por fills — Issue #18](pionex-fill-fee-evidence.md) | Captura read-only de comisiones históricas por fill; omite IDs y cuerpo privado, marca 100 fills como potencialmente truncados | Herramienta probada; evidencia privada pendiente |
-| [Política fail-closed — Issue #18](issue-18-proposed-decision-policy.md) | Semántica temporal, estados de frescura, comisiones y tamaños sin umbrales inventados | Adoptada para investigación pública Spot; no habilita ejecución |
-| [Matriz consolidada de evidencia — Issue #18](issue-18-evidence-matrix.md) | Evidencia, alcance adoptado y límites del modo de investigación pública | Consolidación; decisión económica INDETERMINATE cuando falten datos críticos |
-| [Aplicabilidad de normas ISO — Issue #18](issue-18-data-quality-standards.md) | ISO 8601 para representación temporal e ISO/IEC 25012 para requisitos/medidas de calidad; ninguna fija un umbral universal de frescura de exchange | Nota de aplicabilidad; no certificación |
-| [Fixtures de frescura en vivo — Issue #18](issue-18-live-freshness-fixtures.md) | Pruebas de PASS/FAIL/INDETERMINATE para política aprobada, timestamps ausentes/futuros y desfase de reloj | Límites solo sintéticos; no son política de producto |
-| [Escenario mínimo común por filtros — Issue #18](issue-18-minimum-common-notional-scenario.md) | Calcula una referencia de frontera con filtros públicos; unidad de Pionex minAmount no documentada, por lo que el escenario queda INDETERMINATE | Hipótesis explícita; no es mínimo común verificado |
-| [Mediciones observadas de frescura — Issue #18](issue-18-freshness-observations-2026-10-22.md) | Veintiún deltas Pionex de siete artefactos CI y limitaciones de inferencia | Muestra descriptiva; no aprueba umbral de producción |
-| [Curvas paramétricas de coste del libro — Issue #18](issue-18-depth-cost-curves.md) | VWAP/slippage acumulado, filtros oficiales de cada símbolo y elegibilidad de tamaño explícitamente indeterminada | Análisis descriptivo; coste total pendiente |
-| [Cobertura de profundidad por proveedor — Issue #18](issue-18-depth-coverage.md) | Límites oficiales de snapshots Binance/Pionex, pesos de API y cobertura parcial | Referencia oficial; captura máxima no equivale a libro completo |
-| [Mediciones temporales Pionex Spot — Issue #18](issue-18-pionex-timing-measurements.md) | Deltas observados de timestamps de actualización/respuesta/captura en artefactos CI; muestra exploratoria, no umbral aprobado | Evidencia medida; política pendiente |
-| [Semántica temporal Binance Spot](binance-market-data-timestamp-semantics.md) | Significado oficial de timestamps, sincronización del libro y límites para evaluar frescura | Evidencia documental; no es política aprobada |
-| [Hoja de ruta](roadmap.md) | Fases, dependencias, puertas de salida, riesgos y evidencias | Propuesta |
-| [Gobernanza y riesgos](governance-and-risk-model.md) | Responsabilidades, dominios de control, Definition of Done, registro inicial de riesgos y puertas de decisión | Propuesta |
+| Binance | `quoteVolume` | Volumen del activo cotizado en la ventana móvil de 24 h. |
+| OKX | `volCcy24h` | Volumen en moneda cotizada para Spot; conservar la unidad y contrato de fuente. |
+| Bybit | `turnover24h` | Importe/turnover de Spot; endpoint puede ser inaccesible desde algunos entornos. |
+| MEXC | `quoteVolume` | La documentación permite que sea `null`; no sustituir ausencia por cero. |
+| Gate | `quote_volume` | Turnover en moneda cotizada. |
+| Bitget | `turnover24h` | Turnover Spot en la moneda cotizada. |
+| Pionex | `amount` | Importe total negociado de 24 h; el contrato del símbolo determina la denominación cotizada. |
 
-## Issues relacionados
+## Interpretación
 
-- [#3 — Gobernanza ISO/IEC](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/issues/3)
-- [#4 — Modelo de ingeniería y ciclo de vida](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/issues/4)
-- [#5 — Clientes web, Android, iOS y escritorio opcional](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/issues/5)
-- [#6 — Plataforma central de datos y API común](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/issues/6)
-- [#7 — Selección reproducible de mercados spot](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/issues/7)
-- [#8 — Arquitectura de referencia y trazabilidad](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/issues/8)
-- [#9 — Evaluación del stack mediante criterios y PoC](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/issues/9)
-- [#10 — Evaluación de alojamiento y costes](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/issues/10)
-- [#11 — Issue rector del marco maestro](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/issues/11)
-- [#13 — Evaluación histórica, ranking, análisis de eventos, liquidez y soportes/resistencias](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/issues/13)
-- [#18 — Frescura, comisiones y coste total](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/issues/18)
+- El valor bruto y el contrato de cada campo se conservan. No se suman ni comparan cifras si el campo falta o su unidad no puede demostrarse.
+- Un ticker móvil de 24 h es una sola observación; no demuestra estabilidad. La estabilidad exige una serie de capturas fechadas o datos de velas históricos y análisis de huecos.
+- La captura se programa cada seis horas y los artefactos se retienen hasta 90 días; eso es una ventana de retención de CI, no almacenamiento histórico permanente ni garantía de disponibilidad.
+- `PASS` describe recepción/parseo de una respuesta, no liquidez ejecutable ni recomendación de inversión. Los umbrales de selección quedan pendientes de decisión y evidencia.
+- Un HTTP 403 se conserva como fallo de acceso; no se cambia de dominio para eludir restricciones.
 
-## Reglas de mantenimiento
+## Primera captura real integrada — 2026-10-22T12:21:04Z
 
-- Cada documento debe enlazar los Issues que motivan sus cambios.
-- Las decisiones aprobadas se registran con evidencia y responsable; las propuestas no se presentan como decisiones vigentes.
-- Los cambios se hacen en ramas y PR; no se edita `main` directamente.
-- Si una referencia normativa cambia de edición o estado, se actualiza la matriz con la fuente oficial y la fecha de consulta.
-- Después de cada cambio estructural, revisar los enlaces internos y este índice.
+Workflow: [Multi-exchange Spot quote-volume probe #39777588072](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/actions/runs/39777588072). Artefacto original: [multi-exchange-spot-quote-volume](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/actions/runs/39777588072/artifacts/12425146770). El workflow y los tests offline terminaron en `success`; la captura de mercado fue `PARTIAL` porque Bybit devolvió HTTP 403 para los tres símbolos.
+
+Valores capturados por el campo de turnover cotizado, expresados en USDT según la semántica documentada de cada proveedor:
+
+| Par | Binance | OKX | Bybit | MEXC | Gate | Bitget | Pionex |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| BTC/USDT | 1,850,653,961.12149870 | 623,948,411.148934552 | INDETERMINATE (403) | 529,563,572.28 | 1,016,564,575.3342165 | 382,658,936.756441 | 2,690,638,425.45706367 |
+| ETH/USDT | 747,853,881.40297200 | 399,855,019.22415134 | INDETERMINATE (403) | 223,899,206 | 354,009,552.97876 | 153,921,805.8293 | 452,122,292.61975092 |
+| SOL/USDT | 231,856,434.14443000 | 68,857,917.3333594 | INDETERMINATE (403) | 70,275,763.63 | 97,436,005.46428 | 41,066,662.7077 | 42,216,316.01379989 |
+
+## Lectura correcta de esta muestra
+
+- Se obtuvieron **18/21 valores de turnover válidos** y **3/21 no disponibles** por HTTP 403 de Bybit. El 403 no equivale a volumen cero ni prueba inexistencia del par.
+- Las solicitudes se realizaron secuencialmente en una ventana corta; los tickers de 24 h son ventanas móviles que no terminan exactamente al mismo instante. Esta tabla es descriptiva, no un ranking aprobado.
+- Gate no devolvió un timestamp de origen en el campo extraído de esta respuesta; se conserva la hora de captura y el timestamp de origen queda ausente, no inventado.
+- La dispersión entre proveedores no debe interpretarse automáticamente como discrepancia de datos: las ventanas móviles, definiciones y mecanismos de agregación pueden diferir. Antes de comparar/ordenar hay que verificar la semántica de cada campo y acumular una serie temporal.
+- Una captura aislada no permite calcular estabilidad de volumen en ventanas mayores. La tarea siguiente es recopilar ejecuciones periódicas, medir huecos/cobertura y contrastar las definiciones de volumen con datos históricos oficiales.
+
+
+## Segunda observación real y comparación exploratoria — 2026-10-22
+
+Se analizó el segundo artefacto real posterior a la integración de PR #108:
+
+- Primera observación: [workflow #39777588072, artefacto #12425146770](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/actions/runs/39777588072/artifacts/12425146770), creada a las 12:21:04.875Z.
+- Segunda observación: [workflow #39789741314, artefacto #12431375194](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/actions/runs/39789741314/artifacts/12431375194), creada a las 13:46:07.098Z.
+- Separación entre creaciones: aproximadamente 85 minutos y 2 segundos.
+- Integridad comprobada de forma local para los artefactos descargados: 21/21 respuestas de cada captura conservan un cuerpo cuya longitud coincide con `response_bytes` y cuyo SHA-256 coincide con `response_sha256`.
+- Cada captura tuvo 18/21 valores de turnover válidos y 3/21 no disponibles por HTTP 403 de Bybit. No se infiere cero ni se intenta eludir el bloqueo.
+- Las tablas comparan solo los 18 pares de observaciones válidas en ambas capturas. Los porcentajes son el cambio entre dos valores de ventana móvil de 24 h; **no son el volumen negociado durante esos 85 minutos**.
+
+| Par | Exchange | Turnover 24 h anterior (USDT) | Turnover 24 h nuevo (USDT) | Cambio observado |
+|---|---|---:|---:|---:|
+| BTC/USDT | Binance | 1,850,653,961.12 | 1,866,250,913.92 | +0.84% |
+| BTC/USDT | Bitget | 382,658,936.76 | 370,115,768.74 | -3.28% |
+| BTC/USDT | Gate | 1,016,564,575.33 | 1,004,393,827.20 | -1.20% |
+| BTC/USDT | MEXC | 529,563,572.28 | 534,833,981.15 | +1.00% |
+| BTC/USDT | OKX | 623,948,411.15 | 617,746,577.22 | -0.99% |
+| BTC/USDT | Pionex | 2,690,638,425.46 | 2,721,790,946.44 | +1.16% |
+| ETH/USDT | Binance | 747,853,881.40 | 712,928,579.49 | -4.67% |
+| ETH/USDT | Bitget | 153,921,805.83 | 149,272,959.09 | -3.02% |
+| ETH/USDT | Gate | 354,009,552.98 | 338,245,124.18 | -4.45% |
+| ETH/USDT | MEXC | 223,899,206.00 | 215,813,801.87 | -3.61% |
+| ETH/USDT | OKX | 399,855,019.22 | 381,482,848.11 | -4.59% |
+| ETH/USDT | Pionex | 452,122,292.62 | 436,290,676.13 | -3.50% |
+| SOL/USDT | Binance | 231,856,434.14 | 225,468,242.78 | -2.76% |
+| SOL/USDT | Bitget | 41,066,662.71 | 39,832,350.04 | -3.01% |
+| SOL/USDT | Gate | 97,436,005.46 | 94,451,755.79 | -3.06% |
+| SOL/USDT | MEXC | 70,275,763.63 | 68,490,770.27 | -2.54% |
+| SOL/USDT | OKX | 68,857,917.33 | 65,787,091.46 | -4.46% |
+| SOL/USDT | Pionex | 42,216,316.01 | 41,194,132.61 | -2.42% |
+
+### Interpretación
+
+1. En esta pareja de capturas, los seis venues accesibles muestran un descenso observado del turnover de ETH/USDT y SOL/USDT; BTC/USDT varía según venue. Eso describe dos ventanas móviles, no una causa ni un ranking estable.
+2. La dispersión de los cambios entre proveedores no permite concluir cuál es el mercado más líquido: las ventanas, agregación, timestamps y semántica de campos no son necesariamente idénticos.
+3. Gate no aporta timestamp de origen en estos registros; la hora de captura no sustituye a la hora del dato. Bybit continúa sin evidencia accesible desde el runner de CI.
+4. Dos observaciones separadas por unos 85 minutos siguen siendo insuficientes para estimar estabilidad a largo plazo, percentiles, comportamiento en distintos regímenes o cobertura de fallos.
+5. La siguiente verificación es analizar una serie con muchas observaciones programadas, medir huecos y cobertura por venue/par, validar semántica temporal y solo después definir reglas de comparabilidad y selección. No se asignan umbrales numéricos sin justificación y aprobación.
+
+La nueva captura se ejecutó en modo público read-only. La ejecución del workflow fue `success`, pero el resultado de captura fue `PARTIAL` debido a Bybit; ambos estados deben mantenerse separados.

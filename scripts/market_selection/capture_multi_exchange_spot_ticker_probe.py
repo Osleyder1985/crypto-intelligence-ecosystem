@@ -42,35 +42,74 @@ def build_requests():
             requests.append({"exchange":exchange,"asset":market["asset"],"symbol":symbol,"quote_currency":"USDT","url":url})
     return requests
 
-def extract_quote_volume(exchange, payload):
+def _matching_ticker(exchange, payload, expected_symbol):
+    """Return exactly one ticker whose native symbol matches the requested market."""
+    if not isinstance(expected_symbol, str) or not expected_symbol.strip():
+        raise ValueError("expected_symbol must be a non-empty string")
     if exchange == "gate":
-        if not isinstance(payload, list) or not payload: raise ValueError("Gate response has no ticker")
-        return payload[0].get("quote_volume"), payload[0].get("time"), "quote_volume: quote-currency turnover"
-    if not isinstance(payload, dict): raise ValueError("top-level response must be an object")
-    if exchange == "binance": return payload.get("quoteVolume"), payload.get("closeTime"), "quoteVolume: quote-asset turnover over rolling 24h"
+        if not isinstance(payload, list):
+            raise ValueError("Gate response must be a ticker list")
+        rows = payload
+        symbol_key = "currency_pair"
+    elif exchange in ("binance", "mexc"):
+        if not isinstance(payload, dict):
+            raise ValueError("top-level response must be an object")
+        rows = [payload]
+        symbol_key = "symbol"
+    else:
+        if not isinstance(payload, dict):
+            raise ValueError("top-level response must be an object")
+        if exchange == "okx":
+            if payload.get("code") != "0":
+                raise ValueError("OKX response code was not 0")
+            rows = payload.get("data")
+            symbol_key = "instId"
+        elif exchange == "bybit":
+            if payload.get("retCode") != 0:
+                raise ValueError("Bybit retCode was not 0")
+            result = payload.get("result")
+            rows = result.get("list") if isinstance(result, dict) else None
+            symbol_key = "symbol"
+        elif exchange == "bitget":
+            if payload.get("code") != "00000":
+                raise ValueError("Bitget response code was not 00000")
+            rows = payload.get("data")
+            symbol_key = "symbol"
+        elif exchange == "pionex":
+            if payload.get("result") is not True:
+                raise ValueError("Pionex response result was not true")
+            data = payload.get("data")
+            rows = data.get("tickers") if isinstance(data, dict) else None
+            symbol_key = "symbol"
+        else:
+            raise ValueError("unsupported exchange: " + str(exchange))
+    if not isinstance(rows, list) or not rows:
+        raise ValueError(exchange + " response has no ticker rows")
+    matches = [row for row in rows if isinstance(row, dict) and row.get(symbol_key) == expected_symbol]
+    if len(matches) != 1:
+        raise ValueError(
+            f"{exchange} expected exactly one ticker for {expected_symbol}; found {len(matches)}"
+        )
+    return matches[0]
+
+
+def extract_quote_volume(exchange, payload, expected_symbol):
+    """Extract quote turnover only after validating the exact native market identity."""
+    row = _matching_ticker(exchange, payload, expected_symbol)
+    if exchange == "gate":
+        return row.get("quote_volume"), row.get("time"), "quote_volume: quote-currency turnover"
+    if exchange == "binance":
+        return row.get("quoteVolume"), row.get("closeTime"), "quoteVolume: quote-asset turnover over rolling 24h"
     if exchange == "okx":
-        if payload.get("code") != "0": raise ValueError("OKX response code was not 0")
-        rows = payload.get("data")
-        if not isinstance(rows,list) or not rows: raise ValueError("OKX response has no ticker")
-        return rows[0].get("volCcy24h"), rows[0].get("ts"), "volCcy24h: quote-currency volume for Spot"
+        return row.get("volCcy24h"), row.get("ts"), "volCcy24h: quote-currency volume for Spot"
     if exchange == "bybit":
-        if payload.get("retCode") != 0: raise ValueError("Bybit retCode was not 0")
-        result = payload.get("result")
-        rows = result.get("list") if isinstance(result,dict) else None
-        if not isinstance(rows,list) or not rows: raise ValueError("Bybit response has no ticker list")
-        return rows[0].get("turnover24h"), payload.get("time"), "turnover24h: quote-currency turnover for Spot"
-    if exchange == "mexc": return payload.get("quoteVolume"), payload.get("closeTime"), "quoteVolume: quote-asset volume when supplied by endpoint"
+        return row.get("turnover24h"), payload.get("time"), "turnover24h: quote-currency turnover for Spot"
+    if exchange == "mexc":
+        return row.get("quoteVolume"), row.get("closeTime"), "quoteVolume: quote-asset volume when supplied by endpoint"
     if exchange == "bitget":
-        if payload.get("code") != "00000": raise ValueError("Bitget response code was not 00000")
-        rows = payload.get("data")
-        if not isinstance(rows,list) or not rows: raise ValueError("Bitget response has no ticker list")
-        return rows[0].get("turnover24h"), rows[0].get("ts"), "turnover24h: quote-currency turnover for Spot"
+        return row.get("turnover24h"), row.get("ts"), "turnover24h: quote-currency turnover for Spot"
     if exchange == "pionex":
-        if payload.get("result") is not True: raise ValueError("Pionex response result was not true")
-        data = payload.get("data")
-        rows = data.get("tickers") if isinstance(data,dict) else None
-        if not isinstance(rows,list) or not rows: raise ValueError("Pionex response has no tickers")
-        return rows[0].get("amount"), rows[0].get("time",payload.get("timestamp")), "amount: documented 24h total trading amount; verify quote denomination from symbol"
+        return row.get("amount"), row.get("time", payload.get("timestamp")), "amount: documented 24h total trading amount; verify quote denomination from symbol"
     raise ValueError("unsupported exchange: " + str(exchange))
 
 def capture_one(spec):
@@ -82,7 +121,7 @@ def capture_one(spec):
         record.update(http_status=status,captured_at_utc=now_utc(),response_bytes=len(raw),response_sha256=hashlib.sha256(raw).hexdigest(),response_base64=base64.b64encode(raw).decode("ascii"))
         payload=json.loads(raw.decode("utf-8")); record["parsed_json"]=payload
         if status != 200: raise ValueError("expected HTTP 200, received " + str(status))
-        raw_volume,source_ts,semantics=extract_quote_volume(spec["exchange"],payload)
+        raw_volume,source_ts,semantics=extract_quote_volume(spec["exchange"],payload,spec["symbol"])
         record.update(source_timestamp_raw=source_ts,quote_volume_raw=raw_volume,volume_semantics=semantics,capture_status="PASS")
         if raw_volume is not None:
             try:
