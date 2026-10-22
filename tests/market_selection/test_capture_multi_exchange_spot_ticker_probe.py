@@ -1,11 +1,12 @@
 import unittest
 from unittest.mock import patch
 from scripts.market_selection.capture_multi_exchange_spot_ticker_probe import PROVIDER_IDS, build_requests, capture_one, extract_quote_volume
+from scripts.market_selection.provider_license_gate import SCHEMA_VERSION
 
 class QuoteVolumeProbeTests(unittest.TestCase):
     @staticmethod
     def authorization_record(provider_id):
-        return {"schema_version":"crypto-provider-authorization-v1","provider_id":provider_id,"status":"APPROVED","authorized_use_cases":["persistent_storage"],"terms_url":"https://example.com/terms","terms_sha256":"a"*64,"reviewed_at":"2026-10-22T00:00:00Z","reviewed_by":"offline-test-fixture"}
+        return {"schema_version":SCHEMA_VERSION,"provider_id":provider_id,"status":"APPROVED","authorized_use_cases":["persistent_storage"],"terms_url":"https://example.com/terms","terms_sha256":"a"*64,"reviewed_at":"2026-10-22T00:00:00Z","reviewed_by":"offline-test-fixture"}
 
     def test_missing_authorization_blocks_before_network_for_every_venue(self):
         with patch("scripts.market_selection.capture_multi_exchange_spot_ticker_probe.urlopen", side_effect=AssertionError("network must not be called")):
