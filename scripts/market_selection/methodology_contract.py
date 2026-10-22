@@ -96,11 +96,13 @@ def validate_methodology(methodology: object) -> dict:
         raise ValueError("horizons must define exactly short, medium, and long")
     normalized_horizons = {}
     durations = []
-    for horizon in sorted(HORIZONS):
+    for horizon in ("short", "medium", "long"):
         spec = horizons[horizon]
         if not isinstance(spec, dict):
             raise ValueError(f"horizons.{horizon} must be an object")
         seconds = _finite_number(spec.get("target_window_seconds"), f"horizons.{horizon}.target_window_seconds", minimum=1)
+        if int(seconds) != seconds:
+            raise ValueError(f"horizons.{horizon}.target_window_seconds must be a whole number of seconds")
         target = _text(spec.get("target"), f"horizons.{horizon}.target")
         unit = _text(spec.get("target_unit"), f"horizons.{horizon}.target_unit")
         normalized_horizons[horizon] = {
@@ -228,6 +230,8 @@ def validate_prediction_record(record: object, methodology: object) -> dict:
         raise ValueError("data_as_of cannot be after generated_at")
     if train_end >= generated:
         raise ValueError("model_training_data_end must precede generated_at")
+    if train_end > data_as_of:
+        raise ValueError("model_training_data_end cannot be after data_as_of")
     if target_start <= generated:
         raise ValueError("target_window_start must be after generated_at")
     if target_end <= target_start:
@@ -240,7 +244,8 @@ def validate_prediction_record(record: object, methodology: object) -> dict:
     features = record.get("features")
     if not isinstance(features, list) or not features:
         raise ValueError("prediction must include feature observations")
-    allowed_ids = {item["feature_id"] for item in method["features"]}
+    declared_features = {item["feature_id"]: item for item in method["features"]}
+    allowed_ids = set(declared_features)
     seen = set()
     normalized_features = []
     for index, feature in enumerate(features):
@@ -252,6 +257,13 @@ def validate_prediction_record(record: object, methodology: object) -> dict:
         if feature_id in seen:
             raise ValueError(f"duplicate prediction feature: {feature_id}")
         seen.add(feature_id)
+        declaration = declared_features[feature_id]
+        source_id = _text(feature.get("source_id"), f"features[{index}].source_id")
+        if source_id != declaration["source_id"]:
+            raise ValueError(f"feature {feature_id} source_id does not match methodology")
+        transformation_version = _text(feature.get("transformation_version"), f"features[{index}].transformation_version")
+        if transformation_version != declaration["transformation_version"]:
+            raise ValueError(f"feature {feature_id} transformation_version does not match methodology")
         observed = parse_timestamp(feature.get("observed_at"), f"features[{index}].observed_at")
         captured = parse_timestamp(feature.get("captured_at"), f"features[{index}].captured_at")
         if captured > data_as_of or observed > data_as_of:
@@ -260,10 +272,14 @@ def validate_prediction_record(record: object, methodology: object) -> dict:
             raise ValueError(f"feature {feature_id} capture precedes observation")
         normalized_features.append({
             "feature_id": feature_id,
-            "source_id": _text(feature.get("source_id"), f"features[{index}].source_id"),
+            "source_id": source_id,
+            "transformation_version": transformation_version,
             "observed_at": observed.isoformat().replace("+00:00", "Z"),
             "captured_at": captured.isoformat().replace("+00:00", "Z"),
         })
+    if seen != allowed_ids:
+        missing = sorted(allowed_ids - seen)
+        raise ValueError(f"prediction is missing declared features: {missing}")
     output = record.get("output")
     if not isinstance(output, dict):
         raise ValueError("output must be an object")
