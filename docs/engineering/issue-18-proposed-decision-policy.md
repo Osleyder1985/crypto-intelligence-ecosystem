@@ -1,4 +1,4 @@
-# Política propuesta de frescura y coste — Issue #18
+# Política adoptada de frescura y coste — Issue #18
 
 - **Estado:** ADOPTADA COMO POLÍTICA BASE DEL MODO DE INVESTIGACIÓN PÚBLICA SPOT.
 - **Alcance:** análisis comparativo público y reproducible; no evalúa rentabilidad personalizada de una cuenta ni autoriza ejecución.
