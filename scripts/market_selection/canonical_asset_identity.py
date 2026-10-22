@@ -6,6 +6,7 @@ reviewed identity evidence; it does not query registries or infer identities fro
 from __future__ import annotations
 
 from datetime import datetime
+import base64
 import hashlib
 import json
 import re
@@ -142,6 +143,13 @@ def resolve_asset_identity(
     publisher = _text(source.get("publisher"), "identity_evidence.source.publisher")
     captured_at = _timestamp(source.get("captured_at"), "identity_evidence.source.captured_at")
     content_sha256 = _sha256(source.get("content_sha256"), "identity_evidence.source.content_sha256")
+    content_base64 = _text(source.get("content_base64"), "identity_evidence.source.content_base64")
+    try:
+        source_bytes = base64.b64decode(content_base64, validate=True)
+    except (ValueError, base64.binascii.Error) as exc:
+        raise ValueError("identity_evidence.source.content_base64 must be valid base64") from exc
+    if hashlib.sha256(source_bytes).hexdigest() != content_sha256:
+        raise ValueError("identity_evidence.source.content_sha256 does not match content_base64")
 
     try:
         identity_evidence_record_sha256 = hashlib.sha256(
@@ -171,6 +179,7 @@ def resolve_asset_identity(
             "publisher": publisher,
             "captured_at": captured_at,
             "content_sha256": content_sha256,
+            "content_base64": content_base64,
         },
     }
 
