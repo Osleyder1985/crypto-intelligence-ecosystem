@@ -23,7 +23,7 @@ except ModuleNotFoundError:
     from provider_license_gate import evaluate_artifact_use
 
 INPUT_SCHEMA = "binance-spot-ohlcv-capture-v1"
-REPORT_SCHEMA = "crypto-asset-research-report-v1"
+REPORT_SCHEMA = "crypto-asset-research-report-v2"
 HORIZONS = ("short", "medium", "long")
 
 
