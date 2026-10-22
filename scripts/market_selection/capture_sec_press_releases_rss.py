@@ -253,6 +253,7 @@ def _request(
         result = _blocked_result(schema, state, captured_at, [], requested_url)
         result["capture_status"] = "NETWORK_ERROR"
         result["network_request_made"] = True
+        result["reason_codes"] = ["NETWORK_REQUEST_FAILED"]
         result["errors"] = [{"error_type": type(exc).__name__, "reason_code": "NETWORK_REQUEST_FAILED"}]
         return result, None, None, {}
 
@@ -262,7 +263,14 @@ def _request(
             status_code = response.getcode()
         status_code = int(status_code)
         headers = _safe_headers(getattr(response, "headers", None))
-        raw = response.read()  # Read to EOF; no local response-size cap.
+        try:
+            raw = response.read()  # Read to EOF; no local response-size cap.
+        except (URLError, TimeoutError, OSError) as exc:
+            result = _blocked_result(schema, state, captured_at, ["NETWORK_RESPONSE_READ_FAILED"], requested_url)
+            result["capture_status"] = "NETWORK_ERROR"
+            result["network_request_made"] = True
+            result["errors"] = [{"error_type": type(exc).__name__, "reason_code": "NETWORK_RESPONSE_READ_FAILED"}]
+            return result, None, None, {}
     finally:
         close = getattr(response, "close", None)
         if callable(close):
@@ -273,6 +281,7 @@ def _request(
             schema, state, captured_at, requested_url, status_code, headers, raw, "HTTP_ERROR",
             errors=[{"error_type": "HTTPStatus", "reason_code": "HTTP_STATUS_NOT_SUCCESS"}],
         )
+        result["reason_codes"] = ["HTTP_STATUS_NOT_SUCCESS"]
         return result, raw, status_code, headers
     return None, raw, status_code, headers
 
@@ -380,6 +389,7 @@ def capture_sec_press_releases_rss(
             FEED_CAPTURE_SCHEMA, state, timestamp, source["source_url"], status_code or 200, response_headers, raw or b"", "PARSE_ERROR",
             errors=[{"error_type": "RSSParseError", "reason_code": "RSS_DOCUMENT_INVALID"}],
         )
+        result["reason_codes"] = ["RSS_DOCUMENT_INVALID"]
         return result
 
     return _response_capture(
