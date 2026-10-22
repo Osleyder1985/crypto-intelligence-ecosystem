@@ -11,6 +11,7 @@ from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 
 from data_contract import sha256_hex, utc_now_iso
+from scripts.market_selection.provider_license_gate import evaluate_provider_use
 
 _SYMBOL_RE = re.compile(r"^[A-Z0-9]+_[A-Z0-9]+$")
 
@@ -19,7 +20,10 @@ class PionexReadError(RuntimeError):
     """Public Pionex endpoint failed or returned an invalid response."""
 
 
-def _default_http_get(url: str, timeout: float) -> bytes:
+def _default_http_get(url: str, timeout: float, authorization_record: dict | None = None, use_case: str = "internal_analysis") -> bytes:
+    assessment = evaluate_provider_use("pionex_spot_market_data", use_case, authorization_record)
+    if assessment["decision"] != "ALLOW":
+        raise PermissionError("Pionex public reader blocked before network: " + ",".join(assessment["reason_codes"]))
     request = Request(url, headers={"Accept": "application/json", "User-Agent": "crypto-intelligence-ecosystem/0.1"})
     with urlopen(request, timeout=timeout) as response:
         status = getattr(response, "status", 200)
@@ -42,12 +46,17 @@ class PionexPublicSpotReader:
         http_get: Callable[[str, float], bytes] | None = None,
         clock: Callable[[], str] = utc_now_iso,
         timeout_seconds: float = 10.0,
+        authorization_record: dict | None = None,
+        use_case: str = "internal_analysis",
     ) -> None:
         if isinstance(timeout_seconds, bool) or not isinstance(timeout_seconds, (int, float)) or not math.isfinite(timeout_seconds) or timeout_seconds <= 0:
             raise ValueError("timeout_seconds must be finite and positive")
-        self._http_get = http_get or _default_http_get
+        self._authorization_record = authorization_record
+        self._use_case = use_case
+        self._http_get = http_get or (lambda url, timeout: _default_http_get(url, timeout, self._authorization_record, self._use_case))
         self._clock = clock
         self._timeout = float(timeout_seconds)
+        self._last_provider_assessment: dict[str, object] | None = None
 
     @staticmethod
     def _symbol(symbol: str) -> tuple[str, str, str]:
@@ -63,6 +72,13 @@ class PionexPublicSpotReader:
             "symbols": symbol,
             "type": "SPOT",
         })
+        try:
+            assessment = evaluate_provider_use("pionex_spot_market_data", self._use_case, self._authorization_record)
+        except (TypeError, ValueError) as exc:
+            raise PionexReadError("provider use blocked: invalid authorization record") from exc
+        self._last_provider_assessment = assessment
+        if assessment["decision"] != "ALLOW":
+            raise PionexReadError("provider use blocked before network: " + ",".join(assessment["reason_codes"]))
         try:
             raw = self._http_get(url, self._timeout)
         except (HTTPError, URLError, TimeoutError, OSError) as exc:
@@ -135,5 +151,6 @@ class PionexPublicSpotReader:
                 "Availability does not assess liquidity, fees, asset risk or profitability",
             ],
             "raw_payload_retained": False,
+            "provider_use_assessment": self._last_provider_assessment,
             "detail": detail,
         }
