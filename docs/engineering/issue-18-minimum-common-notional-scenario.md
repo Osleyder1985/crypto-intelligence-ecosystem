@@ -17,7 +17,7 @@ Fuentes oficiales:
 1. Verifica HTTP 200, bytes preservados, SHA-256 y que el JSON parseado coincide con la respuesta original para metadata y libros.
 2. Extrae el símbolo Pionex y los filtros Binance del mismo artefacto, no de cifras hardcodeadas por par.
 3. Calcula el mínimo base que satisface los mínimos de notional/cantidad conocidos de ambos venues, usando el mejor ask de cada snapshot, y redondea hacia arriba al `LOT_SIZE.stepSize` de Binance para mantener una cantidad común comparable.
-4. Simula consumo de asks para compra y bids para venta hasta la cantidad calculada. Si falta profundidad, el escenario queda `INDETERMINATE`; no extrapola.
+4. Deriva la cantidad usando el menor precio top-of-book entre bid y ask de cada venue para asegurar que el mínimo de notional se cumple en ambos sentidos. Simula consumo de asks para compra y bids para venta hasta la cantidad calculada. Si falta profundidad, el escenario queda `INDETERMINATE`; no extrapola.
 5. Añade por separado una tarifa pública de referencia por fill (Pionex 5 bps; Binance Regular User 10 bps). Calcula un coste round-trip estático orientativo solo si ambas direcciones se cubren en el snapshot.
 
 ## Interpretación y límites

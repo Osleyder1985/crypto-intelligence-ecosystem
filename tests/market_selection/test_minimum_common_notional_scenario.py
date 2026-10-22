@@ -64,6 +64,8 @@ class MinimumCommonNotionalTests(unittest.TestCase):
         self.assertAlmostEqual(item["pionex"]["static_snapshot_round_trip_cost_quote"], 0.012)
         self.assertAlmostEqual(item["binance"]["static_snapshot_round_trip_cost_quote"], 0.022)
         self.assertFalse(item["account_effective_fee_verified"])
+        self.assertEqual(item["pionex"]["public_fee_reference"]["observed_at_utc"], "2026-10-22")
+        self.assertEqual(item["binance"]["public_fee_reference"]["observed_at_utc"], "2026-10-22")
         self.assertFalse(item["orders_submitted"])
 
     def test_insufficient_captured_depth_is_indeterminate_without_extrapolation(self):

@@ -165,16 +165,16 @@ def analyze_artifact(artifact: dict[str, Any]) -> dict[str, Any]:
         p_min_quote = _d(p_symbol.get("minAmount"), "Pionex minAmount")
         p_min_base = _d(p_symbol.get("minTradeSize"), "Pionex minTradeSize")
         b_min_base, b_step, b_min_quote = _binance_constraints(b_symbol)
-        p_required_base = max(p_min_base, p_min_quote / p_asks[0][0])
-        b_required_base = max(b_min_base, b_min_quote / b_asks[0][0])
+        p_required_base = max(p_min_base, p_min_quote / min(p_bids[0][0], p_asks[0][0]))
+        b_required_base = max(b_min_base, b_min_quote / min(b_bids[0][0], b_asks[0][0]))
         raw_common_base = max(p_required_base, b_required_base)
         common_base = (raw_common_base / b_step).to_integral_value(rounding=ROUND_CEILING) * b_step
         p_buy = _fill(p_asks, common_base, p_mid, "buy", PUBLIC_FEE_REFERENCE["pionex"]["rate_bps_per_fill"])
         p_sell = _fill(p_bids, common_base, p_mid, "sell", PUBLIC_FEE_REFERENCE["pionex"]["rate_bps_per_fill"])
         b_buy = _fill(b_asks, common_base, b_mid, "buy", PUBLIC_FEE_REFERENCE["binance"]["rate_bps_per_fill"])
         b_sell = _fill(b_bids, common_base, b_mid, "sell", PUBLIC_FEE_REFERENCE["binance"]["rate_bps_per_fill"])
-        p_valid = common_base >= p_min_base and common_base * p_asks[0][0] >= p_min_quote
-        b_valid = common_base >= b_min_base and common_base % b_step == 0 and common_base * b_asks[0][0] >= b_min_quote
+        p_valid = common_base >= p_min_base and common_base * p_asks[0][0] >= p_min_quote and common_base * p_bids[0][0] >= p_min_quote
+        b_valid = common_base >= b_min_base and common_base % b_step == 0 and common_base * b_asks[0][0] >= b_min_quote and common_base * b_bids[0][0] >= b_min_quote
         for venue, result in (("pionex", p_buy), ("binance", b_buy)):
             if result["status"] != "PASS":
                 p_valid = False if venue == "pionex" else p_valid
@@ -201,11 +201,23 @@ def analyze_artifact(artifact: dict[str, Any]) -> dict[str, Any]:
                 "binance_minimums_satisfied": b_valid,
             },
             "pionex": {
+                "public_fee_reference": {
+                    "rate_bps_per_fill": float(PUBLIC_FEE_REFERENCE["pionex"]["rate_bps_per_fill"]),
+                    "source": PUBLIC_FEE_REFERENCE["pionex"]["source"],
+                    "observed_at_utc": PUBLIC_FEE_REFERENCE["pionex"]["observed_at_utc"],
+                    "schedule": PUBLIC_FEE_REFERENCE["pionex"]["schedule"],
+                },
                 "best_ask_reference_notional": float(common_base * p_asks[0][0]),
                 "buy": p_buy, "sell": p_sell,
                 "static_snapshot_round_trip_cost_quote": p_round_trip,
             },
             "binance": {
+                "public_fee_reference": {
+                    "rate_bps_per_fill": float(PUBLIC_FEE_REFERENCE["binance"]["rate_bps_per_fill"]),
+                    "source": PUBLIC_FEE_REFERENCE["binance"]["source"],
+                    "observed_at_utc": PUBLIC_FEE_REFERENCE["binance"]["observed_at_utc"],
+                    "schedule": PUBLIC_FEE_REFERENCE["binance"]["schedule"],
+                },
                 "best_ask_reference_notional": float(common_base * b_asks[0][0]),
                 "buy": b_buy, "sell": b_sell,
                 "static_snapshot_round_trip_cost_quote": b_round_trip,

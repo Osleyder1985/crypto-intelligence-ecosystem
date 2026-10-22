@@ -110,6 +110,8 @@ jobs:
           assert len(scenario["results"]) == 3
           assert all(item["orders_submitted"] is False for item in scenario["results"])
           assert all(item["account_effective_fee_verified"] is False for item in scenario["results"])
+          assert all(item["pionex"]["public_fee_reference"]["observed_at_utc"] == "2026-10-22" for item in scenario["results"])
+          assert all(item["binance"]["public_fee_reference"]["observed_at_utc"] == "2026-10-22" for item in scenario["results"])
           curves = json.loads(Path("artifacts/depth-cost-curves-1.json").read_text(encoding="utf-8"))
           assert curves["schema_version"] == "public-depth-cost-curves-v1"
           assert curves["decision_status"] == "INDETERMINATE"
