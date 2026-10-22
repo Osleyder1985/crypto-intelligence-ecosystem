@@ -62,6 +62,9 @@ def normalize_kline(row, symbol: str, interval: str, captured_at_utc: str) -> di
         raise ValueError("kline timestamps and trade count must be integers") from exc
     if open_time < 0 or close_time < open_time or trade_count < 0:
         raise ValueError("kline timestamps or trade count are invalid")
+    expected_close_time = next_open_time(open_time, interval) - 1
+    if close_time != expected_close_time:
+        raise ValueError("kline close time does not match the interval boundary")
     open_price = _decimal(row[1], "open")
     high_price = _decimal(row[2], "high")
     low_price = _decimal(row[3], "low")

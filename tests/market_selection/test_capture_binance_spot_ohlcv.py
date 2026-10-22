@@ -22,6 +22,12 @@ class BinanceSpotOHLCVTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "OHLC high/low envelope"):
             normalize_kline(row, "BTCUSDT", "1m", "2026-10-22T00:01:00Z")
 
+
+    def test_rejects_close_time_that_does_not_match_interval(self):
+        row = [0, "10", "12", "9", "11", "5", 59_998, "55", 17, "2", "22", "0"]
+        with self.assertRaisesRegex(ValueError, "close time does not match"):
+            normalize_kline(row, "BTCUSDT", "1m", "2026-10-22T00:01:00Z")
+
     def test_rejects_nonfinite_and_negative_volume(self):
         row = [0, "10", "12", "9", "11", "-1", 59_999, "55", 17, "2", "22", "0"]
         with self.assertRaisesRegex(ValueError, "non-negative"):
