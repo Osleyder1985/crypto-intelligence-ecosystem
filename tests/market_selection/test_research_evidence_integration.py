@@ -231,6 +231,23 @@ class ResearchEvidenceIntegrationTests(unittest.TestCase):
                     evaluation_as_of="2026-10-21T00:00:00Z",
                 )
 
+    def test_tampered_event_capture_body_is_blocked(self):
+        ev = event()
+        ev["source_capture_assessments"]["article"]["raw_response_base64"] = base64.b64encode(b"tampered article bytes").decode("ascii")
+        with patch.dict(EVENT_SOURCE_REGISTRY["sources"], {"sec_press_releases": approved_event_source()}):
+            with self.assertRaisesRegex(PermissionError, "raw response SHA-256 mismatch"):
+                enrich_research_report(
+                    report(),
+                    events=[{
+                        "event": ev,
+                        "target_entity": {"id_type": "coingecko_id", "id": "example-asset"},
+                        "movement_window": {"start": "2026-10-20T09:00:00Z", "end": "2026-10-20T11:00:00Z"},
+                    }],
+                    observations=[], methodology=methodology(),
+                    asset={"stable_id": "example-asset", "category": "smart_contract_token"},
+                    evaluation_as_of="2026-10-21T00:00:00Z",
+                )
+
     def test_event_from_terms_pending_source_is_blocked(self):
         ev = event()
         with self.assertRaisesRegex(PermissionError, "event source registry is not approved"):
