@@ -24,13 +24,13 @@ Fuentes oficiales:
 
 La ejecución [39727204612](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/actions/runs/39727204612/artifacts/12404095553) capturó 12/12 registros, ejecutó el análisis dos veces y comparó ambos JSON byte a byte. Los tres escenarios de frontera quedaron estructuralmente cubiertos en el snapshot:
 
-| Par | Cantidad base común | Notional Pionex al mejor ask | Coste round-trip Pionex | Notional Binance al mejor ask | Coste round-trip Binance |
+| Par | Cantidad base común | Notional Pionex al mejor ask | Coste Pionex (USDT / bps) | Notional Binance al mejor ask | Coste Binance (USDT / bps) |
 |---|---:|---:|---:|---:|---:|
-| BTC/USDT | 0,00013 BTC | 10,7603613 USDT | 0,01076166 USDT | 10,7625518 USDT | 0,02152640 USDT |
-| ETH/USDT | 0,0041 ETH | 10,008674 USDT | 0,01004965 USDT | 10,008674 USDT | 0,02005831 USDT |
-| SOL/USDT | 0,096 SOL | 10,09536 USDT | 0,01105488 USDT | 10,09536 USDT | 0,02114976 USDT |
+| BTC/USDT | 0,00013 BTC | 10,7603613 USDT | 0,01076166 / 10,0012 | 10,7625518 USDT | 0,02152640 / 20,0012 |
+| ETH/USDT | 0,0041 ETH | 10,008674 USDT | 0,01004965 / 10,0409 | 10,008674 USDT | 0,02005831 / 20,0409 |
+| SOL/USDT | 0,096 SOL | 10,09536 USDT | 0,01105488 / 10,9505 | 10,09536 USDT | 0,02114976 / 20,95 |
 
-Estos costes combinan la diferencia bid/ask e impacto observados en el libro con la tarifa pública por fill (5 bps Pionex, 10 bps Binance). El round-trip supone compra y venta en el mismo snapshot estático. No incluye movimiento de precio entre fills, latencia de ejecución, descuentos de cuenta, componentes fiscales/especiales ni redondeos de comisión; no es beneficio/pérdida esperado ni una garantía de ejecución. El resultado global del artefacto sigue `INDETERMINATE`.
+La columna de coste muestra USDT y, tras la barra, puntos básicos (bps) respecto al notional de compra para normalizar pequeñas diferencias de nominal. Estos costes combinan la diferencia bid/ask e impacto observados en el libro con la tarifa pública por fill (5 bps Pionex, 10 bps Binance). El round-trip supone compra y venta en el mismo snapshot estático. No incluye movimiento de precio entre fills, latencia de ejecución, descuentos de cuenta, componentes fiscales/especiales ni redondeos de comisión; no es beneficio/pérdida esperado ni una garantía de ejecución. El resultado global del artefacto sigue `INDETERMINATE`.
 
 ## Interpretación y límites
 

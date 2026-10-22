@@ -63,6 +63,8 @@ class MinimumCommonNotionalTests(unittest.TestCase):
         self.assertAlmostEqual(item["pionex"]["sell"]["quote_notional"], 10.09899)
         self.assertAlmostEqual(item["pionex"]["static_snapshot_round_trip_cost_quote"], 0.01212)
         self.assertAlmostEqual(item["binance"]["static_snapshot_round_trip_cost_quote"], 0.02222)
+        self.assertAlmostEqual(item["pionex"]["static_snapshot_round_trip_cost_bps_vs_buy_notional"], 12.0)
+        self.assertAlmostEqual(item["binance"]["static_snapshot_round_trip_cost_bps_vs_buy_notional"], 22.0)
         self.assertFalse(item["account_effective_fee_verified"])
         self.assertEqual(item["pionex"]["public_fee_reference"]["observed_at_utc"], "2026-10-22")
         self.assertEqual(item["binance"]["public_fee_reference"]["observed_at_utc"], "2026-10-22")

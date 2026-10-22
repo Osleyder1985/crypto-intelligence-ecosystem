@@ -210,6 +210,7 @@ def analyze_artifact(artifact: dict[str, Any]) -> dict[str, Any]:
                 "best_ask_reference_notional": float(common_base * p_asks[0][0]),
                 "buy": p_buy, "sell": p_sell,
                 "static_snapshot_round_trip_cost_quote": p_round_trip,
+                "static_snapshot_round_trip_cost_bps_vs_buy_notional": (p_round_trip / p_buy["quote_notional"] * 10000) if p_round_trip is not None and p_buy["quote_notional"] > 0 else None,
             },
             "binance": {
                 "public_fee_reference": {
@@ -221,6 +222,7 @@ def analyze_artifact(artifact: dict[str, Any]) -> dict[str, Any]:
                 "best_ask_reference_notional": float(common_base * b_asks[0][0]),
                 "buy": b_buy, "sell": b_sell,
                 "static_snapshot_round_trip_cost_quote": b_round_trip,
+                "static_snapshot_round_trip_cost_bps_vs_buy_notional": (b_round_trip / b_buy["quote_notional"] * 10000) if b_round_trip is not None and b_buy["quote_notional"] > 0 else None,
             },
             "public_fee_reference_only": True,
             "account_effective_fee_verified": False,
