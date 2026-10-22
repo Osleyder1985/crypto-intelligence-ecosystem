@@ -1,7 +1,30 @@
 import unittest
-from scripts.market_selection.capture_multi_exchange_spot_ticker_probe import build_requests, extract_quote_volume
+from unittest.mock import patch
+from scripts.market_selection.capture_multi_exchange_spot_ticker_probe import PROVIDER_IDS, build_requests, capture_one, extract_quote_volume
 
 class QuoteVolumeProbeTests(unittest.TestCase):
+    @staticmethod
+    def authorization_record(provider_id):
+        return {"schema_version":"crypto-provider-authorization-v1","provider_id":provider_id,"status":"APPROVED","authorized_use_cases":["persistent_storage"],"terms_url":"https://example.com/terms","terms_sha256":"a"*64,"reviewed_at":"2026-10-22T00:00:00Z","reviewed_by":"offline-test-fixture"}
+
+    def test_missing_authorization_blocks_before_network_for_every_venue(self):
+        with patch("scripts.market_selection.capture_multi_exchange_spot_ticker_probe.urlopen", side_effect=AssertionError("network must not be called")):
+            for spec in build_requests():
+                with self.subTest(exchange=spec["exchange"],symbol=spec["symbol"]):
+                    record=capture_one(spec)
+                    self.assertEqual(record["capture_status"],"BLOCKED")
+                    self.assertEqual(record["provider_use_assessment"]["decision"],"BLOCK")
+
+    def test_wrong_use_scope_blocks_before_network(self):
+        spec=build_requests()[0]
+        provider_id=PROVIDER_IDS[spec["exchange"]]
+        authorization=self.authorization_record(provider_id)
+        authorization["authorized_use_cases"]=["live_technical_test"]
+        with patch("scripts.market_selection.capture_multi_exchange_spot_ticker_probe.urlopen", side_effect=AssertionError("network must not be called")):
+            record=capture_one(spec,{provider_id:authorization})
+        self.assertEqual(record["capture_status"],"BLOCKED")
+        self.assertEqual(record["provider_use_assessment"]["decision"],"BLOCK")
+
     def test_covers_seven_venues_and_three_spot_assets(self):
         requests=build_requests()
         self.assertEqual(len(requests),21)
@@ -66,8 +89,10 @@ class QuoteVolumeProbeTests(unittest.TestCase):
 
         spec = {"exchange": "pionex", "asset": "BTC", "symbol": "BTC_USDT",
                 "quote_currency": "USDT", "url": "https://api.pionex.com/api/v1/market/tickers?symbol=BTC_USDT&type=SPOT"}
+        provider_id = PROVIDER_IDS[spec["exchange"]]
+        authorization = {provider_id: self.authorization_record(provider_id)}
         with patch("scripts.market_selection.capture_multi_exchange_spot_ticker_probe.urlopen", return_value=Response()):
-            record = capture_one(spec)
+            record = capture_one(spec, authorization)
         self.assertEqual(record["capture_status"], "PASS")
         self.assertEqual(record["quote_volume_raw"], "70")
         self.assertEqual(record["quote_volume_decimal"], "70")
