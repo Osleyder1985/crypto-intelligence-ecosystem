@@ -173,12 +173,13 @@ def analyze_artifact(artifact: dict[str, Any]) -> dict[str, Any]:
         p_sell = _fill(p_bids, common_base, p_mid, "sell", PUBLIC_FEE_REFERENCE["pionex"]["rate_bps_per_fill"])
         b_buy = _fill(b_asks, common_base, b_mid, "buy", PUBLIC_FEE_REFERENCE["binance"]["rate_bps_per_fill"])
         b_sell = _fill(b_bids, common_base, b_mid, "sell", PUBLIC_FEE_REFERENCE["binance"]["rate_bps_per_fill"])
-        p_valid = common_base >= p_min_base and common_base * p_asks[0][0] >= p_min_quote and common_base * p_bids[0][0] >= p_min_quote
+        p_base_minimum_satisfied = common_base >= p_min_base
+        p_candidate_minimums_satisfied_if_min_amount_is_quote = (
+            p_base_minimum_satisfied
+            and common_base * p_asks[0][0] >= p_min_quote
+            and common_base * p_bids[0][0] >= p_min_quote
+        )
         b_valid = common_base >= b_min_base and common_base % b_step == 0 and common_base * b_asks[0][0] >= b_min_quote and common_base * b_bids[0][0] >= b_min_quote
-        for venue, result in (("pionex", p_buy), ("binance", b_buy)):
-            if result["status"] != "PASS":
-                p_valid = False if venue == "pionex" else p_valid
-                b_valid = False if venue == "binance" else b_valid
         p_round_trip = None
         if p_buy["status"] == p_sell["status"] == "PASS":
             p_round_trip = p_buy["quote_notional"] + p_buy["public_fee_reference_quote"] - p_sell["quote_notional"] + p_sell["public_fee_reference_quote"]
@@ -188,11 +189,15 @@ def analyze_artifact(artifact: dict[str, Any]) -> dict[str, Any]:
         results.append({
             "market_id": market,
             "binance_symbol": bsym,
-            "scenario_type": "minimum_common_quote_notional_boundary",
-            "scenario_status": "PASS" if p_valid and b_valid and all(x["status"] == "PASS" for x in (p_buy, p_sell, b_buy, b_sell)) else "INDETERMINATE",
+            "scenario_type": "assumption_based_minimum_boundary_reference",
+            "scenario_status": "INDETERMINATE",
+            "scenario_computation_status": "PASS" if b_valid and p_base_minimum_satisfied and all(x["status"] == "PASS" for x in (p_buy, p_sell, b_buy, b_sell)) else "INDETERMINATE",
             "common_base_quantity": float(common_base),
             "constraints": {
-                "pionex_min_quote_amount": float(p_min_quote),
+                "pionex_min_amount_value": float(p_min_quote),
+                "pionex_min_amount_unit_verified": False,
+                "pionex_minimums_satisfied": None,
+                "pionex_candidate_minimums_satisfied_if_min_amount_is_quote_notional": p_candidate_minimums_satisfied_if_min_amount_is_quote,
                 "pionex_min_limit_base_quantity": float(p_min_base),
                 "binance_min_base_quantity": float(b_min_base),
                 "binance_limit_quantity_step": float(b_step),
@@ -236,7 +241,8 @@ def analyze_artifact(artifact: dict[str, Any]) -> dict[str, Any]:
         "results": results,
         "method": "derive a shared base quantity from captured Pionex minimums and Binance LOT_SIZE/NOTIONAL filters; then simulate consuming captured depth",
         "limitations": [
-            "This is a boundary scenario derived from public exchange minimums, not a product-approved typical order size.",
+            "This is an assumption-based boundary reference, not a product-approved typical order size or a verified common minimum.",
+            "Pionex official symbol metadata describes minAmount as minimum order amount but does not specify its unit; any interpretation as quote notional is unverified, so Pionex minimum compliance and the scenario status remain INDETERMINATE.",
             "Pionex exposes minTradeSize and minAmount in public symbol metadata; this capture does not expose a documented quantity step, so only those known lower bounds are checked.",
             "Binance filter applicability can depend on order type and reference/average price; this scenario uses the documented limit-order LOT_SIZE and notional floor as a lower-bound reference.",
             "The buy/sell round trip is a static-snapshot simulation, not a guarantee that both sides remain available over time.",

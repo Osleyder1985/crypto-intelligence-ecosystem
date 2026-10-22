@@ -54,8 +54,12 @@ class MinimumCommonNotionalTests(unittest.TestCase):
         self.assertEqual(out["decision_status"], "INDETERMINATE")
         self.assertEqual(len(out["results"]), 1)
         item = out["results"][0]
-        self.assertEqual(item["scenario_type"], "minimum_common_quote_notional_boundary")
-        self.assertEqual(item["scenario_status"], "PASS")
+        self.assertEqual(item["scenario_type"], "assumption_based_minimum_boundary_reference")
+        self.assertEqual(item["scenario_status"], "INDETERMINATE")
+        self.assertEqual(item["scenario_computation_status"], "PASS")
+        self.assertIsNone(item["constraints"]["pionex_minimums_satisfied"])
+        self.assertFalse(item["constraints"]["pionex_min_amount_unit_verified"])
+        self.assertTrue(item["constraints"]["pionex_candidate_minimums_satisfied_if_min_amount_is_quote_notional"])
         self.assertAlmostEqual(item["common_base_quantity"], 0.101)
         self.assertTrue(item["constraints"]["pionex_minimums_satisfied"])
         self.assertTrue(item["constraints"]["binance_minimums_satisfied"])
@@ -74,6 +78,7 @@ class MinimumCommonNotionalTests(unittest.TestCase):
         out = analyze_artifact(fixture(depth_qty="0.02"))
         item = out["results"][0]
         self.assertEqual(item["scenario_status"], "INDETERMINATE")
+        self.assertEqual(item["scenario_computation_status"], "INDETERMINATE")
         self.assertGreater(item["pionex"]["buy"]["uncovered_base"], 0)
         self.assertIsNone(item["pionex"]["static_snapshot_round_trip_cost_quote"])
 
