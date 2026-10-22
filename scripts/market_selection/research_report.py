@@ -88,13 +88,13 @@ def build_research_report(
     symbol = _require_text(market.get("symbol_native"), "artifact.market.symbol_native")
     interval = _require_text(market.get("interval"), "artifact.market.interval")
     requested_asset_id = _require_text(requested_asset_id, "requested_asset_id")
-    normalized_asset = requested_asset_id.upper()
+    normalized_asset = requested_asset_id
     config = _validate_config(config)
 
     # Do not infer base-asset identity from a concatenated market symbol such as BTCUSDT.
-    observed_asset = market.get("asset_id", market.get("base_asset"))
+    observed_asset = market.get("asset_id") or market.get("base_asset")
     if isinstance(observed_asset, str) and observed_asset.strip():
-        if observed_asset.strip().upper() != normalized_asset:
+        if observed_asset.strip().casefold() != normalized_asset.casefold():
             raise ValueError(
                 f"requested asset {normalized_asset} does not match artifact base asset "
                 f"{observed_asset.strip().upper()}"
