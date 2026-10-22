@@ -202,7 +202,6 @@ def analyze_artifact(artifact: dict[str, Any]) -> dict[str, Any]:
                 "binance_min_base_quantity": float(b_min_base),
                 "binance_limit_quantity_step": float(b_step),
                 "binance_min_quote_notional": float(b_min_quote),
-                "pionex_minimums_satisfied": p_valid,
                 "binance_minimums_satisfied": b_valid,
             },
             "pionex": {
