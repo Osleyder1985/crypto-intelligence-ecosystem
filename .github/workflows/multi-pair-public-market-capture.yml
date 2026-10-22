@@ -109,6 +109,8 @@ jobs:
           assert scenario["decision_status"] == "INDETERMINATE"
           assert len(scenario["results"]) == 3
           assert all(item["orders_submitted"] is False for item in scenario["results"])
+          assert all(item["scenario_status"] == "INDETERMINATE" for item in scenario["results"])
+          assert all(item["constraints"]["pionex_minimums_satisfied"] is None for item in scenario["results"])
           assert all(item["withdrawal_cost_included"] is False for item in scenario["results"])
           assert all(item["pionex"]["static_snapshot_round_trip_cost_bps_vs_buy_notional"] is not None for item in scenario["results"])
           assert all(item["binance"]["static_snapshot_round_trip_cost_bps_vs_buy_notional"] is not None for item in scenario["results"])
