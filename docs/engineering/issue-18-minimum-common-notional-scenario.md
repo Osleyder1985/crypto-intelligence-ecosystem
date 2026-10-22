@@ -39,4 +39,5 @@ La columna de coste muestra USDT y, tras la barra, puntos básicos (bps) respect
 - Las reglas Binance pueden depender del tipo de orden y precio de referencia; este escenario usa `LOT_SIZE` y el filtro de notional capturado como límite inferior de comparación, no como autorización de orden.
 - El round-trip supone el mismo snapshot estático para compra y venta. No modela movimiento de precio, colas, latencia de ejecución, impacto posterior, impuestos/comisiones especiales ni moneda/redondeo de tarifa.
 - Tarifas efectivas por cuenta no verificadas; las tarifas públicas son solo referencias.
+- Las comisiones de retiro/red no están incluidas: esta simulación compra y vende dentro del mismo venue. Si la estrategia mueve activos entre exchanges, se debe añadir la tarifa oficial específica de moneda/red, mínimo de retiro y restricciones de depósito/retiro; no es correcto aplicar una tarifa genérica.
 - Por tanto, el resultado del escenario puede ser estructuralmente calculable y aun así la decisión económica global permanece `INDETERMINATE` hasta tener política de frescura aprobada, tarifas aplicables y un tamaño/criterio de producto aprobado.

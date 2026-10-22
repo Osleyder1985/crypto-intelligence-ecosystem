@@ -226,6 +226,7 @@ def analyze_artifact(artifact: dict[str, Any]) -> dict[str, Any]:
             },
             "public_fee_reference_only": True,
             "account_effective_fee_verified": False,
+            "withdrawal_cost_included": False,
             "orders_submitted": False,
         })
     return {
@@ -240,6 +241,7 @@ def analyze_artifact(artifact: dict[str, Any]) -> dict[str, Any]:
             "Binance filter applicability can depend on order type and reference/average price; this scenario uses the documented limit-order LOT_SIZE and notional floor as a lower-bound reference.",
             "The buy/sell round trip is a static-snapshot simulation, not a guarantee that both sides remain available over time.",
             "Public per-fill fee schedules are illustrative; account-specific fees, discounts, tax/special commissions and fee-asset rounding are not verified.",
+            "Withdrawal/network costs are excluded because this is an in-venue static trading round trip; cross-venue transfer strategies require coin/network-specific withdrawal fee and minimum evidence.",
             "A missing or insufficient captured depth makes the scenario INDETERMINATE; no extrapolation or order submission occurs.",
         ],
     }
