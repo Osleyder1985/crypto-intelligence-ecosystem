@@ -13,6 +13,7 @@ from typing import Any
 from scripts.market_selection.external_event_evidence import assess_temporal_association, validate_event
 from scripts.market_selection.fundamental_onchain_contract import evaluate_observations
 from scripts.market_selection.methodology_contract import validate_methodology
+from scripts.market_selection.provider_license_gate import evaluate_artifact_use
 
 REPORT_SCHEMA = "crypto-asset-research-report-v1"
 BUNDLE_SCHEMA = "crypto-research-evidence-bundle-v1"
@@ -49,6 +50,9 @@ def enrich_research_report(
     report = _object(report, "report")
     if report.get("schema_version") != REPORT_SCHEMA:
         raise ValueError(f"report.schema_version must be {REPORT_SCHEMA}")
+    provider_use = evaluate_artifact_use(report, "internal_analysis")
+    if provider_use["decision"] != "ALLOW":
+        raise PermissionError("evidence integration blocked before use: " + ",".join(provider_use["reason_codes"]))
     if not isinstance(events, list):
         raise ValueError("events must be a list")
     if not isinstance(observations, list):
@@ -101,6 +105,7 @@ def enrich_research_report(
         "interpretation": "Temporal association is not proof of causality; event absence does not prove no catalyst existed.",
     }
     output["fundamental_onchain_assessment"] = fundamental
+    output["downstream_use_assessment"] = provider_use
     output["methodology_assessment"] = {
         "schema_version": validated_methodology["schema_version"],
         "methodology_id": validated_methodology["methodology_id"],
