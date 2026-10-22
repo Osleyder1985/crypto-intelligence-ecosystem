@@ -80,6 +80,7 @@ class ExternalEventEvidenceTests(unittest.TestCase):
             movement_start="2026-10-20T09:00:00Z",
             movement_end="2026-10-20T12:00:00Z",
             evaluation_as_of="2026-10-21T00:00:00Z",
+            target_entity={"id_type": "coingecko_id", "id": "example-coin"},
         )
         self.assertEqual(result["status"], "NOT_AVAILABLE_AS_OF")
         self.assertFalse(result["causality_claimed"])
@@ -90,6 +91,7 @@ class ExternalEventEvidenceTests(unittest.TestCase):
             movement_start="2026-10-22T09:00:00Z",
             movement_end="2026-10-22T11:00:00Z",
             evaluation_as_of="2026-10-22T12:00:00Z",
+            target_entity={"id_type": "coingecko_id", "id": "example-coin"},
         )
         self.assertEqual(result["causality_label"], "TEMPORAL_ASSOCIATION")
         self.assertFalse(result["causality_claimed"])
@@ -101,8 +103,40 @@ class ExternalEventEvidenceTests(unittest.TestCase):
             movement_start="2026-10-22T12:00:00Z",
             movement_end="2026-10-22T14:00:00Z",
             evaluation_as_of="2026-10-22T15:00:00Z",
+            target_entity={"id_type": "coingecko_id", "id": "example-coin"},
         )
         self.assertEqual(result["causality_label"], "CAUSE_UNIDENTIFIED")
+
+    def test_rejects_missing_evidence(self):
+        value = event(evidence=[])
+        with self.assertRaisesRegex(ValueError, "at least one evidence reference"):
+            validate_event(value)
+
+    def test_does_not_associate_an_unrelated_asset(self):
+        result = assess_temporal_association(
+            event(),
+            movement_start="2026-10-22T09:00:00Z",
+            movement_end="2026-10-22T11:00:00Z",
+            evaluation_as_of="2026-10-22T12:00:00Z",
+            target_entity={"id_type": "coingecko_id", "id": "different-coin"},
+        )
+        self.assertEqual(result["status"], "ENTITY_NOT_MATCHED")
+        self.assertFalse(result["entity_match"])
+        self.assertEqual(result["causality_label"], "CAUSE_UNIDENTIFIED")
+
+    def test_independent_source_urls_remain_separate_records(self):
+        first = event()
+        second = event(
+            event_id="event-2",
+            source={
+                "source_type": "SECONDARY_MEDIA",
+                "url": "https://news.example.net/story/123",
+                "publisher": "Example News",
+            },
+        )
+        result = deduplicate_events([first, second])
+        self.assertEqual(result["unique_count"], 2)
+        self.assertEqual(result["duplicate_count"], 0)
 
 
 if __name__ == "__main__":
