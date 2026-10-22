@@ -15,7 +15,7 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import urlsplit
 
-from scripts.market_selection.external_event_evidence import assess_temporal_association, validate_event
+from scripts.market_selection.external_event_evidence import assess_temporal_association, parse_timestamp, validate_event
 from scripts.market_selection.fundamental_onchain_contract import evaluate_observations
 from scripts.market_selection.methodology_contract import validate_methodology
 from scripts.market_selection.provider_license_gate import evaluate_artifact_use
@@ -151,6 +151,14 @@ def _verify_promoted_sec_event(event_record: dict, source_entry: dict, registry_
         raise PermissionError("reviewed entity-mapping evidence base64 is invalid") from exc
     if hashlib.sha256(mapping_raw).hexdigest() != mapping_hash:
         raise PermissionError("reviewed entity-mapping evidence SHA-256 mismatch")
+    reviewer = metadata.get("entity_resolution_reviewed_by")
+    reviewed_at = metadata.get("entity_resolution_reviewed_at")
+    if not isinstance(reviewer, str) or not reviewer.strip():
+        raise PermissionError("reviewed entity-mapping reviewer is missing")
+    try:
+        parse_timestamp(reviewed_at, "entity_resolution_reviewed_at")
+    except ValueError as exc:
+        raise PermissionError("reviewed entity-mapping timestamp is invalid") from exc
     if metadata.get("causality_status") != "NOT_ASSESSED":
         raise PermissionError("event evidence must not claim causality")
 
