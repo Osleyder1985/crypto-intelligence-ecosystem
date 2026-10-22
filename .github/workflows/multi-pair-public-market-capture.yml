@@ -26,6 +26,7 @@ jobs:
         with:
           python-version: "3.12"
       - run: python -m unittest discover -s tests/market_selection -p "test_evaluate_capture_batch.py" -v
+      - run: python -m unittest discover -s tests/market_selection -p "test_analyze_depth_cost_curves.py" -v
   capture-offline:
     name: Test multi-pair capture offline
     needs: scope
@@ -83,6 +84,9 @@ jobs:
           python scripts/market_selection/evaluate_capture_batch.py --artifact artifacts/public-market-capture-batch.json --output artifacts/batch-evaluation-1.json
           python scripts/market_selection/evaluate_capture_batch.py --artifact artifacts/public-market-capture-batch.json --output artifacts/batch-evaluation-2.json
           cmp --silent artifacts/batch-evaluation-1.json artifacts/batch-evaluation-2.json
+          python scripts/market_selection/analyze_depth_cost_curves.py --artifact artifacts/public-market-capture-batch.json --output artifacts/depth-cost-curves-1.json
+          python scripts/market_selection/analyze_depth_cost_curves.py --artifact artifacts/public-market-capture-batch.json --output artifacts/depth-cost-curves-2.json
+          cmp --silent artifacts/depth-cost-curves-1.json artifacts/depth-cost-curves-2.json
           python - <<'PY'
           import json
           from pathlib import Path
@@ -95,6 +99,14 @@ jobs:
           assert all(m["dimension_status"]["capture_integrity"] == "PASS" for m in result["markets"])
           assert all(m["dimension_status"]["source_freshness"] == "INDETERMINATE" for m in result["markets"])
           assert all(m["dimension_status"]["fees"] == "INDETERMINATE" for m in result["markets"])
+          curves = json.loads(Path("artifacts/depth-cost-curves-1.json").read_text(encoding="utf-8"))
+          assert curves["schema_version"] == "public-depth-cost-curves-v1"
+          assert curves["decision_status"] == "INDETERMINATE"
+          assert len(curves["books"]) == 6
+          assert all(book["fee_cost_included"] is False for book in curves["books"])
+          assert all(book["order_size_selected"] is False for book in curves["books"])
+          assert all(len(book["execution_cost_curve"]["buy_consuming_asks"]) == book["levels_returned"]["asks"] for book in curves["books"])
+          assert all(len(book["execution_cost_curve"]["sell_consuming_bids"]) == book["levels_returned"]["bids"] for book in curves["books"])
           PY
       - name: Upload capture and evaluation evidence
         if: always()
