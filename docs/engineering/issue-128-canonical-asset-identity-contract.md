@@ -25,3 +25,9 @@ The Binance Spot capture in PR #139 verifies the base ticker reported for the ex
 ## Tests and limitations
 
 Eight tests cover resolved explicit coordinates, ticker-only abstention, evidence presence, HTTPS URLs, SHA-256 syntax, timezone-aware timestamps, reference syntax, and schema version. Tests use a controlled fixture and do not prove that a live provider's claim is true. The validator makes no network requests and does not approve a source, terms of use, token mapping, or investment conclusion.
+
+## Optional integration with the Binance report
+
+The follow-on integration accepts an `--identity-evidence path/to/identity.json` argument. The JSON file contains the identity record described above plus a `market_mapping` object with the exact `exchange`, `symbol`, `base_asset_ticker`, and `exchange_info_sha256` captured during the same run. The report rejects any mismatch against the actual captured metadata.
+
+This proves internal consistency between the supplied mapping and the captured Binance metadata only. It does **not** authenticate the identity provider or prove that the declared chain/asset coordinates correspond to the market ticker. The report therefore records `canonical_asset_identity_status=RESOLVED` only as coordinate completeness, `canonical_asset_identity_evidence_status=STRUCTURE_VALIDATED_NOT_AUTHENTICATED`, and keeps product-level `asset_identity_status=INDETERMINATE`, quality incomplete, and all investment horizons `INDETERMINATE`.
