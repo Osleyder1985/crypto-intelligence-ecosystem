@@ -13,7 +13,10 @@ from typing import Any
 from scripts.market_selection.analyze_ohlcv_risk_profile import analyze_artifact
 from scripts.market_selection.analyze_support_resistance import analyze_support_resistance
 from scripts.market_selection.detect_ohlcv_movement_events import analyze_movement_events
-from scripts.market_selection.provider_license_gate import evaluate_artifact_use
+try:
+    from scripts.market_selection.provider_license_gate import evaluate_artifact_use
+except ModuleNotFoundError:
+    from provider_license_gate import evaluate_artifact_use
 
 INPUT_SCHEMA = "binance-spot-ohlcv-capture-v1"
 REPORT_SCHEMA = "crypto-asset-research-report-v1"
