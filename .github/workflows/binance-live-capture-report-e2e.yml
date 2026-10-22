@@ -53,7 +53,7 @@ jobs:
           }
           JSON
           python -m scripts.market_selection.capture_binance_spot_research \
-            --symbol BTCUSDT --asset-id BTC --interval 1h \
+            --symbol BTCUSDT --base-asset-ticker BTC --interval 1h \
             --start-time-ms "$(python -c 'import datetime; d=datetime.datetime.now(datetime.timezone.utc).replace(minute=0,second=0,microsecond=0)-datetime.timedelta(hours=6); print(int(d.timestamp()*1000))')" \
             --end-time-ms "$(python -c 'import datetime; d=datetime.datetime.now(datetime.timezone.utc).replace(minute=0,second=0,microsecond=0); print(int(d.timestamp()*1000))')" \
             --config artifacts/smoke-test-only-methodology.json \
