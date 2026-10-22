@@ -114,6 +114,43 @@ class SecPressReleaseConnectorTests(unittest.TestCase):
         self.assertIn("AUTHORIZATION_RECORD_MISSING", result["reason_codes"])
         opener.assert_not_called()
 
+    def test_missing_persistent_storage_scope_blocks_before_network(self):
+        with self.approved_registry() as registry:
+            entry = registry["sec_press_releases"]
+            record = authorization_record(entry)
+            record["authorized_use_cases"] = ["internal_analysis"]
+            opener = Mock()
+            result = capture_sec_press_releases_rss(
+                record, self.user_agent, 5, captured_at=self.captured_at, opener=opener,
+            )
+        self.assertEqual(result["capture_status"], "BLOCKED")
+        self.assertIn("USE_CASE_NOT_EXPLICITLY_AUTHORIZED", result["reason_codes"])
+        opener.assert_not_called()
+
+    def test_terms_hash_mismatch_blocks_before_network(self):
+        with self.approved_registry() as registry:
+            entry = registry["sec_press_releases"]
+            record = authorization_record(entry)
+            record["terms_sha256"] = "f" * 64
+            opener = Mock()
+            result = capture_sec_press_releases_rss(
+                record, self.user_agent, 5, captured_at=self.captured_at, opener=opener,
+            )
+        self.assertEqual(result["capture_status"], "BLOCKED")
+        self.assertIn("AUTHORIZATION_TERMS_HASH_MISMATCH", result["reason_codes"])
+        opener.assert_not_called()
+
+    def test_invalid_timeout_blocks_before_network(self):
+        with self.approved_registry() as registry:
+            opener = Mock()
+            result = capture_sec_press_releases_rss(
+                authorization_record(registry["sec_press_releases"]), self.user_agent, 0,
+                captured_at=self.captured_at, opener=opener,
+            )
+        self.assertEqual(result["capture_status"], "BLOCKED")
+        self.assertIn("INVALID_TIMEOUT_SECONDS", result["reason_codes"])
+        opener.assert_not_called()
+
     def test_user_agent_is_required_before_network(self):
         with self.approved_registry() as registry:
             opener = Mock()
@@ -151,6 +188,22 @@ class SecPressReleaseConnectorTests(unittest.TestCase):
         self.assertEqual(request.full_url, "https://www.sec.gov/news/pressreleases.rss")
         self.assertEqual(request.get_header("User-agent"), self.user_agent)
         self.assertEqual(opener.call_args.kwargs["timeout"], 5)
+
+    def test_response_larger_than_five_mib_is_preserved_without_local_cap(self):
+        raw = rss_bytes().replace(
+            b"Fixture summary, not a real event.",
+            b"x" * (5 * 1024 * 1024 + 123),
+        )
+        with self.approved_registry() as registry:
+            result = capture_sec_press_releases_rss(
+                authorization_record(registry["sec_press_releases"]), self.user_agent, 5,
+                captured_at=self.captured_at, opener=Mock(return_value=FakeResponse(raw)),
+            )
+        self.assertGreater(len(raw), 5 * 1024 * 1024)
+        self.assertEqual(result["raw_response_bytes"], len(raw))
+        self.assertEqual(base64.b64decode(result["raw_response_base64"]), raw)
+        self.assertEqual(result["raw_response_sha256"], hashlib.sha256(raw).hexdigest())
+        self.assertEqual(len(result["feed_items"][0]["description"]), 5 * 1024 * 1024 + 123)
 
     def test_missing_or_unparseable_publication_time_is_not_inferred(self):
         with self.approved_registry() as registry:
