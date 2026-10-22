@@ -6,7 +6,7 @@ import unittest
 from unittest.mock import patch
 
 from scripts.market_selection.capture_public_market_batch import (
-    DEFAULT_MARKETS, SCHEMA_VERSION, build_requests, capture_batch, request_capture,
+    BINANCE_DEPTH_LIMIT, DEFAULT_MARKETS, PIONEX_DEPTH_LIMIT, SCHEMA_VERSION, build_requests, capture_batch, request_capture,
 )
 
 
@@ -41,6 +41,10 @@ class BatchCaptureTests(unittest.TestCase):
         for market, _, _, _ in DEFAULT_MARKETS:
             selected = [r for r in requests if r[0] == market]
             self.assertEqual([r[1] for r in selected], ["pionex", "pionex_depth", "binance_exchange_info", "binance_depth"])
+            pionex_depth_url = next(r[2] for r in selected if r[1] == "pionex_depth")
+            binance_depth_url = next(r[2] for r in selected if r[1] == "binance_depth")
+            self.assertIn(f"limit={PIONEX_DEPTH_LIMIT}", pionex_depth_url)
+            self.assertIn(f"limit={BINANCE_DEPTH_LIMIT}", binance_depth_url)
 
     def test_capture_preserves_raw_bytes_and_hash(self):
         with patch("scripts.market_selection.capture_public_market_batch.urlopen", return_value=FakeResponse({"result": True})):
