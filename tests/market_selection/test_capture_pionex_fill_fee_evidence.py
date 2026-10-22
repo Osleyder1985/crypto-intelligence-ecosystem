@@ -47,7 +47,7 @@ class PionexFillFeeEvidenceTests(unittest.TestCase):
 
     def test_100_fills_are_marked_as_potentially_truncated(self):
         raw = b'raw fixture bytes'
-        result = build_evidence(payload(count=100), raw, "BTC_USDT", "USDT", 1, 2, "2026-10-22T00:00:00.000Z")
+        result = build_evidence(payload(count=100), raw, "BTC_USDT", "USDT", 1792627199000, 1792627300000, "2026-10-22T00:00:00.000Z")
         self.assertTrue(result["truncation_possible"])
         self.assertEqual(result["capture_status"], "INDETERMINATE")
         self.assertEqual(result["fee_evidence_status"], "INDETERMINATE")
