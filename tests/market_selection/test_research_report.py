@@ -125,7 +125,7 @@ class ResearchReportTests(unittest.TestCase):
 
     def test_assembles_existing_analyses_and_abstains_on_all_horizons(self):
         report = build_research_report(self.source, config(), "BTC", self.raw)
-        self.assertEqual(report["schema_version"], "crypto-asset-research-report-v1")
+        self.assertEqual(report["schema_version"], "crypto-asset-research-report-v2")
         self.assertEqual(report["report_status"], "PARTIAL")
         self.assertEqual(report["decision_status"], "INDETERMINATE")
         self.assertEqual(report["asset_identity_status"], "INDETERMINATE")
