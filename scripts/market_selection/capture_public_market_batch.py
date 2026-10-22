@@ -53,6 +53,8 @@ def request_capture(market_id: str, provider: str, url: str) -> dict[str, object
         # The current endpoints do not provide a verified event timestamp in this capture contract.
         # Keep provenance explicit; capture time must never be treated as source-event time.
         "source_event_at_utc": None,
+        "source_market_update_at_utc": None,
+        "source_market_update_timestamp_status": "NOT_PROVIDED",
         "source_response_at_utc": None,
         "source_response_timestamp_status": "NOT_PROVIDED",
         "source_timestamp_field": None,
@@ -83,13 +85,14 @@ def request_capture(market_id: str, provider: str, url: str) -> dict[str, object
             record.update(error_type=type(exc).__name__, error_message="response was not valid UTF-8 JSON")
             return record
         record["parsed_json"] = parsed
-        if provider == "pionex":
+        if provider in ("pionex", "pionex_depth"):
             # Pionex documents this top-level timestamp in milliseconds as response metadata.
-            # It is not a market-data event timestamp and must not populate source_event_at_utc.
+            # It is distinct from data.updateTime and local capture time.
             record["source_timestamp_field"] = "timestamp"
+            endpoint_name = "Common Symbols" if provider == "pionex" else "market depth"
             record["source_timestamp_semantics"] = (
-                "Pionex Common Symbols API response timestamp in epoch milliseconds; "
-                "response metadata time, not an order-book event timestamp"
+                f"Pionex {endpoint_name} API response timestamp in epoch milliseconds; "
+                "response metadata time, not the order-book update timestamp"
             )
             timestamp = parsed.get("timestamp") if isinstance(parsed, dict) else None
             if isinstance(timestamp, int) and not isinstance(timestamp, bool) and timestamp >= 0:
@@ -105,6 +108,29 @@ def request_capture(market_id: str, provider: str, url: str) -> dict[str, object
                 record["source_response_timestamp_status"] = "MISSING"
             else:
                 record["source_response_timestamp_status"] = "INVALID"
+        if provider == "pionex_depth":
+            # Pionex documents data.updateTime as the order-book update timestamp in epoch ms.
+            # Keep it separate from the top-level response timestamp and local capture time.
+            data = parsed.get("data") if isinstance(parsed, dict) else None
+            timestamp = data.get("updateTime") if isinstance(data, dict) else None
+            record["source_timestamp_field"] = "data.updateTime"
+            record["source_timestamp_semantics"] = (
+                "Pionex Spot order-book update timestamp in epoch milliseconds; "
+                "distinct from response timestamp and local capture time"
+            )
+            if isinstance(timestamp, int) and not isinstance(timestamp, bool) and timestamp >= 0:
+                try:
+                    record["source_market_update_at_utc"] = (
+                        datetime.fromtimestamp(timestamp / 1000, timezone.utc)
+                        .isoformat(timespec="milliseconds").replace("+00:00", "Z")
+                    )
+                    record["source_market_update_timestamp_status"] = "VALID"
+                except (OverflowError, OSError, ValueError):
+                    record["source_market_update_timestamp_status"] = "INVALID"
+            elif timestamp is None:
+                record["source_market_update_timestamp_status"] = "MISSING"
+            else:
+                record["source_market_update_timestamp_status"] = "INVALID"
         if status != 200:
             record.update(error_type="UnexpectedHTTPStatus", error_message=f"expected HTTP 200, received {status}")
             return record
@@ -121,11 +147,13 @@ def request_capture(market_id: str, provider: str, url: str) -> dict[str, object
 
 def build_requests(markets: tuple[tuple[str, str, str, str], ...]) -> list[tuple[str, str, str]]:
     pionex_base = "https://api.pionex.com/api/v1/common/symbols"
+    pionex_depth_base = "https://api.pionex.com/api/v1/market/depth"
     binance_base = "https://data-api.binance.vision/api/v3"
     requests = []
     for pionex_symbol, binance_symbol, _base, _quote in markets:
         requests.extend([
             (pionex_symbol, "pionex", pionex_base + "?" + urlencode({"symbols": pionex_symbol, "type": "SPOT"})),
+            (pionex_symbol, "pionex_depth", pionex_depth_base + "?" + urlencode({"symbol": pionex_symbol, "limit": 20})),
             (pionex_symbol, "binance_exchange_info", binance_base + "/exchangeInfo?" + urlencode({"symbol": binance_symbol})),
             (pionex_symbol, "binance_depth", binance_base + "/depth?" + urlencode({"symbol": binance_symbol, "limit": 20})),
         ])
@@ -139,7 +167,7 @@ def capture_batch(markets: tuple[tuple[str, str, str, str], ...] = DEFAULT_MARKE
     if len(set(market_ids)) != len(market_ids):
         raise ValueError("market identifiers must be unique")
     records = [request_capture(*request) for request in build_requests(markets)]
-    expected = len(markets) * 3
+    expected = len(markets) * 4
     complete = len(records) == expected and all(item["capture_status"] == "PASS" for item in records)
     return {
         "schema_version": SCHEMA_VERSION,
@@ -156,7 +184,8 @@ def capture_batch(markets: tuple[tuple[str, str, str, str], ...] = DEFAULT_MARKE
         "limitations": [
             "Point-in-time public API capture; not an investment recommendation or ranking.",
             "Provider availability does not prove regional/account access, liquidity, or execution.",
-            "Each Binance depth response is limited to 20 levels and is not the full order book.",
+            "Each Binance and Pionex depth response is limited to 20 levels and is not the full order book.",
+            "Pionex data.updateTime is preserved separately from the response timestamp and capture time; it does not alone prove freshness against a product-specific policy.",
             "Binance lastUpdateId is not a market-event timestamp; source freshness may be indeterminate.",
             "Hashes establish byte identity, not provider authenticity or correctness.",
         ],

@@ -58,9 +58,15 @@ jobs:
           artifact = json.loads(Path("artifacts/public-market-capture-batch.json").read_text(encoding="utf-8"))
           assert artifact["schema_version"] == "public-market-capture-batch-v1"
           assert artifact["overall_status"] == "PASS"
-          assert artifact["expected_record_count"] == artifact["actual_record_count"] == 9
+          assert artifact["expected_record_count"] == artifact["actual_record_count"] == 12
           assert len(artifact["universe"]) == 3
           assert len({item["pionex_symbol"] for item in artifact["universe"]}) == 3
+          depth_records = [record for record in artifact["records"] if record["provider"] == "pionex_depth"]
+          assert len(depth_records) == 3
+          assert all(record["source_market_update_timestamp_status"] == "VALID" for record in depth_records)
+          assert all(record["source_market_update_at_utc"] for record in depth_records)
+          assert all(record["source_response_timestamp_status"] == "VALID" for record in depth_records)
+          assert all(record["source_response_at_utc"] for record in depth_records)
           PY
       - name: Evaluate batch twice and compare outputs without an unapproved scenario
         run: |
