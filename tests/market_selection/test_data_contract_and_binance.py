@@ -5,6 +5,7 @@ import hashlib
 import json
 import sys
 import unittest
+from unittest.mock import patch
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -27,6 +28,31 @@ def exchange_info_payload(symbol="BTCUSDT", status="TRADING", spot=True) -> byte
         "symbol": symbol, "status": status, "isSpotTradingAllowed": spot,
         "baseAsset": "BTC", "quoteAsset": "USDT",
     }]}).encode()
+
+
+class ChunkedHTTPResponse:
+    status = 200
+
+    def __init__(self, body: bytes):
+        self.body = body
+        self.offset = 0
+        self.read_sizes = []
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *args):
+        return False
+
+    def read(self, size=-1):
+        self.read_sizes.append(size)
+        if size is None or size < 0:
+            chunk = self.body[self.offset:]
+            self.offset = len(self.body)
+            return chunk
+        chunk = self.body[self.offset:self.offset + size]
+        self.offset += len(chunk)
+        return chunk
 
 
 class ContractTests(unittest.TestCase):
@@ -91,6 +117,21 @@ class BinanceReaderTests(unittest.TestCase):
         self.assertEqual(record["payload_sha256"], hashlib.sha256(depth_payload()).hexdigest())
         self.assertFalse(record["raw_payload_retained"])
         self.assertEqual(data_contract.validate_observation(record), [])
+
+    def test_response_larger_than_five_mib_is_fully_read_and_parsed(self) -> None:
+        payload = json.loads(exchange_info_payload())
+        payload["padding"] = "x" * (5 * 1024 * 1024 + 128)
+        raw = json.dumps(payload, separators=(",", ":")).encode()
+        response = ChunkedHTTPResponse(raw)
+        with patch.object(binance_public, "urlopen", return_value=response):
+            transported = binance_public._default_http_get("https://example.invalid", 10.0)
+        self.assertEqual(transported, raw)
+        self.assertGreater(len(response.read_sizes), 1)
+        self.assertTrue(all(size == 64 * 1024 for size in response.read_sizes))
+        reader = binance_public.BinancePublicSpotReader(http_get=lambda url, timeout: transported)
+        result = reader.fetch_spot_symbol_status("BTCUSDT")
+        self.assertEqual(result["availability_status"], "confirmed")
+        self.assertEqual(result["payload_sha256"], hashlib.sha256(raw).hexdigest())
 
     def test_rejects_invalid_symbol_before_http_call(self) -> None:
         calls = []

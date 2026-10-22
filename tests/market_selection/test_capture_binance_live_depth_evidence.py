@@ -7,7 +7,42 @@ from unittest.mock import patch
 from scripts.market_selection import capture_binance_live_depth_evidence as capture
 
 
+class ChunkedHTTPResponse:
+    status = 200
+
+    def __init__(self, body: bytes):
+        self.body = body
+        self.offset = 0
+        self.read_sizes = []
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *args):
+        return False
+
+    def read(self, size=-1):
+        self.read_sizes.append(size)
+        if size is None or size < 0:
+            chunk = self.body[self.offset:]
+            self.offset = len(self.body)
+            return chunk
+        chunk = self.body[self.offset:self.offset + size]
+        self.offset += len(chunk)
+        return chunk
+
+
 class LiveDepthEvidenceTests(unittest.TestCase):
+    def test_clock_probe_reads_full_response_above_old_64_kib_limit(self):
+        payload = json.dumps({"serverTime": 1792623717565, "padding": "x" * (70 * 1024)}).encode()
+        response = ChunkedHTTPResponse(payload)
+        with patch.object(capture, "urlopen", return_value=response):
+            result = capture.clock_probe()
+        self.assertEqual(result["status"], "MEASURED")
+        self.assertEqual(result["response_sha256"], hashlib.sha256(payload).hexdigest())
+        self.assertGreater(len(response.read_sizes), 1)
+        self.assertTrue(all(size == 64 * 1024 for size in response.read_sizes))
+
     def test_hash_is_stable_for_canonical_json(self):
         first = {"bids": [["1.0", "2"]], "asks": [["2.0", "3"]]}
         second = {"asks": [["2.0", "3"]], "bids": [["1.0", "2"]]}

@@ -15,8 +15,22 @@ from urllib.error import HTTPError, URLError
 from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 
-MAX_BYTES = 5 * 1024 * 1024
+READ_CHUNK_BYTES = 64 * 1024  # Read buffer size only; not a response-size limit.
 TIMEOUT_SECONDS = 12
+
+
+
+def read_complete(response: object) -> tuple[bytes, str | None]:
+    """Read the entire HTTP body in chunks; chunk size does not cap total bytes."""
+    headers = getattr(response, "headers", None)
+    content_length = headers.get("Content-Length") if headers is not None else None
+    chunks: list[bytes] = []
+    while True:
+        chunk = response.read(READ_CHUNK_BYTES)  # type: ignore[attr-defined]
+        if not chunk:
+            break
+        chunks.append(chunk)
+    return b"".join(chunks), content_length
 
 
 def now_utc() -> str:
@@ -43,9 +57,7 @@ def request_capture(provider: str, url: str) -> dict[str, object]:
     try:
         with urlopen(request, timeout=TIMEOUT_SECONDS) as response:
             status = getattr(response, "status", None)
-            raw = response.read(MAX_BYTES + 1)
-        if len(raw) > MAX_BYTES:
-            raise ValueError(f"response exceeded {MAX_BYTES} byte safety limit")
+            raw, _content_length = read_complete(response)
         record["http_status"] = status
         record["captured_at_utc"] = now_utc()
         record["response_bytes"] = len(raw)

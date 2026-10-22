@@ -11,7 +11,7 @@ Official API references:
 
 ## Runtime behavior
 
-Both capture clients now read the complete response body in repeated chunks. `READ_CHUNK_BYTES = 65,536` is only the per-read buffer size; it is **not** a maximum response size. Reading continues until the HTTP stream reaches EOF. The byte count, SHA-256, Base64 evidence, and parsed JSON are computed from the complete body.
+The public market-data capture clients, including `capture_public_market_batch.py`, read the complete response body in repeated chunks. `READ_CHUNK_BYTES = 65,536` is only the per-read buffer size; it is **not** a maximum response size. Reading continues until the HTTP stream reaches EOF. The byte count, SHA-256, Base64 evidence, and parsed JSON are computed from the complete body.
 
 The response-limit field is retained in the JSON schema for compatibility and is set to `null`, meaning no application-level response-size cap is configured. There is no oversized-prefix success or truncation path.
 

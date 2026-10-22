@@ -20,6 +20,7 @@ class FakeResponse:
 
     def __init__(self, body: bytes):
         self.body = body
+        self.offset = 0
 
     def __enter__(self):
         return self
@@ -28,7 +29,13 @@ class FakeResponse:
         return False
 
     def read(self, size=-1):
-        return self.body[:size]
+        if size is None or size < 0:
+            chunk = self.body[self.offset:]
+            self.offset = len(self.body)
+            return chunk
+        chunk = self.body[self.offset:self.offset + size]
+        self.offset += len(chunk)
+        return chunk
 
 
 class PublicCaptureTests(unittest.TestCase):
