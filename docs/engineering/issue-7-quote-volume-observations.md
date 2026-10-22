@@ -16,7 +16,7 @@ El capturador `scripts/market_selection/capture_multi_exchange_spot_ticker_probe
 
 ## Interpretación
 
-- El valor bruto y el contrato de cada campo se conservan. No se suman ni comparan cifras si el campo falta o su unidad no puede demostrarse.
+- El valor bruto y el contrato de cada campo se conservan. El capturador exige que el símbolo nativo devuelto coincida exactamente con el solicitado y rechaza símbolos ausentes, diferentes o duplicados. No se suman ni comparan cifras si el campo falta o su unidad no puede demostrarse.
 - Un ticker móvil de 24 h es una sola observación; no demuestra estabilidad. La estabilidad exige una serie de capturas fechadas o datos de velas históricos y análisis de huecos.
 - La captura se programa cada seis horas y los artefactos se retienen hasta 90 días; eso es una ventana de retención de CI, no almacenamiento histórico permanente ni garantía de disponibilidad.
 - `PASS` describe recepción/parseo de una respuesta, no liquidez ejecutable ni recomendación de inversión. Los umbrales de selección quedan pendientes de decisión y evidencia.
