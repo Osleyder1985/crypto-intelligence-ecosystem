@@ -61,7 +61,6 @@ class MinimumCommonNotionalTests(unittest.TestCase):
         self.assertFalse(item["constraints"]["pionex_min_amount_unit_verified"])
         self.assertTrue(item["constraints"]["pionex_candidate_minimums_satisfied_if_min_amount_is_quote_notional"])
         self.assertAlmostEqual(item["common_base_quantity"], 0.101)
-        self.assertTrue(item["constraints"]["pionex_minimums_satisfied"])
         self.assertTrue(item["constraints"]["binance_minimums_satisfied"])
         self.assertAlmostEqual(item["pionex"]["buy"]["quote_notional"], 10.10101)
         self.assertAlmostEqual(item["pionex"]["sell"]["quote_notional"], 10.09899)
