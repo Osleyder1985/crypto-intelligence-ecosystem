@@ -55,12 +55,12 @@ class BinanceSpotOHLCVTests(unittest.TestCase):
         import base64
         import hashlib
         import json
-        raw = json.dumps([["not-a-timestamp"]]).encode()
+        raw = json.dumps([["bad", "10", "12", "9", "11", "5", 59999, "55", 17, "2", "22"]]).encode()
         page = {
             "url": BASE_URL, "request_started_at_utc": "2026-10-22T00:00:00Z",
             "captured_at_utc": "2026-10-22T00:00:01Z", "http_status": 200,
             "response_bytes": len(raw), "response_sha256": hashlib.sha256(raw).hexdigest(),
-            "response_base64": base64.b64encode(raw).decode(), "parsed_json": [["not-a-timestamp"]],
+            "response_base64": base64.b64encode(raw).decode(), "parsed_json": [["bad", "10", "12", "9", "11", "5", 59999, "55", 17, "2", "22"]],
             "capture_status": "PASS", "normalization_status": "NOT_RUN",
             "normalization_error": None, "error_type": None, "error_message": None,
         }
