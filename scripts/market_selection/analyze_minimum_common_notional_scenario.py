@@ -218,6 +218,7 @@ def analyze_artifact(artifact: dict[str, Any]) -> dict[str, Any]:
         "schema_version": SCHEMA,
         "source_created_at_utc": artifact.get("created_at_utc"),
         "decision_status": "INDETERMINATE",
+        "results": results,
         "method": "derive a shared base quantity from captured Pionex minimums and Binance LOT_SIZE/NOTIONAL filters; then simulate consuming captured depth",
         "limitations": [
             "This is a boundary scenario derived from public exchange minimums, not a product-approved typical order size.",
