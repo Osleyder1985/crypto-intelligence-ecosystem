@@ -30,8 +30,8 @@ def fixture(depth_qty="2"):
         ],
     }
     pbook = {"result": True, "timestamp": 1792627200250, "data": {
-        "updateTime": 1792627200100, "bids": [["99.99", depth_qty], ["99.98", "2"]],
-        "asks": [["100.01", depth_qty], ["100.02", "2"]],
+        "updateTime": 1792627200100, "bids": [["99.99", depth_qty], ["99.98", depth_qty]],
+        "asks": [["100.01", depth_qty], ["100.02", depth_qty]],
     }}
     bbook = {"lastUpdateId": 123, "bids": [["99.99", depth_qty], ["99.98", "2"]],
              "asks": [["100.01", depth_qty], ["100.02", "2"]]}
