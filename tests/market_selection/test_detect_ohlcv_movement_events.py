@@ -2,6 +2,7 @@ import base64
 import hashlib
 import unittest
 
+from scripts.market_selection.provider_license_gate import ASSESSMENT_SCHEMA_VERSION, POLICY_VERSION
 from scripts.market_selection.detect_ohlcv_movement_events import analyze_movement_events
 
 
@@ -18,7 +19,11 @@ def candle(i, close, quote_volume, *, closed=True):
 def artifact(rows):
     raw = b"synthetic preserved response body"
     return {
-        "schema_version": "binance-spot-ohlcv-capture-v1", "overall_status": "PASS",
+        "schema_version": "binance-spot-ohlcv-capture-v1",
+        "provider_use_assessment": {"schema_version": ASSESSMENT_SCHEMA_VERSION, "policy_version": POLICY_VERSION,
+            "provider_id": "binance_spot_market_data", "use_case": "internal_analysis", "decision": "ALLOW",
+            "reason_codes": ["EXPLICIT_AUTHORIZATION_RECORD_VALIDATED"],
+            "authorization": {"authorized_use_cases": ["internal_analysis"], "authorization_record_sha256": "b" * 64}}, "overall_status": "PASS",
         "market": {"exchange": "binance", "market_type": "SPOT", "symbol_native": "BTCUSDT", "interval": "1h"},
         "pages": [{"capture_status": "PASS", "response_base64": base64.b64encode(raw).decode("ascii"),
                    "response_bytes": len(raw), "response_sha256": hashlib.sha256(raw).hexdigest()}],
