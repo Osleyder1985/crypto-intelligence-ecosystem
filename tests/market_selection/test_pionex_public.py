@@ -12,6 +12,18 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "scripts" / "market_selection"))
 
 import pionex_public  # noqa: E402
+from scripts.market_selection.provider_license_gate import SCHEMA_VERSION
+
+PIONEX_AUTHORIZATION_RECORD = {
+    "schema_version": SCHEMA_VERSION,
+    "provider_id": "pionex_spot_market_data",
+    "status": "APPROVED",
+    "authorized_use_cases": ["internal_analysis"],
+    "terms_url": "https://www.pionex.com/terms",
+    "terms_sha256": "b" * 64,
+    "reviewed_at": "2026-10-22T00:00:00Z",
+    "reviewed_by": "offline-test-fixture",
+}
 
 
 def response(symbol="BTC_USDT", enabled=True, market_type="SPOT", base="BTC", quote="USDT", timestamp=1792368000000):
@@ -52,6 +64,7 @@ class PionexPublicSpotReaderTests(unittest.TestCase):
         return pionex_public.PionexPublicSpotReader(
             http_get=lambda url, timeout: (calls.append(url) if calls is not None else None) or payload,
             clock=lambda: "2026-10-19T00:00:01Z",
+            authorization_record=PIONEX_AUTHORIZATION_RECORD,
         )
 
     def test_response_larger_than_five_mib_is_fully_read_and_parsed(self):
@@ -60,7 +73,7 @@ class PionexPublicSpotReaderTests(unittest.TestCase):
         raw = json.dumps(payload, separators=(",", ":")).encode()
         transport = ChunkedHTTPResponse(raw)
         with patch.object(pionex_public, "urlopen", return_value=transport):
-            transported = pionex_public._default_http_get("https://example.invalid", 10.0)
+            transported = pionex_public._default_http_get("https://example.invalid", 10.0, PIONEX_AUTHORIZATION_RECORD)
         self.assertEqual(transported, raw)
         self.assertGreater(len(transport.read_sizes), 1)
         self.assertTrue(all(size == 64 * 1024 for size in transport.read_sizes))
@@ -95,6 +108,13 @@ class PionexPublicSpotReaderTests(unittest.TestCase):
         reader = self.make_reader(response(base="ETH"))
         with self.assertRaisesRegex(pionex_public.PionexReadError, "does not match"):
             reader.check_spot_symbol("BTC_USDT")
+
+    def test_missing_authorization_blocks_before_transport(self):
+        calls = []
+        reader = pionex_public.PionexPublicSpotReader(http_get=lambda url, timeout: calls.append(url) or response())
+        with self.assertRaisesRegex(pionex_public.PionexReadError, "provider use blocked before network"):
+            reader.check_spot_symbol("BTC_USDT")
+        self.assertEqual(calls, [])
 
     def test_invalid_symbol_never_calls_transport(self):
         calls = []
