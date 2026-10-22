@@ -69,7 +69,7 @@ BINANCE_AUTHORIZATION_RECORD = {
 
 
 def authorized_reader(**kwargs):
-    return authorized_reader(authorization_record=BINANCE_AUTHORIZATION_RECORD, **kwargs)
+    return binance_public.BinancePublicSpotReader(authorization_record=BINANCE_AUTHORIZATION_RECORD, **kwargs)
 
 
 class ContractTests(unittest.TestCase):
