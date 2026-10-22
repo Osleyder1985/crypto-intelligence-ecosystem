@@ -129,10 +129,10 @@ def validate_catalog(content: str) -> list[str]:
     if content.count(required_owner_header) != 2:
         errors.append("expected owner column in both product-requirement tables")
 
-    if len(product_rows) != 33:
-        errors.append(f"expected 33 product requirements; found {len(product_rows)}")
-    if len(nfr_rows) != 18:
-        errors.append(f"expected 18 NFR definitions; found {len(nfr_rows)}")
+    if len(product_rows) != 39:
+        errors.append(f"expected 39 product requirements; found {len(product_rows)}")
+    if len(nfr_rows) != 21:
+        errors.append(f"expected 21 NFR definitions; found {len(nfr_rows)}")
 
     defined = set(product_rows) | set(nfr_rows)
     for match in re.finditer(r"\b(?:REQ-P|NFR)-\d{3}\b", content):
