@@ -4,7 +4,7 @@ import json
 import unittest
 from unittest.mock import patch
 
-from scripts.market_selection.capture_public_market_data import request_capture
+from scripts.market_selection.capture_public_market_data import BINANCE_DEPTH_LIMIT, request_capture
 
 
 class Response:
@@ -33,6 +33,8 @@ class Response:
 
 
 class CompleteResponseTests(unittest.TestCase):
+    def test_binance_depth_limit_uses_official_maximum(self):
+        self.assertEqual(BINANCE_DEPTH_LIMIT, 5000)
     def test_large_binance_metadata_is_preserved(self):
         payload = {"symbols": [{"symbol": "BTCUSDT", "status": "TRADING", "isSpotTradingAllowed": True}], "padding": "x" * (5 * 1024 * 1024 + 128)}
         response = Response(payload)
