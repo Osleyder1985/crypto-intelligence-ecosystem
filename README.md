@@ -26,7 +26,7 @@ El sistema debe ayudar a responder, con evidencia y límites explícitos:
 
 ## Flujo objetivo de evaluación por activo
 
-Al introducir un criptoactivo, el objetivo es generar un expediente histórico con movimientos relevantes y posibles detonantes sustentados por fuentes, zonas de soporte/resistencia y una evaluación explicable para **corto, medio y largo plazo**. Cada horizonte debe exponer escenarios, evidencia a favor/en contra, riesgos, invalidaciones e incertidumbre; la conclusión puede ser favorable, desfavorable o `INDETERMINATE`. La especificación verificable y sus criterios E2E están en [Issue #128](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/issues/128) y [la documentación del flujo](docs/engineering/issue-128-end-to-end-asset-research.md). Esto es el objetivo del producto, no una afirmación de que todas las capacidades estén implementadas.
+Al introducir un criptoactivo, el objetivo es generar un expediente histórico con movimientos relevantes y posibles detonantes sustentados por fuentes, zonas de soporte/resistencia y una evaluación explicable para **corto, medio y largo plazo**. Cada horizonte debe exponer escenarios, evidencia a favor/en contra, riesgos, invalidaciones e incertidumbre; la conclusión puede ser favorable, desfavorable o `INDETERMINATE`. La especificación verificable y sus criterios E2E están en [Issue #128](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/issues/128) y [la documentación del flujo](docs/engineering/issue-128-end-to-end-asset-research.md) y [la auditoría de brechas](docs/engineering/issue-128-implementation-gap-audit.md). Esto es el objetivo del producto, no una afirmación de que todas las capacidades estén implementadas.
 
 ## Alcance actual de ingeniería
 
