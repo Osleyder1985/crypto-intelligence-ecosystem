@@ -1,6 +1,8 @@
 """Offline evaluator for preserved multi-pair public market captures."""
 from __future__ import annotations
 import argparse, base64, hashlib, json, math
+from datetime import datetime
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 try:
@@ -9,7 +11,7 @@ except ImportError:  # Support direct CLI execution from this directory.
     from selector import depth_quote, estimate_slippage_bps, evaluate_freshness, spread_bps
 
 SCHEMA = "public-market-batch-evaluation-v1"
-PROVIDERS = ("pionex", "binance_exchange_info", "binance_depth")
+PROVIDERS = ("pionex", "pionex_depth", "binance_exchange_info", "binance_depth")
 
 def _payload(record: dict[str, Any]) -> dict[str, Any]:
     if record.get("capture_status") != "PASS" or record.get("http_status") != 200:
@@ -29,6 +31,96 @@ def _one(records, market, provider):
     if len(found) != 1:
         raise ValueError(f"expected exactly one {provider} record for {market}; found {len(found)}")
     return _payload(found[0])
+
+def _optional_record(records, market, provider):
+    found = [r for r in records if r.get("market_id") == market and r.get("provider") == provider]
+    if len(found) > 1:
+        raise ValueError(f"expected at most one {provider} record for {market}; found {len(found)}")
+    return found[0] if found else None
+
+
+def _parse_utc(value):
+    if not isinstance(value, str) or not value:
+        return None
+    try:
+        parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+    except (ValueError, OverflowError):
+        return None
+    if parsed.tzinfo is None or parsed.utcoffset() is None:
+        return None
+    return parsed
+
+
+def _pionex_depth_timing(record):
+    """Measure observed timestamp relationships without applying an unapproved freshness threshold."""
+    if record is None:
+        return "INDETERMINATE", {}, "Pionex depth record is absent"
+    _payload(record)  # Verify the raw bytes and parsed JSON before trusting timestamp metadata.
+    if record.get("source_market_update_timestamp_status") != "VALID" or record.get("source_response_timestamp_status") != "VALID":
+        return "INDETERMINATE", {}, "Pionex order-book update or response timestamp is missing/invalid"
+    update = _parse_utc(record.get("source_market_update_at_utc"))
+    response = _parse_utc(record.get("source_response_at_utc"))
+    captured = _parse_utc(record.get("captured_at_utc"))
+    if update is None or response is None or captured is None:
+        return "INDETERMINATE", {}, "Pionex timing fields are not valid timezone-aware timestamps"
+    data = record.get("parsed_json", {}).get("data", {})
+    bids, asks = data.get("bids"), data.get("asks")
+    metrics = {
+        "pionex_response_minus_book_update_ms": (response - update).total_seconds() * 1000,
+        "pionex_capture_minus_book_update_ms": (captured - update).total_seconds() * 1000,
+        "pionex_capture_minus_response_ms": (captured - response).total_seconds() * 1000,
+        "pionex_depth_bid_levels": len(bids) if isinstance(bids, list) else None,
+        "pionex_depth_ask_levels": len(asks) if isinstance(asks, list) else None,
+    }
+    if metrics["pionex_response_minus_book_update_ms"] < 0:
+        return "INDETERMINATE", metrics, "Pionex response timestamp precedes its book update timestamp"
+    return "PASS", metrics, "timestamps are structurally valid and observed timing deltas were measured; no freshness threshold was applied"
+
+
+def _optional_record(records, market, provider):
+    found = [r for r in records if r.get("market_id") == market and r.get("provider") == provider]
+    if len(found) > 1:
+        raise ValueError(f"expected at most one {provider} record for {market}; found {len(found)}")
+    return found[0] if found else None
+
+
+def _parse_utc(value):
+    if not isinstance(value, str) or not value:
+        return None
+    try:
+        parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+    except (ValueError, OverflowError):
+        return None
+    if parsed.tzinfo is None or parsed.utcoffset() is None:
+        return None
+    return parsed
+
+
+def _pionex_depth_timing(record):
+    """Measure observed timestamp relationships without applying an unapproved freshness threshold."""
+    if record is None:
+        return "INDETERMINATE", {}, "Pionex depth record is absent"
+    _payload(record)  # Verify raw bytes and parsed JSON before trusting timestamp metadata.
+    if record.get("source_market_update_timestamp_status") != "VALID" or record.get("source_response_timestamp_status") != "VALID":
+        return "INDETERMINATE", {}, "Pionex order-book update or response timestamp is missing/invalid"
+    update = _parse_utc(record.get("source_market_update_at_utc"))
+    response = _parse_utc(record.get("source_response_at_utc"))
+    captured = _parse_utc(record.get("captured_at_utc"))
+    if update is None or response is None or captured is None:
+        return "INDETERMINATE", {}, "Pionex timing fields are not valid timezone-aware timestamps"
+    data = record.get("parsed_json", {}).get("data", {})
+    bids, asks = data.get("bids"), data.get("asks")
+    metrics = {
+        "pionex_response_minus_book_update_ms": (response - update).total_seconds() * 1000,
+        "pionex_capture_minus_book_update_ms": (captured - update).total_seconds() * 1000,
+        "pionex_capture_minus_response_ms": (captured - response).total_seconds() * 1000,
+        "pionex_depth_bid_levels": len(bids) if isinstance(bids, list) else None,
+        "pionex_depth_ask_levels": len(asks) if isinstance(asks, list) else None,
+    }
+    if metrics["pionex_response_minus_book_update_ms"] < 0:
+        return "INDETERMINATE", metrics, "Pionex response timestamp precedes its book update timestamp"
+    return "PASS", metrics, "timestamps are structurally valid and observed timing deltas were measured; no freshness threshold was applied"
+
 
 def _num(v):
     return isinstance(v, (int, float)) and not isinstance(v, bool) and math.isfinite(v)
@@ -104,14 +196,30 @@ def evaluate_batch(artifact: dict[str, Any], config: dict[str, Any] | None = Non
         seen_market_ids.add(market)
         seen_binance_symbols.add(bsym)
         pionex = _one(records, market, "pionex")
+        pionex_depth_record = _optional_record(records, market, "pionex_depth")
         info = _one(records, market, "binance_exchange_info")
         depth = _one(records, market, "binance_depth")
         status = {"capture_integrity":"PASS", "pionex_spot_availability":"INDETERMINATE",
                   "binance_spot_market":"INDETERMINATE", "spread":"NOT_RUN", "depth":"NOT_RUN",
-                  "slippage":"NOT_RUN", "source_freshness":"INDETERMINATE", "fees":"INDETERMINATE"}
+                  "slippage":"NOT_RUN", "source_freshness":"INDETERMINATE", "fees":"INDETERMINATE",
+                  "pionex_depth_timestamp_evidence":"INDETERMINATE"}
         metrics, reasons = {}, [
             "Trading fees and total execution cost are INDETERMINATE: no verified account-applicable official fee schedule is included in this artifact.",
         ]
+        timing_status, timing_metrics, timing_reason = _pionex_depth_timing(pionex_depth_record)
+        status["pionex_depth_timestamp_evidence"] = timing_status
+        metrics.update(timing_metrics)
+        reasons.append(
+            f"Pionex depth timing evidence is {timing_status}: {timing_reason}. "
+            "Observed timestamp deltas are measurements, not an approved freshness threshold."
+        )
+        timing_status, timing_metrics, timing_reason = _pionex_depth_timing(pionex_depth_record)
+        status["pionex_depth_timestamp_evidence"] = timing_status
+        metrics.update(timing_metrics)
+        reasons.append(
+            f"Pionex depth timing evidence is {timing_status}: {timing_reason}. "
+            "Observed timestamp deltas are measurements, not an approved freshness threshold."
+        )
         freshness_status, freshness_metrics, freshness_reason = _live_freshness(artifact, bsym, config)
         status["source_freshness"] = freshness_status
         metrics.update(freshness_metrics)

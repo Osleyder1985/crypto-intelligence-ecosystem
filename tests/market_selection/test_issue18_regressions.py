@@ -17,11 +17,12 @@ class Issue18RegressionTests(unittest.TestCase):
 
     def test_order_larger_than_captured_depth_is_indeterminate(self):
         artifact = fixture()
-        depth = artifact["records"][2]["parsed_json"]
+        depth_index = next(i for i, record in enumerate(artifact["records"]) if record["provider"] == "binance_depth")
+        depth = artifact["records"][depth_index]["parsed_json"]
         depth["asks"] = [["100.01", "0.01"]]
-        artifact["records"][2] = rec("BTC_USDT", "binance_depth", depth)
+        artifact["records"][depth_index] = rec("BTC_USDT", "binance_depth", depth)
         depth["bids"] = [["99.99", "0.01"]]
-        artifact["records"][2] = rec("BTC_USDT", "binance_depth", depth)
+        artifact["records"][depth_index] = rec("BTC_USDT", "binance_depth", depth)
 
         config = {"order_size_base": 1.0, "max_slippage_bps": 10}
         market = evaluate_batch(artifact, config)["markets"][0]
