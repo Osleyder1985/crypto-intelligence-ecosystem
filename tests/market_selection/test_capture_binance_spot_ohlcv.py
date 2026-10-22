@@ -3,7 +3,7 @@ from unittest.mock import patch
 
 from scripts.market_selection.capture_binance_spot_ohlcv import (
     BASE_URL, build_url, expected_open_times, is_interval_boundary,
-    next_open_time, normalize_kline, validate_window, capture_history,
+    next_open_time, normalize_kline, validate_window, capture_history, request_page,
 )
 
 
@@ -79,6 +79,12 @@ class BinanceSpotOHLCVTests(unittest.TestCase):
         self.assertIn("kline timestamps", result["pages"][0]["normalization_error"])
         self.assertEqual(result["pages"][0]["response_sha256"], hashlib.sha256(raw).hexdigest())
 
+
+    def test_low_level_page_request_blocks_non_test_use_before_network(self):
+        with patch("scripts.market_selection.capture_binance_spot_ohlcv.urlopen", side_effect=AssertionError("network must not be called")):
+            result = request_page(BASE_URL, use_case="internal_analysis")
+        self.assertEqual(result["capture_status"], "BLOCKED")
+        self.assertEqual(result["provider_use_assessment"]["decision"], "BLOCK")
 
     def test_non_test_use_without_authorization_is_blocked_before_network(self):
         with patch("scripts.market_selection.capture_binance_spot_ohlcv.request_page") as network:
