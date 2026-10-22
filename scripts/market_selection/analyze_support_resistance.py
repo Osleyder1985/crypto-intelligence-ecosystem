@@ -240,7 +240,7 @@ def analyze_support_resistance(artifact: dict, pivot_left: int, pivot_right: int
         },
         "gaps": gaps,
         "zones": [{
-            **zone,
+            **{key: value for key, value in zone.items() if key not in {"currently_intersecting", "rejection_recorded_for_episode"}},
             "center_price": str(zone["center_price"]),
             "lower_bound_price": str(zone["lower_bound_price"]),
             "upper_bound_price": str(zone["upper_bound_price"]),
