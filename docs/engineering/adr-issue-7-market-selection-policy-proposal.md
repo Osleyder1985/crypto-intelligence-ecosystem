@@ -19,7 +19,7 @@ Antes de comparar una métrica económica, cada observación debe pasar controle
 
 1. **Identidad:** símbolo nativo, base, quote y mercado Spot confirmados por metadata oficial del venue.
 2. **Integridad:** respuesta completa preservada, tamaño real, SHA-256 y esquema válidos; no aceptar un prefijo truncado como payload completo.
-3. **Comparabilidad:** unidades, ventana, semántica del campo y mercado deben estar documentados. No equiparar volumen base con turnover cotizado.
+3. **Comparabilidad:** unidades, ventana, semántica del campo y mercado deben estar documentados. No equiparar volumen base con turnover cotizado. En Pionex, `amount` se preserva como dato bruto pero no se considera turnover cotizado comparable hasta documentar oficialmente su unidad.
 4. **Disponibilidad objetivo:** el par exacto en Pionex debe confirmarse por separado; acceso regional o de cuenta no se infiere de un endpoint público.
 5. **Frescura:** solo PASS si el tipo de timestamp permite calcular la edad con una política versionada. Sin timestamp de evento o sin unidad demostrada, usar INDETERMINATE; IDs de secuencia no son timestamps.
 6. **Costes:** distinguir tarifa pública de referencia de tarifa efectiva por cuenta. Un coste neto personalizado requiere evidencia de cuenta read-only y una conversión verificable de la moneda de comisión.
