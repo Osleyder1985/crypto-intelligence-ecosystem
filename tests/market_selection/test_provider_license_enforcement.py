@@ -61,6 +61,47 @@ class ProviderLicenseEnforcementTests(unittest.TestCase):
             with self.assertRaises(PermissionError):
                 pionex_account.capture("BTC_USDT", "USDT", 1, 2, "key", "secret")
 
+    def test_pionex_private_account_capture_runs_only_with_explicit_authorization(self) -> None:
+        import json
+        from scripts.market_selection.provider_license_gate import SCHEMA_VERSION
+
+        authorization = {
+            "schema_version": SCHEMA_VERSION,
+            "provider_id": "pionex_spot_account_data",
+            "status": "APPROVED",
+            "authorized_use_cases": ["internal_analysis"],
+            "terms_url": "https://www.pionex.com/terms",
+            "terms_sha256": "c" * 64,
+            "reviewed_at": "2026-10-22T00:00:00Z",
+            "reviewed_by": "offline-test-fixture",
+            "account_owner_consent_ref": "offline-pionex-consent-fixture",
+            "account_owner_consent_sha256": "d" * 64,
+            "credential_scope_verified": True,
+        }
+        raw = json.dumps({
+            "result": True, "timestamp": 1200,
+            "data": {"fills": [{
+                "symbol": "BTC_USDT", "side": "BUY", "role": "TAKER",
+                "price": "100", "size": "0.01", "fee": "0.0005",
+                "feeCoin": "USDT", "timestamp": 1000,
+            }]},
+        }).encode("utf-8")
+
+        class FakeResponse:
+            status = 200
+            def __enter__(self): return self
+            def __exit__(self, *_args): return False
+            def read(self): return raw
+
+        with patch.object(pionex_account, "urlopen", return_value=FakeResponse()) as transport:
+            result = pionex_account.capture(
+                "BTC_USDT", "USDT", 1, 2000, "key", "secret",
+                authorization_record=authorization,
+            )
+        transport.assert_called_once()
+        self.assertEqual(result["provider_use_assessment"]["decision"], "ALLOW")
+        self.assertEqual(result["fills_count"], 1)
+
     def test_private_account_gate_requires_owner_consent_and_verified_credential_scope(self) -> None:
         from scripts.market_selection.provider_license_gate import evaluate_provider_use, SCHEMA_VERSION
         record = {
