@@ -32,6 +32,12 @@ def artifact(rows):
 
 
 class SupportResistanceTests(unittest.TestCase):
+    def test_missing_authorization_blocks_analysis(self):
+        source = artifact([candle(0, 10, 11, 9, 10), candle(1, 10, 11, 8, 9)])
+        source.pop("provider_use_assessment")
+        with self.assertRaisesRegex(PermissionError, "blocked before use"):
+            analyze_support_resistance(source, 1, 1, 100)
+
     def test_pivot_is_available_only_after_right_bars_close(self):
         a = artifact([
             candle(0, 10, 11, 9, 10),
