@@ -31,6 +31,10 @@ Estas reglas son controles de ingeniería y no sustituyen una revisión legal es
 
 `capture_multi_exchange_spot_book_probe.py` guarda el payload público íntegro como evidencia base64 y, por tanto, su caso de uso es `persistent_storage`, no solo una prueba técnica en vivo. La captura ahora evalúa el gate por venue antes de crear una solicitud: Binance, OKX, Bybit, MEXC, Gate, Bitget y Pionex. Sin autorización aprobada para el proveedor y el caso de uso, la fila queda `BLOCKED` y no se llama a `urlopen`. Las autorizaciones se suministran localmente con `--authorization-records`, como objeto JSON indexado por `provider_id`; sin archivo, el comportamiento predeterminado es bloquear. Los registros de prueba no equivalen a permisos reales.
 
+Los lectores `binance_public.py` y `pionex_public.py` también consultan la red directamente. Ahora exigen un registro de autorización explícito para `internal_analysis`, verifican el gate antes del transporte inyectado y antes del transporte HTTP predeterminado, y adjuntan la evaluación a las observaciones correctas. Las pruebas de tamaño grande usan registros sintéticos solo para validar la lectura íntegra; no representan autorizaciones reales.
+
+El sondeo `capture_multi_exchange_spot_ticker_probe.py` también conserva los cuerpos de respuesta completos como evidencia base64. Por eso debe usar `persistent_storage` y la autorización por venue antes de `urlopen`; sin registros locales aprobados para el proveedor y el caso de uso, cada fila se marca `BLOCKED` y no se envía la solicitud. El comando admite `--authorization-records` (objeto JSON indexado por `provider_id`) y bloquea por defecto si no se suministra.
+
 ## Acceso privado de cuenta: Binance y Pionex
 
 Los capturadores `capture_binance_account_commission_evidence.py` y `capture_pionex_fill_fee_evidence.py` consultan endpoints autenticados de cuenta; no son capturas de mercado público. Las claves API, por sí solas, no demuestran consentimiento para cualquier tratamiento ni autorización de licencia para cualquier uso posterior.

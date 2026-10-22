@@ -7,8 +7,20 @@ on:
       - "tests/market_selection/test_provider_license_gate.py"
       - "tests/market_selection/test_provider_license_enforcement.py"
       - "tests/market_selection/test_capture_binance_account_commission_evidence.py"
+      - "scripts/market_selection/binance_public.py"
+      - "scripts/market_selection/pionex_public.py"
+      - "tests/market_selection/test_data_contract_and_binance.py"
+      - "tests/market_selection/test_pionex_public.py"
+      - "scripts/market_selection/capture_multi_exchange_spot_ticker_probe.py"
+      - "tests/market_selection/test_capture_multi_exchange_spot_ticker_probe.py"
       - "scripts/market_selection/capture_binance_account_commission_evidence.py"
       - "scripts/market_selection/capture_pionex_fill_fee_evidence.py"
+      - "scripts/market_selection/binance_public.py"
+      - "scripts/market_selection/pionex_public.py"
+      - "tests/market_selection/test_data_contract_and_binance.py"
+      - "tests/market_selection/test_pionex_public.py"
+      - "scripts/market_selection/capture_multi_exchange_spot_ticker_probe.py"
+      - "tests/market_selection/test_capture_multi_exchange_spot_ticker_probe.py"
       - "scripts/market_selection/capture_multi_exchange_spot_book_probe.py"
       - "tests/market_selection/test_capture_multi_exchange_spot_book_probe.py"
       - ".github/workflows/provider-license-gate-tests.yml"
@@ -38,3 +50,6 @@ jobs:
           python -m unittest discover -s tests/market_selection -p "test_provider_license_*.py" -v
           python -m unittest discover -s tests/market_selection -p "test_capture_multi_exchange_spot_book_probe.py" -v
           python -m unittest discover -s tests/market_selection -p "test_capture_binance_account_commission_evidence.py" -v
+          python -m unittest discover -s tests/market_selection -p "test_data_contract_and_binance.py" -v
+          python -m unittest discover -s tests/market_selection -p "test_pionex_public.py" -v
+          python -m unittest discover -s tests/market_selection -p "test_capture_multi_exchange_spot_ticker_probe.py" -v
