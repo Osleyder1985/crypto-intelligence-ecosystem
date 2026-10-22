@@ -8,6 +8,7 @@
 |---|---|---|
 | [Contrato inicial del informe integrado — Issue #130](issue-130-research-report-contract.md) | Orquestador offline de riesgo OHLCV, movimientos y soportes/resistencias con abstención explícita | Primer incremento; sin noticias, fundamentales/on-chain ni evaluación de horizontes aprobada |
 | [Captura real Binance Spot → informe E2E — Issue #128](issue-128-binance-live-capture-report-e2e.md) | Conecta exchangeInfo y OHLCV públicos con el informe reproducible, conservando respuestas completas y hashes | Integración técnica en revisión; licencia comercial y mapeo canónico cross-provider pendientes |
+| [Contrato de identidad canónica de criptoactivos — Issue #128](issue-128-canonical-asset-identity-contract.md) | Separa ticker de identidad namespaced con evidencia, hash y timestamps; ticker-only produce NOT_RESOLVED | Bloque contractual offline; aún no conectado al informe E2E ni a un registro de fuentes autoritativas |
 | [Marco maestro](master-framework.md) | Visión, límites, principios, gobernanza, ciclo de vida, arquitectura lógica y decisiones pendientes | Borrador |
 | [Matriz normativa](normative-matrix.md) | Referencias, estado de verificación, aplicabilidad inicial, evidencia y decisiones pendientes | Preliminar |
 | [Catálogo de requisitos y trazabilidad](requirements-traceability-catalog.md) | Requisitos iniciales, NFR, mapa de objetivos y reglas de trazabilidad | Borrador |
