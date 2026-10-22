@@ -19,7 +19,7 @@ class FakeResponse:
     def __exit__(self, *args):
         return False
     def read(self, size=-1):
-        return self.payload[:size]
+        return self.payload if size is None or size < 0 else self.payload[:size]
 
 
 class BatchCaptureTests(unittest.TestCase):
@@ -47,6 +47,18 @@ class BatchCaptureTests(unittest.TestCase):
         self.assertIsNone(record["source_response_at_utc"])
         self.assertEqual(record["source_response_timestamp_status"], "MISSING")
         self.assertIsNotNone(record["captured_at_utc"])
+
+    def test_response_larger_than_five_mib_is_preserved_without_arbitrary_cap(self):
+        payload = {"data": "x" * (5 * 1024 * 1024 + 128)}
+        with patch("scripts.market_selection.capture_public_market_batch.urlopen", return_value=FakeResponse(payload)):
+            record = request_capture("BTC_USDT", "pionex", "https://example.invalid")
+        raw = base64.b64decode(record["response_base64"], validate=True)
+        self.assertGreater(len(raw), 5 * 1024 * 1024)
+        self.assertEqual(record["capture_status"], "PASS")
+        self.assertEqual(record["response_bytes"], len(raw))
+        self.assertEqual(record["response_sha256"], hashlib.sha256(raw).hexdigest())
+        self.assertEqual(json.loads(raw.decode("utf-8")), payload)
+        self.assertEqual(record["parsed_json"], payload)
 
     def test_pionex_response_timestamp_is_normalized_separately_from_market_event_time(self):
         payload = {"result": True, "timestamp": 1792610282496, "data": {"symbols": []}}
