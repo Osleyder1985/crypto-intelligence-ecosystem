@@ -6,7 +6,11 @@ approve methodology, infer causality, or issue investment recommendations.
 from __future__ import annotations
 
 import argparse
+import base64
+import hashlib
 import json
+import re
+import xml.etree.ElementTree as ET
 from pathlib import Path
 from typing import Any
 from urllib.parse import urlsplit
@@ -16,9 +20,11 @@ from scripts.market_selection.fundamental_onchain_contract import evaluate_obser
 from scripts.market_selection.methodology_contract import validate_methodology
 from scripts.market_selection.provider_license_gate import evaluate_artifact_use
 from scripts.market_selection.event_source_registry import get_source, source_entry_sha256, source_is_approved
+from scripts.market_selection.capture_sec_press_releases_rss import parse_sec_press_releases_rss
 
 REPORT_SCHEMA = "crypto-asset-research-report-v2"
 BUNDLE_SCHEMA = "crypto-research-evidence-bundle-v1"
+_SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
 
 
 def _object(value: Any, field: str) -> dict:
@@ -31,6 +37,122 @@ def _timestamp(value: Any, field: str) -> str:
     if not isinstance(value, str) or not value.strip():
         raise ValueError(f"{field} must be a non-empty ISO-8601 timestamp with offset")
     return value.strip()
+
+
+def _verify_source_capture(
+    capture: dict,
+    *,
+    field: str,
+    source_entry: dict,
+    registry_hash: str,
+    expected_requested_url: str,
+) -> bytes:
+    capture = _object(capture, field)
+    if capture.get("capture_status") != "PASS" or capture.get("capture_truncated") is not False:
+        raise PermissionError(f"{field} is not a complete PASS capture")
+    if capture.get("network_request_made") is not True:
+        raise PermissionError(f"{field} does not prove a network capture")
+    if capture.get("source_registry_status") != "APPROVED":
+        raise PermissionError(f"{field} source registry was not approved")
+    if capture.get("source_registry_entry_sha256") != registry_hash:
+        raise PermissionError(f"{field} source registry hash is stale")
+    if capture.get("source_url") != source_entry["source_url"]:
+        raise PermissionError(f"{field} source URL does not match registry")
+    if capture.get("requested_url") != expected_requested_url:
+        raise PermissionError(f"{field} requested URL does not match expected source")
+    for key, use_case in (
+        ("provider_use_assessment", "internal_analysis"),
+        ("persistent_storage_assessment", "persistent_storage"),
+    ):
+        assessment = _object(capture.get(key), f"{field}.{key}")
+        if assessment.get("provider_id") != source_entry["provider_id"] or assessment.get("decision") != "ALLOW":
+            raise PermissionError(f"{field} does not authorize {use_case}")
+    encoded = capture.get("raw_response_base64")
+    if not isinstance(encoded, str):
+        raise PermissionError(f"{field} raw response bytes are missing")
+    try:
+        raw = base64.b64decode(encoded, validate=True)
+    except (ValueError, base64.binascii.Error) as exc:
+        raise PermissionError(f"{field} raw response base64 is invalid") from exc
+    digest = capture.get("raw_response_sha256")
+    size = capture.get("raw_response_bytes")
+    if not isinstance(digest, str) or not _SHA256_RE.fullmatch(digest):
+        raise PermissionError(f"{field} raw response SHA-256 is invalid")
+    if hashlib.sha256(raw).hexdigest() != digest:
+        raise PermissionError(f"{field} raw response SHA-256 mismatch")
+    if isinstance(size, bool) or not isinstance(size, int) or len(raw) != size:
+        raise PermissionError(f"{field} raw response byte count mismatch")
+    return raw
+
+
+def _verify_promoted_sec_event(event_record: dict, source_entry: dict, registry_hash: str) -> None:
+    captures = _object(event_record.get("source_capture_assessments"), "event.source_capture_assessments")
+    feed_capture = _object(captures.get("feed"), "event.source_capture_assessments.feed")
+    article_capture = _object(captures.get("article"), "event.source_capture_assessments.article")
+    event_source = _object(event_record.get("source"), "event.source")
+    event_url = event_source.get("url")
+
+    feed_raw = _verify_source_capture(
+        feed_capture, field="event.feed_capture", source_entry=source_entry,
+        registry_hash=registry_hash, expected_requested_url=source_entry["source_url"],
+    )
+    article_raw = _verify_source_capture(
+        article_capture, field="event.article_capture", source_entry=source_entry,
+        registry_hash=registry_hash, expected_requested_url=event_url,
+    )
+    content_type = next(
+        (value.split(";", 1)[0].strip().lower() for key, value in article_capture.get("response_headers", {}).items()
+         if key.lower() == "content-type"),
+        "",
+    )
+    if content_type not in {"text/html", "application/xhtml+xml"}:
+        raise PermissionError("event article capture has an unexpected Content-Type")
+    if article_capture.get("captured_at") != event_record.get("captured_at"):
+        raise PermissionError("event captured_at does not match article capture time")
+
+    metadata = _object(event_record.get("metadata"), "event.metadata")
+    feed_hash = feed_capture["raw_response_sha256"]
+    article_hash = article_capture["raw_response_sha256"]
+    if metadata.get("feed_raw_response_sha256") != feed_hash:
+        raise PermissionError("event feed response hash does not match preserved capture")
+    if metadata.get("article_raw_response_sha256") != article_hash or event_record.get("content_sha256") != article_hash:
+        raise PermissionError("event article hash does not match preserved capture")
+
+    try:
+        parsed_items = parse_sec_press_releases_rss(feed_raw)
+    except (ET.ParseError, ValueError) as exc:
+        raise PermissionError("event feed capture is not valid RSS/RDF") from exc
+    item_id = metadata.get("feed_item_id")
+    matched = next((item for item in parsed_items if item.get("item_id") == item_id), None)
+    if matched is None:
+        raise PermissionError("event feed item is not present in preserved RSS bytes")
+    item_record = _object(metadata.get("feed_item_record"), "event.metadata.feed_item_record")
+    for key in ("item_id", "title", "link", "published_at_utc", "normalized_item_sha256"):
+        if item_record.get(key) != matched.get(key):
+            raise PermissionError(f"event feed item metadata mismatch: {key}")
+    if metadata.get("normalized_feed_item_sha256") != matched.get("normalized_item_sha256"):
+        raise PermissionError("event normalized feed item hash mismatch")
+    if (
+        event_record.get("title") != matched.get("title")
+        or event_record.get("published_at") != matched.get("published_at_utc")
+        or event_url != matched.get("link")
+    ):
+        raise PermissionError("event title, URL, or publication time is not grounded in the captured feed")
+    if article_capture.get("requested_url") != matched.get("link"):
+        raise PermissionError("article capture URL does not match the RSS item")
+
+    mapping_b64 = metadata.get("entity_resolution_evidence_record_base64")
+    mapping_hash = metadata.get("entity_resolution_evidence_record_sha256")
+    if not isinstance(mapping_b64, str) or not isinstance(mapping_hash, str) or not _SHA256_RE.fullmatch(mapping_hash):
+        raise PermissionError("reviewed entity-mapping evidence is missing")
+    try:
+        mapping_raw = base64.b64decode(mapping_b64, validate=True)
+    except (ValueError, base64.binascii.Error) as exc:
+        raise PermissionError("reviewed entity-mapping evidence base64 is invalid") from exc
+    if hashlib.sha256(mapping_raw).hexdigest() != mapping_hash:
+        raise PermissionError("reviewed entity-mapping evidence SHA-256 mismatch")
+    if metadata.get("causality_status") != "NOT_ASSESSED":
+        raise PermissionError("event evidence must not claim causality")
 
 
 def enrich_research_report(
@@ -105,6 +227,8 @@ def enrich_research_report(
             or event_record.get("source_registry_entry_sha256") != registry_hash
         ):
             raise PermissionError(f"event source registry evidence is missing or stale at events[{index}]")
+        if source_id == "sec_press_releases":
+            _verify_promoted_sec_event(event_record, source_entry, registry_hash)
         event_source = _object(event_record.get("source"), f"events[{index}].event.source")
         source_url = event_source.get("url")
         parsed_source_url = urlsplit(source_url) if isinstance(source_url, str) else None
