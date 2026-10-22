@@ -13,6 +13,7 @@ from typing import Any
 from scripts.market_selection.analyze_ohlcv_risk_profile import analyze_artifact
 from scripts.market_selection.analyze_support_resistance import analyze_support_resistance
 from scripts.market_selection.detect_ohlcv_movement_events import analyze_movement_events
+from scripts.market_selection.provider_license_gate import evaluate_artifact_use
 
 INPUT_SCHEMA = "binance-spot-ohlcv-capture-v1"
 REPORT_SCHEMA = "crypto-asset-research-report-v1"
@@ -90,6 +91,9 @@ def build_research_report(
     requested_asset_id = _require_text(requested_asset_id, "requested_asset_id")
     normalized_asset = requested_asset_id
     config = _validate_config(config)
+    downstream_use = evaluate_artifact_use(artifact, "internal_analysis")
+    if downstream_use["decision"] != "ALLOW":
+        raise PermissionError("research report blocked before analysis: " + ",".join(downstream_use["reason_codes"]))
 
     # Do not infer base-asset identity from a concatenated market symbol such as BTCUSDT.
     observed_asset = market.get("asset_id") or market.get("base_asset")
@@ -192,6 +196,8 @@ def build_research_report(
         "source_artifact": {
             "schema_version": artifact["schema_version"],
             "capture_status": input_capture_status,
+            "provider_use_assessment": artifact.get("provider_use_assessment"),
+            "downstream_use_assessment": downstream_use,
             **source_integrity,
         },
         "data_quality": {
