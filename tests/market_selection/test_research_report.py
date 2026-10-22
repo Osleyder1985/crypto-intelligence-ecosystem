@@ -222,7 +222,7 @@ class ResearchReportTests(unittest.TestCase):
             )
             self.assertEqual(completed.returncode, 0, completed.stderr)
             report = json.loads(output_path.read_text(encoding="utf-8"))
-            self.assertEqual(report["schema_version"], "crypto-asset-research-report-v1")
+            self.assertEqual(report["schema_version"], "crypto-asset-research-report-v2")
             self.assertEqual(
                 report["source_artifact"]["sha256"],
                 hashlib.sha256(artifact_path.read_bytes()).hexdigest(),
