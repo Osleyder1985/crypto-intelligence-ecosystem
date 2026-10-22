@@ -9,11 +9,23 @@ def rec(market, provider, payload):
       "response_bytes":len(raw),"parsed_json":payload}
 def fixture():
     market="BTC_USDT"
+    pionex_depth = rec(market,"pionex_depth",{
+      "result":True,"timestamp":1792454400250,
+      "data":{"updateTime":1792454400100,"bids":[["99.99","10"]],"asks":[["100.01","10"]]}
+    })
+    pionex_depth.update({
+      "source_market_update_timestamp_status":"VALID",
+      "source_response_timestamp_status":"VALID",
+      "source_market_update_at_utc":"2026-10-20T00:00:00.100Z",
+      "source_response_at_utc":"2026-10-20T00:00:00.250Z",
+      "captured_at_utc":"2026-10-20T00:00:00.300Z",
+    })
     return {"schema_version":"public-market-capture-batch-v1","overall_status":"PASS",
       "created_at_utc":"2026-10-20T00:00:00Z",
       "universe":[{"pionex_symbol":market,"binance_symbol":"BTCUSDT","base_asset":"BTC","quote_asset":"USDT"}],
       "records":[
         rec(market,"pionex",{"result":True,"data":{"symbols":[{"symbol":market,"type":"SPOT","baseCurrency":"BTC","quoteCurrency":"USDT","enable":True}]}}),
+        pionex_depth,
         rec(market,"binance_exchange_info",{"symbols":[{"symbol":"BTCUSDT","status":"TRADING","isSpotTradingAllowed":True,"baseAsset":"BTC","quoteAsset":"USDT"}]}),
         rec(market,"binance_depth",{"bids":[["99.99","10"],["99.98","10"]],"asks":[["100.01","10"],["100.02","10"]],"lastUpdateId":123})]}
 
@@ -23,6 +35,11 @@ class BatchEvaluatorTests(unittest.TestCase):
         self.assertEqual(m["dimension_status"]["pionex_spot_availability"],"PASS")
         self.assertEqual(m["dimension_status"]["binance_spot_market"],"PASS")
         self.assertAlmostEqual(m["metrics"]["spread_bps"],2.0,places=5)
+        self.assertEqual(m["dimension_status"]["pionex_depth_timestamp_evidence"],"PASS")
+        self.assertAlmostEqual(m["metrics"]["pionex_response_minus_book_update_ms"],150.0)
+        self.assertAlmostEqual(m["metrics"]["pionex_capture_minus_book_update_ms"],200.0)
+        self.assertAlmostEqual(m["metrics"]["pionex_capture_minus_response_ms"],50.0)
+        self.assertEqual(m["metrics"]["pionex_depth_bid_levels"],1)
         self.assertEqual(out["decision_status"],"INDETERMINATE")
         self.assertFalse(out["orders_submitted"]); self.assertFalse(out["network_requests_made"])
     def test_configured_depth_and_slippage(self):
@@ -31,6 +48,21 @@ class BatchEvaluatorTests(unittest.TestCase):
         self.assertIn("min_side_depth_quote",m["metrics"]); self.assertIn("buy_execution",m["metrics"])
         self.assertEqual(m["dimension_status"]["depth"],"PASS"); self.assertEqual(m["dimension_status"]["slippage"],"PASS")
         self.assertFalse(out["config_approved"])
+    def test_missing_pionex_depth_timing_remains_indeterminate(self):
+        a=fixture()
+        a["records"]=[r for r in a["records"] if r["provider"] != "pionex_depth"]
+        m=evaluate_batch(a)["markets"][0]
+        self.assertEqual(m["dimension_status"]["pionex_depth_timestamp_evidence"],"INDETERMINATE")
+        self.assertEqual(m["dimension_status"]["source_freshness"],"INDETERMINATE")
+
+    def test_pionex_response_before_book_update_is_indeterminate(self):
+        a=fixture()
+        record=next(r for r in a["records"] if r["provider"]=="pionex_depth")
+        record["source_response_at_utc"]="2026-10-20T00:00:00.050Z"
+        m=evaluate_batch(a)["markets"][0]
+        self.assertEqual(m["dimension_status"]["pionex_depth_timestamp_evidence"],"INDETERMINATE")
+        self.assertLess(m["metrics"]["pionex_response_minus_book_update_ms"],0)
+
     def test_tampered_hash_rejected(self):
         a=fixture(); a["records"][0]["response_sha256"]="0"*64
         with self.assertRaises(ValueError): evaluate_batch(a)
