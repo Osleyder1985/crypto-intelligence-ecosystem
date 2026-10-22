@@ -42,12 +42,16 @@ def clock_probe(timeout_seconds: float = 5.0) -> dict[str, Any]:
     started_mono_ns = time.monotonic_ns()
     try:
         with urlopen(request, timeout=timeout_seconds) as response:
-            raw = response.read(65537)
+            chunks: list[bytes] = []
+            while True:
+                chunk = response.read(64 * 1024)
+                if not chunk:
+                    break
+                chunks.append(chunk)
+            raw = b"".join(chunks)
             status = response.status
         ended_mono_ns = time.monotonic_ns()
         ended_wall_ns = time.time_ns()
-        if len(raw) > 65536:
-            raise ValueError("Binance time response exceeded the safety limit")
         payload = json.loads(raw.decode("utf-8"))
         server_ms = payload.get("serverTime") if isinstance(payload, dict) else None
         if status != 200 or isinstance(server_ms, bool) or not isinstance(server_ms, int):
