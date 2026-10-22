@@ -12,7 +12,10 @@ from urllib.error import HTTPError, URLError
 from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 
-from scripts.market_selection.provider_license_gate import evaluate_provider_use, SUPPORTED_USE_CASES
+try:
+    from scripts.market_selection.provider_license_gate import evaluate_provider_use, SUPPORTED_USE_CASES
+except ModuleNotFoundError:  # Direct script execution places this directory, not the repo root, on sys.path.
+    from provider_license_gate import evaluate_provider_use, SUPPORTED_USE_CASES
 
 BASE_URL = "https://data-api.binance.vision/api/v3/klines"
 TIMEOUT_SECONDS = 15
