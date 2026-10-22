@@ -87,6 +87,9 @@ def normalize_fills(payload: object, symbol: str, quote_currency: str) -> list[d
 
 def build_evidence(payload: object, raw: bytes, symbol: str, quote_currency: str, requested_start_ms: int, requested_end_ms: int, captured_at_utc: str) -> dict[str, object]:
     fills = normalize_fills(payload, symbol, quote_currency)
+    out_of_range = [item["fill_timestamp_ms"] for item in fills if item["fill_timestamp_ms"] < requested_start_ms or item["fill_timestamp_ms"] > requested_end_ms]
+    if out_of_range:
+        raise ValueError("Pionex returned fill timestamps outside the requested time range")
     truncated_possible = len(fills) >= 100
     rates = [Decimal(item["fee_rate_vs_quote_notional"]) for item in fills if item["fee_rate_vs_quote_notional"] is not None]
     return {
@@ -115,6 +118,7 @@ def build_evidence(payload: object, raw: bytes, symbol: str, quote_currency: str
             "This is historical fill evidence, not proof of the current prospective fee schedule.",
             "Fee rate is calculated only when feeCoin equals the symbol quote currency; no conversion is invented for other fee assets.",
             "The documented endpoint returns latest 100 fills when results exceed 100; a 100-record response is treated as potentially truncated.",
+            "Returned fill timestamps are checked against the requested interval; out-of-range records fail closed.",
             "No order, cancellation, transfer, or account mutation endpoint is called.",
             "Raw response content is not persisted; its byte length and SHA-256 are retained to reduce disclosure of private trading history.",
         ],

@@ -38,6 +38,13 @@ class PionexFillFeeEvidenceTests(unittest.TestCase):
         self.assertIsNone(result[0]["fee_rate_vs_quote_notional"])
         self.assertEqual(result[0]["fee_rate_status"], "INDETERMINATE_FEE_COIN_DIFFERS_FROM_QUOTE")
 
+    def test_out_of_range_fill_timestamp_fails_closed(self):
+        a = payload()
+        a["data"]["fills"][0]["timestamp"] = 10
+        raw = b"raw fixture bytes"
+        with self.assertRaisesRegex(ValueError, "outside the requested time range"):
+            build_evidence(a, raw, "BTC_USDT", "USDT", 100, 200, "2026-10-22T00:00:00.000Z")
+
     def test_100_fills_are_marked_as_potentially_truncated(self):
         raw = b'raw fixture bytes'
         result = build_evidence(payload(count=100), raw, "BTC_USDT", "USDT", 1, 2, "2026-10-22T00:00:00.000Z")
