@@ -19,6 +19,8 @@ from urllib.request import Request, urlopen
 
 TIMEOUT_SECONDS = 12
 READ_CHUNK_BYTES = 64 * 1024  # Read buffer size only; not a response-size limit.
+BINANCE_DEPTH_LIMIT = 5000  # Official GET /api/v3/depth maximum; weight 250.
+PIONEX_DEPTH_LIMIT = 1000  # Official GET /api/v1/market/depth maximum.
 SCHEMA_VERSION = "public-market-capture-batch-v1"
 # Deliberately small, explicit starter universe. This is not a liquidity ranking.
 DEFAULT_MARKETS = (
@@ -153,9 +155,9 @@ def build_requests(markets: tuple[tuple[str, str, str, str], ...]) -> list[tuple
     for pionex_symbol, binance_symbol, _base, _quote in markets:
         requests.extend([
             (pionex_symbol, "pionex", pionex_base + "?" + urlencode({"symbols": pionex_symbol, "type": "SPOT"})),
-            (pionex_symbol, "pionex_depth", pionex_depth_base + "?" + urlencode({"symbol": pionex_symbol, "limit": 20})),
+            (pionex_symbol, "pionex_depth", pionex_depth_base + "?" + urlencode({"symbol": pionex_symbol, "limit": PIONEX_DEPTH_LIMIT})),
             (pionex_symbol, "binance_exchange_info", binance_base + "/exchangeInfo?" + urlencode({"symbol": binance_symbol})),
-            (pionex_symbol, "binance_depth", binance_base + "/depth?" + urlencode({"symbol": binance_symbol, "limit": 20})),
+            (pionex_symbol, "binance_depth", binance_base + "/depth?" + urlencode({"symbol": binance_symbol, "limit": BINANCE_DEPTH_LIMIT})),
         ])
     return requests
 
@@ -184,7 +186,7 @@ def capture_batch(markets: tuple[tuple[str, str, str, str], ...] = DEFAULT_MARKE
         "limitations": [
             "Point-in-time public API capture; not an investment recommendation or ranking.",
             "Provider availability does not prove regional/account access, liquidity, or execution.",
-            "Each Binance and Pionex depth response is limited to 20 levels and is not the full order book.",
+            "Binance depth requests use the documented maximum of 5000 levels (weight 250); Pionex depth requests use the documented maximum of 1000 levels. These are maximum-size snapshots, not the complete or persistent order book.",
             "Pionex data.updateTime is preserved separately from the response timestamp and capture time; it does not alone prove freshness against a product-specific policy.",
             "Binance lastUpdateId is not a market-event timestamp; source freshness may be indeterminate.",
             "Hashes establish byte identity, not provider authenticity or correctness.",
