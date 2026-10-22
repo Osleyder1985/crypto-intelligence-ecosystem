@@ -1,7 +1,11 @@
 import base64
 import hashlib
 import json
+import subprocess
+import sys
+import tempfile
 import unittest
+from pathlib import Path
 
 from scripts.market_selection.research_report import build_research_report
 
@@ -117,6 +121,44 @@ class ResearchReportTests(unittest.TestCase):
         self.assertEqual(report["report_status"], "PARTIAL")
         self.assertEqual(report["data_quality"]["status"], "INCOMPLETE_OR_UNVERIFIED")
         self.assertEqual(report["source_artifact"]["capture_status"], "PARTIAL")
+
+    def test_cli_end_to_end_writes_a_report_from_preserved_artifact(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            artifact_path = root / "ohlcv.json"
+            config_path = root / "methodology.json"
+            output_path = root / "report.json"
+            artifact_path.write_text(json.dumps(self.source, sort_keys=True), encoding="utf-8")
+            config_path.write_text(json.dumps(config(), sort_keys=True), encoding="utf-8")
+
+            completed = subprocess.run(
+                [
+                    sys.executable,
+                    "-m",
+                    "scripts.market_selection.research_report",
+                    "--asset-id",
+                    "BTC",
+                    "--artifact",
+                    str(artifact_path),
+                    "--config",
+                    str(config_path),
+                    "--output",
+                    str(output_path),
+                ],
+                cwd=Path(__file__).resolve().parents[2],
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+            self.assertEqual(completed.returncode, 0, completed.stderr)
+            report = json.loads(output_path.read_text(encoding="utf-8"))
+            self.assertEqual(report["schema_version"], "crypto-asset-research-report-v1")
+            self.assertEqual(
+                report["source_artifact"]["sha256"],
+                hashlib.sha256(artifact_path.read_bytes()).hexdigest(),
+            )
+            self.assertEqual(report["decision_status"], "INDETERMINATE")
+            self.assertEqual(set(report["horizons"]), {"short", "medium", "long"})
 
     def test_missing_explicit_method_parameter_is_rejected(self):
         invalid = config()
