@@ -2,6 +2,7 @@
 
 - [Contrato de evidencia fundamental y on-chain (Issue #134)](issue-134-fundamental-onchain-dictionary.md)
 - [Contrato de evidencia de eventos externos (Issue #132)](issue-132-event-evidence-contract.md)
+- [Contrato de validación metodológica por horizonte (Issue #133)](issue-133-methodology-contract.md)
 - [Registro de fuentes de eventos externos (Issue #132)](issue-132-source-registry.md)
 **Estado del conjunto:** documentos versionados en `main`; su presencia en la rama principal no equivale por sí sola a aprobación formal de requisitos, decisiones normativas ni arquitectura. Los documentos marcados como borrador/propuesta siguen sujetos a decisión y trazabilidad mediante Issues/PR.
 
