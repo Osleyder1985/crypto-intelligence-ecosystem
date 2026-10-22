@@ -84,3 +84,46 @@ Se analizó el segundo artefacto real posterior a la integración de PR #108:
 5. La siguiente verificación es analizar una serie con muchas observaciones programadas, medir huecos y cobertura por venue/par, validar semántica temporal y solo después definir reglas de comparabilidad y selección. No se asignan umbrales numéricos sin justificación y aprobación.
 
 La nueva captura se ejecutó en modo público read-only. La ejecución del workflow fue `success`, pero el resultado de captura fue `PARTIAL` debido a Bybit; ambos estados deben mantenerse separados.
+
+## Tercera observación real — 2026-10-22T13:56:45.057Z
+
+- Workflow: [Multi-exchange Spot quote-volume probe #39791367609](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/actions/runs/39791367609).
+- Artefacto: [multi-exchange-spot-quote-volume #12430313812](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/actions/runs/39791367609/artifacts/12430313812).
+- Estado del workflow: `success`; estado de la captura: `PARTIAL`.
+- 21/21 respuestas conservadas; el recuento de bytes y SHA-256 coincide para las 21 respuestas. 18/21 valores válidos; Bybit devuelve HTTP 403 en BTC/ETH/SOL.
+- Separación desde la segunda observación: 10 min 37.959 s. Separación entre primera y tercera: 1 h 35 min 40.182 s.
+
+### Cambios observados entre la segunda y tercera captura
+
+Los porcentajes comparan dos lecturas de ventanas móviles de 24 horas. No representan el volumen negociado durante los 10 min 37.959 s transcurridos.
+
+| Par | Exchange | Turnover 24 h anterior (USDT) | Turnover 24 h nuevo (USDT) | Cambio observado |
+|---|---|---:|---:|---:|
+| BTC/USDT | Binance | 1,866,250,913.92 | 1,894,194,478.79 | +1.50% |
+| BTC/USDT | Bitget | 370,115,768.74 | 367,958,461.40 | -0.58% |
+| BTC/USDT | Gate | 1,004,393,827.20 | 1,006,859,674.29 | +0.25% |
+| BTC/USDT | MEXC | 534,833,981.15 | 539,650,671.74 | +0.90% |
+| BTC/USDT | OKX | 617,746,577.22 | 623,257,465.60 | +0.89% |
+| BTC/USDT | Pionex | 2,721,790,946.44 | 2,758,275,000.95 | +1.34% |
+| ETH/USDT | Binance | 712,928,579.49 | 714,293,662.26 | +0.19% |
+| ETH/USDT | Bitget | 149,272,959.09 | 148,897,115.47 | -0.25% |
+| ETH/USDT | Gate | 338,245,124.18 | 336,352,911.84 | -0.56% |
+| ETH/USDT | MEXC | 215,813,801.87 | 216,224,559.26 | +0.19% |
+| ETH/USDT | OKX | 381,482,848.11 | 381,918,873.52 | +0.11% |
+| ETH/USDT | Pionex | 436,290,676.13 | 437,497,730.64 | +0.28% |
+| SOL/USDT | Binance | 225,468,242.78 | 226,662,914.69 | +0.53% |
+| SOL/USDT | Bitget | 39,832,350.04 | 39,664,546.12 | -0.42% |
+| SOL/USDT | Gate | 94,451,755.79 | 94,061,729.94 | -0.41% |
+| SOL/USDT | MEXC | 68,490,770.27 | 68,753,171.45 | +0.38% |
+| SOL/USDT | OKX | 65,787,091.46 | 65,701,707.62 | -0.13% |
+| SOL/USDT | Pionex | 41,194,132.61 | 41,249,150.76 | +0.13% |
+
+### Qué permite concluir la tercera captura
+
+1. Se mantiene una cobertura válida de 18/21 combinaciones; el acceso a Bybit continúa sin evidencia desde este runner y no debe interpretarse como volumen cero.
+2. Entre la segunda y tercera muestra, los cambios de BTC varían por venue; ETH presenta variaciones pequeñas y mixtas; SOL también presenta cambios mixtos. No es una clasificación de liquidez.
+3. Tres observaciones en menos de dos horas no constituyen una muestra representativa de estabilidad de 24 h ni de regímenes de mercado. No permiten estimar percentiles robustos, colas, comportamiento semanal ni estabilidad de largo plazo.
+4. La diferencia de timestamps y las semánticas de campo siguen limitando la comparación entre venues. Gate no aporta timestamp de origen en los registros capturados; se conserva como ausente.
+5. Los artefactos conservan respuestas completas y hashes verificables, pero GitHub Actions tiene retención finita. La serie debe analizarse antes de expirar y almacenarse conforme a una política de retención aprobada.
+
+Esta tercera observación aumenta la trazabilidad de la muestra, pero **no cierra 7-M01**: sigue faltando una serie suficientemente larga y un criterio de estabilidad aprobado.
