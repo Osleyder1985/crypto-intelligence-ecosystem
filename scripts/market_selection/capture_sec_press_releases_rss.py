@@ -448,6 +448,18 @@ def capture_sec_press_release_article(
     )
     if response_result is not None:
         return response_result
+    content_type = next(
+        (value.split(";", 1)[0].strip().lower() for key, value in response_headers.items() if key.lower() == "content-type"),
+        "",
+    )
+    if content_type not in {"text/html", "application/xhtml+xml"}:
+        result = _response_capture(
+            ARTICLE_CAPTURE_SCHEMA, state, timestamp, article_url, status_code or 200,
+            response_headers, raw or b"", "CONTENT_TYPE_UNEXPECTED",
+            errors=[{"error_type": "ContentType", "reason_code": "ARTICLE_CONTENT_TYPE_UNEXPECTED"}],
+        )
+        result["reason_codes"] = ["ARTICLE_CONTENT_TYPE_UNEXPECTED"]
+        return result
     return _response_capture(
         ARTICLE_CAPTURE_SCHEMA, state, timestamp, article_url, status_code or 200, response_headers, raw or b"", "PASS",
     )
