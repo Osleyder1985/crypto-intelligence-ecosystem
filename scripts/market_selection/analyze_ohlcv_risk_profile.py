@@ -1,7 +1,10 @@
 """Compute descriptive OHLCV risk metrics without ranking assets or filling missing candles."""
 from __future__ import annotations
 
-from scripts.market_selection.provider_license_gate import evaluate_artifact_use
+try:
+    from scripts.market_selection.provider_license_gate import evaluate_artifact_use
+except ModuleNotFoundError:
+    from provider_license_gate import evaluate_artifact_use
 
 import argparse
 import base64
