@@ -88,6 +88,28 @@ class QuoteVolumeSeriesTests(unittest.TestCase):
         self.assertEqual(result["series"][0]["comparison_status"], "INDETERMINATE_INCOMPATIBLE_SEMANTICS_OR_UNITS")
         self.assertEqual(result["series"][0]["consecutive_deltas"], [])
 
+
+    def test_pionex_amount_with_undocumented_unit_is_preserved_but_never_compared(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            first = record(exchange="pionex", symbol="BTC_USDT", volume=None, quote_status="INDETERMINATE",
+                           captured="2026-10-22T00:00:00Z", unit=None,
+                           semantics="amount: 24h traded amount; unit undocumented")
+            first["quote_volume_raw"] = "2690638425.45706367"
+            second = record(exchange="pionex", symbol="BTC_USDT", volume=None, quote_status="INDETERMINATE",
+                            captured="2026-10-22T06:00:00Z", unit=None,
+                            semantics="amount: 24h traded amount; unit undocumented")
+            second["quote_volume_raw"] = "2721790946.44"
+            a = write_artifact(Path(tmp) / "pionex-a.json", "2026-10-22T00:00:00Z", [first])
+            b = write_artifact(Path(tmp) / "pionex-b.json", "2026-10-22T06:00:00Z", [second])
+            result = analyze_artifacts([a, b])
+        row = result["series"][0]
+        self.assertEqual(row["valid_samples"], 0)
+        self.assertEqual(row["missing_or_invalid_samples"], 2)
+        self.assertEqual(row["comparison_status"], "INSUFFICIENT_VALID_SAMPLES")
+        self.assertEqual(row["consecutive_deltas"], [])
+        self.assertEqual(row["observations"][0]["quote_volume_raw"], "2690638425.45706367")
+        self.assertIsNone(row["observations"][0]["quote_volume_decimal"])
+
     def test_tampered_hash_fails_closed(self):
         with tempfile.TemporaryDirectory() as tmp:
             path = write_artifact(Path(tmp) / "bad.json", "2026-10-22T00:00:00Z",
