@@ -110,6 +110,33 @@ class QuoteVolumeSeriesTests(unittest.TestCase):
         self.assertEqual(row["observations"][0]["quote_volume_raw"], "2690638425.45706367")
         self.assertIsNone(row["observations"][0]["quote_volume_decimal"])
 
+
+    def test_legacy_pionex_artifact_cannot_override_current_unit_guard(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            first = record(exchange="pionex", symbol="BTC_USDT", volume="2690638425.45706367",
+                           quote_status="VALID", unit="USDT",
+                           semantics="amount: 24h traded amount assumed USDT by legacy parser",
+                           captured="2026-10-22T00:00:00Z")
+            second = record(exchange="pionex", symbol="BTC_USDT", volume="2721790946.44",
+                            quote_status="VALID", unit="USDT",
+                            semantics="amount: 24h traded amount assumed USDT by legacy parser",
+                            captured="2026-10-22T06:00:00Z")
+            a = write_artifact(Path(tmp) / "legacy-pionex-a.json", "2026-10-22T00:00:00Z", [first])
+            b = write_artifact(Path(tmp) / "legacy-pionex-b.json", "2026-10-22T06:00:00Z", [second])
+            result = analyze_artifacts([a, b])
+        row = result["series"][0]
+        self.assertEqual(row["valid_samples"], 0)
+        self.assertEqual(row["ineligible_semantic_samples"], 2)
+        self.assertEqual(row["comparison_status"], "INDETERMINATE_SOURCE_UNIT_UNDOCUMENTED")
+        self.assertEqual(row["consecutive_deltas"], [])
+        observation = row["observations"][0]
+        self.assertEqual(observation["quote_volume_raw"], "2690638425.45706367")
+        self.assertEqual(observation["source_reported_quote_volume_status"], "VALID")
+        self.assertEqual(observation["quote_volume_status"], "INDETERMINATE")
+        self.assertEqual(observation["source_reported_quote_volume_unit"], "USDT")
+        self.assertIsNone(observation["quote_volume_unit"])
+        self.assertEqual(observation["comparison_eligibility_status"], "INDETERMINATE_SOURCE_UNIT_UNDOCUMENTED")
+
     def test_tampered_hash_fails_closed(self):
         with tempfile.TemporaryDirectory() as tmp:
             path = write_artifact(Path(tmp) / "bad.json", "2026-10-22T00:00:00Z",

@@ -75,7 +75,16 @@ def load_artifact(path: Path) -> dict:
     }
 
 
+def _is_pionex(record: dict) -> bool:
+    return str(record.get("exchange", "")).strip().lower() == "pionex"
+
+
 def _decimal_value(record: dict):
+    # Historical artifacts may have been produced by a parser that assumed the
+    # Pionex amount field was quoted in USDT. Do not trust that stale label:
+    # the current official schema does not document its denomination.
+    if _is_pionex(record):
+        return None
     if record.get("quote_volume_status") != "VALID":
         return None
     raw = record.get("quote_volume_decimal")
@@ -113,17 +122,22 @@ def analyze_artifacts(paths) -> dict:
             value = _decimal_value(row)
             timestamp = row.get("captured_at_utc") or row["_artifact_created_at_utc"]
             parse_utc(timestamp)
+            pionex = _is_pionex(row)
             row_value = {
                 "artifact": row["_artifact_name"],
                 "artifact_created_at_utc": row["_artifact_created_at_utc"],
                 "captured_at_utc": timestamp,
                 "capture_status": row.get("capture_status", "UNKNOWN"),
                 "http_status": row.get("http_status"),
-                "quote_volume_status": row.get("quote_volume_status", "INDETERMINATE"),
+                "quote_volume_status": "INDETERMINATE" if pionex else row.get("quote_volume_status", "INDETERMINATE"),
+                "source_reported_quote_volume_status": row.get("quote_volume_status", "INDETERMINATE"),
                 "quote_volume_raw": row.get("quote_volume_raw"),
                 "quote_volume_decimal": str(value) if value is not None else None,
-                "quote_volume_unit": row.get("quote_volume_unit"),
-                "volume_semantics": row.get("volume_semantics"),
+                "quote_volume_unit": None if pionex else row.get("quote_volume_unit"),
+                "source_reported_quote_volume_unit": row.get("quote_volume_unit"),
+                "volume_semantics": "Pionex amount; unit/denomination not documented by the reviewed official schema" if pionex else row.get("volume_semantics"),
+                "source_reported_volume_semantics": row.get("volume_semantics"),
+                "comparison_eligibility_status": "INDETERMINATE_SOURCE_UNIT_UNDOCUMENTED" if pionex else "ELIGIBLE_FOR_VALIDATION",
                 "source_timestamp_raw": row.get("source_timestamp_raw"),
                 "response_sha256": row.get("response_sha256"),
                 "integrity_status": row["integrity_status"],
@@ -136,7 +150,9 @@ def analyze_artifacts(paths) -> dict:
         semantics = sorted({item["volume_semantics"] for item, _ in values if item["volume_semantics"] is not None})
         all_semantics_present = all(item["quote_volume_unit"] is not None and item["volume_semantics"] is not None for item, _ in values)
         comparable = len(units) == 1 and len(semantics) == 1 and all_semantics_present and len(values) >= 2
-        if len(values) < 2:
+        if exchange.strip().lower() == "pionex":
+            comparison_status = "INDETERMINATE_SOURCE_UNIT_UNDOCUMENTED"
+        elif len(values) < 2:
             comparison_status = "INSUFFICIENT_VALID_SAMPLES"
         elif len(units) != 1 or len(semantics) != 1 or not all_semantics_present:
             comparison_status = "INDETERMINATE_INCOMPATIBLE_SEMANTICS_OR_UNITS"
@@ -168,6 +184,7 @@ def analyze_artifacts(paths) -> dict:
             "expected_samples": len(records),
             "valid_samples": len(values),
             "missing_or_invalid_samples": len(records) - len(values),
+            "ineligible_semantic_samples": sum(1 for row in records if _is_pionex(row)),
             "coverage_ratio": str(Decimal(len(values)) / Decimal(len(records))) if records else "0",
             "quote_volume_unit_values": units,
             "volume_semantics_values": semantics,
@@ -181,7 +198,7 @@ def analyze_artifacts(paths) -> dict:
         "schema_version": OUTPUT_SCHEMA_VERSION,
         "analysis_status": "DESCRIPTIVE_ONLY",
         "created_at_utc": datetime.now(timezone.utc).isoformat(timespec="milliseconds").replace("+00:00", "Z"),
-        "method": "Group repeated captures by exact exchange/asset/native symbol; verify preserved response bytes, hash and size; compare only valid samples with matching unit and documented field semantics.",
+        "method": "Group repeated captures by exact exchange/asset/native symbol; verify preserved response bytes, hash and size; compare only valid samples with matching unit and documented field semantics. Apply the current semantic guard to Pionex independently of stale historical parser labels; Pionex amount remains ineligible until its unit is documented.",
         "input_artifacts": [{"name": item["path"], "created_at_utc": item["created_at_utc"], "sha256": item["sha256"], "record_count": len(item["records"])} for item in loaded],
         "input_record_count": input_record_count,
         "response_integrity_counts": integrity_counts,
@@ -190,6 +207,7 @@ def analyze_artifacts(paths) -> dict:
         "limitations": [
             "Rolling 24h ticker changes between samples are not volume traded during the elapsed interval.",
             "Provider field semantics and rolling-window end times may differ even when units and labels match; this tool does not prove full cross-venue comparability.",
+            "Pionex amount is preserved as raw evidence but is excluded from turnover comparisons, including legacy artifacts that incorrectly label it VALID/USDT, because the reviewed official schema does not document its denomination.",
             "No ranking, eligibility decision, investment recommendation, or numeric selection threshold is produced.",
             "Missing, invalid, inaccessible, or integrity-unverified observations are not converted to zero.",
             "Two or more samples do not establish long-term stability; representativeness requires a longer series, coverage analysis, and market-regime review.",

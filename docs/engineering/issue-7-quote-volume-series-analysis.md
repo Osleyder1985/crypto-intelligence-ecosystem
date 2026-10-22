@@ -12,13 +12,14 @@
 3. Agrupa por exchange, activo y símbolo nativo exacto.
 4. Informa cobertura y observaciones válidas, inválidas o ausentes sin convertir valores faltantes en cero.
 5. Calcula el cambio porcentual entre observaciones consecutivas válidas solo si coinciden unidad y semántica declarada del campo.
+6. Aplica una regla semántica vigente para Pionex: conserva amount y cualquier etiqueta declarada por capturadores antiguos, pero fuerza su elegibilidad comparativa a INDETERMINATE hasta que una fuente oficial documente la unidad.
 6. Conserva los timestamps de origen como valores originales; no los sustituye por la hora de captura.
 
 ## Interpretación
 
 El dato del ticker es turnover de una ventana móvil de 24 horas. La diferencia entre dos capturas **no** equivale al volumen negociado durante el tiempo transcurrido. Los proveedores pueden cerrar sus ventanas en instantes distintos o aplicar contratos de campo diferentes. El análisis es descriptivo, no un ranking y no demuestra estabilidad de largo plazo.
 
-No establece umbrales de selección, no mide por sí solo liquidez ejecutable y no convierte el turnover en recomendación de inversión. Una serie suficientemente larga y representativa, controles de huecos/cobertura y una política aprobada siguen siendo necesarios para evaluar estabilidad.
+No establece umbrales de selección, no mide por sí solo liquidez ejecutable y no convierte el turnover en recomendación de inversión. Una serie suficientemente larga y representativa, controles de huecos/cobertura y una política aprobada siguen siendo necesarios para evaluar estabilidad. Los artefactos históricos de Pionex que etiquetaban amount como VALID/USDT no se aceptan como comparables: el analizador conserva esa etiqueta como metadato de origen, pero no la trata como evidencia de unidad.
 
 ## Ejemplo
 
