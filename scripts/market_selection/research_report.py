@@ -107,7 +107,7 @@ def build_research_report(
         market,
         identity_evidence,
     )
-    if identity_resolution["canonical_asset_identity_status"] == "CONFLICT":
+    if identity_resolution["canonical_asset_identity_status"] == "CONFLICT" or identity_resolution["market_base_asset_mapping_status"] == "MISMATCH":
         raise ValueError("canonical asset identity evidence conflicts with the requested identifier or market base")
     identity_status = identity_resolution["asset_identity_status"]
 
