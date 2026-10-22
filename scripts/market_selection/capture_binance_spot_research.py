@@ -21,6 +21,7 @@ from scripts.market_selection.capture_binance_spot_ohlcv import (
     capture_history,
 )
 from scripts.market_selection.research_report import build_research_report
+from scripts.market_selection.canonical_asset_identity import assess_canonical_asset_identity
 
 EXCHANGE_INFO_URL = "https://data-api.binance.vision/api/v3/exchangeInfo"
 PIPELINE_SCHEMA = "crypto-asset-live-capture-report-v1"
@@ -111,6 +112,7 @@ def capture_and_build_report(
     end_time_ms_exclusive: int,
     config: dict,
     base_asset_ticker: str,
+    identity_evidence: dict | None = None,
 ) -> tuple[dict, dict]:
     """Capture official exchange metadata and candles, then build report from exact artifact bytes."""
     symbol = symbol.strip().upper()
@@ -142,10 +144,45 @@ def capture_and_build_report(
     report["asset_identity_status"] = "INDETERMINATE"
     report["market_base_asset_mapping_status"] = "VERIFIED"
     report["canonical_asset_identity_status"] = "NOT_RESOLVED"
+    report["canonical_asset_identity"] = {
+        "identity_status": "NOT_RESOLVED",
+        "canonical_asset_id": None,
+        "evidence_status": "NOT_PROVIDED",
+        "reason_codes": ["CANONICAL_ID_COMPONENTS_MISSING"],
+        "ticker_used_as_identity": False,
+    }
     report["asset_identity_scope"] = "Binance pair baseAsset ticker only; global cross-provider token identity is unresolved."
+    if identity_evidence is not None:
+        if not isinstance(identity_evidence, dict):
+            raise ValueError("identity_evidence must be a JSON object")
+        evidence_record = dict(identity_evidence)
+        market_mapping = evidence_record.pop("market_mapping", None)
+        if not isinstance(market_mapping, dict):
+            raise ValueError("identity_evidence.market_mapping must explicitly bind identity evidence to captured market metadata")
+        expected_mapping = {
+            "exchange": "BINANCE",
+            "symbol": symbol,
+            "base_asset_ticker": metadata["base_asset"],
+            "exchange_info_sha256": metadata["captured_exchange_info"]["response_sha256"],
+        }
+        for key, expected in expected_mapping.items():
+            if market_mapping.get(key) != expected:
+                raise ValueError(f"identity_evidence.market_mapping.{key} does not match captured Binance metadata")
+        if str(evidence_record.get("ticker", "")).strip().upper() != metadata["base_asset"].upper():
+            raise ValueError("identity_evidence.ticker must match captured Binance baseAsset ticker")
+        assessment = assess_canonical_asset_identity(evidence_record)
+        report["canonical_asset_identity"] = assessment
+        report["canonical_asset_identity_status"] = assessment["identity_status"]
+        report["canonical_asset_identity_evidence_status"] = "STRUCTURE_VALIDATED_NOT_AUTHENTICATED"
+        report["canonical_asset_identity_market_mapping_status"] = "MATCHED_TO_CAPTURED_BINANCE_METADATA"
+        # Complete coordinates are not proof that the provider assertion is true.
+        # Keep product-level identity INDETERMINATE until source authenticity and
+        # authoritative token/chain mapping are independently verified.
+        report["asset_identity_status"] = "INDETERMINATE"
+        report["asset_identity_scope"] = "Explicit canonical coordinates supplied; source authenticity and authoritative mapping remain unverified."
     report["report_status"] = "PARTIAL"
     report["data_quality"]["status"] = "INCOMPLETE_OR_UNVERIFIED"
-    report["data_quality"]["dimensions"]["canonical_asset_identity"] = "NOT_RESOLVED"
+    report["data_quality"]["dimensions"]["canonical_asset_identity"] = report["canonical_asset_identity_status"]
     for horizon in report["horizons"].values():
         if "CANONICAL_ASSET_ID_NOT_RESOLVED" not in horizon["reason_codes"]:
             horizon["reason_codes"].append("CANONICAL_ASSET_ID_NOT_RESOLVED")
@@ -179,10 +216,12 @@ def main() -> int:
     parser.add_argument("--start-time-ms", required=True, type=int, help="Inclusive UTC candle boundary, Unix milliseconds")
     parser.add_argument("--end-time-ms", required=True, type=int, help="Exclusive UTC candle boundary, Unix milliseconds")
     parser.add_argument("--config", required=True, type=Path, help="Explicit descriptive-analysis configuration JSON")
+    parser.add_argument("--identity-evidence", type=Path, help="Optional JSON with explicit chain/asset coordinates, source evidence and market_mapping bound to captured Binance metadata")
     parser.add_argument("--capture-output", required=True, type=Path)
     parser.add_argument("--report-output", required=True, type=Path)
     args = parser.parse_args()
     config = json.loads(args.config.read_text(encoding="utf-8"))
+    identity_evidence = json.loads(args.identity_evidence.read_text(encoding="utf-8")) if args.identity_evidence else None
     captured, report = capture_and_build_report(
         symbol=args.symbol,
         interval=args.interval,
@@ -190,6 +229,7 @@ def main() -> int:
         end_time_ms_exclusive=args.end_time_ms,
         config=config,
         base_asset_ticker=args.base_asset_ticker,
+        identity_evidence=identity_evidence,
     )
     args.capture_output.parent.mkdir(parents=True, exist_ok=True)
     args.report_output.parent.mkdir(parents=True, exist_ok=True)
@@ -207,6 +247,7 @@ def main() -> int:
         "asset_identity_status": report["asset_identity_status"],
         "market_base_asset_mapping_status": report["market_base_asset_mapping_status"],
         "canonical_asset_identity_status": report["canonical_asset_identity_status"],
+        "canonical_asset_identity_evidence_status": report.get("canonical_asset_identity_evidence_status", "NOT_PROVIDED"),
         "horizons": {key: value["status"] for key, value in report["horizons"].items()},
         "orders_submitted": False,
     }, ensure_ascii=False, indent=2))
