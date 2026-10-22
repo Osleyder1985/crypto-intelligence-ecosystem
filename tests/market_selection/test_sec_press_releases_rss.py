@@ -294,6 +294,8 @@ class SecPressReleaseConnectorTests(unittest.TestCase):
                     "status": "APPROVED",
                     "reviewed_by": "offline-test-fixture",
                     "reviewed_at": "2026-10-22T12:32:00Z",
+                    "evidence_record_base64": base64.b64encode(b"synthetic reviewed entity mapping evidence").decode("ascii"),
+                    "evidence_record_sha256": hashlib.sha256(b"synthetic reviewed entity mapping evidence").hexdigest(),
                     "entities": [{"id_type": "project_id", "id": "registry:example-project"}],
                 },
             )
@@ -326,6 +328,8 @@ class SecPressReleaseConnectorTests(unittest.TestCase):
                         "status": "APPROVED",
                         "reviewed_by": "offline-test-fixture",
                         "reviewed_at": "2026-10-22T12:32:00Z",
+                    "evidence_record_base64": base64.b64encode(b"synthetic reviewed entity mapping evidence").decode("ascii"),
+                    "evidence_record_sha256": hashlib.sha256(b"synthetic reviewed entity mapping evidence").hexdigest(),
                         "entities": [{"id_type": "symbol", "id": "BTC"}],
                     },
                 )
