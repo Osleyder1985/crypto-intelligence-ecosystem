@@ -12,7 +12,7 @@ El capturador `scripts/market_selection/capture_multi_exchange_spot_ticker_probe
 | MEXC | `quoteVolume` | La documentación permite que sea `null`; no sustituir ausencia por cero. |
 | Gate | `quote_volume` | Turnover en moneda cotizada. |
 | Bitget | `turnover24h` | Turnover Spot en la moneda cotizada. |
-| BTC/USDT | 1,850,653,961.12149870 | 623,948,411.148934552 | INDETERMINATE (403) | 529,563,572.28 | 1,016,564,575.3342165 | 382,658,936.756441 | INDETERMINATE (amount=2,690,638,425.45706367; unidad no documentada) |
+| Pionex | `amount` | La OpenAPI oficial lo describe como importe negociado de 24 h, pero no fija inequívocamente la unidad/denominación. Conservar el valor bruto; su comparabilidad como turnover cotizado queda `INDETERMINATE`. |
 
 ## Interpretación
 
