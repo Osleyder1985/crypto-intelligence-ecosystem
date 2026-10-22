@@ -1,0 +1,133 @@
+# Flujo integral de investigación de un criptoactivo — Issue #128
+
+- **Estado:** especificación funcional propuesta; no es evidencia de implementación ni aprobación de una estrategia de inversión.
+- **Issues rectores:** [#11](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/issues/11), [#13](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/issues/13) y [#128](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/issues/128).
+- **Alcance inicial:** investigación de mercados Spot y fuentes públicas/read-only. La ejecución de órdenes reales permanece fuera de alcance.
+
+## 1. Resultado de producto
+
+El usuario introduce un activo y el ecosistema produce un expediente histórico y una evaluación explicable para **corto, medio y largo plazo**, cada horizonte por separado. El resultado puede ser favorable, desfavorable o **INDETERMINATE**. El sistema no está obligado a encontrar una oportunidad y no promete rentabilidad.
+
+La evaluación debe responder, en la medida que las fuentes lo permitan:
+
+1. Qué ocurrió históricamente con precio, volumen, volatilidad, drawdowns y liquidez observable.
+2. Cuándo comenzaron, se aceleraron, agotaron, revirtieron o terminaron movimientos relevantes, según reglas versionadas.
+3. Qué noticias, anuncios, eventos del proyecto, listados/delistados, incidentes, regulación, factores macro, datos on-chain o movimientos generales de mercado podrían explicar esos cambios.
+4. Qué zonas de soporte y resistencia se observan, con método, temporalidad, evidencia e invalidación.
+5. Qué factores favorecen o perjudican cada horizonte, qué riesgos pueden invalidar la tesis y qué evidencia falta.
+6. Cuánta confianza merece el resultado y qué pruebas respaldan la metodología.
+
+## 2. Flujo funcional y contratos
+
+### F-01 — Resolución de identidad
+Resolver identificadores ambiguos antes de analizar: nombre, ticker, activo/red cuando proceda, mercados y pares reales. Mostrar las decisiones de identidad y no combinar activos diferentes por compartir ticker.
+
+### F-02 — Expediente de datos
+Reunir series históricas OHLCV, volumen, volatilidad, drawdown, mercados/pares, spread, profundidad recibida, trades si están disponibles, metadatos del activo, tokenomics, datos on-chain, anuncios, noticias, incidentes, regulación y contexto macro/mercado según cobertura. Cada fuente debe declarar periodo, unidad, zona horaria, timestamps, licencia/condiciones conocidas, calidad y huecos.
+
+No presentar una fuente no disponible como si se hubiera consultado. Distinguir dato no existente, no accesible, no permitido, incompleto y fallido.
+
+### F-03 — Integridad y completitud de captura
+Preservar respuestas completas hasta EOF y calcular hashes verificables. No introducir límites arbitrarios de tamaño impuestos por el proyecto. Los límites reales de API, rate limits, timeouts, almacenamiento o recursos operativos deben identificarse por fuente/entorno, documentarse y gestionarse sin descartar datos silenciosamente. Registrar bytes/elementos capturados, estado de terminación, paginación, reintentos, truncamiento, errores y posibilidad de reanudar. Una captura interrumpida no se etiqueta completa.
+
+### F-04 — Detección histórica de movimientos
+Detectar candidatos a inicio, aceleración, agotamiento, reversión y fin de movimientos mediante reglas explícitas, versionadas y probables de reproducir. La confirmación de un punto de giro solo puede estar disponible a partir del momento en que los datos requeridos existieron; las evaluaciones históricas no pueden usar velas, noticias ni metadatos futuros (look-ahead).
+
+### F-05 — Investigación de detonantes
+Buscar evidencia en ventanas temporales justificadas antes y después del movimiento. Conservar URL o identificador de fuente, autor/editor si consta, hora de publicación, hora de captura, zona horaria, activo relacionado, fuente primaria/secundaria, fiabilidad, relevancia y relación temporal.
+
+Cada explicación se clasifica como:
+- **Hecho verificado:** evidencia primaria o fuentes suficientes que confirman el evento.
+- **Coincidencia temporal/correlación:** el evento ocurrió cerca del movimiento; no demuestra causalidad.
+- **Hipótesis plausible:** mecanismo y evidencia compatibles, pero no concluyentes.
+- **Causalidad respaldada:** convergen evidencias y mecanismo; se explicitan límites y alternativas.
+- **Causa no identificada:** no hay evidencia suficiente.
+
+No atribuir causalidad por proximidad temporal ni inventar una noticia para completar el relato. Incluir explicaciones alternativas y nivel de confianza.
+
+### F-06 — Soportes y resistencias
+Calcular zonas multi-temporalidad mediante métodos documentados. Exponer rango, método, puntos de contacto/rechazo, antigüedad, volumen asociado si existe, distancia al precio, invalidación, sensibilidad de parámetros y confianza. Una zona no garantiza reacción del mercado. Validar con datos disponibles en el momento analizado.
+
+### F-07 — Evaluación por horizonte
+Producir tres evaluaciones separadas. La duración exacta de cada horizonte se define en una metodología versionada y aprobada, no se inventa como constante universal.
+
+Cada horizonte debe incluir:
+- tendencia y estructura de mercado;
+- momentum y volatilidad;
+- liquidez/spread/profundidad observada y limitaciones de ejecución estimada;
+- soportes/resistencias e invalidaciones;
+- fundamentales, tokenomics y datos on-chain solo cuando sean accesibles y verificables;
+- catalizadores/eventos y calidad de la evidencia;
+- riesgos de mercado, liquidez, concentración, contraparte, protocolo, regulación y datos cuando sean pertinentes;
+- escenarios favorables, base y adversos, con supuestos explícitos;
+- evidencia a favor y en contra;
+- conclusión favorable, desfavorable o INDETERMINATE;
+- incertidumbre, limitaciones y razones para abstenerse.
+
+No fusionar los tres horizontes en una única puntuación opaca. Si existe una puntuación compuesta, publicar fórmula, pesos, sensibilidad, universo y versión de metodología; separar calidad del activo, oportunidad, riesgo y calidad de evidencia.
+
+### F-08 — Informe y experiencia de usuario
+El informe presenta primero una síntesis comparativa por horizonte y después detalle navegable: gráficos, cronología, fuentes, datos, movimientos, detonantes, indicadores, soportes/resistencias, riesgos y metodología. Cada afirmación material debe enlazar su evidencia. Mostrar fecha de evaluación, periodo cubierto, cobertura y datos faltantes.
+
+### F-09 — Historial y comparación
+Guardar cada ejecución como registro inmutable/versionado, sin sobrescribir informes anteriores. Registrar entradas o referencias/hash, código, metodología, parámetros, fuentes, transformaciones, exclusiones, advertencias y resultados. Comparar evaluaciones separando cambios del mercado de cambios de metodología, proveedor, cobertura o correcciones.
+
+### F-10 — Validación empírica
+Las reglas y puntuaciones que pretendan aportar señal predictiva requieren backtesting temporal y evaluación fuera de muestra/walk-forward, benchmarks pertinentes, costes/supuestos explícitos, análisis de sensibilidad, calibración y controles de leakage, survivorship bias, data snooping y sobreajuste. No ajustar umbrales mirando el conjunto final de prueba. Registrar predicciones con su timestamp y medir resultados posteriores.
+
+## 3. Requisitos no funcionales
+
+| ID | Requisito | Evidencia de aceptación |
+|---|---|---|
+| NFR-01 | Reproducibilidad | Reejecución con entradas y versiones idénticas reproduce resultados dentro de tolerancias documentadas. |
+| NFR-02 | Integridad de datos | Hashes verificables, estado EOF/paginación y detección de capturas truncadas; sin límite arbitrario de bytes del proyecto. |
+| NFR-03 | Trazabilidad | Requisito → Issue → ADR/diseño → código → prueba → ejecución/artefacto → resultado. |
+| NFR-04 | Temporalidad correcta | Separación de tiempos de evento, publicación, proveedor, captura y procesamiento; ausencia de timestamps no se convierte en frescura supuesta. |
+| NFR-05 | Fallo seguro | Datos críticos ausentes, ambiguos o incompatibles producen advertencias o INDETERMINATE, no inferencias silenciosas. |
+| NFR-06 | Seguridad | Lectura pública en el alcance inicial; secretos fuera de logs/artefactos; ninguna orden real. |
+| NFR-07 | Usabilidad y accesibilidad | Flujos de búsqueda/informe utilizables en móvil y escritorio; gráficos legibles, navegación por teclado y movimiento reducido cuando aplique. |
+| NFR-08 | Operabilidad | Logs estructurados, errores tipados, métricas, reintentos/reanudación documentados y diagnóstico de fallos. |
+| NFR-09 | Rendimiento | Umbrales definidos tras medir casos de uso, volumen y entorno; pruebas registradas. No se inventan SLA ni umbrales universales. |
+| NFR-10 | Seguridad de la conclusión | Toda conclusión declara límites y evidencia; no garantiza rentabilidad ni transforma correlación en causalidad. |
+
+## 4. Matriz de trazabilidad propuesta
+
+| ID | Capacidad | Issue/documento relacionado | Prueba mínima |
+|---|---|---|---|
+| E2E-01 | Entrada y resolución de activo | #128, #13, #17 | Ticker ambiguo, activo inexistente y pares incompatibles. |
+| E2E-02 | Captura histórica íntegra | #128, #13 y documentación de captura | Paginación, EOF, huecos, reintentos, hash y captura interrumpida. |
+| E2E-03 | Detección de movimientos | #13, documento de eventos OHLCV | Casos sintéticos/observados y prueba anti-look-ahead. |
+| E2E-04 | Investigación de eventos/detonantes | #13, #128 | Evento con fuente, publicación tardía, fuentes contradictorias y causa desconocida. |
+| E2E-05 | Soportes/resistencias | #13, documento de eventos S/R | Temporalidades, invalidación, pivotes confirmados y anti-look-ahead. |
+| E2E-06 | Tres horizontes | #128 y catálogo de requisitos | Informe con resultados separados, supuestos versionados y abstención. |
+| E2E-07 | Riesgos/costes/liquidez | #7, #18 | Datos incompletos, profundidad parcial y tarifa no demostrada. |
+| E2E-08 | Historial reproducible | #13, historial de evaluaciones | Repetición determinista, comparación y preservación de versiones. |
+| E2E-09 | Validación predictiva | #13, #128 | Split temporal, benchmark, costes, leakage y calibración. |
+| E2E-10 | Informe final completo | #6, #8, #11, #128 | Prueba de aceptación de extremo a extremo con artefactos archivados. |
+
+## 5. Criterios de cierre
+
+- [ ] Una prueba E2E parte de un activo y entrega un informe reproducible con tres horizontes separados.
+- [ ] El expediente histórico identifica cobertura, huecos, procedencia, temporalidad e integridad.
+- [ ] Los movimientos se detectan con reglas versionadas sin usar información futura.
+- [ ] Cada posible detonante se clasifica con evidencia y explicaciones alternativas; se admite causa desconocida.
+- [ ] Soportes/resistencias tienen método, temporalidad, invalidación e incertidumbre.
+- [ ] Cada horizonte contiene tesis, evidencia a favor/en contra, escenarios, riesgos e invalidaciones.
+- [ ] La conclusión puede ser favorable, desfavorable o INDETERMINATE y no se fuerza una señal.
+- [ ] La validación predictiva aporta resultados fuera de muestra y documenta sesgos/costes.
+- [ ] La matriz requisito–implementación–prueba–resultado está actualizada.
+- [ ] Las pruebas E2E, integración, seguridad y rendimiento exigibles están ejecutadas y archivadas antes de declarar preparación para producción.
+- [ ] La revisión documental no se confunde con implementación ni con conformidad/certificación ISO.
+
+## 6. Decisiones no fijadas por esta especificación
+
+Este documento no decide arbitrariamente duración de horizontes, pesos, umbrales de frescura, universos de activos, costes típicos ni umbrales de rendimiento. Cada decisión necesita fuente, evidencia, análisis de sensibilidad, propietario/aprobación y versión. Si no existe base suficiente, se conserva como indeterminada.
+
+## 7. Referencias internas
+
+- [Issue #128 — Flujo integral](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/issues/128)
+- [Issue #13 — Requisitos analíticos](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/issues/13)
+- [Issue #6 — Plataforma central de datos](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/issues/6)
+- [Issue #7 — Selección de mercados Spot](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/issues/7)
+- [Issue #18 — Frescura, comisiones y coste](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/issues/18)
+- [Issue #19 — Validación integral y preparación operativa](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/issues/19)
