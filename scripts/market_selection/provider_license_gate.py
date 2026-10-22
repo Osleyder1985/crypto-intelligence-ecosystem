@@ -105,9 +105,17 @@ def evaluate_provider_use(provider_id: str, use_case: str, authorization_record:
                     "use_case":use_case,"decision":"BLOCK",
                     "reason_codes":["CUSTOM_REDISTRIBUTION_RIGHTS_REQUIRED"],
                     "authorization_evidence_status":"STANDARD_LICENSE_INSUFFICIENT"}
+    authorization_evidence = {
+        "terms_url": terms_url,
+        "terms_sha256": terms_sha256.lower(),
+        "reviewed_at": reviewed_at,
+        "reviewed_by": reviewer,
+    }
+    if provider_id == "defillama_api":
+        authorization_evidence["written_authorization_url"] = written_url
+        authorization_evidence["written_authorization_sha256"] = written_hash.lower()
     return {"schema_version":"crypto-provider-use-assessment-v1","provider_id":provider_id,
             "use_case":use_case,"decision":"ALLOW",
             "reason_codes":["EXPLICIT_AUTHORIZATION_RECORD_VALIDATED"],
             "authorization_evidence_status":"RECORD_VALIDATED_NOT_LEGAL_ADVICE",
-            "authorization":{"terms_url":terms_url,"terms_sha256":terms_sha256.lower(),
-                             "reviewed_at":reviewed_at,"reviewed_by":reviewer}}
+            "authorization":authorization_evidence}
