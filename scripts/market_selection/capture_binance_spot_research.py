@@ -135,12 +135,14 @@ def capture_and_build_report(
         "is_spot_trading_allowed_at_capture": metadata["is_spot_trading_allowed"],
     })
     artifact["market_identity_evidence"] = metadata["captured_exchange_info"]
+    if identity_evidence is not None:
+        artifact["canonical_asset_identity_evidence"] = identity_evidence
     artifact["pipeline"] = {
         "schema_version": PIPELINE_SCHEMA,
         "metadata_capture_status": metadata["captured_exchange_info"]["capture_status"],
         "metadata_sha256": metadata["captured_exchange_info"]["response_sha256"],
-        "market_identity_basis": "REVIEWED_CANONICAL_IDENTITY_EVIDENCE_AND_BINANCE_BASE_ASSET" if report["canonical_asset_identity_status"] == "VERIFIED" else "BINANCE_EXCHANGE_INFO_BASE_ASSET_ONLY",
-        "canonical_cross_provider_asset_id": report["canonical_asset_identity"].get("stable_id") or "NOT_RESOLVED",
+        "market_identity_basis": "IDENTITY_EVIDENCE_SUPPLIED_PENDING_VALIDATION" if identity_evidence is not None else "BINANCE_EXCHANGE_INFO_BASE_ASSET_ONLY",
+        "canonical_cross_provider_asset_id": "PENDING_VALIDATION" if identity_evidence is not None else "NOT_RESOLVED",
         "license_review_status": metadata["captured_exchange_info"]["provider_use_assessment"].get("authorization_evidence_status", "UNKNOWN"),
         "provider_use_assessment": metadata["captured_exchange_info"]["provider_use_assessment"],
     }
@@ -175,9 +177,9 @@ def capture_and_build_report(
         "capture_artifact_bytes": len(capture_raw),
         "exchange_info_sha256": metadata["captured_exchange_info"]["response_sha256"],
         "klines_source": KLINES_URL,
-        "market_identity_basis": "BINANCE_EXCHANGE_INFO_BASE_ASSET",
-        "canonical_cross_provider_asset_id": "NOT_RESOLVED",
-        "license_review_status": "REQUIRES_PRODUCT_SPECIFIC_REVIEW",
+        "market_identity_basis": "REVIEWED_CANONICAL_IDENTITY_EVIDENCE_AND_BINANCE_BASE_ASSET" if report["canonical_asset_identity_status"] == "VERIFIED" else "BINANCE_EXCHANGE_INFO_BASE_ASSET_ONLY",
+        "canonical_cross_provider_asset_id": report["canonical_asset_identity"].get("stable_id") or "NOT_RESOLVED",
+        "license_review_status": metadata["captured_exchange_info"]["provider_use_assessment"].get("authorization_evidence_status", "UNKNOWN"),
         "network_requests_made": True,
         "orders_submitted": False,
     }
