@@ -4,6 +4,7 @@ import unittest
 from scripts.market_selection.fundamental_onchain_contract import (
     METRIC_CATALOG,
     OBSERVATION_SCHEMA,
+    adapt_defillama_protocol_tvl,
     evaluate_observations,
     validate_observation,
 )
@@ -170,6 +171,68 @@ class FundamentalOnchainContractTests(unittest.TestCase):
     def test_not_applicable_for_applicable_metric_requires_reason(self):
         with self.assertRaisesRegex(ValueError, "applicability_override_reason"):
             validate_observation(obs(status="NOT_APPLICABLE", value=None))
+
+    def test_defillama_adapter_normalizes_captured_protocol_tvl(self):
+        rows = adapt_defillama_protocol_tvl(
+            {"name": "Example", "tvl": [
+                {"date": 1792368000, "totalLiquidityUSD": 1200.5},
+                {"date": 1792454400, "totalLiquidityUSD": 1300.0},
+            ]},
+            protocol_slug="example-protocol",
+            asset_category="defi_protocol_token",
+            asset_stable_id="ethereum:0xabc",
+            captured_at="2026-10-20T10:00:00Z",
+            mapping_evidence_url="https://example.org/token-protocol-relationship",
+        )
+        self.assertEqual(len(rows), 2)
+        self.assertEqual(rows[-1]["metric_id"], "protocol.tvl")
+        self.assertEqual(rows[-1]["source"]["source_id"], "defillama-free-api")
+        self.assertEqual(rows[-1]["publication_time_status"], "UNKNOWN")
+        self.assertIsNone(rows[-1]["published_at"])
+        validated = [validate_observation(row) for row in rows]
+        self.assertEqual(validated[-1]["value"], 1300.0)
+
+    def test_defillama_tvl_captured_today_is_rejected_for_past_cutoff(self):
+        rows = adapt_defillama_protocol_tvl(
+            {"tvl": [{"date": 1792454400, "totalLiquidityUSD": 1300.0}]},
+            protocol_slug="example-protocol",
+            asset_category="defi_protocol_token",
+            asset_stable_id="ethereum:0xabc",
+            captured_at="2026-10-22T10:00:00Z",
+            mapping_evidence_url="https://example.org/token-protocol-relationship",
+        )
+        result = evaluate_observations(
+            rows,
+            asset={"category": "defi_protocol_token", "stable_id": "ethereum:0xabc"},
+            evaluation_as_of="2026-10-21T00:00:00Z",
+        )
+        self.assertEqual(result["metrics"]["protocol.tvl"]["status"], "NOT_AVAILABLE")
+        self.assertEqual(result["coverage"]["rejected_after_cutoff_observation_ids"], [rows[0]["observation_id"]])
+
+    def test_defillama_adapter_rejects_negative_tvl(self):
+        with self.assertRaisesRegex(ValueError, "non-negative"):
+            adapt_defillama_protocol_tvl(
+                {"tvl": [{"date": 1792454400, "totalLiquidityUSD": -1.0}]},
+                protocol_slug="example-protocol",
+                asset_category="defi_protocol_token",
+                asset_stable_id="ethereum:0xabc",
+                captured_at="2026-10-22T10:00:00Z",
+                mapping_evidence_url="https://example.org/token-protocol-relationship",
+            )
+
+    def test_defillama_adapter_rejects_conflicting_duplicate_timestamps(self):
+        with self.assertRaisesRegex(ValueError, "conflicting DefiLlama TVL values"):
+            adapt_defillama_protocol_tvl(
+                {"tvl": [
+                    {"date": 1792454400, "totalLiquidityUSD": 100.0},
+                    {"date": 1792454400, "totalLiquidityUSD": 101.0},
+                ]},
+                protocol_slug="example-protocol",
+                asset_category="defi_protocol_token",
+                asset_stable_id="ethereum:0xabc",
+                captured_at="2026-10-22T10:00:00Z",
+                mapping_evidence_url="https://example.org/token-protocol-relationship",
+            )
 
 
 if __name__ == "__main__":
