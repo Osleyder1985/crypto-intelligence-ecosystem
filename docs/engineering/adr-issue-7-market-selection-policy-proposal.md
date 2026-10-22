@@ -9,7 +9,17 @@
 
 La selección debe comparar mercados Spot con identidad de símbolo confirmada, turnover, spread, profundidad, slippage, tarifas, frescura y riesgo del activo. Un único número agregado puede ocultar incompatibilidades de unidad, libros no sincronizados, datos ausentes o una dimensión crítica deficiente.
 
-La evidencia actual es exploratoria: tres capturas de turnover móvil 24 h para BTC/ETH/SOL en siete venues (18/21 respuestas técnicamente accesibles y 15/21 valores comparables por captura; los tres `amount` de Pionex tienen unidad no documentada) y un snapshot de libros con 18/21 respuestas válidas. Bybit devolvió HTTP 403 en el runner; los libros no fueron sincronizados y Binance/MEXC no aportan timestamp de evento utilizable para la profundidad. La serie de turnover cubre menos de dos horas, insuficiente para derivar estabilidad de largo plazo.
+La evidencia actual es exploratoria: cuatro capturas de turnover móvil de 24 h para BTC/ETH/SOL en siete venues y tres snapshots de libro. En cada muestra de turnover, 18/21 respuestas fueron técnicamente accesibles y 15/21 valores comparables; los tres `amount` de Pionex siguen sin unidad documentada. En los snapshots de libro, 18/21 respuestas son válidas por muestra. Bybit devolvió HTTP 403 en el runner; las capturas son secuenciales y no sincronizadas, y Binance/MEXC no aportan timestamp de evento utilizable para la profundidad. La serie de turnover abarca aproximadamente 3 h 37 min, insuficiente para derivar estabilidad de largo plazo.
+
+
+
+## Actualización de evidencia verificada — 2026-10-22T15:57Z
+
+- **Cuarta captura de turnover:** [workflow #39809696897](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/actions/runs/39809696897), [artefacto #12439416760](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/actions/runs/39809696897/artifacts/12439416760). Los 21 cuerpos se verificaron por Base64, tamaño y SHA-256; 18/21 fueron HTTP 200 y 15/21 valores comparables. Frente a la tercera muestra, los 15 cambios comparables fueron negativos (-2.76% a -15.86%) en lecturas de ventanas móviles de 24 h separadas por 2 h 1 min. No son volumen transado durante ese intervalo.
+- **Tercer snapshot de libro:** [workflow #39809697313](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/actions/runs/39809697313), [artefacto #12438867580](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/actions/runs/39809697313/artifacts/12438867580). Los 21 cuerpos se verificaron; 18/21 snapshots válidos; 6.757 s entre primera y última respuesta. Los snapshots no están sincronizados y los límites de niveles difieren por proveedor.
+- Los artefactos y el análisis detallado están documentados en [observaciones de turnover](issue-7-quote-volume-observations.md) y [capturas de libro](issue-7-multi-exchange-probe.md).
+
+**Consecuencia para el ADR:** esta evidencia refuerza la viabilidad de publicar métricas vectoriales descriptivas, pero no autoriza una clasificación definitiva. La cobertura temporal, los 403, la unidad de Pionex, la frescura absoluta de algunos libros y la falta de tamaños/umbrales aprobados mantienen los criterios 7-M01/7-M02 en estado parcial. La propuesta sigue sin aprobar.
 
 ## Decisión propuesta
 
