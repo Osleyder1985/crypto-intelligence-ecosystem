@@ -607,7 +607,29 @@ def promote_sec_press_release_to_event(
             "causality_status": "NOT_ASSESSED",
         },
     }
-    return validate_event(event)
+    normalized_event = validate_event(event)
+    normalized_event.update({
+        "source_id": SOURCE_ID,
+        "provider_id": SOURCE_ID,
+        "source_registry_status": "APPROVED",
+        "source_registry_entry_sha256": current_registry_hash,
+        "provider_use_assessment": article_capture["provider_use_assessment"],
+        "persistent_storage_assessment": article_capture["persistent_storage_assessment"],
+        "provider_policy_assessments": article_capture["provider_policy_assessments"],
+        "source_capture_assessments": {
+            "feed": {
+                "provider_use_assessment": feed_capture["provider_use_assessment"],
+                "persistent_storage_assessment": feed_capture["persistent_storage_assessment"],
+                "provider_policy_assessments": feed_capture["provider_policy_assessments"],
+            },
+            "article": {
+                "provider_use_assessment": article_capture["provider_use_assessment"],
+                "persistent_storage_assessment": article_capture["persistent_storage_assessment"],
+                "provider_policy_assessments": article_capture["provider_policy_assessments"],
+            },
+        },
+    })
+    return normalized_event
 
 
 def main(argv: list[str] | None = None) -> int:
