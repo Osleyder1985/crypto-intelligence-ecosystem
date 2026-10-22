@@ -246,7 +246,7 @@ def main() -> int:
             "common_base_quantity": item["common_base_quantity"],
             "pionex_round_trip_cost_quote": item["pionex"]["static_snapshot_round_trip_cost_quote"],
             "binance_round_trip_cost_quote": item["binance"]["static_snapshot_round_trip_cost_quote"],
-        } for item in result["scenarios"]],
+        } for item in result["results"]],
     }, ensure_ascii=False, indent=2))
     return 0
 
