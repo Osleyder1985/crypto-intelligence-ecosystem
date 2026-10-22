@@ -176,7 +176,7 @@ def analyze_artifact(artifact: dict, periods_per_year: int | None = None) -> dic
     log_std = statistics.stdev(returns) if len(returns) >= 2 else None
     simple_std = statistics.stdev(simple_returns) if len(simple_returns) >= 2 else None
     annualized_log_vol = log_std * math.sqrt(periods_per_year) if log_std is not None and periods_per_year else None
-    data_quality = "INSUFFICIENT" if len(closed) < 2 else ("INCOMPLETE" if gaps or excluded_open else "COMPLETE")
+    data_quality = "INSUFFICIENT" if len(closed) < 2 else ("INCOMPLETE" if gaps or excluded_open or artifact.get("overall_status") != "PASS" or source_integrity_status != "VERIFIED" else "COMPLETE")
     quote_volumes = [float(c["quote_volume"]) for c in closed]
     base_volumes = [float(c["base_volume"]) for c in closed]
     losses = [r for r in simple_returns if r < 0]

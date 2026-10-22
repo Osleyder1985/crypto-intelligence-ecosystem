@@ -84,6 +84,13 @@ class SupportResistanceTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "OHLC envelope"):
             analyze_support_resistance(bad, 1, 1, 100)
 
+
+    def test_partial_source_artifact_cannot_be_marked_complete(self):
+        a = artifact([candle(0, 10, 11, 9, 10), candle(1, 10, 11, 8, 9), candle(2, 9, 10, 7, 8)])
+        a["overall_status"] = "PARTIAL"
+        result = analyze_support_resistance(a, 1, 1, 100)
+        self.assertEqual(result["data_quality_status"], "INCOMPLETE")
+
     def test_tampered_page_hash_fails_closed(self):
         a = artifact([candle(0, 10, 11, 9, 10), candle(1, 10, 11, 8, 9)])
         a["pages"][0]["response_sha256"] = "0" * 64

@@ -80,6 +80,13 @@ class OHLCVRiskProfileTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "no preserved response body"):
             analyze_artifact(a)
 
+
+    def test_partial_source_artifact_cannot_be_marked_complete(self):
+        a = artifact([candle(0, "100"), candle(3_600_000, "101")])
+        a["overall_status"] = "PARTIAL"
+        result = analyze_artifact(a)
+        self.assertEqual(result["data_quality_status"], "INCOMPLETE")
+
     def test_duplicate_or_out_of_order_candles_fail_closed(self):
         with self.assertRaisesRegex(ValueError, "strictly increasing"):
             analyze_artifact(artifact([candle(3_600_000, "100"), candle(0, "101")]))
