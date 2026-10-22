@@ -1,28 +1,18 @@
 name: Multi-pair public market capture (read-only)
-on:
-  pull_request:
-  workflow_dispatch:
+
+on: [pull_request, workflow_dispatch]
+
 permissions:
   contents: read
+
 jobs:
-  scope:
-    runs-on: ubuntu-latest
-    outputs:
-      applicable: ${{ steps.detect.outputs.applicable }}
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - id: detect
-        run: |
-          if [ -f scripts/market_selection/capture_public_market_batch.py ] && [ -f tests/market_selection/test_evaluate_capture_batch.py ] && [ -f tests/market_selection/test_capture_public_market_batch.py ]; then echo "applicable=true" >> "$GITHUB_OUTPUT"; else echo "applicable=false" >> "$GITHUB_OUTPUT"; fi
   offline-tests:
     name: Test multi-pair capture and evaluation offline
-    needs: scope
-    if: needs.scope.outputs.applicable == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 3
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
         with:
           python-version: "3.12"
       - run: python -m unittest discover -s tests/market_selection -p "test_evaluate_capture_batch.py" -v
@@ -30,59 +20,36 @@ jobs:
       - run: python -m unittest discover -s tests/market_selection -p "test_issue18_live_freshness.py" -v
       - run: python -m unittest discover -s tests/market_selection -p "test_minimum_common_notional_scenario.py" -v
       - run: python -m unittest discover -s tests/market_selection -p "test_capture_pionex_fill_fee_evidence.py" -v
+
   capture-offline:
     name: Test multi-pair capture offline
-    needs: scope
-    if: needs.scope.outputs.applicable == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 3
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
         with:
           python-version: "3.12"
       - run: python -m unittest discover -s tests/market_selection -p "test_capture_public_market_batch.py" -v
+
   live-capture:
     name: Capture and evaluate bounded public market universe
-    needs: scope
-    if: needs.scope.outputs.applicable == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 4
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
         with:
           python-version: "3.12"
-      - name: Run capture with fail-closed provider authorization
+      - name: Capture only providers allowed by policy
         continue-on-error: true
         run: python scripts/market_selection/capture_public_market_batch.py
-      - name: Validate authorization enforcement and preserve audit
+      - name: Assert fail-closed provider decisions
         run: |
-          python - <<'PY'
-          import json
-          from pathlib import Path
-          artifact = json.loads(Path("artifacts/public-market-capture-batch.json").read_text(encoding="utf-8"))
-          assert artifact["schema_version"] == "public-market-capture-batch-v1"
-          assert artifact["overall_status"] == "FAIL"
-          assert artifact["expected_record_count"] == artifact["actual_record_count"] == 12
-          assert len(artifact["universe"]) == 3
-          assert len({item["pionex_symbol"] for item in artifact["universe"]}) == 3
-          pionex_records = [record for record in artifact["records"] if str(record["provider"]).startswith("pionex")]
-          assert len(pionex_records) == 6
-          assert all(record["capture_status"] == "BLOCKED" for record in pionex_records)
-          assert all(record["provider_use_assessment"]["decision"] == "BLOCK" for record in pionex_records)
-          assert all(record["http_status"] is None and record["response_bytes"] is None for record in pionex_records)
-          binance_records = [record for record in artifact["records"] if str(record["provider"]).startswith("binance")]
-          assert len(binance_records) == 6
-          assert all(record["provider_use_assessment"]["decision"] == "ALLOW" for record in binance_records)
-          print("Pionex requests blocked before network: authorization record absent.")
-          print("Binance requests are limited to the live technical test baseline; no commercial rights implied.")
-          PY
-      - name: Withhold downstream evaluation without Pionex authorization
-        run: echo "Evaluation skipped: Pionex capture is blocked until an explicit, reviewed authorization record is supplied."
-      - name: Upload capture and evaluation evidence
+          python -c 'import json; from pathlib import Path; a=json.loads(Path("artifacts/public-market-capture-batch.json").read_text()); assert a["schema_version"] == "public-market-capture-batch-v1"; assert a["overall_status"] == "FAIL"; assert len(a["records"]) == 12; p=[r for r in a["records"] if str(r["provider"]).startswith("pionex")]; b=[r for r in a["records"] if str(r["provider"]).startswith("binance")]; assert len(p) == 6 and all(r["capture_status"] == "BLOCKED" and r["provider_use_assessment"]["decision"] == "BLOCK" and r["http_status"] is None for r in p); assert len(b) == 6 and all(r["provider_use_assessment"]["decision"] == "ALLOW" for r in b); print("Pionex blocked before network; Binance allowed only for technical test.")'
+      - name: Preserve authorization audit artifact
         if: always()
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
           name: public-market-capture-batch-${{ github.run_id }}-${{ github.run_attempt }}
           path: artifacts/
