@@ -51,7 +51,7 @@ class OHLCVMovementEventTests(unittest.TestCase):
 
     def test_future_candles_do_not_change_past_events(self):
         base = [candle(0, "100", "100"), candle(1, "100", "100"), candle(2, "110", "100")]
-        extended = base + [candle(3, "100", "100"), candle(4, "120", "100")]
+        extended = base + [candle(3, "100", "100"), candle(4, "101", "100")]
         first = analyze_movement_events(artifact(base), 2, 5, 3)
         second = analyze_movement_events(artifact(extended), 2, 5, 3)
         cutoff = 2 * 3_600_000 + 3_599_999

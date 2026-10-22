@@ -28,6 +28,8 @@ def verify_pages(artifact):
         raise ValueError("source artifact must contain a non-empty pages list")
     statuses = []
     for i, page in enumerate(pages):
+        if not isinstance(page, dict):
+            raise ValueError(f"pages[{i}] must be an object")
         encoded = page.get("response_base64")
         if encoded is None:
             if page.get("capture_status") == "PASS":
@@ -83,9 +85,9 @@ def analyze_movement_events(artifact, lookback_bars, return_threshold_pct, volum
         raise ValueError("market.interval is required")
     if isinstance(lookback_bars, bool) or not isinstance(lookback_bars, int) or lookback_bars < 2:
         raise ValueError("lookback_bars must be an integer >= 2")
-    if not math.isfinite(return_threshold_pct) or return_threshold_pct <= 0:
+    if isinstance(return_threshold_pct, bool) or not math.isfinite(return_threshold_pct) or return_threshold_pct <= 0:
         raise ValueError("return_threshold_pct must be finite and positive")
-    if not math.isfinite(volume_ratio_threshold) or volume_ratio_threshold <= 1:
+    if isinstance(volume_ratio_threshold, bool) or not math.isfinite(volume_ratio_threshold) or volume_ratio_threshold <= 1:
         raise ValueError("volume_ratio_threshold must be finite and greater than 1")
     rows = artifact.get("candles")
     if not isinstance(rows, list):
@@ -109,10 +111,15 @@ def analyze_movement_events(artifact, lookback_bars, return_threshold_pct, volum
         close_ms = int(row.get("close_time_ms"))
         if close_ms != next_open(open_ms, interval) - 1:
             raise ValueError(f"candles[{i}] close time does not match interval boundary")
+        op = dec(row.get("open"), f"candles[{i}].open")
+        high = dec(row.get("high"), f"candles[{i}].high")
+        low = dec(row.get("low"), f"candles[{i}].low")
         close = dec(row.get("close"), f"candles[{i}].close")
         quote_volume = dec(row.get("quote_volume"), f"candles[{i}].quote_volume")
-        if close <= 0 or quote_volume < 0:
-            raise ValueError("close must be positive and quote volume non-negative")
+        if min(op, high, low, close) <= 0 or high < max(op, close, low) or low > min(op, close, high):
+            raise ValueError("candle OHLC envelope must be positive and internally consistent")
+        if quote_volume < 0:
+            raise ValueError("quote volume must be non-negative")
         gap_before = force_new_segment or (closed and open_ms != next_open(closed[-1]["open_time_ms"], interval))
         closed.append({
             "open_time_ms": open_ms, "close_time_ms": close_ms,
