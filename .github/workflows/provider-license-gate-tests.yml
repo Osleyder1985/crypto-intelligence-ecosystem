@@ -6,6 +6,7 @@ on:
       - "scripts/market_selection/provider_license_gate.py"
       - "tests/market_selection/test_provider_license_gate.py"
       - "tests/market_selection/test_provider_license_enforcement.py"
+      - "tests/market_selection/test_capture_binance_account_commission_evidence.py"
       - "scripts/market_selection/capture_binance_account_commission_evidence.py"
       - "scripts/market_selection/capture_pionex_fill_fee_evidence.py"
       - "scripts/market_selection/capture_multi_exchange_spot_book_probe.py"
@@ -36,3 +37,4 @@ jobs:
         run: |
           python -m unittest discover -s tests/market_selection -p "test_provider_license_*.py" -v
           python -m unittest discover -s tests/market_selection -p "test_capture_multi_exchange_spot_book_probe.py" -v
+          python -m unittest discover -s tests/market_selection -p "test_capture_binance_account_commission_evidence.py" -v
