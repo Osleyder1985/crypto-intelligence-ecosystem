@@ -162,6 +162,10 @@ def _collect_provider_assessments(value: object, output: list[dict]) -> None:
             capture_status = value.get("capture_status")
             if capture_status not in {"FAIL", "BLOCKED", "NOT_AVAILABLE"}:
                 output.append(assessment)
+        elif value.get("capture_status") == "PASS" and any(key in value for key in ("provider", "exchange", "provider_id")):
+            output.append({"schema_version": ASSESSMENT_SCHEMA_VERSION, "policy_version": None,
+                           "provider_id": str(value.get("provider_id") or value.get("provider") or value.get("exchange") or ""),
+                           "decision": "BLOCK", "reason_codes": ["PROVIDER_USE_ASSESSMENT_MISSING"]})
         elif value.get("schema_version") == ASSESSMENT_SCHEMA_VERSION:
             output.append(value)
         for key, child in value.items():
