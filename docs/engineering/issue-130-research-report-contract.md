@@ -37,6 +37,7 @@ Para intentar resolver identidad canónica, proporciona un archivo `crypto-canon
 ```bash
 python -m scripts.market_selection.research_report \
   --asset-id BTC \
+  --identity-evidence artifacts/reviewed-canonical-identity.json \
   --artifact artifacts/binance-spot-ohlcv-capture.json \
   --config configs/technical-descriptive-baseline.json \
   --output artifacts/crypto-asset-research-report.json
