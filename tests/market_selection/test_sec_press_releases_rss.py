@@ -122,7 +122,7 @@ class SecPressReleaseConnectorTests(unittest.TestCase):
                 captured_at=self.captured_at, opener=opener,
             )
         self.assertEqual(result["capture_status"], "BLOCKED")
-        self.assertIn("CLASSIFIED_USER_AGENT_REQUIRED", result["reason_codes"])
+        self.assertIn("USER_AGENT_REQUIRED", result["reason_codes"])
         opener.assert_not_called()
 
     def test_successful_feed_capture_preserves_full_body_headers_and_timestamps(self):
