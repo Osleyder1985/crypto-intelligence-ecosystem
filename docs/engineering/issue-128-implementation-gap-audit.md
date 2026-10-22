@@ -60,19 +60,19 @@ Crear un servicio/CLI de investigación que coordine identidad, captura, validac
 
 **Aceptación:** prueba E2E desde activo de entrada hasta informe, con artefactos y versiones registradas.
 
-### P2 — Fuentes de noticias y eventos
+### P2 — Fuentes de noticias y eventos ([Issue #132](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/issues/132))
 
 Diseñar registro de fuentes permitidas y conectores verificables para noticias, anuncios oficiales, listados/delistados, incidentes, regulación y eventos de protocolo según cobertura. Preservar fuente original, publicación, captura, zona horaria, entidades, relación con el activo, fiabilidad y duplicados. Diferenciar hechos, correlación, hipótesis y causa desconocida.
 
 **Aceptación:** pruebas con noticia anterior/posterior, publicación tardía, fuentes contradictorias, falso positivo y causa desconocida. No declarar causalidad solo por proximidad temporal.
 
-### P3 — Metodología de horizontes
+### P3 — Metodología de horizontes ([Issue #133](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/issues/133))
 
 Definir y versionar la duración y la metodología de corto/medio/largo plazo, sin fijar valores arbitrarios. Para cada horizonte, generar escenarios, evidencia favorable/adversa, riesgos, niveles técnicos, invalidaciones y limitaciones. Mantener separadas calidad de evidencia, riesgo, oportunidad y cualquier puntuación compuesta.
 
 **Aceptación:** configuración versionada, pruebas de contrato, sensibilidad y casos donde los horizontes discrepen o devuelvan `INDETERMINATE`.
 
-### P4 — Fundamentales/on-chain y cobertura
+### P4 — Fundamentales/on-chain y cobertura ([Issue #134](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/issues/134))
 
 Evaluar qué métricas son aplicables por tipo de activo y cuáles tienen fuentes fiables. Implementar solo conectores con procedencia y licencias/condiciones revisadas. Diferenciar no aplicable, no disponible, no accesible, incompleto y error.
 
