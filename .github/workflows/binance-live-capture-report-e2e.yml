@@ -43,11 +43,20 @@ jobs:
           python-version: "3.12"
       - name: Run tiny public market capture and report smoke test
         run: |
+          mkdir -p artifacts
+          cat > artifacts/smoke-test-only-methodology.json <<'JSON'
+          {
+            "methodology_id": "ci-live-capture-smoke-test-only",
+            "methodology_version": "0.0.0-test",
+            "movement": {"lookback_bars": 2, "return_threshold_pct": 5.0, "volume_ratio_threshold": 3.0},
+            "support_resistance": {"pivot_left": 1, "pivot_right": 1, "tolerance_bps": 100.0}
+          }
+          JSON
           python -m scripts.market_selection.capture_binance_spot_research \
             --symbol BTCUSDT --asset-id BTC --interval 1h \
             --start-time-ms "$(python -c 'import datetime; d=datetime.datetime.now(datetime.timezone.utc).replace(minute=0,second=0,microsecond=0)-datetime.timedelta(hours=6); print(int(d.timestamp()*1000))')" \
             --end-time-ms "$(python -c 'import datetime; d=datetime.datetime.now(datetime.timezone.utc).replace(minute=0,second=0,microsecond=0); print(int(d.timestamp()*1000))')" \
-            --config configs/technical-descriptive-baseline.json \
+            --config artifacts/smoke-test-only-methodology.json \
             --capture-output artifacts/binance-live-capture.json \
             --report-output artifacts/binance-live-report.json
           python -c 'import json; r=json.load(open("artifacts/binance-live-report.json")); assert r["decision_status"] == "INDETERMINATE"; assert r["orders_submitted"] is False'
