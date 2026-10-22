@@ -36,6 +36,21 @@ class FakeResponse:
         return self.raw
 
 
+AUTHORIZATION_RECORD = {
+    "schema_version": "crypto-provider-authorization-v1",
+    "provider_id": "binance_spot_account_data",
+    "status": "APPROVED",
+    "authorized_use_cases": ["internal_analysis"],
+    "terms_url": "https://www.binance.com/en/terms",
+    "terms_sha256": "a" * 64,
+    "reviewed_at": "2026-10-22T00:00:00Z",
+    "reviewed_by": "offline-test-fixture",
+    "account_owner_consent_ref": "offline-consent-fixture",
+    "account_owner_consent_sha256": "b" * 64,
+    "credential_scope_verified": True,
+}
+
+
 class CommissionEvidenceTests(unittest.TestCase):
     def test_signed_url_signs_exact_query_and_contains_no_secret(self):
         url = build_signed_url("BTCUSDT", "not-for-output", 123456789)
@@ -52,7 +67,7 @@ class CommissionEvidenceTests(unittest.TestCase):
             self.assertEqual(request.get_header("X-mbx-apikey"), "public-key-test")
             self.assertEqual(timeout, 12)
             return response
-        result = capture_commission_evidence("BTCUSDT", "public-key-test", "secret-test", timestamp_ms=123, opener=opener)
+        result = capture_commission_evidence("BTCUSDT", "public-key-test", "secret-test", timestamp_ms=123, opener=opener, authorization_record=AUTHORIZATION_RECORD)
         self.assertEqual(result["commission_evidence_status"], "PASS")
         self.assertEqual(result["response_sha256"], hashlib.sha256(response.raw).hexdigest())
         self.assertFalse(result["orders_submitted"])
@@ -92,7 +107,8 @@ class CommissionEvidenceTests(unittest.TestCase):
                 self.raw = b"not-json"
                 self.status = 200
         result = capture_commission_evidence(
-            "BTCUSDT", "key", "secret", timestamp_ms=1, opener=lambda *_args, **_kwargs: BadResponse()
+            "BTCUSDT", "key", "secret", timestamp_ms=1, opener=lambda *_args, **_kwargs: BadResponse(),
+            authorization_record=AUTHORIZATION_RECORD,
         )
         self.assertEqual(result["commission_evidence_status"], "INDETERMINATE")
         self.assertEqual(result["response_sha256"], hashlib.sha256(b"not-json").hexdigest())
@@ -102,7 +118,7 @@ class CommissionEvidenceTests(unittest.TestCase):
         from urllib.error import HTTPError
         def fail(*_args, **_kwargs):
             raise HTTPError("https://api.binance.com", 451, "restricted", {}, None)
-        result = capture_commission_evidence("BTCUSDT", "key", "secret", timestamp_ms=1, opener=fail)
+        result = capture_commission_evidence("BTCUSDT", "key", "secret", timestamp_ms=1, opener=fail, authorization_record=AUTHORIZATION_RECORD)
         self.assertEqual(result["http_status"], 451)
         self.assertEqual(result["commission_evidence_status"], "INDETERMINATE")
         self.assertNotIn("signature", json.dumps(result))
