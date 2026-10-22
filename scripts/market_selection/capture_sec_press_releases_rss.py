@@ -25,12 +25,12 @@ try:
     from scripts.market_selection.external_event_evidence import INPUT_SCHEMA as EVENT_SCHEMA, parse_timestamp, validate_event
     from scripts.market_selection.event_source_registry import get_source, source_entry_sha256, source_is_approved
     from scripts.market_selection.provider_license_gate import (
-        ASSESSMENT_SCHEMA_VERSION, POLICY_VERSION, evaluate_provider_use,
+        ASSESSMENT_SCHEMA_VERSION, POLICY_VERSION, evaluate_artifact_use, evaluate_provider_use,
     )
 except ModuleNotFoundError:
     from external_event_evidence import INPUT_SCHEMA as EVENT_SCHEMA, parse_timestamp, validate_event
     from event_source_registry import get_source, source_entry_sha256, source_is_approved
-    from provider_license_gate import ASSESSMENT_SCHEMA_VERSION, POLICY_VERSION, evaluate_provider_use
+    from provider_license_gate import ASSESSMENT_SCHEMA_VERSION, POLICY_VERSION, evaluate_artifact_use, evaluate_provider_use
 
 FEED_CAPTURE_SCHEMA = "crypto-sec-rss-capture-v1"
 ARTICLE_CAPTURE_SCHEMA = "crypto-sec-article-capture-v1"
@@ -504,9 +504,9 @@ def promote_sec_press_release_to_event(
     if feed_capture.get("source_registry_entry_sha256") != current_registry_hash or article_capture.get("source_registry_entry_sha256") != current_registry_hash:
         raise ValueError("source registry changed after capture; recapture under the current reviewed entry")
     for capture, name in ((feed_capture, "feed_capture"), (article_capture, "article_capture")):
-        if capture.get("provider_use_assessment", {}).get("decision") != "ALLOW":
+        if evaluate_artifact_use(capture, "internal_analysis")["decision"] != "ALLOW":
             raise ValueError(f"{name} does not authorize internal_analysis")
-        if capture.get("persistent_storage_assessment", {}).get("decision") != "ALLOW":
+        if evaluate_artifact_use(capture, "persistent_storage")["decision"] != "ALLOW":
             raise ValueError(f"{name} does not authorize persistent_storage")
         _verify_capture_body(capture, name)
 
