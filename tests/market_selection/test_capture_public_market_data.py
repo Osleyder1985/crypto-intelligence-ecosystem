@@ -13,6 +13,7 @@ class Response:
         self.headers = {}
         self.payload = json.dumps(payload, separators=(",", ":")).encode()
         self.calls = []
+        self.offset = 0
 
     def __enter__(self):
         return self
@@ -22,7 +23,13 @@ class Response:
 
     def read(self, size=-1):
         self.calls.append(size)
-        return self.payload if size is None or size < 0 else self.payload[:size]
+        if size is None or size < 0:
+            chunk = self.payload[self.offset:]
+            self.offset = len(self.payload)
+            return chunk
+        chunk = self.payload[self.offset:self.offset + size]
+        self.offset += len(chunk)
+        return chunk
 
 
 class CompleteResponseTests(unittest.TestCase):
