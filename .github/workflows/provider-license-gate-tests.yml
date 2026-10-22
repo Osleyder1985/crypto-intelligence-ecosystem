@@ -41,6 +41,8 @@ on:
       - "tests/market_selection/test_detect_ohlcv_movement_events.py"
       - "scripts/market_selection/analyze_support_resistance.py"
       - "tests/market_selection/test_analyze_support_resistance.py"
+      - "scripts/market_selection/research_evidence_integration.py"
+      - "tests/market_selection/test_research_evidence_integration.py"
       - ".github/workflows/provider-license-gate-tests.yml"
   push:
     branches: [main]
@@ -116,3 +118,4 @@ jobs:
           python -m unittest discover -s tests/market_selection -p "test_analyze_ohlcv_risk_profile.py" -v
           python -m unittest discover -s tests/market_selection -p "test_detect_ohlcv_movement_events.py" -v
           python -m unittest discover -s tests/market_selection -p "test_analyze_support_resistance.py" -v
+          python -m unittest discover -s tests/market_selection -p "test_research_evidence_integration.py" -v
