@@ -11,6 +11,7 @@
 | [Catálogo de requisitos y trazabilidad](requirements-traceability-catalog.md) | Requisitos iniciales, NFR, mapa de objetivos y reglas de trazabilidad | Borrador |
 | [Matriz de cierre de aceptación #7/#13](acceptance-closure-matrix-issues-7-13.md) | Descomposición de criterios, evidencia, método de prueba y decisiones pendientes | Propuesta de verificación |
 | [Metodología de selección spot](spot-market-selection-methodology.md) | Contrato de datos, fórmulas, controles de calidad y decisión reproducible por par | Especificación propuesta |
+| [Evidencia de comisiones Pionex Spot por fills — Issue #18](pionex-fill-fee-evidence.md) | Captura read-only de comisiones históricas por fill; omite IDs y cuerpo privado, marca 100 fills como potencialmente truncados | Evidencia histórica, no tarifa prospectiva aprobada |
 | [Matriz consolidada de evidencia — Issue #18](issue-18-evidence-matrix.md) | Estado de cada criterio, enlaces a artefactos y bloqueos de cierre sin inventar umbrales | Consolidación; decisión global INDETERMINATE |
 | [Aplicabilidad de normas ISO — Issue #18](issue-18-data-quality-standards.md) | ISO 8601 para representación temporal e ISO/IEC 25012 para requisitos/medidas de calidad; ninguna fija un umbral universal de frescura de exchange | Nota de aplicabilidad; no certificación |
 | [Fixtures de frescura en vivo — Issue #18](issue-18-live-freshness-fixtures.md) | Pruebas de PASS/FAIL/INDETERMINATE para política aprobada, timestamps ausentes/futuros y desfase de reloj | Límites solo sintéticos; no son política de producto |
