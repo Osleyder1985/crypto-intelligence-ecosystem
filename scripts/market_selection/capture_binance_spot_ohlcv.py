@@ -5,8 +5,6 @@ import argparse
 import base64
 import hashlib
 import json
-import math
-import sys
 from datetime import datetime, timezone
 from decimal import Decimal, InvalidOperation
 from pathlib import Path
@@ -54,8 +52,8 @@ def _decimal(value, field: str) -> Decimal:
 
 
 def normalize_kline(row, symbol: str, interval: str, captured_at_utc: str) -> dict:
-    if not isinstance(row, list) or len(row) < 11:
-        raise ValueError("Binance kline row must be an array with at least 11 fields")
+    if not isinstance(row, list) or len(row) != 12:
+        raise ValueError("Binance kline row must be an array with exactly 12 fields")
     try:
         open_time = int(row[0])
         close_time = int(row[6])
