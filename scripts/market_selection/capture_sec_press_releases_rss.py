@@ -141,7 +141,8 @@ def _blocked_result(schema: str, state: dict, captured_at: str, blockers: list[s
         "provider_id": SOURCE_ID,
         "source_registry_status": state["source"]["status"],
         "source_registry_entry_sha256": state["source_registry_entry_sha256"],
-        "source_url": requested_url,
+        "source_url": state["source"]["source_url"],
+        "requested_url": requested_url,
         "captured_at": captured_at,
         "capture_status": "BLOCKED",
         "network_request_made": False,
@@ -171,7 +172,7 @@ def _response_capture(
     feed_items: list[dict] | None = None,
     errors: list[dict] | None = None,
 ) -> dict:
-    return {
+    result = {
         "schema_version": schema,
         "source_id": SOURCE_ID,
         "provider_id": SOURCE_ID,
@@ -192,17 +193,25 @@ def _response_capture(
         "provider_policy_assessments": state["provider_policy_assessments"],
         "provider_use_assessment": state["provider_use_assessment"],
         "persistent_storage_assessment": state["persistent_storage_assessment"],
-        "feed_items": feed_items or [],
-        "feed_item_count": len(feed_items or []),
-        "coverage": {
+        "reason_codes": [],
+        "errors": errors or [],
+    }
+    if schema == FEED_CAPTURE_SCHEMA:
+        result["feed_items"] = feed_items or []
+        result["feed_item_count"] = len(feed_items or [])
+        result["coverage"] = {
             "scope": state["source"]["coverage_scope"],
             "historical_archive_complete": False,
             "empty_feed_proves_no_event": False,
             "entities_auto_resolved": False,
-        },
-        "reason_codes": [],
-        "errors": errors or [],
-    }
+        }
+    else:
+        result["coverage"] = {
+            "scope": "Single SEC article response body only",
+            "historical_archive_complete": False,
+            "entities_auto_resolved": False,
+        }
+    return result
 
 
 def _request(
@@ -213,7 +222,7 @@ def _request(
     timeout_seconds: float,
     opener: Any,
     schema: str,
-) -> tuple[dict | None, bytes | None]:
+) -> tuple[dict | None, bytes | None, int | None, dict[str, str]]:
     request = Request(
         requested_url,
         headers={
@@ -225,24 +234,26 @@ def _request(
     try:
         response = opener(request, timeout=timeout_seconds)
     except HTTPError as exc:
-        raw = exc.read()
+        raw = exc.read()  # Preserve the complete error body too.
+        headers = _safe_headers(exc.headers)
         result = _response_capture(
             schema, state, captured_at, requested_url, int(exc.code),
-            _safe_headers(exc.headers), raw, "HTTP_ERROR",
+            headers, raw, "HTTP_ERROR",
             errors=[{"error_type": "HTTPError", "reason_code": "HTTP_STATUS_NOT_SUCCESS"}],
         )
-        return result, raw
+        return result, raw, int(exc.code), headers
     except (URLError, TimeoutError, OSError) as exc:
         result = _blocked_result(schema, state, captured_at, [], requested_url)
         result["capture_status"] = "NETWORK_ERROR"
         result["network_request_made"] = True
         result["errors"] = [{"error_type": type(exc).__name__, "reason_code": "NETWORK_REQUEST_FAILED"}]
-        return result, None
+        return result, None, None, {}
 
     try:
         status_code = getattr(response, "status", None)
         if status_code is None:
             status_code = response.getcode()
+        status_code = int(status_code)
         headers = _safe_headers(getattr(response, "headers", None))
         raw = response.read()  # Read to EOF; no local response-size cap.
     finally:
@@ -250,12 +261,13 @@ def _request(
         if callable(close):
             close()
 
-    if int(status_code) != 200:
-        return _response_capture(
-            schema, state, captured_at, requested_url, int(status_code), headers, raw, "HTTP_ERROR",
+    if status_code != 200:
+        result = _response_capture(
+            schema, state, captured_at, requested_url, status_code, headers, raw, "HTTP_ERROR",
             errors=[{"error_type": "HTTPStatus", "reason_code": "HTTP_STATUS_NOT_SUCCESS"}],
-        ), raw
-    return None, raw
+        )
+        return result, raw, status_code, headers
+    return None, raw, status_code, headers
 
 
 def _parse_rss(raw: bytes) -> list[dict]:
@@ -339,7 +351,7 @@ def capture_sec_press_releases_rss(
     if blockers:
         return _blocked_result(FEED_CAPTURE_SCHEMA, state, timestamp, blockers, source["source_url"])
 
-    response_result, raw = _request(
+    response_result, raw, status_code, response_headers = _request(
         state, timestamp, source["source_url"], user_agent.strip(), timeout_seconds,
         opener or urlopen, FEED_CAPTURE_SCHEMA,
     )
@@ -349,13 +361,13 @@ def capture_sec_press_releases_rss(
         items = _parse_rss(raw or b"")
     except (ET.ParseError, ValueError):
         result = _response_capture(
-            FEED_CAPTURE_SCHEMA, state, timestamp, source["source_url"], 200, {}, raw or b"", "PARSE_ERROR",
+            FEED_CAPTURE_SCHEMA, state, timestamp, source["source_url"], status_code or 200, response_headers, raw or b"", "PARSE_ERROR",
             errors=[{"error_type": "RSSParseError", "reason_code": "RSS_DOCUMENT_INVALID"}],
         )
         return result
 
     return _response_capture(
-        FEED_CAPTURE_SCHEMA, state, timestamp, source["source_url"], 200, {}, raw or b"", "PASS",
+        FEED_CAPTURE_SCHEMA, state, timestamp, source["source_url"], status_code or 200, response_headers, raw or b"", "PASS",
         feed_items=items,
     )
 
@@ -379,14 +391,14 @@ def capture_sec_press_release_article(
     if blockers:
         return _blocked_result(ARTICLE_CAPTURE_SCHEMA, state, timestamp, blockers, article_url)
 
-    response_result, raw = _request(
+    response_result, raw, status_code, response_headers = _request(
         state, timestamp, article_url, user_agent.strip(), timeout_seconds,
         opener or urlopen, ARTICLE_CAPTURE_SCHEMA,
     )
     if response_result is not None:
         return response_result
     return _response_capture(
-        ARTICLE_CAPTURE_SCHEMA, state, timestamp, article_url, 200, {}, raw or b"", "PASS",
+        ARTICLE_CAPTURE_SCHEMA, state, timestamp, article_url, status_code or 200, response_headers, raw or b"", "PASS",
     )
 
 
