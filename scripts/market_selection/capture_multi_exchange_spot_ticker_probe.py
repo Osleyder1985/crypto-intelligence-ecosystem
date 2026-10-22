@@ -109,11 +109,11 @@ def extract_quote_volume(exchange, payload, expected_symbol):
     if exchange == "bitget":
         return row.get("turnover24h"), row.get("ts"), "turnover24h: quote-currency turnover for Spot"
     if exchange == "pionex":
-        return row.get("amount"), row.get("time", payload.get("timestamp")), "amount: documented 24h total trading amount; verify quote denomination from symbol"
+        return row.get("amount"), row.get("time", payload.get("timestamp")), "amount: 24h total trading amount; official schema does not specify its denomination, so quote-turnover comparability is unverified"
     raise ValueError("unsupported exchange: " + str(exchange))
 
 def capture_one(spec):
-    record = {**spec,"request_started_at_utc":now_utc(),"captured_at_utc":None,"http_status":None,"response_bytes":None,"response_sha256":None,"response_base64":None,"parsed_json":None,"source_timestamp_raw":None,"quote_volume_raw":None,"quote_volume_decimal":None,"quote_volume_unit":"USDT","volume_semantics":None,"capture_status":"FAIL","quote_volume_status":"INDETERMINATE","error_type":None,"error_message":None}
+    record = {**spec,"request_started_at_utc":now_utc(),"captured_at_utc":None,"http_status":None,"response_bytes":None,"response_sha256":None,"response_base64":None,"parsed_json":None,"source_timestamp_raw":None,"quote_volume_raw":None,"quote_volume_decimal":None,"quote_volume_unit":"USDT" if spec["exchange"] != "pionex" else None,"quote_volume_unit_status":"DOCUMENTED" if spec["exchange"] != "pionex" else "INDETERMINATE","volume_semantics":None,"capture_status":"FAIL","quote_volume_status":"INDETERMINATE","error_type":None,"error_message":None}
     req = Request(spec["url"],headers={"Accept":"application/json","User-Agent":"crypto-intelligence-ecosystem-quote-volume-probe/1.0"})
     try:
         with urlopen(req,timeout=TIMEOUT_SECONDS) as response:
@@ -127,7 +127,7 @@ def capture_one(spec):
             try:
                 value=Decimal(str(raw_volume))
                 if value.is_finite() and value >= 0:
-                    record["quote_volume_decimal"]=str(value); record["quote_volume_status"]="VALID"
+                    record["quote_volume_decimal"]=str(value); record["quote_volume_status"]="INDETERMINATE" if spec["exchange"] == "pionex" else "VALID"
                 else: record["quote_volume_status"]="INVALID"
             except (InvalidOperation,ValueError): record["quote_volume_status"]="INVALID"
     except (HTTPError,URLError,TimeoutError,OSError,ValueError,TypeError,KeyError,IndexError,json.JSONDecodeError) as exc:

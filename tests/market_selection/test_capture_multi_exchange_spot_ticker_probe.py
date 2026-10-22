@@ -29,7 +29,7 @@ class QuoteVolumeProbeTests(unittest.TestCase):
         with self.assertRaises(ValueError): extract_quote_volume('bitget',{'code':'40001','data':[]},'BTCUSDT')
     def test_pionex_uses_amount_and_ticker_time(self):
         value,ts,sem=extract_quote_volume('pionex',{'result':True,'timestamp':5,'data':{'tickers':[{'symbol':'BTC_USDT','amount':'70','time':4}]}},'BTC_USDT')
-        self.assertEqual(value,'70'); self.assertEqual(ts,4)
+        self.assertEqual(value,'70'); self.assertEqual(ts,4); self.assertIn('does not specify its denomination',sem)
 
     def test_rejects_ticker_for_wrong_market(self):
         with self.assertRaisesRegex(ValueError, "expected exactly one ticker"):
@@ -46,5 +46,33 @@ class QuoteVolumeProbeTests(unittest.TestCase):
     def test_rejects_missing_native_symbol(self):
         with self.assertRaisesRegex(ValueError, "found 0"):
             extract_quote_volume('gate', [{'quote_volume':'50','time':'7'}], 'BTC_USDT')
+
+
+    def test_pionex_amount_is_preserved_but_not_certified_as_quote_turnover(self):
+        import json
+        from unittest.mock import patch
+        from scripts.market_selection.capture_multi_exchange_spot_ticker_probe import capture_one
+
+        class Response:
+            status = 200
+            def __enter__(self): return self
+            def __exit__(self, *args): return False
+            def read(self, size=-1):
+                if getattr(self, "_done", False): return b""
+                self._done = True
+                return json.dumps({"result": True, "timestamp": 5, "data": {"tickers": [
+                    {"symbol": "BTC_USDT", "amount": "70", "time": 4}
+                ]}}).encode()
+
+        spec = {"exchange": "pionex", "asset": "BTC", "symbol": "BTC_USDT",
+                "quote_currency": "USDT", "url": "https://api.pionex.com/api/v1/market/tickers?symbol=BTC_USDT&type=SPOT"}
+        with patch("scripts.market_selection.capture_multi_exchange_spot_ticker_probe.urlopen", return_value=Response()):
+            record = capture_one(spec)
+        self.assertEqual(record["capture_status"], "PASS")
+        self.assertEqual(record["quote_volume_raw"], "70")
+        self.assertEqual(record["quote_volume_decimal"], "70")
+        self.assertEqual(record["quote_volume_status"], "INDETERMINATE")
+        self.assertIsNone(record["quote_volume_unit"])
+        self.assertEqual(record["quote_volume_unit_status"], "INDETERMINATE")
 
 if __name__=='__main__': unittest.main()
