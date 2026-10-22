@@ -199,9 +199,20 @@ def assess_temporal_association(
     movement_start: str,
     movement_end: str,
     evaluation_as_of: str,
+    target_entity: dict,
 ) -> dict:
-    """Assess temporal eligibility, never infer causality from proximity alone."""
+    """Assess entity match and temporal eligibility, never infer causality from proximity alone."""
     normalized = validate_event(event)
+    if not isinstance(target_entity, dict):
+        raise ValueError("target_entity must be an explicit stable asset identifier")
+    target_type = _nonempty_string(target_entity.get("id_type"), "target_entity.id_type")
+    target_id = _nonempty_string(target_entity.get("id"), "target_entity.id")
+    if target_type not in {"coingecko_id", "chain_contract", "exchange_asset_id", "project_id"}:
+        raise ValueError("target_entity must use a stable identifier; ticker-only matching is forbidden")
+    entity_matches = any(
+        item["id_type"] == target_type and item["id"].casefold() == target_id.casefold()
+        for item in normalized["entities"]
+    )
     start = parse_timestamp(movement_start, "movement_start")
     end = parse_timestamp(movement_end, "movement_end")
     as_of = parse_timestamp(evaluation_as_of, "evaluation_as_of")
@@ -213,7 +224,11 @@ def assess_temporal_association(
     # For a reproducible historical backtest, require both publication and actual capture by as-of.
     available_by_as_of = published <= as_of and captured <= as_of
     overlaps_window = start <= published <= end
-    if not available_by_as_of:
+    if not entity_matches:
+        status = "ENTITY_NOT_MATCHED"
+        label = "CAUSE_UNIDENTIFIED"
+        reason = "No exact stable identifier links this event to the target asset."
+    elif not available_by_as_of:
         status = "NOT_AVAILABLE_AS_OF"
         label = "CAUSE_UNIDENTIFIED"
         reason = "The event was published or captured after the evaluation cutoff."
@@ -228,6 +243,8 @@ def assess_temporal_association(
     return {
         "schema_version": OUTPUT_SCHEMA,
         "event_id": normalized["event_id"],
+        "target_entity": {"id_type": target_type, "id": target_id},
+        "entity_match": entity_matches,
         "status": status,
         "causality_label": label,
         "published_at": normalized["published_at"],
