@@ -221,6 +221,10 @@ def enrich_research_report(
             raise PermissionError(f"event source registry is not approved at events[{index}]")
         if event_record.get("provider_id") != source_entry.get("provider_id"):
             raise PermissionError(f"event provider id does not match registry at events[{index}]")
+        for assessment_field in ("provider_use_assessment", "persistent_storage_assessment"):
+            assessment = _object(event_record.get(assessment_field), f"events[{index}].event.{assessment_field}")
+            if assessment.get("provider_id") != source_entry.get("provider_id") or assessment.get("decision") != "ALLOW":
+                raise PermissionError(f"event {assessment_field} does not match the approved source at events[{index}]")
         registry_hash = source_entry_sha256(source_entry)
         if (
             event_record.get("source_registry_status") != "APPROVED"
