@@ -8,9 +8,20 @@ from urllib.error import HTTPError, URLError
 from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 
+from scripts.market_selection.provider_license_gate import evaluate_provider_use
+
 TIMEOUT_SECONDS = 12
 READ_CHUNK_BYTES = 64 * 1024
 SCHEMA_VERSION = "multi-exchange-spot-quote-volume-v1"
+PROVIDER_IDS = {
+    "binance": "binance_spot_market_data",
+    "okx": "okx_spot_market_data",
+    "bybit": "bybit_spot_market_data",
+    "mexc": "mexc_spot_market_data",
+    "gate": "gate_spot_market_data",
+    "bitget": "bitget_spot_market_data",
+    "pionex": "pionex_spot_market_data",
+}
 MARKETS = (
     {"asset":"BTC","binance":"BTCUSDT","okx":"BTC-USDT","bybit":"BTCUSDT","mexc":"BTCUSDT","gate":"BTC_USDT","bitget":"BTCUSDT","pionex":"BTC_USDT"},
     {"asset":"ETH","binance":"ETHUSDT","okx":"ETH-USDT","bybit":"ETHUSDT","mexc":"ETHUSDT","gate":"ETH_USDT","bitget":"ETHUSDT","pionex":"ETH_USDT"},
@@ -112,8 +123,18 @@ def extract_quote_volume(exchange, payload, expected_symbol):
         return row.get("amount"), row.get("time", payload.get("timestamp")), "amount: 24h total trading amount; official schema does not specify its denomination, so quote-turnover comparability is unverified"
     raise ValueError("unsupported exchange: " + str(exchange))
 
-def capture_one(spec):
+def capture_one(spec, authorization_records=None):
     record = {**spec,"request_started_at_utc":now_utc(),"captured_at_utc":None,"http_status":None,"response_bytes":None,"response_sha256":None,"response_base64":None,"parsed_json":None,"source_timestamp_raw":None,"quote_volume_raw":None,"quote_volume_decimal":None,"quote_volume_unit":"USDT" if spec["exchange"] != "pionex" else None,"quote_volume_unit_status":"DOCUMENTED" if spec["exchange"] != "pionex" else "INDETERMINATE","volume_semantics":None,"capture_status":"FAIL","quote_volume_status":"INDETERMINATE","error_type":None,"error_message":None}
+    provider_id = PROVIDER_IDS.get(spec["exchange"])
+    authorization_record = (authorization_records or {}).get(provider_id) if provider_id else None
+    try:
+        assessment = evaluate_provider_use(provider_id or spec["exchange"], "persistent_storage", authorization_record)
+    except (TypeError, ValueError):
+        assessment = {"schema_version":"crypto-provider-use-assessment-v1","provider_id":provider_id or spec["exchange"],"use_case":"persistent_storage","decision":"BLOCK","reason_codes":["AUTHORIZATION_RECORD_INVALID"],"authorization_evidence_status":"INVALID"}
+    record["provider_use_assessment"] = assessment
+    if assessment["decision"] != "ALLOW":
+        record.update(captured_at_utc=now_utc(),capture_status="BLOCKED",quote_volume_status="INDETERMINATE",error_type="ProviderUseBlocked",error_message=";".join(assessment["reason_codes"]))
+        return record
     req = Request(spec["url"],headers={"Accept":"application/json","User-Agent":"crypto-intelligence-ecosystem-quote-volume-probe/1.0"})
     try:
         with urlopen(req,timeout=TIMEOUT_SECONDS) as response:
@@ -139,14 +160,21 @@ def capture_one(spec):
             except OSError: pass
     return record
 
-def capture_batch():
-    records=[capture_one(spec) for spec in build_requests()]
+def capture_batch(authorization_records=None):
+    records=[capture_one(spec, authorization_records) for spec in build_requests()]
     exchanges=("binance","okx","bybit","mexc","gate","bitget","pionex")
     return {"schema_version":SCHEMA_VERSION,"created_at_utc":now_utc(),"scope":"read-only rolling 24h public Spot quote-turnover observations; no credentials; no orders","expected_record_count":21,"actual_record_count":len(records),"records":records,"exchange_status":{e:("PASS" if any(x["exchange"]==e and x["capture_status"]=="PASS" for x in records) else "FAIL") for e in exchanges},"overall_status":"PASS" if all(x["capture_status"]=="PASS" and x["quote_volume_status"]=="VALID" for x in records) else "PARTIAL","limitations":["A single rolling-24h ticker is not historical volume stability; stability requires repeated dated captures or candle history.","Provider fields have documented but non-identical semantics; raw values, source timestamps, URLs and response hashes are retained.","MEXC may return null quoteVolume; missing values remain INDETERMINATE and are never replaced by zero.","Bybit HTTP 403 from the CI runner is preserved as an access failure; no alternate domain is used to bypass it.","Snapshots are sequential and quote volume alone does not measure executable liquidity or asset risk."]}
 
 def main():
-    parser=argparse.ArgumentParser(description=__doc__); parser.add_argument("--output",default="artifacts/multi-exchange-spot-quote-volume.json"); args=parser.parse_args()
-    artifact=capture_batch(); path=Path(args.output); path.parent.mkdir(parents=True,exist_ok=True); path.write_text(json.dumps(artifact,ensure_ascii=False,indent=2,sort_keys=True)+"\n",encoding="utf-8")
+    parser=argparse.ArgumentParser(description=__doc__); parser.add_argument("--output",default="artifacts/multi-exchange-spot-quote-volume.json"); parser.add_argument("--authorization-records",help="Local JSON object keyed by provider_id; without it, persistent captures are blocked"); args=parser.parse_args()
+    try:
+        authorization_records=None
+        if args.authorization_records:
+            authorization_records=json.loads(Path(args.authorization_records).read_text(encoding="utf-8"))
+            if not isinstance(authorization_records,dict) or any(not isinstance(value,dict) for value in authorization_records.values()): raise ValueError("authorization records must map provider IDs to JSON objects")
+    except (OSError,ValueError,json.JSONDecodeError) as exc:
+        print("Authorization records unavailable or invalid: "+type(exc).__name__,file=sys.stderr); return 2
+    artifact=capture_batch(authorization_records); path=Path(args.output); path.parent.mkdir(parents=True,exist_ok=True); path.write_text(json.dumps(artifact,ensure_ascii=False,indent=2,sort_keys=True)+"\n",encoding="utf-8")
     print(json.dumps({"artifact":str(path),"overall_status":artifact["overall_status"],"exchange_status":artifact["exchange_status"],"records":[{k:r.get(k) for k in ("exchange","asset","symbol","capture_status","http_status","quote_volume_raw","quote_volume_unit","quote_volume_status","source_timestamp_raw","error_type","error_message")} for r in artifact["records"]]},ensure_ascii=False,indent=2))
     return 0 if artifact["overall_status"]=="PASS" else 1
 
