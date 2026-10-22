@@ -9,6 +9,7 @@ from pathlib import Path
 
 from scripts.market_selection.research_report import build_research_report
 from scripts.market_selection.provider_license_gate import ASSESSMENT_SCHEMA_VERSION, POLICY_VERSION, evaluate_provider_use
+from scripts.market_selection.canonical_asset_identity import SCHEMA_VERSION as IDENTITY_SCHEMA_VERSION
 
 
 def candle(index, open_price, high, low, close, *, closed=True, quote_volume="1000"):
@@ -66,6 +67,33 @@ def artifact(rows, *, base_asset="BTC", overall_status="PASS"):
     }
 
 
+def identity_evidence():
+    return {
+        "schema_version": IDENTITY_SCHEMA_VERSION,
+        "stable_id": "registry:bitcoin",
+        "asset_type": "NATIVE_ASSET",
+        "symbol": "BTC",
+        "name": "Bitcoin",
+        "chain_id": "bitcoin",
+        "contract_address": None,
+        "resolution": {
+            "status": "VERIFIED_UNIQUE",
+            "candidate_count": 1,
+            "review_status": "APPROVED",
+            "reviewed_by": "offline-test-fixture",
+            "reviewed_at": "2026-10-22T00:00:00Z",
+        },
+        "source": {
+            "source_type": "AUTHORITATIVE_REGISTRY",
+            "url": "https://example.invalid/registry/bitcoin",
+            "publisher": "Synthetic fixture only",
+            "captured_at": "2026-10-22T00:00:00Z",
+            "content_sha256": hashlib.sha256(b"synthetic identity registry content").hexdigest(),
+            "content_base64": base64.b64encode(b"synthetic identity registry content").decode("ascii"),
+        },
+    }
+
+
 def config():
     return {
         "methodology_id": "technical-descriptive-baseline",
@@ -97,10 +125,12 @@ class ResearchReportTests(unittest.TestCase):
 
     def test_assembles_existing_analyses_and_abstains_on_all_horizons(self):
         report = build_research_report(self.source, config(), "BTC", self.raw)
-        self.assertEqual(report["schema_version"], "crypto-asset-research-report-v1")
-        self.assertEqual(report["report_status"], "TECHNICAL_BASELINE_ASSEMBLED")
+        self.assertEqual(report["schema_version"], "crypto-asset-research-report-v2")
+        self.assertEqual(report["report_status"], "PARTIAL")
         self.assertEqual(report["decision_status"], "INDETERMINATE")
-        self.assertEqual(report["asset_identity_status"], "VERIFIED")
+        self.assertEqual(report["asset_identity_status"], "INDETERMINATE")
+        self.assertEqual(report["canonical_asset_identity_status"], "NOT_RESOLVED")
+        self.assertEqual(report["market_base_asset_mapping_status"], "VERIFIED")
         self.assertEqual(report["source_artifact"]["hash_basis"], "RAW_SOURCE_FILE_BYTES")
         self.assertEqual(report["source_artifact"]["sha256"], hashlib.sha256(self.raw).hexdigest())
         self.assertIn("risk_profile", report["descriptive_analyses"])
@@ -111,6 +141,15 @@ class ResearchReportTests(unittest.TestCase):
         self.assertFalse(report["event_causal_assessment"]["causality_claimed"])
         self.assertFalse(report["orders_submitted"])
         self.assertFalse(report["network_requests_made"])
+
+    def test_reviewed_unique_identity_evidence_verifies_canonical_asset(self):
+        report = build_research_report(self.source, config(), "BTC", self.raw, identity_evidence=identity_evidence())
+        self.assertEqual(report["asset_identity_status"], "VERIFIED")
+        self.assertEqual(report["canonical_asset_identity_status"], "VERIFIED")
+        self.assertEqual(report["market_base_asset_mapping_status"], "VERIFIED")
+        self.assertEqual(report["canonical_asset_identity"]["stable_id"], "registry:bitcoin")
+        self.assertRegex(report["canonical_asset_identity"]["identity_evidence"]["identity_evidence_record_sha256"], r"^[0-9a-f]{64}$")
+        self.assertEqual(report["report_status"], "TECHNICAL_BASELINE_ASSEMBLED")
 
     def test_technical_test_capture_cannot_be_used_for_internal_analysis(self):
         source = dict(self.source)
@@ -133,11 +172,13 @@ class ResearchReportTests(unittest.TestCase):
         source["market"].pop("base_asset")
         report = build_research_report(source, config(), "BTC")
         self.assertEqual(report["asset_identity_status"], "INDETERMINATE")
+        self.assertEqual(report["canonical_asset_identity_status"], "NOT_RESOLVED")
+        self.assertEqual(report["market_base_asset_mapping_status"], "INDETERMINATE")
         self.assertEqual(report["report_status"], "PARTIAL")
         self.assertEqual(report["decision_status"], "INDETERMINATE")
 
     def test_mismatched_asset_identity_fails_closed(self):
-        with self.assertRaisesRegex(ValueError, "does not match artifact base asset"):
+        with self.assertRaisesRegex(ValueError, "canonical asset identity evidence conflicts"):
             build_research_report(self.source, config(), "ETH")
 
     def test_partial_capture_is_not_reported_complete(self):
@@ -153,8 +194,10 @@ class ResearchReportTests(unittest.TestCase):
             artifact_path = root / "ohlcv.json"
             config_path = root / "methodology.json"
             output_path = root / "report.json"
+            identity_path = root / "identity.json"
             artifact_path.write_text(json.dumps(self.source, sort_keys=True), encoding="utf-8")
             config_path.write_text(json.dumps(config(), sort_keys=True), encoding="utf-8")
+            identity_path.write_text(json.dumps(identity_evidence(), sort_keys=True), encoding="utf-8")
 
             completed = subprocess.run(
                 [
@@ -169,6 +212,8 @@ class ResearchReportTests(unittest.TestCase):
                     str(config_path),
                     "--output",
                     str(output_path),
+                    "--identity-evidence",
+                    str(identity_path),
                 ],
                 cwd=Path(__file__).resolve().parents[2],
                 capture_output=True,
@@ -177,12 +222,15 @@ class ResearchReportTests(unittest.TestCase):
             )
             self.assertEqual(completed.returncode, 0, completed.stderr)
             report = json.loads(output_path.read_text(encoding="utf-8"))
-            self.assertEqual(report["schema_version"], "crypto-asset-research-report-v1")
+            self.assertEqual(report["schema_version"], "crypto-asset-research-report-v2")
             self.assertEqual(
                 report["source_artifact"]["sha256"],
                 hashlib.sha256(artifact_path.read_bytes()).hexdigest(),
             )
             self.assertEqual(report["decision_status"], "INDETERMINATE")
+            self.assertEqual(report["asset_identity_status"], "VERIFIED")
+            self.assertEqual(report["canonical_asset_identity_status"], "VERIFIED")
+            self.assertEqual(report["canonical_asset_identity"]["stable_id"], "registry:bitcoin")
             self.assertEqual(set(report["horizons"]), {"short", "medium", "long"})
 
     def test_missing_explicit_method_parameter_is_rejected(self):

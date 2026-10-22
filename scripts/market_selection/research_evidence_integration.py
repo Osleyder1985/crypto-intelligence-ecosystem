@@ -15,7 +15,7 @@ from scripts.market_selection.fundamental_onchain_contract import evaluate_obser
 from scripts.market_selection.methodology_contract import validate_methodology
 from scripts.market_selection.provider_license_gate import evaluate_artifact_use
 
-REPORT_SCHEMA = "crypto-asset-research-report-v1"
+REPORT_SCHEMA = "crypto-asset-research-report-v2"
 BUNDLE_SCHEMA = "crypto-research-evidence-bundle-v1"
 
 
@@ -149,7 +149,7 @@ def enrich_research_report(
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--report", required=True, type=Path, help="Existing crypto-asset-research-report-v1 JSON")
+    parser.add_argument("--report", required=True, type=Path, help="Existing crypto-asset-research-report-v2 JSON")
     parser.add_argument("--events", required=True, type=Path, help="JSON array of event records with movement windows")
     parser.add_argument("--observations", required=True, type=Path, help="JSON array of fundamental/on-chain observations")
     parser.add_argument("--methodology", required=True, type=Path, help="Versioned crypto-investment-methodology-v1 JSON")

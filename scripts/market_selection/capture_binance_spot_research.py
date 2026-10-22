@@ -118,6 +118,9 @@ def capture_and_build_report(
     base_asset_ticker: str,
     use_case: str = "internal_analysis",
     authorization_record: dict | None = None,
+    requested_identifier_type: str = "symbol",
+    requested_chain_id: str | None = None,
+    identity_evidence: dict | None = None,
 ) -> tuple[dict, dict]:
     """Capture official exchange metadata and candles, then build report from exact artifact bytes."""
     symbol = symbol.strip().upper()
@@ -132,31 +135,41 @@ def capture_and_build_report(
         "is_spot_trading_allowed_at_capture": metadata["is_spot_trading_allowed"],
     })
     artifact["market_identity_evidence"] = metadata["captured_exchange_info"]
+    if identity_evidence is not None:
+        artifact["canonical_asset_identity_evidence"] = identity_evidence
     artifact["pipeline"] = {
         "schema_version": PIPELINE_SCHEMA,
         "metadata_capture_status": metadata["captured_exchange_info"]["capture_status"],
         "metadata_sha256": metadata["captured_exchange_info"]["response_sha256"],
-        "market_identity_basis": "BINANCE_EXCHANGE_INFO_BASE_ASSET",
-        "canonical_cross_provider_asset_id": "NOT_RESOLVED",
-        "license_review_status": "TECHNICAL_TEST_ONLY" if use_case == "live_technical_test" else "AUTHORIZED_SCOPE_REVIEWED",
+        "market_identity_basis": "IDENTITY_EVIDENCE_SUPPLIED_PENDING_VALIDATION" if identity_evidence is not None else "BINANCE_EXCHANGE_INFO_BASE_ASSET_ONLY",
+        "canonical_cross_provider_asset_id": "PENDING_VALIDATION" if identity_evidence is not None else "NOT_RESOLVED",
+        "license_review_status": metadata["captured_exchange_info"]["provider_use_assessment"].get("authorization_evidence_status", "UNKNOWN"),
         "provider_use_assessment": metadata["captured_exchange_info"]["provider_use_assessment"],
     }
     capture_raw = (
         json.dumps(artifact, ensure_ascii=False, indent=2, sort_keys=True, allow_nan=False) + "\n"
     ).encode("utf-8")
-    report = build_research_report(artifact, config, base_asset_ticker, capture_raw)
-    # The exchange metadata verifies only the pair's base ticker. It does not prove
-    # a globally unique token identity across chains, wrapped assets, or providers.
-    report["asset_identity_status"] = "INDETERMINATE"
-    report["market_base_asset_mapping_status"] = "VERIFIED"
-    report["canonical_asset_identity_status"] = "NOT_RESOLVED"
-    report["asset_identity_scope"] = "Binance pair baseAsset ticker only; global cross-provider token identity is unresolved."
-    report["report_status"] = "PARTIAL"
-    report["data_quality"]["status"] = "INCOMPLETE_OR_UNVERIFIED"
-    report["data_quality"]["dimensions"]["canonical_asset_identity"] = "NOT_RESOLVED"
-    for horizon in report["horizons"].values():
-        if "CANONICAL_ASSET_ID_NOT_RESOLVED" not in horizon["reason_codes"]:
-            horizon["reason_codes"].append("CANONICAL_ASSET_ID_NOT_RESOLVED")
+    report = build_research_report(
+        artifact, config, base_asset_ticker, capture_raw,
+        requested_identifier_type=requested_identifier_type,
+        requested_chain_id=requested_chain_id,
+        identity_evidence=identity_evidence,
+    )
+    # ExchangeInfo proves only the market base ticker. Canonical identity requires
+    # separate, unique, reviewed evidence linked to that base asset.
+    report["asset_identity_scope"] = (
+        "Reviewed unique canonical identity evidence linked to Binance baseAsset."
+        if report["canonical_asset_identity_status"] == "VERIFIED"
+        else "Binance pair baseAsset ticker only; canonical cross-provider identity is unresolved."
+    )
+    if report["canonical_asset_identity_status"] != "VERIFIED":
+        report["asset_identity_status"] = "INDETERMINATE"
+        report["report_status"] = "PARTIAL"
+        report["data_quality"]["status"] = "INCOMPLETE_OR_UNVERIFIED"
+        report["data_quality"]["dimensions"]["canonical_asset_identity"] = "NOT_RESOLVED"
+        for horizon in report["horizons"].values():
+            if "CANONICAL_ASSET_ID_NOT_RESOLVED" not in horizon["reason_codes"]:
+                horizon["reason_codes"].append("CANONICAL_ASSET_ID_NOT_RESOLVED")
     report["pipeline"] = {
         "schema_version": PIPELINE_SCHEMA,
         "provider_use_assessment": metadata["captured_exchange_info"]["provider_use_assessment"],
@@ -164,16 +177,21 @@ def capture_and_build_report(
         "capture_artifact_bytes": len(capture_raw),
         "exchange_info_sha256": metadata["captured_exchange_info"]["response_sha256"],
         "klines_source": KLINES_URL,
-        "market_identity_basis": "BINANCE_EXCHANGE_INFO_BASE_ASSET",
-        "canonical_cross_provider_asset_id": "NOT_RESOLVED",
-        "license_review_status": "REQUIRES_PRODUCT_SPECIFIC_REVIEW",
+        "market_identity_basis": "REVIEWED_CANONICAL_IDENTITY_EVIDENCE_AND_BINANCE_BASE_ASSET" if report["canonical_asset_identity_status"] == "VERIFIED" else "BINANCE_EXCHANGE_INFO_BASE_ASSET_ONLY",
+        "canonical_cross_provider_asset_id": report["canonical_asset_identity"].get("stable_id") or "NOT_RESOLVED",
+        "license_review_status": metadata["captured_exchange_info"]["provider_use_assessment"].get("authorization_evidence_status", "UNKNOWN"),
         "network_requests_made": True,
         "orders_submitted": False,
     }
     report["network_requests_made"] = True
     report["orders_submitted"] = False
+    identity_limitation = (
+        "Canonical identity is based on the supplied reviewed evidence; source authority, scope, and aliases still require human review."
+        if report["canonical_asset_identity_status"] == "VERIFIED"
+        else "This pipeline resolves the base ticker from Binance exchangeInfo only; it does not establish a globally unique token identity across chains, wrapped assets, or other providers."
+    )
     report["limitations"] = list(report.get("limitations", [])) + [
-        "This pipeline resolves the base ticker from Binance exchangeInfo; it does not establish a globally unique token identity across chains, wrapped assets, or other providers.",
+        identity_limitation,
         "Public endpoint documentation establishes technical availability, not a blanket commercial licence. Review applicable terms before commercial persistence, display, export, or redistribution.",
         "The pipeline performs read-only GET requests only. It never submits orders or uses trading credentials.",
     ]
@@ -191,11 +209,15 @@ def main() -> int:
     parser.add_argument("--use-case", choices=sorted(SUPPORTED_USE_CASES), default="internal_analysis",
                         help="Intended data use; defaults to internal_analysis and requires explicit authorization")
     parser.add_argument("--authorization-record", type=Path, help="Reviewed provider authorization record JSON")
+    parser.add_argument("--asset-id-type", choices=("symbol", "canonical_id", "contract_address", "name"), default="symbol")
+    parser.add_argument("--asset-chain-id", help="Required when --asset-id-type=contract_address")
+    parser.add_argument("--identity-evidence", type=Path, help="Reviewed canonical identity evidence JSON")
     parser.add_argument("--capture-output", required=True, type=Path)
     parser.add_argument("--report-output", required=True, type=Path)
     args = parser.parse_args()
     config = json.loads(args.config.read_text(encoding="utf-8"))
     authorization_record = json.loads(args.authorization_record.read_text(encoding="utf-8")) if args.authorization_record else None
+    identity_evidence = json.loads(args.identity_evidence.read_text(encoding="utf-8")) if args.identity_evidence else None
     captured, report = capture_and_build_report(
         symbol=args.symbol,
         interval=args.interval,
@@ -205,6 +227,9 @@ def main() -> int:
         base_asset_ticker=args.base_asset_ticker,
         use_case=args.use_case,
         authorization_record=authorization_record,
+        requested_identifier_type=args.asset_id_type,
+        requested_chain_id=args.asset_chain_id,
+        identity_evidence=identity_evidence,
     )
     args.capture_output.parent.mkdir(parents=True, exist_ok=True)
     args.report_output.parent.mkdir(parents=True, exist_ok=True)
@@ -222,6 +247,7 @@ def main() -> int:
         "asset_identity_status": report["asset_identity_status"],
         "market_base_asset_mapping_status": report["market_base_asset_mapping_status"],
         "canonical_asset_identity_status": report["canonical_asset_identity_status"],
+        "canonical_asset_id": report["canonical_asset_identity"].get("stable_id"),
         "horizons": {key: value["status"] for key, value in report["horizons"].items()},
         "orders_submitted": False,
     }, ensure_ascii=False, indent=2))

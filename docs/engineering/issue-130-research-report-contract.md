@@ -1,9 +1,9 @@
 # Informe integrado de investigación — contrato inicial de Issue #130
 
 - **Estado:** primer contrato técnico propuesto; no es una recomendación de inversión ni el cierre de Issue #128.
-- **Implementación:** `scripts/market_selection/research_report.py`.
-- **Pruebas:** `tests/market_selection/test_research_report.py`.
-- **Schema de salida:** `crypto-asset-research-report-v1`.
+- **Implementación:** `scripts/market_selection/research_report.py`, `scripts/market_selection/canonical_asset_identity.py`.
+- **Pruebas:** `tests/market_selection/test_research_report.py`, `tests/market_selection/test_canonical_asset_identity.py`.
+- **Schema de salida:** `crypto-asset-research-report-v2`.
 - **Entrada:** artefacto preservado `binance-spot-ohlcv-capture-v1` y archivo de configuración de metodología con parámetros explícitos.
 
 ## Qué integra
@@ -16,11 +16,13 @@ El orquestador reutiliza los analizadores existentes para generar un único arte
 - resultados separados para `short`, `medium` y `long`;
 - limitaciones, estados y causas de abstención.
 
-El CLI es offline: no descarga datos ni busca noticias. Recibe un artefacto histórico ya capturado y un archivo de configuración; por eso todavía no resuelve por sí mismo un nombre/ticker arbitrario ni sustituye la futura API/interfaz.
+El CLI es offline: no descarga datos ni busca noticias. Recibe un artefacto histórico, configuración y, si existe, evidencia canónica revisada. No busca por sí mismo nombres/tickers ni sustituye la futura API/interfaz; sin evidencia de identidad, el resultado permanece parcial.
 
 ## Reglas conservadoras
 
-1. No se infiere el activo base concatenando/partiendo un símbolo como `BTCUSDT`. Si el artefacto no incluye `base_asset` o `asset_id`, la identidad queda `INDETERMINATE`; si contradice el activo solicitado, la ejecución falla.
+1. No se infiere el activo base concatenando/partiendo un símbolo como `BTCUSDT`. La coincidencia entre el ticker solicitado y `market.base_asset` solo puede verificar `market_base_asset_mapping_status`; **no verifica identidad canónica**. Sin evidencia canónica única, revisada y vinculada al símbolo base, `canonical_asset_identity_status=NOT_RESOLVED` y `asset_identity_status=INDETERMINATE`. Si el símbolo de mercado contradice el activo solicitado o la evidencia, la ejecución falla.
+2. La evidencia canónica usa `crypto-canonical-asset-identity-v1` e incluye `stable_id`, tipo de activo, símbolo/nombre, cadena, contrato cuando aplique, estado de resolución (`VERIFIED_UNIQUE`), `candidate_count=1`, revisión aprobada y una fuente HTTPS con `content_base64` y SHA-256 coincidente. Para `TOKEN` y `WRAPPED_ASSET`, cadena y dirección de contrato son obligatorias; una dirección solicitada también exige `chain_id`.
+3. El resolver no consulta registries ni inventa equivalencias. Recalcula el hash sobre `content_base64` y el hash del registro de identidad, pero no descarga la URL ni demuestra por sí mismo que el dominio sea oficial o que el contenido otorgue derechos. La fuente, su autoridad y la unicidad deben ser revisadas por una persona.
 2. Se preserva SHA-256 y número de bytes del archivo exacto en la ejecución CLI. Las llamadas en memoria usan hash de serialización JSON canónica y lo declaran.
 3. Los parámetros de detección de movimientos y soporte/resistencia son obligatorios en una configuración versionada; no se introducen umbrales ocultos.
 4. Los tres horizontes se emiten por separado, pero permanecen `INDETERMINATE` hasta aprobar metodologías específicas y añadir cobertura de eventos, fundamentales y on-chain.
@@ -29,9 +31,13 @@ El CLI es offline: no descarga datos ni busca noticias. Recibe un artefacto hist
 
 ## Uso
 
+Para intentar resolver identidad canónica, proporciona un archivo `crypto-canonical-asset-identity-v1` revisado mediante `--identity-evidence` y declara el tipo del identificador con `--asset-id-type`. Sin esa evidencia, el informe permanece parcial aunque el ticker coincida con `base_asset`.
+
+
 ```bash
 python -m scripts.market_selection.research_report \
   --asset-id BTC \
+  --identity-evidence artifacts/reviewed-canonical-identity.json \
   --artifact artifacts/binance-spot-ohlcv-capture.json \
   --config configs/technical-descriptive-baseline.json \
   --output artifacts/crypto-asset-research-report.json

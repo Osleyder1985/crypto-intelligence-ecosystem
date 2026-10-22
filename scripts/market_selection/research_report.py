@@ -14,12 +14,16 @@ from scripts.market_selection.analyze_ohlcv_risk_profile import analyze_artifact
 from scripts.market_selection.analyze_support_resistance import analyze_support_resistance
 from scripts.market_selection.detect_ohlcv_movement_events import analyze_movement_events
 try:
+    from scripts.market_selection.canonical_asset_identity import resolve_asset_identity
+except ModuleNotFoundError:
+    from canonical_asset_identity import resolve_asset_identity
+try:
     from scripts.market_selection.provider_license_gate import evaluate_artifact_use
 except ModuleNotFoundError:
     from provider_license_gate import evaluate_artifact_use
 
 INPUT_SCHEMA = "binance-spot-ohlcv-capture-v1"
-REPORT_SCHEMA = "crypto-asset-research-report-v1"
+REPORT_SCHEMA = "crypto-asset-research-report-v2"
 HORIZONS = ("short", "medium", "long")
 
 
@@ -76,6 +80,10 @@ def build_research_report(
     config: dict,
     requested_asset_id: str,
     source_bytes: bytes | None = None,
+    *,
+    requested_identifier_type: str = "symbol",
+    requested_chain_id: str | None = None,
+    identity_evidence: dict | None = None,
 ) -> dict:
     """Build a deterministic report from one preserved normalized Spot OHLCV artifact.
 
@@ -94,17 +102,14 @@ def build_research_report(
     requested_asset_id = _require_text(requested_asset_id, "requested_asset_id")
     normalized_asset = requested_asset_id
     config = _validate_config(config)
-    # Do not infer base-asset identity from a concatenated market symbol such as BTCUSDT.
-    observed_asset = market.get("asset_id") or market.get("base_asset")
-    if isinstance(observed_asset, str) and observed_asset.strip():
-        if observed_asset.strip().casefold() != normalized_asset.casefold():
-            raise ValueError(
-                f"requested asset {normalized_asset} does not match artifact base asset "
-                f"{observed_asset.strip().upper()}"
-            )
-        identity_status = "VERIFIED"
-    else:
-        identity_status = "INDETERMINATE"
+    identity_resolution = resolve_asset_identity(
+        {"type": requested_identifier_type, "value": normalized_asset, "chain_id": requested_chain_id},
+        market,
+        identity_evidence,
+    )
+    if identity_resolution["canonical_asset_identity_status"] == "CONFLICT" or identity_resolution["market_base_asset_mapping_status"] == "MISMATCH":
+        raise ValueError("canonical asset identity evidence conflicts with the requested identifier or market base")
+    identity_status = identity_resolution["asset_identity_status"]
 
     downstream_use = evaluate_artifact_use(artifact, "internal_analysis")
     if downstream_use["decision"] != "ALLOW":
@@ -154,6 +159,7 @@ def build_research_report(
     input_capture_status = artifact.get("overall_status")
     analysis_quality = {
         "capture_status": input_capture_status if input_capture_status in {"PASS", "PARTIAL"} else "INDETERMINATE",
+        "canonical_asset_identity": identity_resolution["canonical_asset_identity_status"],
         "risk_profile": risk.get("data_quality_status", "INDETERMINATE"),
         "movement_events": movement.get("data_quality_status", "INDETERMINATE"),
         "support_resistance": support_resistance.get("data_quality_status", "INDETERMINATE"),
@@ -188,11 +194,21 @@ def build_research_report(
         "report_status": "TECHNICAL_BASELINE_ASSEMBLED" if quality_complete else "PARTIAL",
         "decision_status": "INDETERMINATE",
         "requested_asset_id": normalized_asset,
+        "requested_identifier_type": requested_identifier_type,
         "asset_identity_status": identity_status,
+        "canonical_asset_identity_status": identity_resolution["canonical_asset_identity_status"],
+        "market_base_asset_mapping_status": identity_resolution["market_base_asset_mapping_status"],
+        "canonical_asset_identity": identity_resolution,
+        "asset_identity_scope": (
+            "Reviewed unique canonical identity evidence linked to market base asset."
+            if identity_status == "VERIFIED"
+            else "Market base symbol only; canonical identity is unresolved."
+        ),
         "market": {
             "exchange": exchange,
             "market_type": "SPOT",
             "symbol_native": symbol,
+            "base_asset": market.get("base_asset"),
             "interval": interval,
         },
         "methodology": config,
@@ -233,7 +249,10 @@ def build_research_report(
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--asset-id", required=True, help="Canonical asset identifier to evaluate")
+    parser.add_argument("--asset-id", required=True, help="Identifier value to evaluate; declare its type with --asset-id-type")
+    parser.add_argument("--asset-id-type", choices=("symbol", "canonical_id", "contract_address", "name"), default="symbol")
+    parser.add_argument("--asset-chain-id", help="Required when --asset-id-type=contract_address")
+    parser.add_argument("--identity-evidence", type=Path, help="Reviewed crypto-canonical-asset-identity-v1 JSON; without it canonical identity remains unresolved")
     parser.add_argument("--artifact", required=True, type=Path, help="Preserved normalized Spot OHLCV JSON")
     parser.add_argument("--config", required=True, type=Path, help="Versioned JSON with explicit analysis parameters")
     parser.add_argument("--output", required=True, type=Path, help="Path to the research report JSON")
@@ -242,7 +261,13 @@ def main() -> int:
     raw = args.artifact.read_bytes()
     artifact = json.loads(raw.decode("utf-8"))
     config = json.loads(args.config.read_text(encoding="utf-8"))
-    report = build_research_report(artifact, config, args.asset_id, raw)
+    identity_evidence = json.loads(args.identity_evidence.read_text(encoding="utf-8")) if args.identity_evidence else None
+    report = build_research_report(
+        artifact, config, args.asset_id, raw,
+        requested_identifier_type=args.asset_id_type,
+        requested_chain_id=args.asset_chain_id,
+        identity_evidence=identity_evidence,
+    )
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(
         json.dumps(report, ensure_ascii=False, indent=2, sort_keys=True, allow_nan=False) + "\n",
@@ -254,6 +279,8 @@ def main() -> int:
         "report_status": report["report_status"],
         "decision_status": report["decision_status"],
         "asset_identity_status": report["asset_identity_status"],
+        "canonical_asset_identity_status": report["canonical_asset_identity_status"],
+        "market_base_asset_mapping_status": report["market_base_asset_mapping_status"],
         "horizons": {key: value["status"] for key, value in report["horizons"].items()},
     }, ensure_ascii=False, indent=2))
     return 0

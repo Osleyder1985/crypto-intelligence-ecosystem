@@ -20,7 +20,7 @@ La evaluación debe responder, en la medida que las fuentes lo permitan:
 ## 2. Flujo funcional y contratos
 
 ### F-01 — Resolución de identidad
-Resolver identificadores ambiguos antes de analizar: nombre, ticker, activo/red cuando proceda, mercados y pares reales. Mostrar las decisiones de identidad y no combinar activos diferentes por compartir ticker.
+Resolver identificadores ambiguos antes de analizar: nombre, ticker, activo/red cuando proceda, mercados y pares reales. Mostrar las decisiones de identidad y no combinar activos diferentes por compartir ticker. La coincidencia de un ticker de par no constituye identidad canónica. Un identificador canónico solo se marca `VERIFIED` con evidencia única y revisada que vincule el identificador solicitado con el activo base del mercado; los tokens/wrapped assets requieren cadena y dirección de contrato. Sin evidencia, la salida es `INDETERMINATE` y el informe no se presenta como completo.
 
 ### F-02 — Expediente de datos
 Reunir series históricas OHLCV, volumen, volatilidad, drawdown, mercados/pares, spread, profundidad recibida, trades si están disponibles, metadatos del activo, tokenomics, datos on-chain, anuncios, noticias, incidentes, regulación y contexto macro/mercado según cobertura. Cada fuente debe declarar periodo, unidad, zona horaria, timestamps, licencia/condiciones conocidas, calidad y huecos.
@@ -94,7 +94,7 @@ Las reglas y puntuaciones que pretendan aportar señal predictiva requieren back
 
 | ID | Capacidad | Issue/documento relacionado | Prueba mínima |
 |---|---|---|---|
-| E2E-01 | Entrada y resolución de activo | #128, #13, #17 | Ticker ambiguo, activo inexistente y pares incompatibles. |
+| E2E-01 | Entrada y resolución de activo | #128, #13, #17, #130 | Ticker ambiguo, activo inexistente, par incompatible, identidad sin evidencia, identidad no única y conflicto de cadena/contrato. |
 | E2E-02 | Captura histórica íntegra | #128, #13 y documentación de captura | Paginación, EOF, huecos, reintentos, hash y captura interrumpida. |
 | E2E-03 | Detección de movimientos | #13, documento de eventos OHLCV | Casos sintéticos/observados y prueba anti-look-ahead. |
 | E2E-04 | Investigación de eventos/detonantes | #13, #128 | Evento con fuente, publicación tardía, fuentes contradictorias y causa desconocida. |
