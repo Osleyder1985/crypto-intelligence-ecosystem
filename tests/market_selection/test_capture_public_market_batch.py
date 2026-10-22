@@ -170,11 +170,24 @@ class BatchCaptureTests(unittest.TestCase):
     def test_batch_schema_and_expected_record_count(self):
         payloads = [FakeResponse({"ok": True}) for _ in range(12)]
         with patch("scripts.market_selection.capture_public_market_batch.urlopen", side_effect=payloads):
-            artifact = capture_batch()
+            artifact = capture_batch(authorization_records={"pionex_spot_market_data": TEST_PIONEX_AUTHORIZATION})
         self.assertEqual(artifact["schema_version"], SCHEMA_VERSION)
         self.assertEqual(artifact["expected_record_count"], 12)
         self.assertEqual(artifact["actual_record_count"], 12)
         self.assertEqual(artifact["overall_status"], "PASS")
+
+
+    def test_batch_blocks_unlicensed_provider_calls_before_network(self):
+        # Binance technical-test calls are permitted by baseline; Pionex remains blocked.
+        payloads = [FakeResponse({"ok": True}) for _ in range(6)]
+        with patch("scripts.market_selection.capture_public_market_batch.urlopen", side_effect=payloads) as network:
+            artifact = capture_batch()
+        self.assertEqual(network.call_count, 6)
+        pionex_records = [r for r in artifact["records"] if str(r["provider"]).startswith("pionex")]
+        self.assertEqual(len(pionex_records), 6)
+        self.assertTrue(all(r["capture_status"] == "BLOCKED" for r in pionex_records))
+        self.assertTrue(all(r["provider_use_assessment"]["decision"] == "BLOCK" for r in pionex_records))
+        self.assertEqual(artifact["overall_status"], "FAIL")
 
     def test_empty_or_duplicate_market_universe_rejected(self):
         with self.assertRaises(ValueError):
