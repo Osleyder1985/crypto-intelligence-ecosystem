@@ -50,10 +50,12 @@ class DepthCostCurveTests(unittest.TestCase):
         self.assertFalse(book["fee_cost_included"])
         self.assertFalse(book["order_size_selected"])
         self.assertEqual(book["public_fee_reference_overlay"]["rate_bps_per_fill"], 5.0)
+        self.assertEqual(book["public_fee_reference_overlay"]["observed_at_utc"], "2026-10-22")
         self.assertFalse(book["public_fee_reference_overlay"]["effective_account_fee_verified"])
         self.assertAlmostEqual(buy[0]["slippage_plus_public_fee_reference_bps_per_fill"], 105.0)
         binance = next(x for x in result["books"] if x["venue"] == "binance")
         self.assertEqual(binance["public_fee_reference_overlay"]["rate_bps_per_fill"], 10.0)
+        self.assertEqual(binance["public_fee_reference_overlay"]["observed_at_utc"], "2026-10-22")
         self.assertAlmostEqual(binance["execution_cost_curve"]["buy_consuming_asks"][0]["slippage_plus_public_fee_reference_bps_per_fill"], 110.0)
 
     def test_tampered_raw_bytes_fail_closed(self):
