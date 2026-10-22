@@ -3,7 +3,10 @@ from __future__ import annotations
 
 import math
 from datetime import datetime
-from scripts.market_selection.provider_license_gate import evaluate_artifact_use
+try:
+    from scripts.market_selection.provider_license_gate import evaluate_artifact_use
+except ModuleNotFoundError:
+    from provider_license_gate import evaluate_artifact_use
 from typing import Any
 
 VALID_STATES = {"PASS", "FAIL", "INDETERMINATE", "NOT_APPLICABLE", "NOT_RUN"}
