@@ -5,11 +5,43 @@ from urllib.error import HTTPError
 from io import BytesIO
 
 from scripts.market_selection.capture_multi_exchange_spot_book_probe import (
-    SCHEMA_VERSION, READ_CHUNK_BYTES, build_requests, capture_one, extract_top_of_book,
+    SCHEMA_VERSION, READ_CHUNK_BYTES, PROVIDER_IDS, build_requests, capture_one, extract_top_of_book,
 )
 
 
 class MultiExchangeSpotBookProbeTests(unittest.TestCase):
+    @staticmethod
+    def authorization_record(provider_id):
+        return {
+            "schema_version": "crypto-provider-authorization-v1",
+            "provider_id": provider_id,
+            "status": "APPROVED",
+            "authorized_use_cases": ["persistent_storage"],
+            "terms_url": "https://example.com/terms",
+            "terms_sha256": "a" * 64,
+            "reviewed_at": "2026-10-22T00:00:00Z",
+            "reviewed_by": "offline-test-fixture",
+        }
+
+    def test_missing_authorization_blocks_before_network_for_every_venue(self):
+        with patch("scripts.market_selection.capture_multi_exchange_spot_book_probe.urlopen", side_effect=AssertionError("network must not be called")):
+            for spec in build_requests():
+                with self.subTest(exchange=spec["exchange"], symbol=spec["symbol"]):
+                    result = capture_one(spec)
+                    self.assertEqual(result["capture_status"], "BLOCKED")
+                    self.assertEqual(result["provider_use_assessment"]["decision"], "BLOCK")
+
+    def test_authorization_outside_provider_or_use_scope_blocks_before_network(self):
+        spec = build_requests()[0]
+        provider_id = PROVIDER_IDS[spec["exchange"]]
+        bad_record = self.authorization_record(provider_id)
+        bad_record["authorized_use_cases"] = ["live_technical_test"]
+        records = {provider_id: bad_record}
+        with patch("scripts.market_selection.capture_multi_exchange_spot_book_probe.urlopen", side_effect=AssertionError("network must not be called")):
+            result = capture_one(spec, records)
+        self.assertEqual(result["capture_status"], "BLOCKED")
+        self.assertEqual(result["provider_use_assessment"]["decision"], "BLOCK")
+
     def test_probe_covers_seven_required_exchanges_and_three_assets(self):
         requests = build_requests()
         self.assertEqual(len(requests), 21)
@@ -73,8 +105,9 @@ class MultiExchangeSpotBookProbeTests(unittest.TestCase):
                 else:
                     result, self.remaining = self.remaining[:size], self.remaining[size:]
                 return result
+        authorization_records = {PROVIDER_IDS[spec["exchange"]]: self.authorization_record(PROVIDER_IDS[spec["exchange"]])}
         with patch("scripts.market_selection.capture_multi_exchange_spot_book_probe.urlopen", return_value=FakeResponse()):
-            result = capture_one(spec)
+            result = capture_one(spec, authorization_records)
         self.assertEqual(result["capture_status"], "PASS")
         self.assertEqual(result["response_bytes"], len(body))
         self.assertEqual(result["response_bytes_observed"], len(body))
@@ -84,8 +117,9 @@ class MultiExchangeSpotBookProbeTests(unittest.TestCase):
     def test_http_error_is_recorded_not_raised(self):
         spec = build_requests()[0]
         error = HTTPError(spec["url"], 451, "restricted", {}, BytesIO(b"blocked"))
+        authorization_records = {PROVIDER_IDS[spec["exchange"]]: self.authorization_record(PROVIDER_IDS[spec["exchange"]])}
         with patch("scripts.market_selection.capture_multi_exchange_spot_book_probe.urlopen", side_effect=error):
-            result = capture_one(spec)
+            result = capture_one(spec, authorization_records)
         self.assertEqual(result["capture_status"], "FAIL")
         self.assertEqual(result["http_status"], 451)
         self.assertEqual(result["error_type"], "HTTPError")
