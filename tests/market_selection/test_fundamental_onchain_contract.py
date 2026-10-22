@@ -126,7 +126,7 @@ class FundamentalOnchainContractTests(unittest.TestCase):
 
     def test_wrong_category_for_metric_is_rejected(self):
         with self.assertRaisesRegex(ValueError, "not defined as applicable"):
-            validate_observation(obs(metric_id="stablecoin.reserve_attestation", unit="categorical_or_usd"))
+            validate_observation(obs(metric_id="stablecoin.reserve_attestation", unit="categorical_or_usd", value="ATTESTED"))
 
     def test_capture_before_observation_is_rejected(self):
         with self.assertRaisesRegex(ValueError, "cannot precede observed_at"):
