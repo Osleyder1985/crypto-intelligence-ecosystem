@@ -8,6 +8,7 @@ import unittest
 from pathlib import Path
 
 from scripts.market_selection.research_report import build_research_report
+from scripts.market_selection.provider_license_gate import ASSESSMENT_SCHEMA_VERSION, POLICY_VERSION, evaluate_provider_use
 
 
 def candle(index, open_price, high, low, close, *, closed=True, quote_volume="1000"):
@@ -31,6 +32,18 @@ def artifact(rows, *, base_asset="BTC", overall_status="PASS"):
     raw = b"preserved OHLCV source response"
     return {
         "schema_version": "binance-spot-ohlcv-capture-v1",
+        "provider_use_assessment": {
+            "schema_version": ASSESSMENT_SCHEMA_VERSION,
+            "policy_version": POLICY_VERSION,
+            "provider_id": "binance_spot_market_data",
+            "use_case": "internal_analysis",
+            "decision": "ALLOW",
+            "reason_codes": ["EXPLICIT_AUTHORIZATION_RECORD_VALIDATED"],
+            "authorization_evidence_status": "RECORD_VALIDATED_NOT_LEGAL_ADVICE",
+            "authorization": {"terms_url": "https://www.binance.com/en/terms", "terms_sha256": "a" * 64,
+                              "reviewed_at": "2026-10-22T00:00:00Z", "reviewed_by": "offline-test-fixture",
+                              "authorized_use_cases": ["internal_analysis"], "authorization_record_sha256": "b" * 64},
+        },
         "overall_status": overall_status,
         "market": {
             "exchange": "binance",
@@ -98,6 +111,18 @@ class ResearchReportTests(unittest.TestCase):
         self.assertFalse(report["event_causal_assessment"]["causality_claimed"])
         self.assertFalse(report["orders_submitted"])
         self.assertFalse(report["network_requests_made"])
+
+    def test_technical_test_capture_cannot_be_used_for_internal_analysis(self):
+        source = dict(self.source)
+        source["provider_use_assessment"] = evaluate_provider_use("binance_spot_market_data", "live_technical_test")
+        with self.assertRaisesRegex(PermissionError, "blocked before analysis"):
+            build_research_report(source, config(), "BTC")
+
+    def test_missing_provider_assessment_blocks_report(self):
+        source = dict(self.source)
+        source.pop("provider_use_assessment")
+        with self.assertRaisesRegex(PermissionError, "blocked before analysis"):
+            build_research_report(source, config(), "BTC")
 
     def test_source_bytes_must_match_the_analyzed_artifact(self):
         with self.assertRaisesRegex(ValueError, "do not match"):
