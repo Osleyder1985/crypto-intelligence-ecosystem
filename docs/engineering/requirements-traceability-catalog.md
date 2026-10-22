@@ -314,3 +314,22 @@ Para el desglose operativo de los criterios originales de los Issues #7 y #13, v
 2. Convertir los criterios aún cualitativos en umbrales aprobados con método de medición, conjunto de datos, entorno y regla PASS/FAIL.
 3. Producir PoC, ADR, capturas de fuentes y pruebas de recuperación donde los Issues lo exigen; una propuesta documental no satisface esos criterios.
 4. Revisar de nuevo la matriz cuando se incorporen evidencias y actualizar estado solo con enlaces verificables.
+
+
+## 5. Requisitos integrales de evaluación por activo — Issue #128
+
+El detalle funcional, no funcional y de pruebas está en [issue-128-end-to-end-asset-research.md](issue-128-end-to-end-asset-research.md). Se añaden estos identificadores para mantener trazabilidad estable:
+
+| ID | Requisito | Prioridad | Criterio verificable | Evidencia prevista | Estado |
+|---|---|---|---|---|---|
+| REQ-P-010 | Investigar un activo desde una entrada identificable hasta un informe reproducible. | Alta | Prueba E2E con identificador válido/ambiguo y artefacto final. | Resultado E2E archivado | Especificado; integración pendiente |
+| REQ-P-011 | Reconstruir movimientos históricos y buscar detonantes con evidencia temporal. | Alta | Reglas sin look-ahead; fuentes/horas e hipótesis alternativas. | Pruebas de eventos y expediente de fuentes | Parcial; validar cobertura |
+| REQ-P-012 | Evaluar por separado corto, medio y largo plazo. | Alta | Tres resultados independientes con supuestos versionados, riesgos e invalidaciones. | Informe E2E y metodología | Requisito especificado; duración/metodología por aprobar |
+| REQ-P-013 | Calcular soportes/resistencias explicables y temporales. | Alta | Método, temporalidad, zona, invalidación y prueba anti-look-ahead. | Tests y artefacto de evaluación | Componente parcial; integración pendiente |
+| REQ-P-014 | Abstenerse cuando evidencia o calidad sea insuficiente. | Alta | Casos negativos producen INDETERMINATE con motivo. | Pruebas de regresión | Especificado; cobertura E2E pendiente |
+| REQ-P-015 | Conservar y comparar evaluaciones sin sobrescribir historial. | Alta | Repetición/comparación distingue mercado de cambios de método/proveedor. | Registros y tests deterministas | Prototipo local; persistencia central por verificar |
+| REQ-N-010 | Preservar datos completos hasta EOF sin límite arbitrario de bytes impuesto por el proyecto. | Alta | Hash, estado de captura y detección de truncamiento; límites reales de fuente/recursos declarados. | Tests de paginación, integridad e interrupción | Política documentada; cobertura integral pendiente |
+| REQ-N-011 | Evitar fuga temporal y sesgos predictivos. | Alta | Split temporal/out-of-sample, benchmarks, costes y controles de leakage/survivorship/overfitting. | Protocolo y resultados reproducibles | Validación integral pendiente |
+| REQ-N-012 | Trazar cada conclusión hasta fuente, datos, metodología y prueba. | Alta | Trazabilidad requisito→código→prueba→resultado. | Matriz y artefactos de CI/E2E | Pendiente de integración completa |
+
+Los estados anteriores son una clasificación de trabajo y deben confirmarse contra el código, pruebas y artefactos del commit que se audite. No deben interpretarse como verificación automática de implementación.
