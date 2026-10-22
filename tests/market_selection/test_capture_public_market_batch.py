@@ -15,13 +15,20 @@ class FakeResponse:
         self.status = status
         self.payload = json.dumps(payload, separators=(",", ":")).encode("utf-8")
         self.read_calls = []
+        self.offset = 0
     def __enter__(self):
         return self
     def __exit__(self, *args):
         return False
     def read(self, size=-1):
         self.read_calls.append(size)
-        return self.payload if size is None or size < 0 else self.payload[:size]
+        if size is None or size < 0:
+            chunk = self.payload[self.offset:]
+            self.offset = len(self.payload)
+            return chunk
+        chunk = self.payload[self.offset:self.offset + size]
+        self.offset += len(chunk)
+        return chunk
 
 
 class BatchCaptureTests(unittest.TestCase):
