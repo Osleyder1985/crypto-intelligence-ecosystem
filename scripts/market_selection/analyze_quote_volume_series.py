@@ -9,7 +9,10 @@ from datetime import datetime, timezone
 from decimal import Decimal, InvalidOperation
 from pathlib import Path
 
-from scripts.market_selection.provider_license_gate import evaluate_artifact_use
+try:
+    from scripts.market_selection.provider_license_gate import evaluate_artifact_use
+except ModuleNotFoundError:
+    from provider_license_gate import evaluate_artifact_use
 
 
 SCHEMA_VERSION = "multi-exchange-spot-quote-volume-v1"
