@@ -17,6 +17,7 @@ from urllib.request import Request, urlopen
 
 READ_CHUNK_BYTES = 64 * 1024  # Read buffer size only; not a response-size limit.
 TIMEOUT_SECONDS = 12
+BINANCE_DEPTH_LIMIT = 5000  # Official maximum for GET /api/v3/depth; request weight 250.
 
 
 
@@ -142,7 +143,7 @@ def main() -> int:
     requests = [
         ("pionex", pionex_url),
         ("binance_exchange_info", binance_base + "/exchangeInfo?" + urlencode({"symbol": "BTCUSDT"})),
-        ("binance_depth", binance_base + "/depth?" + urlencode({"symbol": "BTCUSDT", "limit": 20})),
+        ("binance_depth", binance_base + "/depth?" + urlencode({"symbol": "BTCUSDT", "limit": BINANCE_DEPTH_LIMIT})),
     ]
     records = [request_capture(provider, url) for provider, url in requests]
     artifact = {
@@ -154,7 +155,7 @@ def main() -> int:
         "limitations": [
             "This is a point-in-time public API capture, not an investment recommendation.",
             "Pionex symbol availability does not prove regional/account access or liquidity.",
-            "Binance depth lastUpdateId is not an event timestamp; source-time freshness remains indeterminate.",
+            "Binance depth requests use the documented maximum of 5000 levels; snapshots remain partial and lastUpdateId is not an event timestamp, so source-time freshness remains indeterminate.",
             "Payload hashes establish byte identity only, not provider authenticity or correctness.",
         ],
     }
