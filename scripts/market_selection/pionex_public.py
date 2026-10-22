@@ -12,7 +12,6 @@ from urllib.request import Request, urlopen
 
 from data_contract import sha256_hex, utc_now_iso
 
-MAX_RESPONSE_BYTES = 5 * 1024 * 1024
 _SYMBOL_RE = re.compile(r"^[A-Z0-9]+_[A-Z0-9]+$")
 
 
@@ -26,10 +25,13 @@ def _default_http_get(url: str, timeout: float) -> bytes:
         status = getattr(response, "status", 200)
         if status != 200:
             raise PionexReadError(f"public endpoint returned HTTP {status}")
-        payload = response.read(MAX_RESPONSE_BYTES + 1)
-    if len(payload) > MAX_RESPONSE_BYTES:
-        raise PionexReadError("response exceeded configured size limit")
-    return payload
+        chunks: list[bytes] = []
+        while True:
+            chunk = response.read(64 * 1024)
+            if not chunk:
+                break
+            chunks.append(chunk)
+    return b"".join(chunks)
 
 
 class PionexPublicSpotReader:
@@ -67,8 +69,6 @@ class PionexPublicSpotReader:
             raise PionexReadError(f"public endpoint request failed: {type(exc).__name__}") from exc
         if not isinstance(raw, bytes):
             raise PionexReadError("HTTP transport must return response bytes")
-        if len(raw) > MAX_RESPONSE_BYTES:
-            raise PionexReadError("response exceeded configured size limit")
         try:
             payload = json.loads(raw.decode("utf-8"))
         except (UnicodeDecodeError, json.JSONDecodeError) as exc:
