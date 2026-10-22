@@ -74,7 +74,7 @@ La mera precedencia temporal, una nota de prensa o la correlación de precios nu
 - El adaptador exige autorización independiente para `internal_analysis` y `persistent_storage`, un User-Agent proporcionado por el operador y un timeout explícito antes de abrir la conexión. El código no certifica que SEC considere clasificado el User-Agent.
 - `capture_sec_press_releases_rss.py` preserva la respuesta completa hasta EOF, sin límite local de tamaño; incluye bytes base64, tamaño, SHA-256, headers y errores HTTP. Las respuestas mayores de 5 MiB y los errores de lectura parcial tienen pruebas offline.
 - Los titulares no crean eventos automáticamente. La promoción requiere captura completa del artículo, mapeo de entidades con IDs estables y evidencia de mapeo preservada con hash. El registro conserva el gate del proveedor y el hash del registry.
-- `research_evidence_integration.enrich_research_report` vuelve a validar cada evento: autorización para análisis y almacenamiento, fuente registrada/aprobada, hash de registry actual, host HTTPS allowlisted, editor y tipo de fuente coincidentes. Eventos sin estos datos quedan bloqueados.
+- `research_evidence_integration.enrich_research_report` vuelve a validar cada evento: autorización para análisis y almacenamiento, fuente registrada/aprobada, hash de registry actual, host HTTPS allowlisted, editor y tipo de fuente coincidentes. Verifica base64, tamaño y SHA-256 de las capturas RSS/artículo, vuelve a parsear el RSS y comprueba que título, URL y publicación coincidan, además de verificar la evidencia del mapeo de entidades. Eventos sin estos datos quedan bloqueados.
 - La evaluación temporal mantiene `causality_claimed=false`; la captura y el enlace temporal no prueban causalidad.
 
 ## 8. Pruebas implementadas
