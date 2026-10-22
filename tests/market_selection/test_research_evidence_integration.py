@@ -136,6 +136,8 @@ class ResearchEvidenceIntegrationTests(unittest.TestCase):
             )
         self.assertEqual(enriched["decision_status"], "INDETERMINATE")
         self.assertEqual(enriched["external_event_evidence"]["assessments"][0]["causality_label"], "TEMPORAL_ASSOCIATION")
+        self.assertEqual(enriched["external_event_evidence"]["assessments"][0]["source_use_assessment"]["decision"], "ALLOW")
+        self.assertEqual(enriched["external_event_evidence"]["assessments"][0]["source_storage_assessment"]["decision"], "ALLOW")
         self.assertFalse(enriched["external_event_evidence"]["causality_claimed"])
         self.assertFalse(enriched["methodology_assessment"]["predictive_performance_validated"])
         self.assertEqual(enriched["fundamental_onchain_assessment"]["decision_status"], "INDETERMINATE")
@@ -176,6 +178,50 @@ class ResearchEvidenceIntegrationTests(unittest.TestCase):
         invalid = report()
         invalid.pop("source_artifact")
         with self.assertRaisesRegex(PermissionError, "blocked before use"):
+            enrich_research_report(
+                invalid, events=[], observations=[], methodology=methodology(),
+                asset={"stable_id": "example-asset", "category": "smart_contract_token"},
+                evaluation_as_of="2026-10-21T00:00:00Z",
+            )
+
+    def test_event_without_provider_authorization_is_blocked(self):
+        ev = event()
+        ev.pop("provider_use_assessment")
+        ev.pop("persistent_storage_assessment")
+        ev.pop("provider_policy_assessments")
+        with patch.dict(EVENT_SOURCE_REGISTRY["sources"], {"sec_press_releases": approved_event_source()}):
+            with self.assertRaisesRegex(PermissionError, "event evidence blocked before use"):
+                enrich_research_report(
+                    report(),
+                    events=[{
+                        "event": ev,
+                        "target_entity": {"id_type": "coingecko_id", "id": "example-asset"},
+                        "movement_window": {"start": "2026-10-20T09:00:00Z", "end": "2026-10-20T11:00:00Z"},
+                    }],
+                    observations=[], methodology=methodology(),
+                    asset={"stable_id": "example-asset", "category": "smart_contract_token"},
+                    evaluation_as_of="2026-10-21T00:00:00Z",
+                )
+
+    def test_event_from_terms_pending_source_is_blocked(self):
+        ev = event()
+        with self.assertRaisesRegex(PermissionError, "event source registry is not approved"):
+            enrich_research_report(
+                report(),
+                events=[{
+                    "event": ev,
+                    "target_entity": {"id_type": "coingecko_id", "id": "example-asset"},
+                    "movement_window": {"start": "2026-10-20T09:00:00Z", "end": "2026-10-20T11:00:00Z"},
+                }],
+                observations=[], methodology=methodology(),
+                asset={"stable_id": "example-asset", "category": "smart_contract_token"},
+                evaluation_as_of="2026-10-21T00:00:00Z",
+            )
+
+    def test_missing_persistent_storage_scope_blocks_report_integration(self):
+        invalid = report()
+        invalid["source_artifact"]["provider_use_assessment"]["authorization"]["authorized_use_cases"] = ["internal_analysis"]
+        with self.assertRaisesRegex(PermissionError, "storage blocked before use"):
             enrich_research_report(
                 invalid, events=[], observations=[], methodology=methodology(),
                 asset={"stable_id": "example-asset", "category": "smart_contract_token"},
