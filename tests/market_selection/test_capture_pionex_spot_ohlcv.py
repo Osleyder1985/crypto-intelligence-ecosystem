@@ -110,6 +110,14 @@ class PionexOhlcvCaptureTests(unittest.TestCase):
         self.assertNotIn("base_volume", candle)
         self.assertNotIn("quote_volume", candle)
 
+    def test_fractional_source_timestamp_is_rejected(self):
+        with self.assertRaisesRegex(ValueError, "integer millisecond timestamp"):
+            normalize_kline(kline(60000.5), "BTC_USDT", "1M", "2026-10-22T16:00:00Z", 0)
+
+    def test_out_of_range_source_timestamp_is_rejected(self):
+        with self.assertRaisesRegex(ValueError, "supported timestamp range"):
+            normalize_kline(kline(10**30), "BTC_USDT", "1M", "2026-10-22T16:00:00Z", 0)
+
     def test_invalid_ohlc_envelope_is_rejected(self):
         with self.assertRaisesRegex(ValueError, "high is below"):
             normalize_kline(kline(60000, open_price="10", high="10", low="9", close="11"),
