@@ -10,6 +10,18 @@ from pathlib import Path
 from typing import Any
 
 SCHEMA = "public-depth-cost-curves-v1"
+PUBLIC_FEE_REFERENCE = {
+    "pionex": {
+        "rate_bps_per_fill": Decimal("5"),
+        "source": "https://www.pionex.com/es/fees",
+        "schedule": "public Spot maker/taker 0.050% reference",
+    },
+    "binance": {
+        "rate_bps_per_fill": Decimal("10"),
+        "source": "https://www.binance.com/es-LA/fee/trading",
+        "schedule": "Regular User Spot maker/taker 0.100% reference",
+    },
+}
 
 
 def _verified_payload(record: dict[str, Any]) -> dict[str, Any]:
@@ -54,7 +66,7 @@ def _levels(raw: Any, side: str) -> list[tuple[Decimal, Decimal]]:
     return out
 
 
-def _curve(levels: list[tuple[Decimal, Decimal]], mid: Decimal, side: str) -> list[dict[str, float | int]]:
+def _curve(levels: list[tuple[Decimal, Decimal]], mid: Decimal, side: str, fee_reference_bps: Decimal) -> list[dict[str, float | int]]:
     cumulative_base = Decimal(0)
     cumulative_quote = Decimal(0)
     curve = []
@@ -72,6 +84,7 @@ def _curve(levels: list[tuple[Decimal, Decimal]], mid: Decimal, side: str) -> li
             "cumulative_quote": float(cumulative_quote),
             "vwap": float(vwap),
             "slippage_bps_vs_mid": float(slippage_bps),
+            "slippage_plus_public_fee_reference_bps_per_fill": float(slippage_bps + fee_reference_bps),
         })
     return curve
 
@@ -87,6 +100,7 @@ def analyze_depth_record(record: dict[str, Any], market_id: str, venue: str) -> 
         raise ValueError("book is locked or crossed")
     mid = (best_bid + best_ask) / Decimal(2)
     spread_bps = (best_ask - best_bid) / mid * Decimal(10000)
+    fee_reference = PUBLIC_FEE_REFERENCE[venue]
     return {
         "market_id": market_id,
         "venue": venue,
@@ -98,13 +112,20 @@ def analyze_depth_record(record: dict[str, Any], market_id: str, venue: str) -> 
         "best_ask": float(best_ask),
         "mid": float(mid),
         "spread_bps": float(spread_bps),
+        "public_fee_reference_overlay": {
+            "rate_bps_per_fill": float(fee_reference["rate_bps_per_fill"]),
+            "schedule": fee_reference["schedule"],
+            "source": fee_reference["source"],
+            "effective_account_fee_verified": False,
+            "meaning": "illustrative per-fill overlay only; not an account-specific or total round-trip fee",
+        },
         "visible_depth_quote": {
             "bids": float(sum((price * qty for price, qty in bids), Decimal(0))),
             "asks": float(sum((price * qty for price, qty in asks), Decimal(0))),
         },
         "execution_cost_curve": {
-            "buy_consuming_asks": _curve(asks, mid, "buy"),
-            "sell_consuming_bids": _curve(bids, mid, "sell"),
+            "buy_consuming_asks": _curve(asks, mid, "buy", fee_reference["rate_bps_per_fill"]),
+            "sell_consuming_bids": _curve(bids, mid, "sell", fee_reference["rate_bps_per_fill"]),
         },
         "fee_cost_included": False,
         "order_size_selected": False,
@@ -131,13 +152,13 @@ def analyze_artifact(artifact: dict[str, Any]) -> dict[str, Any]:
         "schema_version": SCHEMA,
         "source_schema_version": artifact["schema_version"],
         "source_created_at_utc": artifact.get("created_at_utc"),
-        "method": "cumulative VWAP/slippage at every returned order-book level; no fixed order size and no fee assumptions",
+        "method": "cumulative VWAP/slippage at every returned order-book level; no fixed order size; public fee reference overlay is illustrative only",
         "decision_status": "INDETERMINATE",
         "books": books,
         "limitations": [
             "Each curve is based only on the levels returned by one point-in-time snapshot.",
             "Binance and Pionex snapshots are captured sequentially and are not asserted to be synchronized.",
-            "Slippage curves exclude fees and cannot establish account-specific total execution cost.",
+            "Public fee overlay uses published base schedules only; actual account fees, discounts, fee asset rounding and round-trip total are not verified.",
             "A curve is descriptive; the product has not approved a single order size or acceptance threshold.",
             "No orders are submitted.",
         ],

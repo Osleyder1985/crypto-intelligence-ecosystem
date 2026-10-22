@@ -14,11 +14,19 @@ El script verifica para cada libro el HTTP 200, Base64, longitud de bytes, SHA-2
 
 Cada punto corresponde a consumir desde el mejor precio hasta ese nivel real. Por tanto, el tamaño base se deriva del libro capturado, no de un importe comercial inventado. La salida conserva el número de niveles realmente recibidos, mejores precios, spread y profundidad cotizada visible. Los snapshots de Binance y Pionex se analizan por separado.
 
+## Referencia pública de comisión (no efectiva de cuenta)
+
+Cada punto incluye `slippage_plus_public_fee_reference_bps_per_fill`, una suma ilustrativa de slippage frente al mid y una tarifa pública de referencia por un solo fill:
+- Pionex Spot: 0,050% maker/taker (5 bps), [tarifas oficiales](https://www.pionex.com/es/fees).
+- Binance Spot, Regular User: 0,100% maker/taker (10 bps), [tarifas oficiales](https://www.binance.com/es-LA/fee/trading).
+
+La salida conserva `effective_account_fee_verified=false`. El overlay no aplica VIP, descuentos BNB, promociones de símbolo, componentes fiscales/especiales, moneda de comisión ni redondeos. No es un coste total round-trip y no se debe interpretar como tarifa efectiva del usuario. Se ofrece solo como escenario público de referencia para que el impacto de usar una tarifa base sea visible.
+
 ## Interpretación
 
 - `slippage_bps_vs_mid` es una medida de desviación del VWAP acumulado frente al mid del snapshot; incluye el efecto del spread y el impacto de los niveles consumidos. No es una garantía de precio de ejecución.
 - `visible_depth_quote` suma precio × cantidad de todos los niveles recibidos. No es liquidez garantizada ni prueba que el libro se mantenga hasta la orden.
-- Las curvas **no incluyen comisiones**. El coste total sigue indeterminado hasta integrar evidencia de tarifa efectiva por cuenta/símbolo o una tarifa pública de referencia claramente etiquetada.
+- La curva base de slippage no incluye comisiones; la salida agrega aparte un overlay de tarifa pública de referencia por fill. El coste total efectivo sigue indeterminado hasta integrar evidencia aplicable a la cuenta/símbolo.
 - Las capturas entre venues son secuenciales, no se declara que estén sincronizadas.
 - El script no escoge un tamaño único, no crea un umbral de aprobación y no envía órdenes; el resultado global es `INDETERMINATE`.
 
