@@ -85,6 +85,21 @@ class SupportResistanceTests(unittest.TestCase):
             analyze_support_resistance(bad, 1, 1, 100)
 
 
+
+    def test_consecutive_candles_inside_zone_count_as_one_touch_episode(self):
+        rows = [
+            candle(0, 10, 11, 9, 10),
+            candle(1, 10, 11, 8, 9),
+            candle(2, 9, 10, 7, 8),
+            candle(3, 8, 9, 8, 8.5),
+            candle(4, 7.2, 8, 7.0, 7.05),
+            candle(5, 7.1, 8, 7.01, 7.06),
+        ]
+        result = analyze_support_resistance(artifact(rows), 1, 1, 100)
+        zone = next(z for z in result["zones"] if z["kind"] == "support" and z["center_price"] == "7")
+        self.assertEqual(zone["touch_count"], 1)
+        self.assertEqual(sum(e["event_type"] == "zone_touch" and e["zone_id"] == zone["zone_id"] for e in result["events"]), 1)
+
     def test_partial_source_artifact_cannot_be_marked_complete(self):
         a = artifact([candle(0, 10, 11, 9, 10), candle(1, 10, 11, 8, 9), candle(2, 9, 10, 7, 8)])
         a["overall_status"] = "PARTIAL"

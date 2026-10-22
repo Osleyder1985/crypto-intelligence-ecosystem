@@ -130,24 +130,31 @@ def analyze_support_resistance(artifact: dict, pivot_left: int, pivot_right: int
                     continue
                 low, high, close = candle["low"], candle["high"], candle["close"]
                 intersects = low <= zone["upper_bound_price"] and high >= zone["lower_bound_price"]
-                if intersects:
-                    zone["touch_count"] += 1
-                    zone["last_touch_at_ms"] = candle["close_time_ms"]
-                    events.append({
-                        "event_type": "zone_touch", "zone_id": zone["zone_id"],
-                        "event_time_ms": candle["close_time_ms"], "source_candle_open_time_ms": candle["open_time_ms"],
-                    })
-                    if zone["kind"] == "support" and close > zone["upper_bound_price"]:
-                        zone["rejection_count"] += 1
+                was_intersecting = zone["currently_intersecting"]
+                if not intersects:
+                    zone["currently_intersecting"] = False
+                    zone["rejection_recorded_for_episode"] = False
+                else:
+                    zone["currently_intersecting"] = True
+                    if not was_intersecting:
+                        zone["touch_count"] += 1
+                        zone["last_touch_at_ms"] = candle["close_time_ms"]
                         events.append({
-                            "event_type": "support_rejection", "zone_id": zone["zone_id"],
+                            "event_type": "zone_touch", "zone_id": zone["zone_id"],
                             "event_time_ms": candle["close_time_ms"], "source_candle_open_time_ms": candle["open_time_ms"],
                         })
-                    elif zone["kind"] == "resistance" and close < zone["lower_bound_price"]:
+                    rejection = (
+                        zone["kind"] == "support" and close > zone["upper_bound_price"]
+                    ) or (
+                        zone["kind"] == "resistance" and close < zone["lower_bound_price"]
+                    )
+                    if rejection and not zone["rejection_recorded_for_episode"]:
                         zone["rejection_count"] += 1
+                        zone["rejection_recorded_for_episode"] = True
                         events.append({
-                            "event_type": "resistance_rejection", "zone_id": zone["zone_id"],
-                            "event_time_ms": candle["close_time_ms"], "source_candle_open_time_ms": candle["open_time_ms"],
+                            "event_type": "support_rejection" if zone["kind"] == "support" else "resistance_rejection",
+                            "zone_id": zone["zone_id"], "event_time_ms": candle["close_time_ms"],
+                            "source_candle_open_time_ms": candle["open_time_ms"],
                         })
                 invalidated = (
                     zone["kind"] == "support" and close < zone["lower_bound_price"]
@@ -200,6 +207,7 @@ def analyze_support_resistance(artifact: dict, pivot_left: int, pivot_right: int
                         "created_at_ms": event_time, "available_from_ms": available_from,
                         "pivot_count": 1, "touch_count": 0, "rejection_count": 0,
                         "last_touch_at_ms": None, "invalidated_at_ms": None,
+                        "currently_intersecting": False, "rejection_recorded_for_episode": False,
                     }
                     zones.append(zone)
                     events.append({
