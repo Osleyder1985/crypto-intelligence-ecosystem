@@ -95,3 +95,8 @@ La Fase 5 incluye, como mínimo, REQ-P-004, REQ-P-005, REQ-P-009, REQ-P-012–RE
 El [Issue #128](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/issues/128) y la [especificación de flujo](issue-128-end-to-end-asset-research.md) concretan la integración de los componentes analíticos. La fase no se declara terminada hasta que una prueba E2E demuestre entrada de activo, expediente histórico, análisis de movimientos y posibles detonantes, soportes/resistencias, evaluación independiente de corto/medio/largo plazo, persistencia y resultado reproducible.
 
 **Puerta de salida:** evidencia archivada de tests E2E y de integración, manejo de cobertura insuficiente, anti-look-ahead, integridad de capturas, trazabilidad de fuentes, validación temporal y resultado `INDETERMINATE` cuando corresponda. La documentación por sí sola no cierra la fase.
+
+
+## Auditoría de brechas de implementación — Issue #128
+
+La auditoría documental [issue-128-implementation-gap-audit.md](issue-128-implementation-gap-audit.md) registra qué módulos existentes pueden reutilizarse y qué falta para demostrar el flujo E2E. La prioridad es integrar primero el contrato de investigación y el orquestador, después añadir fuentes verificables de noticias/eventos y metodologías separadas por horizonte, y finalmente validar informe, persistencia, API/UX y desempeño fuera de muestra. Esta secuencia no declara implementadas esas fases.
