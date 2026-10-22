@@ -3,7 +3,7 @@
 - **Estado:** contrato de datos y diccionario inicial en rama de trabajo; adaptadores reales pendientes.
 - **Issue:** [#134](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/issues/134)
 - **Dependencia:** [#128](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/issues/128) y [#130](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/issues/130)
-- **Código:** `scripts/market_selection/fundamental_onchain_contract.py`
+- **Código:** `scripts/market_selection/fundamental_onchain_contract.py` (incluye normalizador offline de TVL histórico de DefiLlama)
 - **Tests:** `tests/market_selection/test_fundamental_onchain_contract.py`
 - **Contratos:** `crypto-fundamental-metric-catalog-v1`, `crypto-fundamental-observation-v1`, `crypto-fundamental-assessment-v1`
 - **Consulta documental:** 2026-10-22
@@ -87,6 +87,6 @@ Cada observación usa `crypto-fundamental-observation-v1` y contiene:
 
 ## 6. Limitaciones pendientes
 
-Esta entrega crea catálogo/contrato, validación offline y 19 tests sintéticos. **No implementa todavía adaptadores que consulten proveedores, no verifica licencias por sí misma, no crea historial de capturas reales y no se integra aún con el informe de #130.** Las métricas de concentración, unlocks, auditoría, reservas y seguridad requieren fuentes específicas y resolución de entidad por activo.
+Esta entrega crea catálogo/contrato, validación offline y 23 tests sintéticos. **No implementa todavía clientes de red que consulten proveedores ni verifica licencias por sí misma. El adaptador de DefiLlama normaliza una respuesta previamente capturada, exige un vínculo token-protocolo aportado por el llamador y deja su estado como pendiente de revisión; no equivale a una integración en vivo ni crea historial de capturas reales. Tampoco se integra aún con el informe de #130.** Las métricas de concentración, unlocks, auditoría, reservas y seguridad requieren fuentes específicas y resolución de entidad por activo.
 
 Para cerrar #134 faltan adaptadores aprobados, fixtures reales reproducibles, manejo de reorgs y datos contradictorios de proveedores, controles de cobertura y calidad, integración en el informe E2E y pruebas anti-look-ahead con capturas históricas verificables.
