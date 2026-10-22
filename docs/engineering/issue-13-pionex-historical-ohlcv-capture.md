@@ -16,7 +16,7 @@
 scripts/market_selection/capture_pionex_spot_ohlcv.py:
 - Lee cada cuerpo completo hasta EOF con un buffer de 64 KiB; no hay límite local de bytes, velas ni páginas.
 - Preserva URL, timestamps de captura, estado HTTP, cuerpo Base64, tamaño, SHA-256 y JSON parseado por página.
-- Pagina hacia atrás usando endTime = timestamp más antiguo observado - 1 ms; verifica progreso y conserva los duplicados en el artefacto si aparecen.
+- Pagina hacia atrás usando endTime = timestamp más antiguo observado - 1 ms; verifica progreso, registra respuestas posteriores al endTime solicitado y conserva los duplicados en el artefacto si aparecen.
 - Se detiene ante página vacía, límite de historial declarado por Pionex, fallo de red/esquema, anomalía de normalización o ausencia de progreso.
 - Marca overall_status=PARTIAL si la cobertura no se puede demostrar. No convierte errores en ceros ni elimina silenciosamente velas duplicadas.
 - Conserva source_time_ms y volume_raw, pero deja timestamp_role_status y volume_unit_status en INDETERMINATE. No crea open_time_ms, close_time_ms, volumen base ni turnover cotizado por inferencia.
