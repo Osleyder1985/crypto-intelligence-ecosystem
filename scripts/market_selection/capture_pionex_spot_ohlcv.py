@@ -248,7 +248,18 @@ def capture_history(
         for page in pages
     )
     complete_stop = stop_reason in {"NO_MORE_RECORDS", "REQUESTED_START_BOUND_REACHED", "EARLIEST_REPRESENTABLE_TIMESTAMP_REACHED"}
-    overall = "PASS" if all_pages_pass and complete_stop and not duplicate_times and pagination_progress_status == "PASS" and candles else "PARTIAL"
+    if len(candles) >= OFFICIAL_HISTORY_LIMIT_RECORDS:
+        provider_history_limit_reached = True
+    history_completeness = (
+        "INDETERMINATE_PROVIDER_HISTORY_LIMIT"
+        if provider_history_limit_reached
+        else "OBSERVED_ENDPOINT_BOUNDARY_REACHED"
+        if stop_reason == "NO_MORE_RECORDS"
+        else "REQUESTED_START_BOUND_REACHED"
+        if stop_reason == "REQUESTED_START_BOUND_REACHED"
+        else "INDETERMINATE_CAPTURE_INTERRUPTED"
+    )
+    overall = "PASS" if all_pages_pass and complete_stop and not duplicate_times and pagination_progress_status == "PASS" and candles and not provider_history_limit_reached else "PARTIAL"
     return {
         "schema_version": SCHEMA_VERSION, "overall_status": overall,
         "analysis_readiness_status": "INDETERMINATE", "created_at_utc": utc_now(),
@@ -269,6 +280,7 @@ def capture_history(
             "oldest_source_time_ms": min(timestamps) if timestamps else None,
             "newest_source_time_ms": max(timestamps) if timestamps else None,
             "stop_reason": stop_reason, "provider_history_limit_reached": provider_history_limit_reached,
+            "history_completeness_status": history_completeness,
             "pagination_progress_status": pagination_progress_status,
         },
         "pages": pages, "candles": candles,
