@@ -9,6 +9,7 @@ import argparse
 import json
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlsplit
 
 from scripts.market_selection.external_event_evidence import assess_temporal_association, validate_event
 from scripts.market_selection.fundamental_onchain_contract import evaluate_observations
@@ -96,12 +97,34 @@ def enrich_research_report(
             raise PermissionError(f"event source is not registered at events[{index}]") from exc
         if not source_is_approved(source_entry):
             raise PermissionError(f"event source registry is not approved at events[{index}]")
+        if event_record.get("provider_id") != source_entry.get("provider_id"):
+            raise PermissionError(f"event provider id does not match registry at events[{index}]")
         registry_hash = source_entry_sha256(source_entry)
         if (
             event_record.get("source_registry_status") != "APPROVED"
             or event_record.get("source_registry_entry_sha256") != registry_hash
         ):
             raise PermissionError(f"event source registry evidence is missing or stale at events[{index}]")
+        event_source = _object(event_record.get("source"), f"events[{index}].event.source")
+        source_url = event_source.get("url")
+        parsed_source_url = urlsplit(source_url) if isinstance(source_url, str) else None
+        allowed_hosts = set(source_entry.get("allowed_article_hosts") or [])
+        if not allowed_hosts:
+            base_host = urlsplit(source_entry["source_url"]).hostname
+            allowed_hosts = {base_host} if base_host else set()
+        if (
+            parsed_source_url is None
+            or parsed_source_url.scheme != "https"
+            or parsed_source_url.hostname not in allowed_hosts
+            or parsed_source_url.port not in (None, 443)
+            or parsed_source_url.username is not None
+            or parsed_source_url.password is not None
+        ):
+            raise PermissionError(f"event source URL is outside registry allowlist at events[{index}]")
+        if event_source.get("source_type") != source_entry.get("source_type"):
+            raise PermissionError(f"event source type does not match registry at events[{index}]")
+        if event_source.get("publisher") != source_entry.get("display_name"):
+            raise PermissionError(f"event publisher does not match registry at events[{index}]")
 
         event = validate_event(event_record)
         event_id = event["event_id"]
