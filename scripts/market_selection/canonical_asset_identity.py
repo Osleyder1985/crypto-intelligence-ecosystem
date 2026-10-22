@@ -6,6 +6,8 @@ reviewed identity evidence; it does not query registries or infer identities fro
 from __future__ import annotations
 
 from datetime import datetime
+import hashlib
+import json
 import re
 from typing import Any
 from urllib.parse import urlsplit
@@ -141,7 +143,15 @@ def resolve_asset_identity(
     captured_at = _timestamp(source.get("captured_at"), "identity_evidence.source.captured_at")
     content_sha256 = _sha256(source.get("content_sha256"), "identity_evidence.source.content_sha256")
 
+    try:
+        identity_evidence_record_sha256 = hashlib.sha256(
+            json.dumps(evidence, ensure_ascii=False, sort_keys=True, separators=(",", ":"), allow_nan=False).encode("utf-8")
+        ).hexdigest()
+    except (TypeError, ValueError) as exc:
+        raise ValueError("identity_evidence must be canonical JSON without non-finite values") from exc
+
     sanitized_evidence = {
+        "identity_evidence_record_sha256": identity_evidence_record_sha256,
         "stable_id": stable_id,
         "asset_type": asset_type,
         "symbol": symbol,
