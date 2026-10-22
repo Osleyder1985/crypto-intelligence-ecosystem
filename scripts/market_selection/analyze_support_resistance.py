@@ -210,8 +210,8 @@ def analyze_support_resistance(artifact: dict, pivot_left: int, pivot_right: int
                     })
 
     events.sort(key=lambda item: (item["event_time_ms"], item.get("zone_id") or "", item["event_type"]))
-    data_quality = "INSUFFICIENT" if len(closed) < pivot_left + pivot_right + 1 else (
-        "INCOMPLETE" if gaps or excluded_open or artifact.get("overall_status") != "PASS" or source_integrity_status != "VERIFIED" else "COMPLETE"
+    data_quality = "INCOMPLETE" if gaps or excluded_open or artifact.get("overall_status") != "PASS" or source_integrity_status != "VERIFIED" else (
+        "INSUFFICIENT" if len(closed) < pivot_left + pivot_right + 1 else "COMPLETE"
     )
     return {
         "schema_version": OUTPUT_SCHEMA,
