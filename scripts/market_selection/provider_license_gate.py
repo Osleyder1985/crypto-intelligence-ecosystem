@@ -185,14 +185,7 @@ def evaluate_artifact_use(artifact: object, use_case: str) -> dict:
         raise ValueError(f"unsupported use_case: {use_case}")
     assessments: list[dict] = []
     _collect_provider_assessments(artifact, assessments)
-    unique: dict[tuple[str, str, str], dict] = {}
-    for assessment in assessments:
-        provider_id = str(assessment.get("provider_id", "")).lower()
-        captured_use_case = str(assessment.get("use_case", ""))
-        authorization = assessment.get("authorization")
-        auth_hash = authorization.get("authorization_record_sha256", "") if isinstance(authorization, dict) else ""
-        unique[(provider_id, captured_use_case, str(auth_hash))] = assessment
-    assessments = list(unique.values())
+    # Check every consumed assessment. Never deduplicate away a conflicting or tampered row.
     reasons: list[str] = []
     provider_ids: list[str] = []
     if not assessments:
