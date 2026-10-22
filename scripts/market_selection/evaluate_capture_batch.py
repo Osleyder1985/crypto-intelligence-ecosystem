@@ -213,13 +213,6 @@ def evaluate_batch(artifact: dict[str, Any], config: dict[str, Any] | None = Non
             f"Pionex depth timing evidence is {timing_status}: {timing_reason}. "
             "Observed timestamp deltas are measurements, not an approved freshness threshold."
         )
-        timing_status, timing_metrics, timing_reason = _pionex_depth_timing(pionex_depth_record)
-        status["pionex_depth_timestamp_evidence"] = timing_status
-        metrics.update(timing_metrics)
-        reasons.append(
-            f"Pionex depth timing evidence is {timing_status}: {timing_reason}. "
-            "Observed timestamp deltas are measurements, not an approved freshness threshold."
-        )
         freshness_status, freshness_metrics, freshness_reason = _live_freshness(artifact, bsym, config)
         status["source_freshness"] = freshness_status
         metrics.update(freshness_metrics)
