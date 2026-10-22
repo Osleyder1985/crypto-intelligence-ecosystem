@@ -194,6 +194,9 @@ def evaluate_artifact_use(artifact: object, use_case: str) -> dict:
         provider_id = str(assessment.get("provider_id", "")).lower()
         if provider_id and provider_id not in provider_ids:
             provider_ids.append(provider_id)
+        if provider_id not in BASELINE_POLICY:
+            reasons.append("PROVIDER_NOT_REVIEWED")
+            continue
         if assessment.get("policy_version") != POLICY_VERSION:
             reasons.append("PROVIDER_POLICY_VERSION_MISMATCH")
         if assessment.get("decision") != "ALLOW":
