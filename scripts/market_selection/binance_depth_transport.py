@@ -66,7 +66,10 @@ def fetch_public_depth_snapshot(
 
 
 def _open_public_stream(symbol: str, timeout_seconds: float) -> Any:
-    """Open the public stream using websocket-client, imported only for live use."""
+    """Open the public stream only after the technical-test provider gate allows it."""
+    assessment = evaluate_provider_use("binance_spot_market_data", "live_technical_test")
+    if assessment["decision"] != "ALLOW":
+        raise PermissionError("Binance provider use blocked before WebSocket connection: " + ";".join(assessment["reason_codes"]))
     try:
         import websocket
     except ImportError as exc:
