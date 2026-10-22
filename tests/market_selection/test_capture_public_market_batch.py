@@ -14,11 +14,13 @@ class FakeResponse:
     def __init__(self, payload, status=200):
         self.status = status
         self.payload = json.dumps(payload, separators=(",", ":")).encode("utf-8")
+        self.read_calls = []
     def __enter__(self):
         return self
     def __exit__(self, *args):
         return False
     def read(self, size=-1):
+        self.read_calls.append(size)
         return self.payload if size is None or size < 0 else self.payload[:size]
 
 
@@ -50,10 +52,13 @@ class BatchCaptureTests(unittest.TestCase):
 
     def test_response_larger_than_five_mib_is_preserved_without_arbitrary_cap(self):
         payload = {"data": "x" * (5 * 1024 * 1024 + 128)}
-        with patch("scripts.market_selection.capture_public_market_batch.urlopen", return_value=FakeResponse(payload)):
+        response = FakeResponse(payload)
+        with patch("scripts.market_selection.capture_public_market_batch.urlopen", return_value=response):
             record = request_capture("BTC_USDT", "pionex", "https://example.invalid")
         raw = base64.b64decode(record["response_base64"], validate=True)
         self.assertGreater(len(raw), 5 * 1024 * 1024)
+        self.assertGreater(len(response.read_calls), 1)
+        self.assertTrue(all(size == 64 * 1024 for size in response.read_calls))
         self.assertEqual(record["capture_status"], "PASS")
         self.assertEqual(record["response_bytes"], len(raw))
         self.assertEqual(record["response_sha256"], hashlib.sha256(raw).hexdigest())
