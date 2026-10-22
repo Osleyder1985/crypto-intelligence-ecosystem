@@ -334,7 +334,7 @@ def _request(
     return None, raw, status_code, headers
 
 
-def _parse_rss(raw: bytes) -> list[dict]:
+def parse_sec_press_releases_rss(raw: bytes) -> list[dict]:
     root = ET.fromstring(raw)
     root_name = _local_name(root.tag)
     if root_name not in {"rss", "RDF"}:
@@ -431,7 +431,7 @@ def capture_sec_press_releases_rss(
     if response_result is not None:
         return response_result
     try:
-        items = _parse_rss(raw or b"")
+        items = parse_sec_press_releases_rss(raw or b"")
     except (ET.ParseError, ValueError):
         result = _response_capture(
             FEED_CAPTURE_SCHEMA, state, timestamp, source["source_url"], status_code or 200, response_headers, raw or b"", "PARSE_ERROR",
