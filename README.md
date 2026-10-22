@@ -24,6 +24,10 @@ El sistema debe ayudar a responder, con evidencia y límites explícitos:
 6. **Sin ejecución implícita:** el alcance actual es de investigación pública Spot y evaluación; el envío de órdenes reales requiere una decisión, controles y verificación separados.
 7. **Gobernanza honesta:** trazabilidad o alineación documental con normas ISO/IEC no equivale a certificación ni conformidad evaluada externamente.
 
+## Flujo objetivo de evaluación por activo
+
+Al introducir un criptoactivo, el objetivo es generar un expediente histórico con movimientos relevantes y posibles detonantes sustentados por fuentes, zonas de soporte/resistencia y una evaluación explicable para **corto, medio y largo plazo**. Cada horizonte debe exponer escenarios, evidencia a favor/en contra, riesgos, invalidaciones e incertidumbre; la conclusión puede ser favorable, desfavorable o `INDETERMINATE`. La especificación verificable y sus criterios E2E están en [Issue #128](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/issues/128) y [la documentación del flujo](docs/engineering/issue-128-end-to-end-asset-research.md). Esto es el objetivo del producto, no una afirmación de que todas las capacidades estén implementadas.
+
 ## Alcance actual de ingeniería
 
 - Captura pública read-only de metadatos, libros Spot y volumen cotizado de 24 horas para un universo de exchanges documentado.
