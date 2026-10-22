@@ -4,6 +4,7 @@ import unittest
 from scripts.market_selection.provider_license_gate import (
     SCHEMA_VERSION,
     POLICY_VERSION,
+    SUPPORTED_USE_CASES,
     evaluate_artifact_use,
     evaluate_provider_use,
 )
