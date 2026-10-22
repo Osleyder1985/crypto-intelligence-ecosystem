@@ -1,0 +1,51 @@
+name: Multi-exchange Spot quote-volume probe
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    paths:
+      - "scripts/market_selection/capture_multi_exchange_spot_ticker_probe.py"
+      - "tests/market_selection/test_capture_multi_exchange_spot_ticker_probe.py"
+      - ".github/workflows/multi-exchange-spot-quote-volume-probe.yml"
+  workflow_dispatch:
+  schedule:
+    - cron: "13 */6 * * *"
+
+permissions:
+  contents: read
+
+jobs:
+  offline-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Run offline contract tests
+        run: python -m unittest discover -s tests/market_selection -p 'test_capture_multi_exchange_spot_ticker_probe.py' -v
+
+  live-public-capture:
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Capture public 24h Spot turnover
+        id: capture
+        continue-on-error: true
+        run: python -m scripts.market_selection.capture_multi_exchange_spot_ticker_probe
+      - name: Upload timestamped raw evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: multi-exchange-spot-quote-volume
+          path: artifacts/multi-exchange-spot-quote-volume.json
+          if-no-files-found: error
+          retention-days: 90
+      - name: Report capture status
+        if: steps.capture.outcome != 'success'
+        run: echo "Some provider ticker observations were unavailable or incomplete; the artifact preserves per-venue results."
