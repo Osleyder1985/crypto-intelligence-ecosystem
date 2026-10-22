@@ -54,14 +54,26 @@ def authorization_record(entry):
 
 
 class FakeResponse:
-    def __init__(self, raw, status=200, headers=None):
+    def __init__(self, raw, status=200, headers=None, error_after_bytes=None):
         self.raw = raw
         self.status = status
         self.headers = headers or {"Content-Type": "application/rss+xml", "ETag": '"fixture-etag"'}
         self.closed = False
+        self.offset = 0
+        self.error_after_bytes = error_after_bytes
 
-    def read(self):
-        return self.raw
+    def read(self, size=-1):
+        if self.error_after_bytes is not None and self.offset >= self.error_after_bytes:
+            raise OSError("synthetic mid-stream read error")
+        if self.offset >= len(self.raw):
+            return b""
+        limit = len(self.raw) if size is None or size < 0 else self.offset + size
+        if self.error_after_bytes is not None:
+            limit = min(limit, self.error_after_bytes)
+        end = min(limit, len(self.raw))
+        chunk = self.raw[self.offset:end]
+        self.offset = end
+        return chunk
 
     def close(self):
         self.closed = True
@@ -216,6 +228,23 @@ class SecPressReleaseConnectorTests(unittest.TestCase):
         self.assertEqual(result["capture_status"], "PASS")
         self.assertIsNone(item["published_at_utc"])
         self.assertEqual(item["timestamp_status"], "MISSING_PUBLISHED_AT")
+
+    def test_midstream_read_error_preserves_all_bytes_received_before_failure(self):
+        raw = rss_bytes()
+        cutoff = 100000
+        with self.approved_registry() as registry:
+            response = FakeResponse(raw, error_after_bytes=cutoff)
+            result = capture_sec_press_releases_rss(
+                authorization_record(registry["sec_press_releases"]), self.user_agent, 5,
+                captured_at=self.captured_at, opener=Mock(return_value=response),
+            )
+        partial = base64.b64decode(result["raw_response_base64"])
+        self.assertEqual(result["capture_status"], "NETWORK_ERROR")
+        self.assertTrue(result["capture_truncated"])
+        self.assertEqual(len(partial), cutoff)
+        self.assertEqual(result["raw_response_bytes"], cutoff)
+        self.assertEqual(result["raw_response_sha256"], hashlib.sha256(partial).hexdigest())
+        self.assertIn("NETWORK_RESPONSE_READ_FAILED", result["reason_codes"])
 
     def test_malformed_xml_preserves_complete_body_and_reports_parse_error(self):
         raw = b"<rss><channel><item>unfinished"
