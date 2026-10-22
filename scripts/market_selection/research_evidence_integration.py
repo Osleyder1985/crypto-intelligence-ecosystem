@@ -14,6 +14,7 @@ from scripts.market_selection.external_event_evidence import assess_temporal_ass
 from scripts.market_selection.fundamental_onchain_contract import evaluate_observations
 from scripts.market_selection.methodology_contract import validate_methodology
 from scripts.market_selection.provider_license_gate import evaluate_artifact_use
+from scripts.market_selection.event_source_registry import get_source, source_entry_sha256, source_is_approved
 
 REPORT_SCHEMA = "crypto-asset-research-report-v2"
 BUNDLE_SCHEMA = "crypto-research-evidence-bundle-v1"
@@ -53,6 +54,9 @@ def enrich_research_report(
     provider_use = evaluate_artifact_use(report, "internal_analysis")
     if provider_use["decision"] != "ALLOW":
         raise PermissionError("evidence integration blocked before use: " + ",".join(provider_use["reason_codes"]))
+    provider_storage = evaluate_artifact_use(report, "persistent_storage")
+    if provider_storage["decision"] != "ALLOW":
+        raise PermissionError("evidence integration storage blocked before use: " + ",".join(provider_storage["reason_codes"]))
     if not isinstance(events, list):
         raise ValueError("events must be a list")
     if not isinstance(observations, list):
@@ -71,20 +75,53 @@ def enrich_research_report(
     seen_event_ids = set()
     for index, item in enumerate(events):
         item = _object(item, f"events[{index}]")
-        event = validate_event(item.get("event"))
+        event_record = _object(item.get("event"), f"events[{index}].event")
+        event_use = evaluate_artifact_use(event_record, "internal_analysis")
+        if event_use["decision"] != "ALLOW":
+            raise PermissionError(
+                f"event evidence blocked before use at events[{index}]: " + ",".join(event_use["reason_codes"])
+            )
+        event_storage = evaluate_artifact_use(event_record, "persistent_storage")
+        if event_storage["decision"] != "ALLOW":
+            raise PermissionError(
+                f"event evidence storage blocked before use at events[{index}]: " + ",".join(event_storage["reason_codes"])
+            )
+
+        source_id = event_record.get("source_id")
+        if not isinstance(source_id, str) or not source_id.strip():
+            raise PermissionError(f"event source registry id missing at events[{index}]")
+        try:
+            source_entry = get_source(source_id)
+        except (KeyError, ValueError) as exc:
+            raise PermissionError(f"event source is not registered at events[{index}]") from exc
+        if not source_is_approved(source_entry):
+            raise PermissionError(f"event source registry is not approved at events[{index}]")
+        registry_hash = source_entry_sha256(source_entry)
+        if (
+            event_record.get("source_registry_status") != "APPROVED"
+            or event_record.get("source_registry_entry_sha256") != registry_hash
+        ):
+            raise PermissionError(f"event source registry evidence is missing or stale at events[{index}]")
+
+        event = validate_event(event_record)
         event_id = event["event_id"]
         if event_id in seen_event_ids:
             raise ValueError(f"duplicate event_id in evidence bundle: {event_id}")
         seen_event_ids.add(event_id)
         window = _object(item.get("movement_window"), f"events[{index}].movement_window")
-        assessment = assess_temporal_association(
+        temporal_assessment = assess_temporal_association(
             event,
             movement_start=_timestamp(window.get("start"), f"events[{index}].movement_window.start"),
             movement_end=_timestamp(window.get("end"), f"events[{index}].movement_window.end"),
             evaluation_as_of=cutoff,
             target_entity=item.get("target_entity") or {},
         )
-        event_assessments.append(assessment)
+        event_assessments.append({
+            **temporal_assessment,
+            "source_use_assessment": event_use,
+            "source_storage_assessment": event_storage,
+            "source_registry_entry_sha256": registry_hash,
+        })
 
     fundamental = evaluate_observations(
         observations,
@@ -106,6 +143,7 @@ def enrich_research_report(
     }
     output["fundamental_onchain_assessment"] = fundamental
     output["downstream_use_assessment"] = provider_use
+    output["downstream_storage_assessment"] = provider_storage
     output["methodology_assessment"] = {
         "schema_version": validated_methodology["schema_version"],
         "methodology_id": validated_methodology["methodology_id"],
@@ -137,7 +175,7 @@ def enrich_research_report(
         output["horizons"][horizon]["reason_codes"] = reasons
     output["limitations"] = list(output.get("limitations", []))
     output["limitations"].append(
-        "External events and fundamental/on-chain observations are contract-validated supplied inputs; this command does not fetch sources or prove their authority, completeness, licensing, or predictive value."
+        "External events must pass source-registry approval plus provider authorization for internal analysis and persistent storage. These controls enforce recorded policy but do not prove legal authority, source completeness, or predictive value."
     )
     output["limitations"].append(
         "Methodology contract validity is not a backtest result; no predictive performance, calibrated confidence, or investment recommendation is claimed."
