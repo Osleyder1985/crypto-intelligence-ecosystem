@@ -3,7 +3,7 @@
 - **Estado:** primer contrato técnico propuesto; no es una recomendación de inversión ni el cierre de Issue #128.
 - **Implementación:** `scripts/market_selection/research_report.py`, `scripts/market_selection/canonical_asset_identity.py`.
 - **Pruebas:** `tests/market_selection/test_research_report.py`, `tests/market_selection/test_canonical_asset_identity.py`.
-- **Schema de salida:** `crypto-asset-research-report-v1`.
+- **Schema de salida:** `crypto-asset-research-report-v2`.
 - **Entrada:** artefacto preservado `binance-spot-ohlcv-capture-v1` y archivo de configuración de metodología con parámetros explícitos.
 
 ## Qué integra
