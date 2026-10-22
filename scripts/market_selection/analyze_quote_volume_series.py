@@ -5,8 +5,7 @@ import argparse
 import base64
 import hashlib
 import json
-import math
-from datetime import datetime
+from datetime import datetime, timezone
 from decimal import Decimal, InvalidOperation
 from pathlib import Path
 
@@ -180,7 +179,7 @@ def analyze_artifacts(paths) -> dict:
     return {
         "schema_version": OUTPUT_SCHEMA_VERSION,
         "analysis_status": "DESCRIPTIVE_ONLY",
-        "created_at_utc": datetime.now().astimezone().isoformat(),
+        "created_at_utc": datetime.now(timezone.utc).isoformat(timespec="milliseconds").replace("+00:00", "Z"),
         "method": "Group repeated captures by exact exchange/asset/native symbol; verify preserved response bytes, hash and size; compare only valid samples with matching unit and documented field semantics.",
         "input_artifacts": [{"name": item["path"], "created_at_utc": item["created_at_utc"], "sha256": item["sha256"], "record_count": len(item["records"])} for item in loaded],
         "input_record_count": input_record_count,
