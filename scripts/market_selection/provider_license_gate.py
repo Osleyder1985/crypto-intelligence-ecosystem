@@ -90,6 +90,9 @@ def evaluate_provider_use(provider_id: str, use_case: str, authorization_record:
             raise ValueError("written_authorization_sha256 must be 64 hexadecimal characters")
     if provider_id in {"binance_spot_account_data", "pionex_spot_account_data"}:
         consent_ref = _text(record.get("account_owner_consent_ref"), "authorization_record.account_owner_consent_ref")
+        consent_hash = _text(record.get("account_owner_consent_sha256"), "authorization_record.account_owner_consent_sha256")
+        if not _SHA256.fullmatch(consent_hash):
+            raise ValueError("authorization_record.account_owner_consent_sha256 must be 64 hexadecimal characters")
         if record.get("credential_scope_verified") is not True:
             raise ValueError("authorization_record.credential_scope_verified must be true for private account data")
     if provider_id == "coingecko_api":
@@ -124,6 +127,7 @@ def evaluate_provider_use(provider_id: str, use_case: str, authorization_record:
         authorization_evidence["written_authorization_sha256"] = written_hash.lower()
     if provider_id in {"binance_spot_account_data", "pionex_spot_account_data"}:
         authorization_evidence["account_owner_consent_ref"] = consent_ref
+        authorization_evidence["account_owner_consent_sha256"] = consent_hash.lower()
         authorization_evidence["credential_scope_verified"] = True
     return {"schema_version":"crypto-provider-use-assessment-v1","provider_id":provider_id,
             "use_case":use_case,"decision":"ALLOW",
