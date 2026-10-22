@@ -3,7 +3,7 @@ from unittest.mock import patch
 
 from scripts.market_selection.capture_binance_spot_ohlcv import (
     BASE_URL, build_url, expected_open_times, is_interval_boundary,
-    next_open_time, normalize_kline, validate_window,
+    next_open_time, normalize_kline, validate_window, capture_history,
 )
 
 
@@ -78,6 +78,35 @@ class BinanceSpotOHLCVTests(unittest.TestCase):
         self.assertEqual(result["pages"][0]["normalization_status"], "FAIL")
         self.assertIn("kline timestamps", result["pages"][0]["normalization_error"])
         self.assertEqual(result["pages"][0]["response_sha256"], hashlib.sha256(raw).hexdigest())
+
+
+    def test_non_test_use_without_authorization_is_blocked_before_network(self):
+        with patch("scripts.market_selection.capture_binance_spot_ohlcv.request_page") as network:
+            result = capture_history("BTCUSDT", "1m", 0, 60_000, use_case="internal_analysis")
+        network.assert_not_called()
+        self.assertEqual(result["overall_status"], "BLOCKED")
+        self.assertEqual(result["provider_use_assessment"]["decision"], "BLOCK")
+        self.assertIn("AUTHORIZATION_RECORD_MISSING", result["provider_use_assessment"]["reason_codes"])
+        self.assertEqual(result["pages"], [])
+
+    def test_invalid_authorization_record_is_blocked_before_network(self):
+        with patch("scripts.market_selection.capture_binance_spot_ohlcv.request_page") as network:
+            result = capture_history("BTCUSDT", "1m", 0, 60_000, use_case="internal_analysis",
+                                    authorization_record={"schema_version": "wrong"})
+        network.assert_not_called()
+        self.assertEqual(result["overall_status"], "BLOCKED")
+        self.assertIn("AUTHORIZATION_RECORD_INVALID", result["provider_use_assessment"]["reason_codes"])
+
+    def test_baseline_permission_is_explicitly_limited_to_technical_test(self):
+        page = {
+            "capture_status": "PASS", "normalization_status": "PASS", "parsed_json": [],
+            "captured_at_utc": "2026-10-22T00:00:01Z",
+        }
+        with patch("scripts.market_selection.capture_binance_spot_ohlcv.request_page", return_value=page) as network:
+            result = capture_history("BTCUSDT", "1m", 0, 60_000, use_case="live_technical_test")
+        network.assert_called_once()
+        self.assertEqual(result["provider_use_assessment"]["decision"], "ALLOW")
+        self.assertEqual(result["provider_use_assessment"]["authorization_evidence_status"], "NOT_A_COMMERCIAL_LICENSE")
 
     def test_url_uses_official_host_and_exclusive_end(self):
         url = build_url("BTCUSDT", "1m", 0, 180_000, 60_000)

@@ -9,6 +9,23 @@ from scripts.market_selection.capture_pionex_spot_ohlcv import (
 )
 
 
+
+TEST_PIONEX_AUTHORIZATION = {
+    "schema_version": "crypto-provider-authorization-v1",
+    "provider_id": "pionex_spot_market_data",
+    "status": "APPROVED",
+    "authorized_use_cases": ["live_technical_test"],
+    "terms_url": "https://www.pionex.com/",
+    "terms_sha256": "a" * 64,
+    "reviewed_at": "2026-10-22T12:00:00Z",
+    "reviewed_by": "synthetic-test-fixture",
+}
+
+
+def capture_history_with_test_authorization(*args, **kwargs):
+    return capture_history(*args, authorization_record=TEST_PIONEX_AUTHORIZATION, **kwargs)
+
+
 def make_page(rows, *, status=200, payload=None, captured_at="2026-10-22T16:00:00.000Z"):
     if payload is None:
         payload = {"result": True, "data": {"klines": rows}, "timestamp": 1792684800000}
@@ -40,6 +57,21 @@ class FakeResponse:
 
 
 class PionexOhlcvCaptureTests(unittest.TestCase):
+
+    def test_missing_authorization_blocks_before_network(self):
+        out = capture_history("BTC_USDT", "1M")
+        self.assertEqual(out["overall_status"], "BLOCKED")
+        self.assertEqual(out["provider_use_assessment"]["decision"], "BLOCK")
+        self.assertIn("AUTHORIZATION_RECORD_MISSING", out["provider_use_assessment"]["reason_codes"])
+        self.assertEqual(out["pages"], [])
+        self.assertEqual(out["coverage"]["pages_captured"], 0)
+
+    def test_invalid_authorization_blocks_before_network(self):
+        out = capture_history("BTC_USDT", "1M", authorization_record={"invalid": True})
+        self.assertEqual(out["overall_status"], "BLOCKED")
+        self.assertIn("AUTHORIZATION_RECORD_INVALID", out["provider_use_assessment"]["reason_codes"])
+        self.assertEqual(out["pages"], [])
+
     def test_build_url_uses_documented_limit_and_end_time_without_start_time(self):
         query = parse_qs(urlparse(build_url("BTC_USDT", "1M", 239999)).query)
         self.assertEqual(query["symbol"], ["BTC_USDT"])
@@ -60,7 +92,7 @@ class PionexOhlcvCaptureTests(unittest.TestCase):
             urls.append(url)
             return pages.pop(0)
 
-        out = capture_history("BTC_USDT", "1M", page_fetcher=fetch)
+        out = capture_history_with_test_authorization("BTC_USDT", "1M", page_fetcher=fetch)
         self.assertEqual(out["overall_status"], "PASS")
         self.assertEqual(out["coverage"]["stop_reason"], "NO_MORE_RECORDS")
         self.assertEqual(out["coverage"]["pages_captured"], 3)
@@ -75,14 +107,14 @@ class PionexOhlcvCaptureTests(unittest.TestCase):
 
     def test_response_after_requested_end_time_is_partial(self):
         page = make_page([kline(240000)])
-        out = capture_history("BTC_USDT", "1M", end_time_ms=239999, page_fetcher=lambda _: page)
+        out = capture_history_with_test_authorization("BTC_USDT", "1M", end_time_ms=239999, page_fetcher=lambda _: page)
         self.assertEqual(out["overall_status"], "PARTIAL")
         self.assertEqual(out["coverage"]["stop_reason"], "END_TIME_BOUNDARY_VIOLATION")
         self.assertEqual(out["coverage"]["end_time_boundary_violations"][0]["returned_source_time_ms"], 240000)
 
     def test_provider_history_limit_is_preserved_as_partial(self):
         error = make_page([], status=400, payload={"result": False, "code": "MARKET_INVALID_TIME", "message": "history limit"})
-        out = capture_history("BTC_USDT", "1D", page_fetcher=lambda _: error)
+        out = capture_history_with_test_authorization("BTC_USDT", "1D", page_fetcher=lambda _: error)
         self.assertEqual(out["overall_status"], "PARTIAL")
         self.assertEqual(out["coverage"]["stop_reason"], "PROVIDER_HISTORY_LIMIT_REACHED")
         self.assertTrue(out["coverage"]["provider_history_limit_reached"])
@@ -95,7 +127,7 @@ class PionexOhlcvCaptureTests(unittest.TestCase):
             make_page([kline(180000), kline(240000)]),
             make_page([]),
         ]
-        out = capture_history("BTC_USDT", "1M", page_fetcher=lambda _: pages.pop(0))
+        out = capture_history_with_test_authorization("BTC_USDT", "1M", page_fetcher=lambda _: pages.pop(0))
         self.assertEqual(out["overall_status"], "PARTIAL")
         self.assertEqual(out["coverage"]["duplicate_source_time_ms"], [240000])
         self.assertEqual(out["coverage"]["captured_candle_rows"], 4)
@@ -103,7 +135,7 @@ class PionexOhlcvCaptureTests(unittest.TestCase):
 
     def test_pagination_no_progress_does_not_loop_forever(self):
         pages = [make_page([kline(240000), kline(300000)]), make_page([kline(240000), kline(300000)])]
-        out = capture_history("BTC_USDT", "1M", page_fetcher=lambda _: pages.pop(0))
+        out = capture_history_with_test_authorization("BTC_USDT", "1M", page_fetcher=lambda _: pages.pop(0))
         self.assertEqual(out["overall_status"], "PARTIAL")
         self.assertEqual(out["coverage"]["stop_reason"], "PAGINATION_NO_PROGRESS")
         self.assertEqual(out["coverage"]["pagination_progress_status"], "FAIL")
@@ -136,7 +168,7 @@ class PionexOhlcvCaptureTests(unittest.TestCase):
 
     def test_unsupported_interval_is_rejected_before_network(self):
         with self.assertRaisesRegex(ValueError, "unsupported Pionex interval"):
-            capture_history("BTC_USDT", "1m", page_fetcher=lambda _: self.fail("network must not be called"))
+            capture_history_with_test_authorization("BTC_USDT", "1m", page_fetcher=lambda _: self.fail("network must not be called"))
 
 
 if __name__ == "__main__":

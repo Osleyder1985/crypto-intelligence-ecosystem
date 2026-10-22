@@ -31,7 +31,36 @@ class FakeResponse:
         return chunk
 
 
+TEST_PIONEX_AUTHORIZATION = {
+    "schema_version": "crypto-provider-authorization-v1",
+    "provider_id": "pionex_spot_market_data",
+    "status": "APPROVED",
+    "authorized_use_cases": ["live_technical_test"],
+    "terms_url": "https://www.pionex.com/",
+    "terms_sha256": "a" * 64,
+    "reviewed_at": "2026-10-22T12:00:00Z",
+    "reviewed_by": "synthetic-test-fixture",
+}
+
+
 class BatchCaptureTests(unittest.TestCase):
+
+    def test_pionex_without_authorization_is_blocked_before_network_request(self):
+        with patch("scripts.market_selection.capture_public_market_batch.urlopen") as network:
+            record = request_capture("BTC_USDT", "pionex", "https://example.invalid")
+        network.assert_not_called()
+        self.assertEqual(record["capture_status"], "BLOCKED")
+        self.assertEqual(record["provider_use_assessment"]["decision"], "BLOCK")
+        self.assertIn("AUTHORIZATION_RECORD_MISSING", record["provider_use_assessment"]["reason_codes"])
+
+    def test_invalid_authorization_is_blocked_before_network_request(self):
+        with patch("scripts.market_selection.capture_public_market_batch.urlopen") as network:
+            record = request_capture("BTC_USDT", "pionex", "https://example.invalid",
+                                     authorization_records={"pionex_spot_market_data": {"invalid": True}})
+        network.assert_not_called()
+        self.assertEqual(record["capture_status"], "BLOCKED")
+        self.assertIn("AUTHORIZATION_RECORD_INVALID", record["provider_use_assessment"]["reason_codes"])
+
     def test_default_universe_is_explicit_and_small(self):
         self.assertEqual([m[0] for m in DEFAULT_MARKETS], ["BTC_USDT", "ETH_USDT", "SOL_USDT"])
         self.assertEqual(len(build_requests(DEFAULT_MARKETS)), 12)
@@ -48,7 +77,7 @@ class BatchCaptureTests(unittest.TestCase):
 
     def test_capture_preserves_raw_bytes_and_hash(self):
         with patch("scripts.market_selection.capture_public_market_batch.urlopen", return_value=FakeResponse({"result": True})):
-            record = request_capture("BTC_USDT", "pionex", "https://example.invalid")
+            record = request_capture("BTC_USDT", "pionex", "https://example.invalid", authorization_records={"pionex_spot_market_data": TEST_PIONEX_AUTHORIZATION})
         raw = base64.b64decode(record["response_base64"], validate=True)
         self.assertEqual(record["capture_status"], "PASS")
         self.assertEqual(record["response_bytes"], len(raw))
@@ -65,7 +94,7 @@ class BatchCaptureTests(unittest.TestCase):
         payload = {"data": "x" * (5 * 1024 * 1024 + 128)}
         response = FakeResponse(payload)
         with patch("scripts.market_selection.capture_public_market_batch.urlopen", return_value=response):
-            record = request_capture("BTC_USDT", "pionex", "https://example.invalid")
+            record = request_capture("BTC_USDT", "pionex", "https://example.invalid", authorization_records={"pionex_spot_market_data": TEST_PIONEX_AUTHORIZATION})
         raw = base64.b64decode(record["response_base64"], validate=True)
         self.assertGreater(len(raw), 5 * 1024 * 1024)
         self.assertGreater(len(response.read_calls), 1)
@@ -79,7 +108,7 @@ class BatchCaptureTests(unittest.TestCase):
     def test_pionex_response_timestamp_is_normalized_separately_from_market_event_time(self):
         payload = {"result": True, "timestamp": 1792610282496, "data": {"symbols": []}}
         with patch("scripts.market_selection.capture_public_market_batch.urlopen", return_value=FakeResponse(payload)):
-            record = request_capture("BTC_USDT", "pionex", "https://example.invalid")
+            record = request_capture("BTC_USDT", "pionex", "https://example.invalid", authorization_records={"pionex_spot_market_data": TEST_PIONEX_AUTHORIZATION})
         self.assertEqual(record["capture_status"], "PASS")
         self.assertEqual(record["source_response_at_utc"], "2026-10-21T19:18:02.496Z")
         self.assertEqual(record["source_response_timestamp_status"], "VALID")
@@ -90,7 +119,7 @@ class BatchCaptureTests(unittest.TestCase):
     def test_pionex_invalid_response_timestamp_is_not_normalized(self):
         payload = {"result": True, "timestamp": "not-a-timestamp", "data": {"symbols": []}}
         with patch("scripts.market_selection.capture_public_market_batch.urlopen", return_value=FakeResponse(payload)):
-            record = request_capture("BTC_USDT", "pionex", "https://example.invalid")
+            record = request_capture("BTC_USDT", "pionex", "https://example.invalid", authorization_records={"pionex_spot_market_data": TEST_PIONEX_AUTHORIZATION})
         self.assertEqual(record["capture_status"], "PASS")
         self.assertIsNone(record["source_response_at_utc"])
         self.assertEqual(record["source_response_timestamp_status"], "INVALID")
@@ -103,7 +132,7 @@ class BatchCaptureTests(unittest.TestCase):
             "data": {"updateTime": 1792610399123, "bids": [["100", "2"]], "asks": [["101", "3"]]},
         }
         with patch("scripts.market_selection.capture_public_market_batch.urlopen", return_value=FakeResponse(payload)):
-            record = request_capture("BTC_USDT", "pionex_depth", "https://example.invalid")
+            record = request_capture("BTC_USDT", "pionex_depth", "https://example.invalid", authorization_records={"pionex_spot_market_data": TEST_PIONEX_AUTHORIZATION})
         self.assertEqual(record["capture_status"], "PASS")
         self.assertEqual(record["source_market_update_at_utc"], "2026-10-21T19:19:59.123Z")
         self.assertEqual(record["source_market_update_timestamp_status"], "VALID")
@@ -115,7 +144,7 @@ class BatchCaptureTests(unittest.TestCase):
     def test_pionex_depth_missing_update_time_stays_missing(self):
         payload = {"result": True, "timestamp": 1792610400000, "data": {"bids": [], "asks": []}}
         with patch("scripts.market_selection.capture_public_market_batch.urlopen", return_value=FakeResponse(payload)):
-            record = request_capture("BTC_USDT", "pionex_depth", "https://example.invalid")
+            record = request_capture("BTC_USDT", "pionex_depth", "https://example.invalid", authorization_records={"pionex_spot_market_data": TEST_PIONEX_AUTHORIZATION})
         self.assertEqual(record["capture_status"], "PASS")
         self.assertIsNone(record["source_market_update_at_utc"])
         self.assertEqual(record["source_market_update_timestamp_status"], "MISSING")
@@ -141,11 +170,24 @@ class BatchCaptureTests(unittest.TestCase):
     def test_batch_schema_and_expected_record_count(self):
         payloads = [FakeResponse({"ok": True}) for _ in range(12)]
         with patch("scripts.market_selection.capture_public_market_batch.urlopen", side_effect=payloads):
-            artifact = capture_batch()
+            artifact = capture_batch(authorization_records={"pionex_spot_market_data": TEST_PIONEX_AUTHORIZATION})
         self.assertEqual(artifact["schema_version"], SCHEMA_VERSION)
         self.assertEqual(artifact["expected_record_count"], 12)
         self.assertEqual(artifact["actual_record_count"], 12)
         self.assertEqual(artifact["overall_status"], "PASS")
+
+
+    def test_batch_blocks_unlicensed_provider_calls_before_network(self):
+        # Binance technical-test calls are permitted by baseline; Pionex remains blocked.
+        payloads = [FakeResponse({"ok": True}) for _ in range(6)]
+        with patch("scripts.market_selection.capture_public_market_batch.urlopen", side_effect=payloads) as network:
+            artifact = capture_batch()
+        self.assertEqual(network.call_count, 6)
+        pionex_records = [r for r in artifact["records"] if str(r["provider"]).startswith("pionex")]
+        self.assertEqual(len(pionex_records), 6)
+        self.assertTrue(all(r["capture_status"] == "BLOCKED" for r in pionex_records))
+        self.assertTrue(all(r["provider_use_assessment"]["decision"] == "BLOCK" for r in pionex_records))
+        self.assertEqual(artifact["overall_status"], "FAIL")
 
     def test_empty_or_duplicate_market_universe_rejected(self):
         with self.assertRaises(ValueError):

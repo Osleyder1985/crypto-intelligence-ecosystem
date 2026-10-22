@@ -1,28 +1,18 @@
 name: Multi-pair public market capture (read-only)
-on:
-  pull_request:
-  workflow_dispatch:
+
+on: [pull_request, workflow_dispatch]
+
 permissions:
   contents: read
+
 jobs:
-  scope:
-    runs-on: ubuntu-latest
-    outputs:
-      applicable: ${{ steps.detect.outputs.applicable }}
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - id: detect
-        run: |
-          if [ -f scripts/market_selection/capture_public_market_batch.py ] && [ -f tests/market_selection/test_evaluate_capture_batch.py ] && [ -f tests/market_selection/test_capture_public_market_batch.py ]; then echo "applicable=true" >> "$GITHUB_OUTPUT"; else echo "applicable=false" >> "$GITHUB_OUTPUT"; fi
   offline-tests:
     name: Test multi-pair capture and evaluation offline
-    needs: scope
-    if: needs.scope.outputs.applicable == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 3
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
         with:
           python-version: "3.12"
       - run: python -m unittest discover -s tests/market_selection -p "test_evaluate_capture_batch.py" -v
@@ -30,113 +20,36 @@ jobs:
       - run: python -m unittest discover -s tests/market_selection -p "test_issue18_live_freshness.py" -v
       - run: python -m unittest discover -s tests/market_selection -p "test_minimum_common_notional_scenario.py" -v
       - run: python -m unittest discover -s tests/market_selection -p "test_capture_pionex_fill_fee_evidence.py" -v
+
   capture-offline:
     name: Test multi-pair capture offline
-    needs: scope
-    if: needs.scope.outputs.applicable == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 3
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
         with:
           python-version: "3.12"
       - run: python -m unittest discover -s tests/market_selection -p "test_capture_public_market_batch.py" -v
+
   live-capture:
     name: Capture and evaluate bounded public market universe
-    needs: scope
-    if: needs.scope.outputs.applicable == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 4
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
         with:
           python-version: "3.12"
-      - run: python scripts/market_selection/capture_public_market_batch.py
-      - name: Validate batch structure
+      - name: Capture only providers allowed by policy
+        continue-on-error: true
+        run: python scripts/market_selection/capture_public_market_batch.py
+      - name: Assert fail-closed provider decisions
         run: |
-          python - <<'PY'
-          import json
-          from pathlib import Path
-          artifact = json.loads(Path("artifacts/public-market-capture-batch.json").read_text(encoding="utf-8"))
-          assert artifact["schema_version"] == "public-market-capture-batch-v1"
-          assert artifact["overall_status"] == "PASS"
-          assert artifact["expected_record_count"] == artifact["actual_record_count"] == 12
-          assert len(artifact["universe"]) == 3
-          assert len({item["pionex_symbol"] for item in artifact["universe"]}) == 3
-          depth_records = [record for record in artifact["records"] if record["provider"] == "pionex_depth"]
-          assert len(depth_records) == 3
-          assert all(record["source_market_update_timestamp_status"] == "VALID" for record in depth_records)
-          assert all(record["source_market_update_at_utc"] for record in depth_records)
-          assert all(record["source_response_timestamp_status"] == "VALID" for record in depth_records)
-          assert all(record["source_response_at_utc"] for record in depth_records)
-          for record in depth_records:
-              data = record["parsed_json"]["data"]
-              assert 0 < len(data["bids"]) <= 1000
-              assert 0 < len(data["asks"]) <= 1000
-          binance_depth_records = [record for record in artifact["records"] if record["provider"] == "binance_depth"]
-          assert len(binance_depth_records) == 3
-          for record in binance_depth_records:
-              assert 0 < len(record["parsed_json"]["bids"]) <= 5000
-              assert 0 < len(record["parsed_json"]["asks"]) <= 5000
-          PY
-      - name: Evaluate batch twice and compare outputs without an unapproved scenario
-        run: |
-          set -euo pipefail
-          python scripts/market_selection/evaluate_capture_batch.py --artifact artifacts/public-market-capture-batch.json --output artifacts/batch-evaluation-1.json
-          python scripts/market_selection/evaluate_capture_batch.py --artifact artifacts/public-market-capture-batch.json --output artifacts/batch-evaluation-2.json
-          cmp --silent artifacts/batch-evaluation-1.json artifacts/batch-evaluation-2.json
-          python scripts/market_selection/analyze_minimum_common_notional_scenario.py --artifact artifacts/public-market-capture-batch.json --output artifacts/minimum-common-notional-1.json
-          python scripts/market_selection/analyze_minimum_common_notional_scenario.py --artifact artifacts/public-market-capture-batch.json --output artifacts/minimum-common-notional-2.json
-          cmp --silent artifacts/minimum-common-notional-1.json artifacts/minimum-common-notional-2.json
-          python scripts/market_selection/analyze_depth_cost_curves.py --artifact artifacts/public-market-capture-batch.json --output artifacts/depth-cost-curves-1.json
-          python scripts/market_selection/analyze_depth_cost_curves.py --artifact artifacts/public-market-capture-batch.json --output artifacts/depth-cost-curves-2.json
-          cmp --silent artifacts/depth-cost-curves-1.json artifacts/depth-cost-curves-2.json
-          python - <<'PY'
-          import json
-          from pathlib import Path
-          result = json.loads(Path("artifacts/batch-evaluation-1.json").read_text(encoding="utf-8"))
-          assert result["markets_evaluated"] == 3
-          assert result["decision_status"] == "INDETERMINATE"
-          assert result["orders_submitted"] is False
-          assert result["network_requests_made"] is False
-          assert result["config_approved"] is False
-          assert all(m["dimension_status"]["capture_integrity"] == "PASS" for m in result["markets"])
-          assert all(m["dimension_status"]["source_freshness"] == "INDETERMINATE" for m in result["markets"])
-          assert all(m["dimension_status"]["fees"] == "INDETERMINATE" for m in result["markets"])
-          scenario = json.loads(Path("artifacts/minimum-common-notional-1.json").read_text(encoding="utf-8"))
-          assert scenario["schema_version"] == "minimum-common-notional-reference-v1"
-          assert scenario["decision_status"] == "INDETERMINATE"
-          assert len(scenario["results"]) == 3
-          assert all(item["orders_submitted"] is False for item in scenario["results"])
-          assert all(item["scenario_status"] == "INDETERMINATE" for item in scenario["results"])
-          assert all(item["constraints"]["pionex_minimums_satisfied"] is None for item in scenario["results"])
-          assert all(item["withdrawal_cost_included"] is False for item in scenario["results"])
-          assert all(item["pionex"]["static_snapshot_round_trip_cost_bps_vs_buy_notional"] is not None for item in scenario["results"])
-          assert all(item["binance"]["static_snapshot_round_trip_cost_bps_vs_buy_notional"] is not None for item in scenario["results"])
-          assert all(item["account_effective_fee_verified"] is False for item in scenario["results"])
-          assert all(item["pionex"]["public_fee_reference"]["observed_at_utc"] == "2026-10-22" for item in scenario["results"])
-          assert all(item["binance"]["public_fee_reference"]["observed_at_utc"] == "2026-10-22" for item in scenario["results"])
-          curves = json.loads(Path("artifacts/depth-cost-curves-1.json").read_text(encoding="utf-8"))
-          assert curves["schema_version"] == "public-depth-cost-curves-v1"
-          assert curves["decision_status"] == "INDETERMINATE"
-          assert len(curves["books"]) == 6
-          assert all(book["fee_cost_included"] is False for book in curves["books"])
-          assert all(book["order_size_selected"] is False for book in curves["books"])
-          assert all(book["public_fee_reference_overlay"]["effective_account_fee_verified"] is False for book in curves["books"])
-          assert all(book["symbol_constraints"]["status"] == "PASS" for book in curves["books"])
-          assert all(book["order_size_eligibility"] == "INDETERMINATE" for book in curves["books"])
-          assert all("MARKET_LOT_SIZE" in book["symbol_constraints"]["filter_types"] for book in curves["books"] if book["venue"] == "binance")
-          assert all("minTradeSize" in book["symbol_constraints"]["fields"] for book in curves["books"] if book["venue"] == "pionex")
-          assert all(book["public_fee_reference_overlay"]["observed_at_utc"] == "2026-10-22" for book in curves["books"])
-          assert all(point["slippage_plus_public_fee_reference_bps_per_fill"] >= point["slippage_bps_vs_mid"] for book in curves["books"] for side in ("buy_consuming_asks", "sell_consuming_bids") for point in book["execution_cost_curve"][side])
-          assert all(len(book["execution_cost_curve"]["buy_consuming_asks"]) == book["levels_returned"]["asks"] for book in curves["books"])
-          assert all(len(book["execution_cost_curve"]["sell_consuming_bids"]) == book["levels_returned"]["bids"] for book in curves["books"])
-          PY
-      - name: Upload capture and evaluation evidence
+          python -c 'import json; from pathlib import Path; a=json.loads(Path("artifacts/public-market-capture-batch.json").read_text()); assert a["schema_version"] == "public-market-capture-batch-v1"; assert a["overall_status"] == "FAIL"; assert len(a["records"]) == 12; p=[r for r in a["records"] if str(r["provider"]).startswith("pionex")]; b=[r for r in a["records"] if str(r["provider"]).startswith("binance")]; assert len(p) == 6 and all(r["capture_status"] == "BLOCKED" and r["provider_use_assessment"]["decision"] == "BLOCK" and r["http_status"] is None for r in p); assert len(b) == 6 and all(r["provider_use_assessment"]["decision"] == "ALLOW" for r in b); print("Pionex blocked before network; Binance allowed only for technical test.")'
+      - name: Preserve authorization audit artifact
         if: always()
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
           name: public-market-capture-batch-${{ github.run_id }}-${{ github.run_attempt }}
           path: artifacts/

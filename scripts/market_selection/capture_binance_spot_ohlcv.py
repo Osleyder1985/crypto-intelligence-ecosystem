@@ -12,6 +12,11 @@ from urllib.error import HTTPError, URLError
 from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 
+try:
+    from scripts.market_selection.provider_license_gate import evaluate_provider_use, SUPPORTED_USE_CASES
+except ModuleNotFoundError:  # Direct script execution places this directory, not the repo root, on sys.path.
+    from provider_license_gate import evaluate_provider_use, SUPPORTED_USE_CASES
+
 BASE_URL = "https://data-api.binance.vision/api/v3/klines"
 TIMEOUT_SECONDS = 15
 READ_CHUNK_BYTES = 64 * 1024
@@ -199,11 +204,36 @@ def request_page(url: str) -> dict:
     return record
 
 
-def capture_history(symbol: str, interval: str, start_time_ms: int, end_time_ms_exclusive: int) -> dict:
+def capture_history(symbol: str, interval: str, start_time_ms: int, end_time_ms_exclusive: int, *, use_case: str = "live_technical_test", authorization_record: dict | None = None) -> dict:
     if not isinstance(symbol, str) or not symbol or symbol.strip() != symbol:
         raise ValueError("symbol must be a non-empty native Binance symbol")
     symbol = symbol.upper()
     validate_window(start_time_ms, end_time_ms_exclusive, interval)
+    try:
+        assessment = evaluate_provider_use("binance_spot_market_data", use_case, authorization_record)
+    except (TypeError, ValueError) as exc:
+        assessment = {
+            "schema_version": "crypto-provider-use-assessment-v1",
+            "provider_id": "binance_spot_market_data",
+            "use_case": use_case,
+            "decision": "BLOCK",
+            "reason_codes": ["AUTHORIZATION_RECORD_INVALID"],
+            "authorization_evidence_status": "INVALID",
+            "validation_error": str(exc),
+        }
+    if assessment["decision"] != "ALLOW":
+        return {
+            "schema_version": SCHEMA_VERSION,
+            "overall_status": "BLOCKED",
+            "market": {"exchange": "binance", "market_type": "SPOT", "symbol_native": symbol, "interval": interval},
+            "window": {"start_time_ms_inclusive": start_time_ms, "end_time_ms_exclusive": end_time_ms_exclusive,
+                       "timezone": "UTC", "boundary_policy": "half-open [start, end) aligned to candle boundaries"},
+            "source": BASE_URL, "requested_open_candle_count": len(expected_open_times(start_time_ms, end_time_ms_exclusive, interval)),
+            "captured_candle_count": 0, "missing_open_time_ms": expected_open_times(start_time_ms, end_time_ms_exclusive, interval),
+            "unexpected_open_time_ms": [], "pages": [], "candles": [],
+            "provider_use_assessment": assessment,
+            "limitations": ["Capture was blocked by provider-use authorization policy before any network request."],
+        }
     cursor = start_time_ms
     pages = []
     candles_by_open = {}
@@ -264,6 +294,7 @@ def capture_history(symbol: str, interval: str, start_time_ms: int, end_time_ms_
         "window": {"start_time_ms_inclusive": start_time_ms, "end_time_ms_exclusive": end_time_ms_exclusive,
                    "timezone": "UTC", "boundary_policy": "half-open [start, end) aligned to candle boundaries"},
         "source": BASE_URL,
+        "provider_use_assessment": assessment,
         "requested_open_candle_count": len(expected),
         "captured_candle_count": len(candles),
         "missing_open_time_ms": missing,
@@ -285,9 +316,19 @@ def main() -> int:
     parser.add_argument("--interval", required=True, choices=SUPPORTED_INTERVALS)
     parser.add_argument("--start-time-ms", required=True, type=int, help="inclusive UTC candle boundary in Unix milliseconds")
     parser.add_argument("--end-time-ms", required=True, type=int, help="exclusive UTC candle boundary in Unix milliseconds")
+    parser.add_argument("--use-case", choices=sorted(SUPPORTED_USE_CASES), default="live_technical_test",
+                        help="intended use of the provider data; non-test use requires an authorization record")
+    parser.add_argument("--authorization-record", help="JSON authorization record matching provider and exact use-case")
     parser.add_argument("--output", default="artifacts/binance-spot-ohlcv.json")
     args = parser.parse_args()
-    result = capture_history(args.symbol, args.interval, args.start_time_ms, args.end_time_ms)
+    authorization_record = None
+    if args.authorization_record:
+        try:
+            authorization_record = json.loads(Path(args.authorization_record).read_text(encoding="utf-8"))
+        except (OSError, UnicodeDecodeError, json.JSONDecodeError):
+            authorization_record = {"invalid_authorization_file": True}
+    result = capture_history(args.symbol, args.interval, args.start_time_ms, args.end_time_ms,
+                             use_case=args.use_case, authorization_record=authorization_record)
     path = Path(args.output)
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(result, ensure_ascii=False, indent=2, sort_keys=True) + "\n", encoding="utf-8")
@@ -296,7 +337,7 @@ def main() -> int:
         "market": result["market"], "requested_open_candle_count": result["requested_open_candle_count"],
         "captured_candle_count": result["captured_candle_count"],
         "missing_candle_count": len(result["missing_open_time_ms"]),
-        "page_count": len(result["pages"]), "orders_submitted": False,
+        "page_count": len(result["pages"]), "provider_use_assessment": result.get("provider_use_assessment"), "orders_submitted": False,
     }, ensure_ascii=False, indent=2))
     return 0 if result["overall_status"] == "PASS" else 1
 

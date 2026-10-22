@@ -15,6 +15,11 @@ from urllib.error import HTTPError, URLError
 from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 
+try:
+    from scripts.market_selection.provider_license_gate import evaluate_provider_use, SUPPORTED_USE_CASES
+except ModuleNotFoundError:  # Direct script execution places this directory, not the repo root, on sys.path.
+    from provider_license_gate import evaluate_provider_use, SUPPORTED_USE_CASES
+
 READ_CHUNK_BYTES = 64 * 1024  # Read buffer size only; not a response-size limit.
 TIMEOUT_SECONDS = 12
 BINANCE_DEPTH_LIMIT = 5000  # Official maximum for GET /api/v3/depth; request weight 250.
@@ -38,7 +43,7 @@ def now_utc() -> str:
     return datetime.now(timezone.utc).isoformat(timespec="milliseconds").replace("+00:00", "Z")
 
 
-def request_capture(provider: str, url: str) -> dict[str, object]:
+def request_capture(provider: str, url: str, *, use_case: str = "live_technical_test", authorization_records: dict | None = None) -> dict[str, object]:
     started = now_utc()
     record: dict[str, object] = {
         "provider": provider,
@@ -51,9 +56,26 @@ def request_capture(provider: str, url: str) -> dict[str, object]:
         "response_base64": None,
         "parsed_json": None,
         "capture_status": "FAIL",
+        "provider_use_assessment": None,
         "error_type": None,
         "error_message": None,
     }
+    provider_id = "pionex_spot_market_data" if provider == "pionex" else "binance_spot_market_data"
+    authorization_record = (authorization_records or {}).get(provider_id)
+    try:
+        assessment = evaluate_provider_use(provider_id, use_case, authorization_record)
+    except (TypeError, ValueError) as exc:
+        assessment = {
+            "schema_version": "crypto-provider-use-assessment-v1",
+            "provider_id": provider_id, "use_case": use_case, "decision": "BLOCK",
+            "reason_codes": ["AUTHORIZATION_RECORD_INVALID"],
+            "authorization_evidence_status": "INVALID", "validation_error": str(exc),
+        }
+    record["provider_use_assessment"] = assessment
+    if assessment["decision"] != "ALLOW":
+        record.update(capture_status="BLOCKED", error_type="ProviderUseBlocked",
+                      error_message=";".join(assessment["reason_codes"]))
+        return record
     request = Request(url, headers={"Accept": "application/json", "User-Agent": "crypto-intelligence-ecosystem-public-capture/0.1"})
     try:
         with urlopen(request, timeout=TIMEOUT_SECONDS) as response:
@@ -136,6 +158,21 @@ def request_capture(provider: str, url: str) -> dict[str, object]:
 
 
 def main() -> int:
+    import argparse
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--use-case", choices=sorted(SUPPORTED_USE_CASES), default="live_technical_test")
+    parser.add_argument("--authorization-records", help="JSON object mapping provider IDs to authorization records")
+    args = parser.parse_args()
+    authorization_records = {}
+    if args.authorization_records:
+        try:
+            loaded = json.loads(Path(args.authorization_records).read_text(encoding="utf-8"))
+            if isinstance(loaded, dict):
+                authorization_records = loaded
+            else:
+                authorization_records = {"__invalid_file__": loaded}
+        except (OSError, UnicodeDecodeError, json.JSONDecodeError):
+            authorization_records = {"__invalid_file__": {"invalid": True}}
     artifact_dir = Path("artifacts")
     artifact_dir.mkdir(parents=True, exist_ok=True)
     pionex_url = "https://api.pionex.com/api/v1/common/symbols?" + urlencode({"symbols": "BTC_USDT", "type": "SPOT"})
@@ -145,7 +182,7 @@ def main() -> int:
         ("binance_exchange_info", binance_base + "/exchangeInfo?" + urlencode({"symbol": "BTCUSDT"})),
         ("binance_depth", binance_base + "/depth?" + urlencode({"symbol": "BTCUSDT", "limit": BINANCE_DEPTH_LIMIT})),
     ]
-    records = [request_capture(provider, url) for provider, url in requests]
+    records = [request_capture(provider, url, use_case=args.use_case, authorization_records=authorization_records) for provider, url in requests]
     artifact = {
         "schema_version": "public-market-capture-v1",
         "created_at_utc": now_utc(),
@@ -165,7 +202,7 @@ def main() -> int:
         "artifact": str(path),
         "overall_status": artifact["overall_status"],
         "records": [
-            {key: item.get(key) for key in ("provider", "capture_status", "http_status", "captured_at_utc", "response_bytes", "response_sha256", "error_type", "error_message", "summary")}
+            {key: item.get(key) for key in ("provider", "capture_status", "http_status", "captured_at_utc", "response_bytes", "response_sha256", "provider_use_assessment", "error_type", "error_message", "summary")}
             for item in records
         ],
     }, ensure_ascii=False, indent=2))
