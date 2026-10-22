@@ -10,8 +10,21 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "scripts" / "market_selection"))
 
 import selector  # noqa: E402
+from scripts.market_selection.provider_license_gate import ASSESSMENT_SCHEMA_VERSION, POLICY_VERSION
 
 BASE_OBSERVATION = {
+    "provider_use_assessment": {
+        "schema_version": ASSESSMENT_SCHEMA_VERSION,
+        "policy_version": POLICY_VERSION,
+        "provider_id": "binance_spot_market_data",
+        "use_case": "internal_analysis",
+        "decision": "ALLOW",
+        "reason_codes": ["EXPLICIT_AUTHORIZATION_RECORD_VALIDATED"],
+        "authorization_evidence_status": "RECORD_VALIDATED_NOT_LEGAL_ADVICE",
+        "authorization": {"terms_url": "https://www.binance.com/en/terms", "terms_sha256": "a" * 64,
+                          "reviewed_at": "2026-10-22T00:00:00Z", "reviewed_by": "offline-test-fixture",
+                          "authorized_use_cases": ["internal_analysis"], "authorization_record_sha256": "b" * 64},
+    },
     "market_type": "spot",
     "availability_status": "confirmed",
     "source_timestamp_utc": "2026-10-20T03:00:00Z",
@@ -96,6 +109,13 @@ class SpotSelectorTests(unittest.TestCase):
         result = selector.evaluate_market(observation, BASE_CONFIG)
         self.assertEqual(result["decision_status"], "FAIL")
         self.assertEqual(result["dimension_status"]["market_type"], "FAIL")
+
+    def test_missing_provider_authorization_blocks_market_evaluation(self) -> None:
+        observation = dict(BASE_OBSERVATION)
+        observation.pop("provider_use_assessment")
+        result = selector.evaluate_market(observation, BASE_CONFIG)
+        self.assertEqual(result["decision_status"], "INDETERMINATE")
+        self.assertIn("PROVIDER_USE_ASSESSMENT_MISSING", result["provider_use_assessment"]["reason_codes"])
 
     def test_missing_threshold_never_defaults_to_pass(self) -> None:
         config = dict(BASE_CONFIG)
