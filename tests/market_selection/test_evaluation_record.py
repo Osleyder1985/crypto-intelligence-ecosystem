@@ -137,11 +137,11 @@ class EvaluationRecordTests(unittest.TestCase):
             build_evaluation_record(data, self.archive, self.records)
 
     def test_comparison_uses_zero_safe_relative_delta(self):
-        old = self.build()
+        old = self.build(results={"return_pct": 0, "risk": {"drawdown_pct": -1.2}})
         source2 = self.root / "source2.json"
         source2.write_text('{"rows":[0]}', encoding="utf-8")
         new = build_evaluation_record(manifest(source2, generated_at_utc="2026-10-22T13:00:00Z",
-            results={"return_pct": 0, "risk": {"drawdown_pct": -1.2}}), self.archive, self.root / "records2")
+            results={"return_pct": 2.5, "risk": {"drawdown_pct": -1.2}}), self.archive, self.root / "records2")
         result = compare_evaluation_records(old, new)
         metric = next(x for x in result["numeric_metric_deltas"] if x["metric"] == "return_pct")
         self.assertEqual(metric["relative_delta_pct"], None)
