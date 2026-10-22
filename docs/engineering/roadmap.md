@@ -30,11 +30,12 @@
 
 ## Plan inmediato
 
-1. Cerrar primero las brechas de identidad/calidad de datos de los Issues #16–#18 y completar sus pruebas adversariales antes de confiar en métricas spot.
-2. Corregir el validador de catálogo y sus pruebas de mutación; mantener trazabilidad explícita de requisitos, Issues y criterios de aceptación.
-3. Completar la matriz de fases/prioridades y las dependencias de los Issues #19–#21 sin declarar resuelta ninguna brecha por mera documentación.
-4. Resolver la línea base de gobernanza, responsables, licencias y decisiones pendientes con aprobación explícita del propietario.
-5. Solo después de disponer de evidencia y decisiones aprobadas, avanzar hacia PoC, verificación integral y preparación operativa.
+1. **Continuar Issue #7 — selección reproducible de mercados Spot.** Ya existen sondas públicas de libros para siete exchanges y una primera captura de volumen cotizado 24 h; ampliar la evidencia temporal y la cobertura antes de elegir ganadores o cerrar el Issue.
+2. **Desarrollar Issue #13 — motor de investigación cuantitativa.** Convertir capacidades requeridas (historial persistente, comparación, ranking, eventos, series multitemporales, libro y soportes/resistencias) en requisitos verificables, pruebas temporales anti-leakage y una primera línea base descriptiva.
+3. **Avanzar Issue #6 — plataforma central de datos.** Definir contratos canónicos versionados, procedencia, persistencia y API común para clientes; no duplicar lógica analítica por dispositivo.
+4. **Mantener Issue #19 como bloqueo de producción.** Preparar pruebas integrales, seguridad, rendimiento, restauración, alertas y rollback con evidencia ejecutada; CI verde no equivale a readiness.
+5. **Resolver gobernanza pendiente en #11/#20/#21 y arquitectura en #8–#10.** Documentar propuestas y evidencias, pero reservar al propietario las decisiones legales/de producto que realmente le correspondan.
+6. Mantener trazabilidad requisito → Issue → implementación → prueba → artefacto. No cerrar Issues por mera documentación ni declarar resultados que la evidencia no soporte.
 
 ## Criterio de progreso
 
