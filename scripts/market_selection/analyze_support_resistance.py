@@ -1,6 +1,8 @@
 """Detect causal pivot-based support/resistance zones from closed Spot candles."""
 from __future__ import annotations
 
+from scripts.market_selection.provider_license_gate import evaluate_artifact_use
+
 import argparse
 import json
 import math
@@ -46,6 +48,9 @@ def _candle(row, index, interval):
 def analyze_support_resistance(artifact: dict, pivot_left: int, pivot_right: int, tolerance_bps: float) -> dict:
     if not isinstance(artifact, dict) or artifact.get("schema_version") != INPUT_SCHEMA:
         raise ValueError(f"expected schema_version {INPUT_SCHEMA}")
+    provider_use = evaluate_artifact_use(artifact, "internal_analysis")
+    if provider_use["decision"] != "ALLOW":
+        raise PermissionError("support/resistance analysis blocked before use: " + ",".join(provider_use["reason_codes"]))
     source_integrity_status = verify_page_integrity(artifact)
     market = artifact.get("market")
     if not isinstance(market, dict) or market.get("market_type") != "SPOT":
