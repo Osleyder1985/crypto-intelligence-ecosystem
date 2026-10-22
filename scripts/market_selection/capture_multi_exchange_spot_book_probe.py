@@ -128,6 +128,7 @@ def capture_one(spec: dict[str, str]) -> dict[str, object]:
         record["error_type"] = type(exc).__name__
         record["error_message"] = str(exc)[:300]
         if isinstance(exc, HTTPError):
+            record["http_status"] = exc.code
             try:
                 body = read_complete(exc)[0]
                 record["response_bytes_observed"] = len(body)
