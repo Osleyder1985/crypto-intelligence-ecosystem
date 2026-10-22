@@ -20,6 +20,7 @@ from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
 from scripts.market_selection.binance_depth_transport import capture_once
+from scripts.market_selection.provider_license_gate import evaluate_provider_use
 
 TIME_URL = "https://data-api.binance.vision/api/v3/time"
 DEFAULT_SYMBOLS = ("BTCUSDT", "ETHUSDT", "SOLUSDT")
@@ -37,6 +38,9 @@ def sha256_json(value: Any) -> str:
 
 def clock_probe(timeout_seconds: float = 5.0) -> dict[str, Any]:
     """Measure local wall-clock offset against Binance server time; do not grade it."""
+    assessment = evaluate_provider_use("binance_spot_market_data", "live_technical_test")
+    if assessment["decision"] != "ALLOW":
+        raise PermissionError("Binance provider use blocked before server-time request: " + ";".join(assessment["reason_codes"]))
     request = Request(TIME_URL, headers={"Accept": "application/json"}, method="GET")
     started_wall_ns = time.time_ns()
     started_mono_ns = time.monotonic_ns()
