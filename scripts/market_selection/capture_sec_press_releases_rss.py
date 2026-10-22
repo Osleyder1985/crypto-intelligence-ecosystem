@@ -128,6 +128,10 @@ def _authorization_state(
     if isinstance(timeout_seconds, bool) or not isinstance(timeout_seconds, (int, float)) or timeout_seconds <= 0:
         blockers.append("INVALID_TIMEOUT_SECONDS")
 
+    if raw_analysis.get("decision") != "ALLOW":
+        blockers.extend(raw_analysis.get("reason_codes") or ["INTERNAL_ANALYSIS_NOT_AUTHORIZED"])
+    if raw_storage.get("decision") != "ALLOW":
+        blockers.extend(raw_storage.get("reason_codes") or ["PERSISTENT_STORAGE_NOT_AUTHORIZED"])
     blockers = sorted(set(blockers))
     analysis = _effective_assessment(raw_analysis, blockers)
     storage = _effective_assessment(raw_storage, blockers)
