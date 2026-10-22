@@ -6,6 +6,7 @@
 
 | Documento | Propósito | Estado |
 |---|---|---|
+| [Flujo integral de investigación por activo — Issue #128](issue-128-end-to-end-asset-research.md) | Entrada de activo, expediente histórico, detonantes con evidencia, soportes/resistencias, tres horizontes, NFR y criterios E2E | Especificación propuesta; implementación integral pendiente de verificar |
 | [Marco maestro](master-framework.md) | Visión, límites, principios, gobernanza, ciclo de vida, arquitectura lógica y decisiones pendientes | Borrador |
 | [Matriz normativa](normative-matrix.md) | Referencias, estado de verificación, aplicabilidad inicial, evidencia y decisiones pendientes | Preliminar |
 | [Catálogo de requisitos y trazabilidad](requirements-traceability-catalog.md) | Requisitos iniciales, NFR, mapa de objetivos y reglas de trazabilidad | Borrador |
@@ -47,6 +48,7 @@
 - [#10 — Evaluación de alojamiento y costes](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/issues/10)
 - [#11 — Issue rector del marco maestro](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/issues/11)
 - [#13 — Evaluación histórica, ranking, análisis de eventos, liquidez y soportes/resistencias](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/issues/13)
+- [#128 — Flujo integral de investigación y evaluación por horizonte](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/issues/128)
 - [#18 — Frescura, comisiones y coste total](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/issues/18)
 
 ## Reglas de mantenimiento
