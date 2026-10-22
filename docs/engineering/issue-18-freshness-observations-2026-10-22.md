@@ -12,6 +12,7 @@
 | 39725519816 | 2026-10-22 05:00:32.869 | 12/12 registros; PASS | [ZIP de evidencia](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/actions/runs/39725519816/artifacts/12402698227) |
 | 39725727132 | 2026-10-22 05:02:37.498 | 12/12 registros; PASS | [ZIP de evidencia](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/actions/runs/39725727132/artifacts/12403295302) |
 | 39726272598 | 2026-10-22 05:08:21.527 | 12/12 registros; PASS | [ZIP de evidencia](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/actions/runs/39726272598/artifacts/12402498544) |
+| 39727842880 | 2026-10-22 05:24:46.114 | 12/12 registros; PASS | [ZIP de evidencia](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/actions/runs/39727842880/artifacts/12404105933) |
 
 Se analizaron los archivos JSON originales `public-market-capture-batch.json` dentro de los ZIP, no solo el resumen impreso en los logs.
 
@@ -30,11 +31,15 @@ Se analizaron los archivos JSON originales `public-market-capture-batch.json` de
 | 39726272598 | BTC_USDT | 232 | 20 | 999 / 999 |
 | 39726272598 | ETH_USDT | 202 | 19 | 999 / 999 |
 | 39726272598 | SOL_USDT | 324 | 13 | 1000 / 1000 |
+| 39727842880 | BTC_USDT | 247 | 39 | 999 / 999 |
+| 39727842880 | ETH_USDT | 192 | 42 | 999 / 999 |
+| 39727842880 | SOL_USDT | 189 | 36 | 1000 / 1000 |
 
 Resumen descriptivo de las nueve observaciones:
 - `response − updateTime`: mínimo 167 ms, máximo 416 ms.
 - `captura − response`: mínimo 13 ms, máximo 47 ms.
-- Las tres ejecuciones abarcan aproximadamente 7 min 49 s desde la creación del primer al tercer artefacto.
+- Las cuatro ejecuciones abarcan aproximadamente 24 min 14 s desde el primer artefacto hasta el cuarto.
+- Con 12 observaciones, `response − updateTime` sigue entre 167 y 416 ms; `captura − response` sigue entre 13 y 47 ms. La muestra continúa siendo pequeña y se concentra en una sola ventana de unas decenas de minutos.
 
 ## Qué demuestra y qué no
 
