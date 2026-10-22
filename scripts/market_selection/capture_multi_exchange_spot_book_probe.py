@@ -19,7 +19,7 @@ from urllib.parse import urlencode
 TIMEOUT_SECONDS = 12
 SCHEMA_VERSION = "multi-exchange-spot-book-probe-v1"
 
-# The quote differs where a venue's public spot market uses USD rather than USDT.
+# All requested reference pairs use USDT as quote; exact venue availability remains an observed question.
 READ_CHUNK_BYTES = 64 * 1024  # Read buffer size only; not a response-size limit.
 
 def read_complete(response: object) -> tuple[bytes, str | None]:
