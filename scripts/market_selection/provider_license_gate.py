@@ -19,6 +19,9 @@ BASELINE_POLICY = {
     "pionex_spot_market_data": {u: "REQUIRES_APPROVAL" for u in SUPPORTED_USE_CASES},
     "defillama_api": {u: "BLOCK_PENDING_WRITTEN_AUTHORIZATION" for u in SUPPORTED_USE_CASES},
     "coingecko_api": {u: "REQUIRES_PLAN_AND_SCOPE_APPROVAL" for u in SUPPORTED_USE_CASES},
+    # Private account data is a separate authorization domain from public market data.
+    "binance_spot_account_data": {u: "REQUIRES_ACCOUNT_OWNER_AND_PROVIDER_SCOPE_APPROVAL" for u in SUPPORTED_USE_CASES},
+    "pionex_spot_account_data": {u: "REQUIRES_ACCOUNT_OWNER_AND_PROVIDER_SCOPE_APPROVAL" for u in SUPPORTED_USE_CASES},
 }
 
 def _text(value: object, field: str) -> str:
@@ -85,6 +88,10 @@ def evaluate_provider_use(provider_id: str, use_case: str, authorization_record:
             raise ValueError("written_authorization_url must be an absolute HTTPS URL")
         if not _SHA256.fullmatch(written_hash):
             raise ValueError("written_authorization_sha256 must be 64 hexadecimal characters")
+    if provider_id in {"binance_spot_account_data", "pionex_spot_account_data"}:
+        consent_ref = _text(record.get("account_owner_consent_ref"), "authorization_record.account_owner_consent_ref")
+        if record.get("credential_scope_verified") is not True:
+            raise ValueError("authorization_record.credential_scope_verified must be true for private account data")
     if provider_id == "coingecko_api":
         plan = _text(record.get("plan_name"), "authorization_record.plan_name").lower()
         if plan in {"demo", "free", "keyless"}:
@@ -115,6 +122,9 @@ def evaluate_provider_use(provider_id: str, use_case: str, authorization_record:
     if provider_id == "defillama_api":
         authorization_evidence["written_authorization_url"] = written_url
         authorization_evidence["written_authorization_sha256"] = written_hash.lower()
+    if provider_id in {"binance_spot_account_data", "pionex_spot_account_data"}:
+        authorization_evidence["account_owner_consent_ref"] = consent_ref
+        authorization_evidence["credential_scope_verified"] = True
     return {"schema_version":"crypto-provider-use-assessment-v1","provider_id":provider_id,
             "use_case":use_case,"decision":"ALLOW",
             "reason_codes":["EXPLICIT_AUTHORIZATION_RECORD_VALIDATED"],
