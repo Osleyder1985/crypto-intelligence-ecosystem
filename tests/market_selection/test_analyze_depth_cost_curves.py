@@ -3,13 +3,21 @@ import hashlib
 import json
 import unittest
 
+from scripts.market_selection.provider_license_gate import ASSESSMENT_SCHEMA_VERSION, POLICY_VERSION
+
 from scripts.market_selection.analyze_depth_cost_curves import analyze_artifact, analyze_depth_record
 
 
 def record(market, provider, payload, **metadata):
     raw = json.dumps(payload, separators=(",", ":")).encode()
+    provider_id = "pionex_spot_market_data" if provider.startswith("pionex") else "binance_spot_market_data"
     out = {
         "market_id": market, "provider": provider, "capture_status": "PASS", "http_status": 200,
+        "provider_use_assessment": {"schema_version": ASSESSMENT_SCHEMA_VERSION, "policy_version": POLICY_VERSION,
+            "provider_id": provider_id, "use_case": "persistent_storage", "decision": "ALLOW",
+            "reason_codes": ["EXPLICIT_AUTHORIZATION_RECORD_VALIDATED"],
+            "authorization": {"authorized_use_cases": ["persistent_storage", "internal_analysis"],
+                              "authorization_record_sha256": "b" * 64}},
         "response_base64": base64.b64encode(raw).decode(),
         "response_sha256": hashlib.sha256(raw).hexdigest(), "response_bytes": len(raw),
         "parsed_json": payload, "captured_at_utc": "2026-10-22T00:00:00.300Z",
@@ -77,6 +85,12 @@ class DepthCostCurveTests(unittest.TestCase):
         self.assertIn("MARKET_LOT_SIZE", binance["symbol_constraints"]["filter_types"])
         self.assertEqual(binance["order_size_eligibility"], "INDETERMINATE")
         self.assertAlmostEqual(binance["execution_cost_curve"]["buy_consuming_asks"][0]["slippage_plus_public_fee_reference_bps_per_fill"], 110.0)
+
+    def test_missing_internal_analysis_scope_blocks_before_analysis(self):
+        a = artifact()
+        a["records"][0]["provider_use_assessment"]["authorization"]["authorized_use_cases"] = ["persistent_storage"]
+        with self.assertRaisesRegex(PermissionError, "blocked before use"):
+            analyze_artifact(a)
 
     def test_tampered_raw_bytes_fail_closed(self):
         a = artifact()
