@@ -25,9 +25,9 @@ def fixture():
       "universe":[{"pionex_symbol":market,"binance_symbol":"BTCUSDT","base_asset":"BTC","quote_asset":"USDT"}],
       "records":[
         rec(market,"pionex",{"result":True,"data":{"symbols":[{"symbol":market,"type":"SPOT","baseCurrency":"BTC","quoteCurrency":"USDT","enable":True}]}}),
-        pionex_depth,
         rec(market,"binance_exchange_info",{"symbols":[{"symbol":"BTCUSDT","status":"TRADING","isSpotTradingAllowed":True,"baseAsset":"BTC","quoteAsset":"USDT"}]}),
-        rec(market,"binance_depth",{"bids":[["99.99","10"],["99.98","10"]],"asks":[["100.01","10"],["100.02","10"]],"lastUpdateId":123})]}
+        rec(market,"binance_depth",{"bids":[["99.99","10"],["99.98","10"]],"asks":[["100.01","10"],["100.02","10"]],"lastUpdateId":123}),
+        pionex_depth]}
 
 class BatchEvaluatorTests(unittest.TestCase):
     def test_integrity_market_states_and_spread(self):
