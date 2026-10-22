@@ -4,10 +4,14 @@ A validated record is a software-policy check, not proof of legal rights or auth
 """
 from __future__ import annotations
 from datetime import datetime
+import hashlib
+import json
 import re
 from urllib.parse import urlsplit
 
 SCHEMA_VERSION = "crypto-provider-authorization-v1"
+POLICY_VERSION = "1.1.0"
+ASSESSMENT_SCHEMA_VERSION = "crypto-provider-use-assessment-v1"
 _SHA256 = re.compile(r"^[0-9a-fA-F]{64}$")
 SUPPORTED_USE_CASES = {
     "live_technical_test", "internal_analysis", "public_display",
@@ -51,16 +55,16 @@ def evaluate_provider_use(provider_id: str, use_case: str, authorization_record:
         raise ValueError(f"unsupported use_case: {use_case}")
     baseline = BASELINE_POLICY.get(provider_id)
     if baseline is None:
-        return {"schema_version":"crypto-provider-use-assessment-v1","provider_id":provider_id,
+        return {"schema_version":ASSESSMENT_SCHEMA_VERSION,"policy_version":POLICY_VERSION,"provider_id":provider_id,
                 "use_case":use_case,"decision":"BLOCK","reason_codes":["PROVIDER_NOT_REVIEWED"],
                 "authorization_evidence_status":"NOT_PROVIDED"}
     baseline_status = baseline[use_case]
     if provider_id in {"binance_spot_market_data", "binance_us_market_data"} and use_case == "live_technical_test" and authorization_record is None:
-        return {"schema_version":"crypto-provider-use-assessment-v1","provider_id":provider_id,
+        return {"schema_version":ASSESSMENT_SCHEMA_VERSION,"policy_version":POLICY_VERSION,"provider_id":provider_id,
                 "use_case":use_case,"decision":"ALLOW","reason_codes":["TECHNICAL_TEST_ONLY"],
                 "authorization_evidence_status":"NOT_A_COMMERCIAL_LICENSE"}
     if not isinstance(authorization_record, dict):
-        return {"schema_version":"crypto-provider-use-assessment-v1","provider_id":provider_id,
+        return {"schema_version":ASSESSMENT_SCHEMA_VERSION,"policy_version":POLICY_VERSION,"provider_id":provider_id,
                 "use_case":use_case,"decision":"BLOCK",
                 "reason_codes":[baseline_status,"AUTHORIZATION_RECORD_MISSING"],
                 "authorization_evidence_status":"NOT_PROVIDED"}
@@ -70,12 +74,12 @@ def evaluate_provider_use(provider_id: str, use_case: str, authorization_record:
     if _text(record.get("provider_id"), "authorization_record.provider_id").lower() != provider_id:
         raise ValueError("authorization_record.provider_id does not match requested provider")
     if record.get("status") != "APPROVED":
-        return {"schema_version":"crypto-provider-use-assessment-v1","provider_id":provider_id,
+        return {"schema_version":ASSESSMENT_SCHEMA_VERSION,"policy_version":POLICY_VERSION,"provider_id":provider_id,
                 "use_case":use_case,"decision":"BLOCK","reason_codes":["AUTHORIZATION_NOT_APPROVED"],
                 "authorization_evidence_status":"PRESENT_BUT_NOT_APPROVED"}
     allowed = record.get("authorized_use_cases")
     if not isinstance(allowed, list) or use_case not in allowed:
-        return {"schema_version":"crypto-provider-use-assessment-v1","provider_id":provider_id,
+        return {"schema_version":ASSESSMENT_SCHEMA_VERSION,"policy_version":POLICY_VERSION,"provider_id":provider_id,
                 "use_case":use_case,"decision":"BLOCK","reason_codes":["USE_CASE_NOT_EXPLICITLY_AUTHORIZED"],
                 "authorization_evidence_status":"SCOPE_MISMATCH"}
     terms_url = _text(record.get("terms_url"), "authorization_record.terms_url")
@@ -104,7 +108,7 @@ def evaluate_provider_use(provider_id: str, use_case: str, authorization_record:
     if provider_id == "coingecko_api":
         plan = _text(record.get("plan_name"), "authorization_record.plan_name").lower()
         if plan in {"demo", "free", "keyless"}:
-            return {"schema_version":"crypto-provider-use-assessment-v1","provider_id":provider_id,
+            return {"schema_version":ASSESSMENT_SCHEMA_VERSION,"policy_version":POLICY_VERSION,"provider_id":provider_id,
                     "use_case":use_case,"decision":"BLOCK",
                     "reason_codes":["PAID_PLAN_REQUIRED_FOR_COMMERCIAL_PRODUCT"],
                     "authorization_evidence_status":"PLAN_INSUFFICIENT"}
@@ -118,15 +122,23 @@ def evaluate_provider_use(provider_id: str, use_case: str, authorization_record:
             if record.get("encrypted_storage") is not True or record.get("delete_on_termination") is not True:
                 raise ValueError("CoinGecko persistent storage requires encryption and deletion on termination")
         if use_case == "export_redistribution" and record.get("custom_redistribution_rights") is not True:
-            return {"schema_version":"crypto-provider-use-assessment-v1","provider_id":provider_id,
+            return {"schema_version":ASSESSMENT_SCHEMA_VERSION,"policy_version":POLICY_VERSION,"provider_id":provider_id,
                     "use_case":use_case,"decision":"BLOCK",
                     "reason_codes":["CUSTOM_REDISTRIBUTION_RIGHTS_REQUIRED"],
                     "authorization_evidence_status":"STANDARD_LICENSE_INSUFFICIENT"}
+    try:
+        authorization_record_sha256 = hashlib.sha256(
+            json.dumps(record, ensure_ascii=False, sort_keys=True, separators=(",", ":"), allow_nan=False).encode("utf-8")
+        ).hexdigest()
+    except (TypeError, ValueError) as exc:
+        raise ValueError("authorization_record must be canonical JSON without non-finite values") from exc
     authorization_evidence = {
         "terms_url": terms_url,
         "terms_sha256": terms_sha256.lower(),
         "reviewed_at": reviewed_at,
         "reviewed_by": reviewer,
+        "authorized_use_cases": sorted(allowed),
+        "authorization_record_sha256": authorization_record_sha256,
     }
     if provider_id == "defillama_api":
         authorization_evidence["written_authorization_url"] = written_url
@@ -135,8 +147,78 @@ def evaluate_provider_use(provider_id: str, use_case: str, authorization_record:
         authorization_evidence["account_owner_consent_ref"] = consent_ref
         authorization_evidence["account_owner_consent_sha256"] = consent_hash.lower()
         authorization_evidence["credential_scope_verified"] = True
-    return {"schema_version":"crypto-provider-use-assessment-v1","provider_id":provider_id,
+    return {"schema_version":ASSESSMENT_SCHEMA_VERSION,"policy_version":POLICY_VERSION,"provider_id":provider_id,
             "use_case":use_case,"decision":"ALLOW",
             "reason_codes":["EXPLICIT_AUTHORIZATION_RECORD_VALIDATED"],
             "authorization_evidence_status":"RECORD_VALIDATED_NOT_LEGAL_ADVICE",
             "authorization":authorization_evidence}
+
+
+def _collect_provider_assessments(value: object, output: list[dict]) -> None:
+    """Collect capture assessments while ignoring failed rows that were not consumed."""
+    if isinstance(value, dict):
+        assessment = value.get("provider_use_assessment")
+        if isinstance(assessment, dict):
+            capture_status = value.get("capture_status")
+            if capture_status not in {"FAIL", "BLOCKED", "NOT_AVAILABLE"}:
+                output.append(assessment)
+        elif value.get("schema_version") == ASSESSMENT_SCHEMA_VERSION:
+            output.append(value)
+        for key, child in value.items():
+            if key != "provider_use_assessment":
+                _collect_provider_assessments(child, output)
+    elif isinstance(value, list):
+        for child in value:
+            _collect_provider_assessments(child, output)
+
+
+def evaluate_artifact_use(artifact: object, use_case: str) -> dict:
+    """Check that supplied capture evidence includes explicit authorization for a downstream use.
+
+    This validates recorded policy evidence, not legal rights or document authenticity.
+    """
+    if use_case not in SUPPORTED_USE_CASES:
+        raise ValueError(f"unsupported use_case: {use_case}")
+    assessments: list[dict] = []
+    _collect_provider_assessments(artifact, assessments)
+    unique: dict[tuple[str, str, str], dict] = {}
+    for assessment in assessments:
+        provider_id = str(assessment.get("provider_id", "")).lower()
+        captured_use_case = str(assessment.get("use_case", ""))
+        authorization = assessment.get("authorization")
+        auth_hash = authorization.get("authorization_record_sha256", "") if isinstance(authorization, dict) else ""
+        unique[(provider_id, captured_use_case, str(auth_hash))] = assessment
+    assessments = list(unique.values())
+    reasons: list[str] = []
+    provider_ids: list[str] = []
+    if not assessments:
+        reasons.append("PROVIDER_USE_ASSESSMENT_MISSING")
+    for assessment in assessments:
+        provider_id = str(assessment.get("provider_id", "")).lower()
+        if provider_id and provider_id not in provider_ids:
+            provider_ids.append(provider_id)
+        if assessment.get("policy_version") != POLICY_VERSION:
+            reasons.append("PROVIDER_POLICY_VERSION_MISMATCH")
+        if assessment.get("decision") != "ALLOW":
+            reasons.extend(assessment.get("reason_codes") or ["CAPTURE_PROVIDER_USE_NOT_ALLOWED"])
+            continue
+        authorization = assessment.get("authorization")
+        if not isinstance(authorization, dict):
+            reasons.append("AUTHORIZATION_EVIDENCE_MISSING_FOR_DOWNSTREAM_USE")
+            continue
+        scopes = authorization.get("authorized_use_cases")
+        if not isinstance(scopes, list) or use_case not in scopes:
+            reasons.append("DOWNSTREAM_USE_CASE_NOT_EXPLICITLY_AUTHORIZED")
+        record_hash = authorization.get("authorization_record_sha256")
+        if not isinstance(record_hash, str) or not _SHA256.fullmatch(record_hash):
+            reasons.append("AUTHORIZATION_RECORD_HASH_MISSING_OR_INVALID")
+    return {
+        "schema_version": ASSESSMENT_SCHEMA_VERSION,
+        "policy_version": POLICY_VERSION,
+        "use_case": use_case,
+        "decision": "ALLOW" if assessments and not reasons else "BLOCK",
+        "provider_ids": sorted(provider_ids),
+        "reason_codes": sorted(set(reasons)),
+        "assessments_checked": len(assessments),
+    }
+
