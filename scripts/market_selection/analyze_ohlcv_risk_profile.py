@@ -1,6 +1,8 @@
 """Compute descriptive OHLCV risk metrics without ranking assets or filling missing candles."""
 from __future__ import annotations
 
+from scripts.market_selection.provider_license_gate import evaluate_artifact_use
+
 import argparse
 import base64
 import hashlib
@@ -94,6 +96,9 @@ def verify_page_integrity(artifact: dict) -> str:
 def analyze_artifact(artifact: dict, periods_per_year: int | None = None) -> dict:
     if not isinstance(artifact, dict) or artifact.get("schema_version") != INPUT_SCHEMA:
         raise ValueError(f"expected schema_version {INPUT_SCHEMA}")
+    provider_use = evaluate_artifact_use(artifact, "internal_analysis")
+    if provider_use["decision"] != "ALLOW":
+        raise PermissionError("OHLCV risk analysis blocked before use: " + ",".join(provider_use["reason_codes"]))
     source_integrity_status = verify_page_integrity(artifact)
     market = artifact.get("market")
     if not isinstance(market, dict) or market.get("market_type") != "SPOT":
