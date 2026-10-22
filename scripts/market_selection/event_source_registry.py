@@ -32,6 +32,7 @@ EVENT_SOURCE_REGISTRY = {
             "display_name": "U.S. Securities and Exchange Commission press releases RSS",
             "source_type": "REGULATORY",
             "source_url": "https://www.sec.gov/news/pressreleases.rss",
+            "allowed_article_hosts": ["www.sec.gov", "sec.gov"],
             "terms_url": "https://www.sec.gov/about/developer-resources",
             "status": "TERMS_PENDING",
             "terms_sha256": None,
@@ -90,6 +91,9 @@ def validate_source_entry(entry: dict) -> dict:
     source_type = _non_empty(entry.get("source_type"), "source_type")
     _https_url(entry.get("source_url"), "source_url")
     _https_url(entry.get("terms_url"), "terms_url")
+    hosts = entry.get("allowed_article_hosts")
+    if not isinstance(hosts, list) or not hosts or any(not isinstance(host, str) or not host.strip() for host in hosts):
+        raise ValueError("allowed_article_hosts must be a non-empty list of hostnames")
     status = _non_empty(entry.get("status"), "status")
     if status not in SOURCE_STATUSES:
         raise ValueError(f"unsupported source status: {status}")
