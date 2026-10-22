@@ -37,7 +37,7 @@ def methodology():
 
 def report():
     return {
-        "schema_version": "crypto-asset-research-report-v1",
+        "schema_version": "crypto-asset-research-report-v2",
         "source_artifact": {"provider_use_assessment": {
             "schema_version": ASSESSMENT_SCHEMA_VERSION, "policy_version": POLICY_VERSION,
             "provider_id": "binance_spot_market_data", "use_case": "internal_analysis", "decision": "ALLOW",
