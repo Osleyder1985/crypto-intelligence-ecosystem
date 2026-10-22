@@ -197,6 +197,8 @@ class BinanceSpotResearchCaptureTests(unittest.TestCase):
         self.assertEqual(result["canonical_asset_identity_evidence_status"], "STRUCTURE_VALIDATED_NOT_AUTHENTICATED")
         self.assertEqual(result["canonical_asset_identity_market_mapping_status"], "MATCHED_TO_CAPTURED_BINANCE_METADATA")
         self.assertEqual(result["asset_identity_status"], "INDETERMINATE")
+        self.assertIn("CANONICAL_ASSET_ID_EVIDENCE_NOT_AUTHENTICATED",
+                      result["horizons"]["short"]["reason_codes"])
         self.assertEqual(result["data_quality"]["status"], "INCOMPLETE_OR_UNVERIFIED")
         self.assertFalse(result["orders_submitted"])
 
