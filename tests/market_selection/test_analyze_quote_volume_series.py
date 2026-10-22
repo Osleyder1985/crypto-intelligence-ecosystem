@@ -105,7 +105,7 @@ class QuoteVolumeSeriesTests(unittest.TestCase):
         row = result["series"][0]
         self.assertEqual(row["valid_samples"], 0)
         self.assertEqual(row["missing_or_invalid_samples"], 2)
-        self.assertEqual(row["comparison_status"], "INSUFFICIENT_VALID_SAMPLES")
+        self.assertEqual(row["comparison_status"], "INDETERMINATE_SOURCE_UNIT_UNDOCUMENTED")
         self.assertEqual(row["consecutive_deltas"], [])
         self.assertEqual(row["observations"][0]["quote_volume_raw"], "2690638425.45706367")
         self.assertIsNone(row["observations"][0]["quote_volume_decimal"])
