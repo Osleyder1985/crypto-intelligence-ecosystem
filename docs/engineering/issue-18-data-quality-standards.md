@@ -8,15 +8,15 @@
 
 ### ISO 8601-1:2019 — Representación de fechas y horas
 
-Fuente oficial: https://www.iso.org/standard/70907.html
+Fuentes oficiales: https://www.iso.org/standard/70907.html y https://www.iso.org/standard/81801.html
 
-ISO indica que esta edición fue revisada y confirmada en 2024 y permanece vigente. Su alcance es representar fechas, horas, intervalos/desplazamientos y UTC para intercambio de información. Sirve para normalizar timestamps como `2026-10-22T05:00:00.000Z`, pero **no define cuántos milisegundos de antigüedad son aceptables para un libro de órdenes** ni una política de frescura para exchanges.
+ISO indica que ISO 8601-1:2019 fue revisada y confirmada en 2024 y permanece vigente; la enmienda ISO 8601-1:2019/Amd 1:2022 figura publicada. En la consulta de 2026-10-22, el proyecto ISO/CD 8601-1 aparece en desarrollo, no como una edición publicada que sustituya a 2019. Su alcance es representar fechas, horas, intervalos/desplazamientos y UTC para intercambio de información. Sirve para normalizar timestamps como `2026-10-22T05:00:00.000Z`, pero **no define cuántos milisegundos de antigüedad son aceptables para un libro de órdenes** ni una política de frescura para exchanges.
 
 ### ISO/IEC 25012:2008 — Modelo de calidad de datos
 
-Fuente oficial: https://www.iso.org/standard/35736.html
+Fuente oficial: https://www.iso.org/standard/35736.html (estado vigente confirmado en 2025).
 
-ISO describe esta norma como un modelo general de calidad de datos que puede usarse para establecer requisitos de calidad, definir medidas y planificar/evaluar la calidad. La norma reconoce que la importancia de las características de calidad varía según el contexto y las partes interesadas. No prescribe un límite universal de 100 ms, 500 ms, 1 s u otro para Binance/Pionex Spot.
+ISO describe esta norma como un modelo general de calidad de datos que puede usarse para establecer requisitos de calidad, definir medidas y planificar/evaluar la calidad. El catálogo oficial indica que ISO/IEC 25012:2008 fue revisada y confirmada en 2025 y permanece vigente. La norma reconoce que la importancia de las características de calidad varía según el contexto y las partes interesadas. No prescribe un límite universal de 100 ms, 500 ms, 1 s u otro para Binance/Pionex Spot.
 
 ## Aplicación al ecosistema
 

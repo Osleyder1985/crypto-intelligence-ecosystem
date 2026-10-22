@@ -43,8 +43,8 @@ La decisión económica global solo podrá ser distinta de `INDETERMINATE` cuand
 
 ## 5. Fuentes oficiales
 
-- [ISO 8601 / representación temporal](https://www.iso.org/iso-8601-date-and-time-format.html): representación/intercambio de fecha y hora; no prescribe un SLA de frescura para estos exchanges.
-- [ISO/IEC 25012](https://www.iso.org/standard/35736.html): modelo de calidad de datos; no fija un umbral universal para este producto.
+- [ISO 8601-1:2019](https://www.iso.org/standard/70907.html), revisada/confirmada en 2024, y [enmienda 1:2022](https://www.iso.org/standard/81801.html): representación/intercambio de fechas y horas; no prescribe un SLA de frescura para estos exchanges. El borrador ISO/CD 8601-1 en desarrollo no se trata como norma publicada vigente.
+- [ISO/IEC 25012:2008](https://www.iso.org/standard/35736.html), confirmada por ISO en 2025: modelo general de calidad de datos; no fija un umbral universal de frescura para este producto.
 - [Binance Spot REST API](https://github.com/binance/binance-spot-api-docs/blob/master/rest-api.md): profundidad REST y `lastUpdateId`.
 - [Binance WebSocket streams](https://github.com/binance/binance-spot-api-docs/blob/master/web-socket-streams.md): timestamps de eventos e IDs para sincronizar el libro.
 - [Binance Commission FAQ](https://github.com/binance/binance-spot-api-docs/blob/master/faqs/commission_faq.md): consulta de comisiones por símbolo.
