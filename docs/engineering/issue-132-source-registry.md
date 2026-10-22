@@ -1,6 +1,6 @@
 # Registro preliminar de fuentes de noticias y eventos — Issue #132
 
-- **Estado:** inventario inicial de candidatos; ninguna fuente queda aprobada para ingestión automática hasta revisar acceso, términos, cobertura y captura temporal.
+- **Estado:** registro machine-readable añadido; ninguna fuente queda aprobada para ingestión automática. El adaptador SEC está implementado pero bloqueado por `TERMS_PENDING` hasta completar revisión de términos y autorización de uso.
 - **Issue:** [#132](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/issues/132)
 - **Contrato de evento:** [issue-132-event-evidence-contract.md](issue-132-event-evidence-contract.md)
 - **Fecha de consulta:** 2026-10-22
@@ -14,7 +14,7 @@ El registro distingue la autoridad de una fuente sobre el hecho que publica, su 
 | Fuente/categoría | Uso principal | Autoridad para el hecho | Acceso observable | Estado para el ecosistema |
 |---|---|---|---|---|
 | [Binance Newsroom](https://www.binance.com/en/press) | Anuncios propios, cambios de producto y listados/delistados publicados por Binance | Primaria para anuncios de Binance; no primaria para hechos de terceros | Página pública de newsroom; no se ha validado una API/RSS estable ni una licencia de archivo automatizado | Candidata para evaluación; acceso automatizado y términos pendientes |
-| [SEC — Press Releases](https://www.sec.gov/newsroom/press-releases) | Acciones, comunicados y anuncios regulatorios de la SEC | Primaria para acciones/comunicados de la SEC; alcance jurisdiccional limitado | Página oficial muestra un feed RSS de comunicados | Candidata para adaptador regulatorio; verificar condiciones técnicas, atribución y captura antes de habilitar |
+| [SEC — Press Releases](https://www.sec.gov/newsroom/press-releases) | Acciones, comunicados y anuncios regulatorios de la SEC | Primaria para acciones/comunicados de la SEC; alcance jurisdiccional limitado | Feed oficial `https://www.sec.gov/news/pressreleases.rss` | Adaptador implementado, pero deshabilitado por `TERMS_PENDING`; no realiza red hasta aprobación de términos y autorización explícita |
 | Comunicados oficiales de cada proyecto/protocolo | Incidentes, upgrades, gobernanza, tokenomics, unlocks y cambios de protocolo | Primaria solo respecto de lo que el propio proyecto declara | Heterogéneo: web, RSS/Atom, blog, foro, GitHub releases o canales oficiales | Requiere catálogo por proyecto, URL verificada y resolución de identidad; no se asume una interfaz común |
 | Páginas oficiales de estado/incidentes de exchanges y protocolos | Caídas, interrupciones, explotación, mantenimiento y recuperación | Primaria para el estado operativo declarado por ese proveedor | Heterogéneo; formatos y retención varían | Candidata por proveedor; hay que capturar cambios de estado y hora de primera observación |
 | Fuentes periodísticas secundarias | Descubrir hechos, contexto, versiones contradictorias y pistas para investigación | Secundaria; debe corroborarse con fuente primaria cuando sea posible | Depende del proveedor, API, suscripción y términos de reutilización | No seleccionar proveedor hasta evaluar licencia, cobertura, historial, timestamps y coste |
@@ -50,4 +50,13 @@ Antes de activar una fuente se debe completar y versionar al menos:
 - U.S. Securities and Exchange Commission, [Press Releases](https://www.sec.gov/newsroom/press-releases): página oficial de comunicados; la página anuncia disponibilidad de RSS.
 - Binance Developer Documentation, [Developer Documentation](https://developers.binance.com/en/docs/introduction): la documentación oficial diferencia interfaces soportadas de comportamientos/endpoints no documentados.
 
-Estas referencias acreditan la existencia de puntos de acceso públicos, no la aprobación de sus condiciones de reutilización ni la implementación de conectores. Los términos, las cuotas y el comportamiento real deben verificarse por separado antes de implementar cada adaptador.
+Estas referencias acreditan puntos de acceso públicos, no aprobación de reutilización. El adaptador SEC está en `scripts/market_selection/capture_sec_press_releases_rss.py` y se gobierna por `scripts/market_selection/event_source_registry.py`; la entrada permanece `TERMS_PENDING`, por lo que la ejecución real está bloqueada antes de la red. Las pruebas usan respuestas sintéticas y opener simulado.
+
+## Adaptador SEC: alcance y habilitación
+
+- La URL RSS está fijada al endpoint oficial; el adaptador no acepta URLs arbitrarias para el feed. Los artículos individuales se limitan a hosts HTTPS `sec.gov`/`www.sec.gov`.
+- El adaptador lee la respuesta hasta EOF, preserva bytes base64, tamaño, SHA-256 y headers de respuesta sin imponer un límite local de tamaño. Los errores HTTP también conservan el cuerpo completo recibido.
+- Cada invocación hace como máximo una petición y no abre solicitudes paralelas. El límite publicado por SEC es de 10 solicitudes/segundo; la coordinación agregada entre procesos debe garantizarse en el despliegue, no se afirma que este módulo imponga un limitador global.
+- Se requiere un User-Agent proporcionado y revisado por el operador y un timeout explícito. El código no puede determinar si SEC considera clasificado ese agente.
+- La fuente solo se puede activar si se preservan los bytes de los términos revisados y su SHA-256 coincidente, se completan `reviewed_by`, `reviewed_at` y `allowed_use_cases`, y el registro de autorización del proveedor coincide con esa revisión. Aun así, la autorización de software no es dictamen legal.
+- El RSS es solo una ventana de feed, no archivo histórico completo. Los titulares no resuelven entidades: promover un evento requiere captura completa del artículo, IDs estables revisados y una afirmación explícita. El conector no infiere causalidad.
