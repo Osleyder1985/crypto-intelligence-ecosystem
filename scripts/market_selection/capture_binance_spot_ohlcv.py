@@ -165,6 +165,7 @@ def request_page(url: str) -> dict:
         "url": url, "request_started_at_utc": started, "captured_at_utc": None,
         "http_status": None, "response_bytes": None, "response_sha256": None,
         "response_base64": None, "parsed_json": None, "capture_status": "FAIL",
+        "normalization_status": "NOT_RUN", "normalization_error": None,
         "error_type": None, "error_message": None,
     }
     req = Request(url, headers={"Accept": "application/json", "User-Agent": "crypto-intelligence-ecosystem-ohlcv/1.0"})
@@ -213,19 +214,27 @@ def capture_history(symbol: str, interval: str, start_time_ms: int, end_time_ms_
             break
         rows = page["parsed_json"]
         if not rows:
+            page["normalization_status"] = "PASS"
             break
         captured_at = page["captured_at_utc"]
-        parsed = [normalize_kline(row, symbol, interval, captured_at) for row in rows]
-        parsed.sort(key=lambda candle: candle["open_time_ms"])
-        for candle in parsed:
-            open_time = candle["open_time_ms"]
-            if open_time < cursor:
-                raise ValueError("provider returned a candle older than the pagination cursor")
-            if not start_time_ms <= open_time < end_time_ms_exclusive:
-                raise ValueError("provider returned a candle outside the requested half-open window")
-            if open_time in candles_by_open:
-                raise ValueError("duplicate candle open time across pages")
-            candles_by_open[open_time] = candle
+        try:
+            parsed = [normalize_kline(row, symbol, interval, captured_at) for row in rows]
+            parsed.sort(key=lambda candle: candle["open_time_ms"])
+            for candle in parsed:
+                open_time = candle["open_time_ms"]
+                if open_time < cursor:
+                    raise ValueError("provider returned a candle older than the pagination cursor")
+                if not start_time_ms <= open_time < end_time_ms_exclusive:
+                    raise ValueError("provider returned a candle outside the requested half-open window")
+                if open_time in candles_by_open:
+                    raise ValueError("duplicate candle open time across pages")
+            for candle in parsed:
+                candles_by_open[candle["open_time_ms"]] = candle
+            page["normalization_status"] = "PASS"
+        except ValueError as exc:
+            page["normalization_status"] = "FAIL"
+            page["normalization_error"] = str(exc)
+            break
         last_open = parsed[-1]["open_time_ms"]
         next_cursor = last_open + 1
         if next_cursor <= cursor:
@@ -245,7 +254,7 @@ def capture_history(symbol: str, interval: str, start_time_ms: int, end_time_ms_
         candle["closed_at_capture"] = candle["close_time_ms"] < now_ms
         candle["eligible_for_closed_candle_analysis"] = candle["closed_at_capture"]
         candles.append(candle)
-    all_pages_pass = bool(pages) and all(page["capture_status"] == "PASS" for page in pages)
+    all_pages_pass = bool(pages) and all(page["capture_status"] == "PASS" and page.get("normalization_status") == "PASS" for page in pages)
     complete = all_pages_pass and not missing and not unexpected and len(candles) == len(expected)
     return {
         "schema_version": SCHEMA_VERSION,

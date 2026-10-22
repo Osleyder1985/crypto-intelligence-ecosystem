@@ -50,6 +50,29 @@ class BinanceSpotOHLCVTests(unittest.TestCase):
         self.assertTrue(is_interval_boundary(monday, "1w"))
         self.assertFalse(is_interval_boundary(tuesday, "1w"))
 
+
+    def test_invalid_payload_is_preserved_and_returns_partial_artifact(self):
+        import base64
+        import hashlib
+        import json
+        raw = json.dumps([["not-a-timestamp"]]).encode()
+        page = {
+            "url": BASE_URL, "request_started_at_utc": "2026-10-22T00:00:00Z",
+            "captured_at_utc": "2026-10-22T00:00:01Z", "http_status": 200,
+            "response_bytes": len(raw), "response_sha256": hashlib.sha256(raw).hexdigest(),
+            "response_base64": base64.b64encode(raw).decode(), "parsed_json": [["not-a-timestamp"]],
+            "capture_status": "PASS", "normalization_status": "NOT_RUN",
+            "normalization_error": None, "error_type": None, "error_message": None,
+        }
+        with patch("scripts.market_selection.capture_binance_spot_ohlcv.request_page", return_value=page):
+            result = __import__("scripts.market_selection.capture_binance_spot_ohlcv", fromlist=["capture_history"]).capture_history(
+                "BTCUSDT", "1m", 0, 60_000
+            )
+        self.assertEqual(result["overall_status"], "PARTIAL")
+        self.assertEqual(result["pages"][0]["normalization_status"], "FAIL")
+        self.assertIn("kline timestamps", result["pages"][0]["normalization_error"])
+        self.assertEqual(result["pages"][0]["response_sha256"], hashlib.sha256(raw).hexdigest())
+
     def test_url_uses_official_host_and_exclusive_end(self):
         url = build_url("BTCUSDT", "1m", 0, 180_000, 60_000)
         self.assertTrue(url.startswith(BASE_URL + "?"))
