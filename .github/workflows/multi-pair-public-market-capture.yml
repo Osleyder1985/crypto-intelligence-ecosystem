@@ -67,6 +67,15 @@ jobs:
           assert all(record["source_market_update_at_utc"] for record in depth_records)
           assert all(record["source_response_timestamp_status"] == "VALID" for record in depth_records)
           assert all(record["source_response_at_utc"] for record in depth_records)
+          for record in depth_records:
+              data = record["parsed_json"]["data"]
+              assert 0 < len(data["bids"]) <= 1000
+              assert 0 < len(data["asks"]) <= 1000
+          binance_depth_records = [record for record in artifact["records"] if record["provider"] == "binance_depth"]
+          assert len(binance_depth_records) == 3
+          for record in binance_depth_records:
+              assert 0 < len(record["parsed_json"]["bids"]) <= 5000
+              assert 0 < len(record["parsed_json"]["asks"]) <= 5000
           PY
       - name: Evaluate batch twice and compare outputs without an unapproved scenario
         run: |
