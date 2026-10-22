@@ -32,6 +32,12 @@ def artifact(rows):
 
 
 class OHLCVRiskProfileTests(unittest.TestCase):
+    def test_missing_authorization_blocks_analysis(self):
+        source = artifact([candle(0, "100"), candle(3_600_000, "101")])
+        source.pop("provider_use_assessment")
+        with self.assertRaisesRegex(PermissionError, "blocked before use"):
+            analyze_artifact(source)
+
     def test_drawdown_and_period_return_use_closed_observed_closes(self):
         result = analyze_artifact(artifact([
             candle(0, "100"), candle(3_600_000, "110"),
