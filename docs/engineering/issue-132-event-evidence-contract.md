@@ -1,6 +1,6 @@
 # Contrato de evidencia de noticias y eventos externos — Issue #132
 
-- **Estado:** propuesta técnica implementada en rama de trabajo; pendiente de revisión y validación CI.
+- **Estado:** contrato offline integrado; esta rama añade un adaptador SEC RSS/artículo, probado con respuestas sintéticas y deshabilitado hasta aprobar términos.
 - **Issue:** [#132](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/issues/132)
 - **Dependencia de producto:** [#128](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/issues/128)
 - **Implementación:** `scripts/market_selection/external_event_evidence.py`
@@ -10,7 +10,7 @@
 
 ## 1. Alcance y no-objetivos
 
-La primera entrega valida, normaliza y relaciona de forma conservadora registros de eventos externos. Es un módulo offline y agnóstico al proveedor. **No descarga noticias, no certifica la veracidad de una fuente, no construye un archivo histórico por sí solo y no prueba causalidad.** La disponibilidad de fuentes, su cobertura y sus términos deben resolverse en adaptadores y decisiones posteriores.
+El contrato de evento valida, normaliza y relaciona de forma conservadora registros externos. El contrato base es offline y no prueba causalidad. Esta rama añade un adaptador SEC RSS/artículo; por defecto la fuente sigue `TERMS_PENDING`, por lo que no descarga nada. El adaptador preserva el feed y artículos completos cuando la fuente esté aprobada, pero requiere revisión humana de entidad antes de promover un feed item a evento.
 
 ## 2. Campos obligatorios de cada evento
 
@@ -72,4 +72,4 @@ La mera precedencia temporal, una nota de prensa o la correlación de precios nu
 
 Los once tests cubren normalización de tiempo, rechazo de entidades identificadas solo por ticker, timestamps sin zona horaria, captura anterior a publicación, duplicados con conflicto, captura posterior al corte histórico, coincidencia temporal sin afirmación causal, evento fuera de ventana, ausencia de evidencia, activo no coincidente y preservación de registros de fuentes independientes.
 
-**Estado de validación:** los archivos y tests se han añadido a una rama GitHub. La ejecución CI debe confirmar la integración con el entorno real; hasta ese momento no se declara la entrega validada. El módulo no se ha integrado en el informe `crypto-asset-research-report-v1`, no consulta fuentes externas y no cierra por sí solo Issue #132.
+**Estado de validación:** el contrato offline ya está en `main`; esta rama añade pruebas offline del adaptador y su gate. No se ha hecho captura real desde esta rama porque el registro de fuentes mantiene `TERMS_PENDING`. La integración con el informe `crypto-asset-research-report-v2` requiere pasar eventos promovidos explícitamente a `research_evidence_integration`; no se infiere entidad ni causalidad automáticamente. Issue #132 permanece abierto hasta completar revisión de fuente y validar una captura autorizada real.
