@@ -531,6 +531,18 @@ def promote_sec_press_release_to_event(
     entities = entity_resolution.get("entities")
     if not isinstance(entities, list) or not entities:
         raise ValueError("entity_resolution.entities must contain stable identifiers")
+    mapping_evidence_base64 = entity_resolution.get("evidence_record_base64")
+    mapping_evidence_sha256 = entity_resolution.get("evidence_record_sha256")
+    if not isinstance(mapping_evidence_base64, str) or not mapping_evidence_base64:
+        raise ValueError("entity_resolution.evidence_record_base64 is required")
+    if not isinstance(mapping_evidence_sha256, str) or not _SHA256.fullmatch(mapping_evidence_sha256):
+        raise ValueError("entity_resolution.evidence_record_sha256 must be a SHA-256")
+    try:
+        mapping_evidence_bytes = base64.b64decode(mapping_evidence_base64, validate=True)
+    except (ValueError, base64.binascii.Error) as exc:
+        raise ValueError("entity_resolution.evidence_record_base64 is invalid") from exc
+    if hashlib.sha256(mapping_evidence_bytes).hexdigest() != mapping_evidence_sha256:
+        raise ValueError("entity-resolution evidence SHA-256 does not match preserved bytes")
 
     claim_text = claim.strip() if isinstance(claim, str) else ""
     event_type_text = event_type.strip() if isinstance(event_type, str) else ""
@@ -567,6 +579,8 @@ def promote_sec_press_release_to_event(
             "normalized_feed_item_sha256": feed_item.get("normalized_item_sha256"),
             "entity_resolution_reviewed_by": reviewed_by.strip(),
             "entity_resolution_reviewed_at": reviewed_at_utc,
+            "entity_resolution_evidence_record_sha256": mapping_evidence_sha256,
+            "entity_resolution_evidence_record_base64": mapping_evidence_base64,
             "causality_status": "NOT_ASSESSED",
         },
     }
