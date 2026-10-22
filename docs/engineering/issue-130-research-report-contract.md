@@ -20,7 +20,9 @@ El CLI es offline: no descarga datos ni busca noticias. Recibe un artefacto hist
 
 ## Reglas conservadoras
 
-1. No se infiere el activo base concatenando/partiendo un símbolo como `BTCUSDT`. Si el artefacto no incluye `base_asset` o `asset_id`, la identidad queda `INDETERMINATE`; si contradice el activo solicitado, la ejecución falla.
+1. No se infiere el activo base concatenando/partiendo un símbolo como `BTCUSDT`. La coincidencia entre el ticker solicitado y `market.base_asset` solo puede verificar `market_base_asset_mapping_status`; **no verifica identidad canónica**. Sin evidencia canónica única, revisada y vinculada al símbolo base, `canonical_asset_identity_status=NOT_RESOLVED` y `asset_identity_status=INDETERMINATE`. Si el símbolo de mercado contradice el activo solicitado o la evidencia, la ejecución falla.
+2. La evidencia canónica usa `crypto-canonical-asset-identity-v1` e incluye `stable_id`, tipo de activo, símbolo/nombre, cadena, contrato cuando aplique, estado de resolución (`VERIFIED_UNIQUE`), `candidate_count=1`, revisión aprobada y una fuente HTTPS con SHA-256. Para `TOKEN` y `WRAPPED_ASSET`, cadena y dirección de contrato son obligatorias; una dirección solicitada también exige `chain_id`.
+3. El resolver no consulta registries ni inventa equivalencias. Valida el contrato y la coincidencia exacta; el hash verifica la integridad del contenido referenciado, no su autoridad. La fuente y la unicidad deben ser revisadas por una persona.
 2. Se preserva SHA-256 y número de bytes del archivo exacto en la ejecución CLI. Las llamadas en memoria usan hash de serialización JSON canónica y lo declaran.
 3. Los parámetros de detección de movimientos y soporte/resistencia son obligatorios en una configuración versionada; no se introducen umbrales ocultos.
 4. Los tres horizontes se emiten por separado, pero permanecen `INDETERMINATE` hasta aprobar metodologías específicas y añadir cobertura de eventos, fundamentales y on-chain.
@@ -28,6 +30,9 @@ El CLI es offline: no descarga datos ni busca noticias. Recibe un artefacto hist
 6. No hay ranking, probabilidad predictiva, rentabilidad esperada, órdenes reales ni credenciales de trading.
 
 ## Uso
+
+Para intentar resolver identidad canónica, proporciona un archivo `crypto-canonical-asset-identity-v1` revisado mediante `--identity-evidence` y declara el tipo del identificador con `--asset-id-type`. Sin esa evidencia, el informe permanece parcial aunque el ticker coincida con `base_asset`.
+
 
 ```bash
 python -m scripts.market_selection.research_report \
