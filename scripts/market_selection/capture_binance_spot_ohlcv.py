@@ -165,15 +165,23 @@ def build_url(symbol: str, interval: str, start_time_ms: int, end_time_ms_exclus
     return BASE_URL + "?" + query
 
 
-def request_page(url: str) -> dict:
+def request_page(url: str, *, use_case: str = "live_technical_test", authorization_record: dict | None = None) -> dict:
     started = utc_now()
     record = {
         "url": url, "request_started_at_utc": started, "captured_at_utc": None,
         "http_status": None, "response_bytes": None, "response_sha256": None,
         "response_base64": None, "parsed_json": None, "capture_status": "FAIL",
         "normalization_status": "NOT_RUN", "normalization_error": None,
-        "error_type": None, "error_message": None,
+        "error_type": None, "error_message": None, "provider_use_assessment": None,
     }
+    try:
+        assessment = evaluate_provider_use("binance_spot_market_data", use_case, authorization_record)
+    except (TypeError, ValueError):
+        assessment = {"schema_version":"crypto-provider-use-assessment-v1","provider_id":"binance_spot_market_data","use_case":use_case,"decision":"BLOCK","reason_codes":["AUTHORIZATION_RECORD_INVALID"],"authorization_evidence_status":"INVALID"}
+    record["provider_use_assessment"] = assessment
+    if assessment["decision"] != "ALLOW":
+        record.update(captured_at_utc=utc_now(),capture_status="BLOCKED",error_type="ProviderUseBlocked",error_message=";".join(assessment["reason_codes"]))
+        return record
     req = Request(url, headers={"Accept": "application/json", "User-Agent": "crypto-intelligence-ecosystem-ohlcv/1.0"})
     try:
         with urlopen(req, timeout=TIMEOUT_SECONDS) as response:
@@ -239,7 +247,7 @@ def capture_history(symbol: str, interval: str, start_time_ms: int, end_time_ms_
     candles_by_open = {}
     while cursor < end_time_ms_exclusive:
         url = build_url(symbol, interval, start_time_ms, end_time_ms_exclusive, cursor)
-        page = request_page(url)
+        page = request_page(url, use_case=use_case, authorization_record=authorization_record)
         pages.append(page)
         if page["capture_status"] != "PASS":
             break

@@ -55,7 +55,13 @@ def now_utc() -> str:
     return datetime.now(timezone.utc).isoformat(timespec="milliseconds").replace("+00:00", "Z")
 
 
-def request_json(url: str) -> dict[str, object]:
+def request_json(url: str, *, provider_id: str, use_case: str = "live_technical_test", authorization_record: dict | None = None) -> dict[str, object]:
+    try:
+        assessment = evaluate_provider_use(provider_id, use_case, authorization_record)
+    except (TypeError, ValueError) as exc:
+        raise PermissionError("regional REST diagnostic blocked: invalid authorization record") from exc
+    if assessment["decision"] != "ALLOW":
+        raise PermissionError("regional REST diagnostic blocked before network: " + ";".join(assessment["reason_codes"]))
     request = Request(url, headers={
         "Accept": "application/json",
         "User-Agent": "crypto-intelligence-ecosystem-binance-region-diagnostic/1.0",
@@ -90,7 +96,7 @@ def capture_endpoint(venue: dict[str, str], kind: str, url: str, asset: str | No
         record["captured_at_utc"] = now_utc()
         return record
     try:
-        result = request_json(url)
+        result = request_json(url, provider_id=provider_id, use_case="live_technical_test")
         raw = result["raw"]
         payload = result["payload"]
         record.update(

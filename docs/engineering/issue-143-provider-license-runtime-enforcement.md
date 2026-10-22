@@ -31,6 +31,8 @@ Estas reglas son controles de ingeniería y no sustituyen una revisión legal es
 
 `capture_multi_exchange_spot_book_probe.py` guarda el payload público íntegro como evidencia base64 y, por tanto, su caso de uso es `persistent_storage`, no solo una prueba técnica en vivo. La captura ahora evalúa el gate por venue antes de crear una solicitud: Binance, OKX, Bybit, MEXC, Gate, Bitget y Pionex. Sin autorización aprobada para el proveedor y el caso de uso, la fila queda `BLOCKED` y no se llama a `urlopen`. Las autorizaciones se suministran localmente con `--authorization-records`, como objeto JSON indexado por `provider_id`; sin archivo, el comportamiento predeterminado es bloquear. Los registros de prueba no equivalen a permisos reales.
 
+También se cierran entrypoints de transporte de bajo nivel: `request_page` de Binance OHLCV y `request_json` del diagnóstico REST regional vuelven a evaluar el gate antes de `urlopen`, incluso cuando se invocan sin sus funciones coordinadoras; `_open_public_stream` vuelve a comprobar la política justo antes de abrir el WebSocket. Los tests verifican que el transporte no se invoca al bloquear.
+
 Los lectores `binance_public.py` y `pionex_public.py` también consultan la red directamente. Ahora exigen un registro de autorización explícito para `internal_analysis`, verifican el gate antes del transporte inyectado y antes del transporte HTTP predeterminado, y adjuntan la evaluación a las observaciones correctas. Las pruebas de tamaño grande usan registros sintéticos solo para validar la lectura íntegra; no representan autorizaciones reales.
 
 El sondeo `capture_multi_exchange_spot_ticker_probe.py` también conserva los cuerpos de respuesta completos como evidencia base64. Por eso debe usar `persistent_storage` y la autorización por venue antes de `urlopen`; sin registros locales aprobados para el proveedor y el caso de uso, cada fila se marca `BLOCKED` y no se envía la solicitud. El comando admite `--authorization-records` (objeto JSON indexado por `provider_id`) y bloquea por defecto si no se suministra.
@@ -48,3 +50,28 @@ La evidencia de cuenta puede contener historial de operaciones y tasas individua
 No imponer un límite local arbitrario de bytes no significa que una API garantice todo el histórico imaginable. La captura debe leer cada respuesta hasta EOF, conservar el cuerpo íntegro recibido, registrar tamaño y SHA-256 y declarar cualquier truncamiento o fallo de transporte. Los límites documentados del proveedor, cuotas, ventanas históricas, paginación y fallos reales deben reflejarse como limitaciones observadas; no deben reemplazarse por un techo local inventado ni ocultarse como cobertura completa.
 
 La integridad del cuerpo recibido y la autorización para usar los datos son controles distintos: pasar uno no implica pasar el otro.
+
+## Inventario de entrypoints de red auditados
+
+La revisión recursiva de los archivos Python del repositorio identificó los siguientes entrypoints de red. Los módulos analíticos, contratos, validadores de calidad y ensambladores de informes son offline; no contienen llamadas HTTP/WebSocket directas.
+
+| Entry point | Proveedor / transporte | Caso de uso comprobado antes de red |
+|---|---|---|
+| `binance_depth_transport.fetch_public_depth_snapshot` | Binance REST depth | `live_technical_test` |
+| `binance_depth_transport._open_public_stream` / `capture_once` | Binance WebSocket depth | `live_technical_test` |
+| `capture_binance_live_depth_evidence.clock_probe` | Binance REST server-time | `live_technical_test` |
+| `capture_binance_regional_rest_diagnostic.request_json` / `capture_endpoint` | Binance global / Binance.US REST | `live_technical_test` |
+| `capture_binance_spot_ohlcv.request_page` / `capture_history` | Binance Spot OHLCV | Caso declarado; registro para usos no técnicos |
+| `capture_binance_spot_research` | Binance exchange metadata | Caso declarado; gate antes de `urlopen` |
+| `capture_pionex_spot_ohlcv.request_page` / `capture_history` | Pionex Spot OHLCV | Caso declarado; gate antes de `urlopen` |
+| `capture_binance_account_commission_evidence.capture_commission_evidence` | Binance cuenta privada | `internal_analysis` + consentimiento del titular + alcance de credencial verificado |
+| `capture_pionex_fill_fee_evidence.capture` | Pionex fills de cuenta privada | `internal_analysis` + consentimiento del titular + alcance de credencial verificado |
+| `capture_multi_exchange_spot_book_probe.capture_one` | Binance, OKX, Bybit, MEXC, Gate, Bitget, Pionex REST depth | `persistent_storage` por proveedor |
+| `capture_multi_exchange_spot_ticker_probe.capture_one` | Los mismos siete venues, REST ticker | `persistent_storage` por proveedor |
+| `capture_public_market_batch.request_capture` | Proveedores públicos declarados por configuración | Caso declarado; gate antes de `urlopen` |
+| `capture_public_market_data.request_capture` | Proveedores públicos declarados por configuración | Caso declarado; gate antes de `urlopen` |
+| `binance_public.BinancePublicSpotReader` / `_default_http_get` | Binance REST exchangeInfo/depth | `internal_analysis` por defecto |
+| `pionex_public.PionexPublicSpotReader` / `_default_http_get` | Pionex REST symbols | `internal_analysis` por defecto |
+
+**Controles transversales:** el gate se evalúa tanto en los coordinadores como en los entrypoints de bajo nivel que abren conexiones. Los rechazos se producen antes de `urlopen` o `websocket.create_connection`. Los usos de `live_technical_test` permitidos por la política no equivalen a licencia comercial, autorización de redistribución ni elegibilidad regional. La evidencia de un registro aprobado sigue requiriendo verificación humana de los términos oficiales y del alcance real.
+
