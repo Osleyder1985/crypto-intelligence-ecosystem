@@ -60,12 +60,19 @@ def _decimal(value: Any, field: str, *, positive: bool = False) -> Decimal:
 def normalize_kline(row: Any, symbol: str, interval: str, captured_at_utc: str, page_index: int) -> dict[str, Any]:
     if not isinstance(row, dict):
         raise ValueError("Pionex kline must be a JSON object")
+    raw_time = row.get("time")
+    if isinstance(raw_time, bool) or (isinstance(raw_time, float) and not raw_time.is_integer()):
+        raise ValueError("kline time must be an integer millisecond timestamp")
     try:
-        source_time_ms = int(row["time"])
-    except (KeyError, TypeError, ValueError, OverflowError) as exc:
+        source_time_ms = int(raw_time)
+    except (TypeError, ValueError, OverflowError) as exc:
         raise ValueError("kline time must be an integer millisecond timestamp") from exc
     if source_time_ms < 0:
         raise ValueError("kline time must be non-negative")
+    try:
+        source_time_utc = datetime.fromtimestamp(source_time_ms / 1000, tz=timezone.utc).isoformat(timespec="milliseconds").replace("+00:00", "Z")
+    except (OverflowError, OSError, ValueError) as exc:
+        raise ValueError("kline time is outside the supported timestamp range") from exc
     prices = {key: _decimal(row.get(key), key, positive=True) for key in ("open", "high", "low", "close")}
     if prices["high"] < max(prices["open"], prices["close"], prices["low"]):
         raise ValueError("kline high is below the OHLC envelope")
@@ -75,7 +82,7 @@ def normalize_kline(row: Any, symbol: str, interval: str, captured_at_utc: str, 
     return {
         "exchange": "pionex", "market_type": "SPOT", "symbol_native": symbol,
         "interval_native": interval, "source_time_ms": source_time_ms,
-        "source_time_utc": datetime.fromtimestamp(source_time_ms / 1000, tz=timezone.utc).isoformat(timespec="milliseconds").replace("+00:00", "Z"),
+        "source_time_utc": source_time_utc,
         "timestamp_unit": "milliseconds",
         "timestamp_role_status": "INDETERMINATE_OFFICIAL_SCHEMA_DOES_NOT_SPECIFY_OPEN_OR_CLOSE_ROLE",
         "open": str(prices["open"]), "high": str(prices["high"]),
@@ -257,6 +264,8 @@ def capture_history(
         if stop_reason == "NO_MORE_RECORDS"
         else "REQUESTED_START_BOUND_REACHED"
         if stop_reason == "REQUESTED_START_BOUND_REACHED"
+        else "OBSERVED_EARLIEST_REPRESENTABLE_TIMESTAMP_REACHED"
+        if stop_reason == "EARLIEST_REPRESENTABLE_TIMESTAMP_REACHED"
         else "INDETERMINATE_CAPTURE_INTERRUPTED"
     )
     overall = "PASS" if all_pages_pass and complete_stop and not duplicate_times and pagination_progress_status == "PASS" and candles and not provider_history_limit_reached else "PARTIAL"
