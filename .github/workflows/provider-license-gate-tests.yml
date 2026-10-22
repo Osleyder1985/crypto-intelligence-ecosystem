@@ -13,6 +13,12 @@ on:
       - "tests/market_selection/test_pionex_public.py"
       - "scripts/market_selection/capture_multi_exchange_spot_ticker_probe.py"
       - "tests/market_selection/test_capture_multi_exchange_spot_ticker_probe.py"
+      - "scripts/market_selection/capture_binance_spot_ohlcv.py"
+      - "tests/market_selection/test_capture_binance_spot_ohlcv.py"
+      - "scripts/market_selection/capture_binance_regional_rest_diagnostic.py"
+      - "tests/market_selection/test_capture_binance_regional_rest_diagnostic.py"
+      - "scripts/market_selection/binance_depth_transport.py"
+      - "tests/market_selection/test_binance_depth_transport.py"
       - "scripts/market_selection/capture_binance_account_commission_evidence.py"
       - "scripts/market_selection/capture_pionex_fill_fee_evidence.py"
       - "scripts/market_selection/binance_public.py"
@@ -53,3 +59,6 @@ jobs:
           python -m unittest discover -s tests/market_selection -p "test_data_contract_and_binance.py" -v
           python -m unittest discover -s tests/market_selection -p "test_pionex_public.py" -v
           python -m unittest discover -s tests/market_selection -p "test_capture_multi_exchange_spot_ticker_probe.py" -v
+          python -m unittest discover -s tests/market_selection -p "test_capture_binance_spot_ohlcv.py" -v
+          python -m unittest discover -s tests/market_selection -p "test_capture_binance_regional_rest_diagnostic.py" -v
+          python -m unittest discover -s tests/market_selection -p "test_binance_depth_transport.py" -v
