@@ -36,7 +36,7 @@ Los valores se expresan en USDT solo cuando la semántica oficial del campo lo r
 
 ## Lectura correcta de esta muestra
 
-- Se obtuvieron **18/21 valores de turnover válidos** y **3/21 no disponibles** por HTTP 403 de Bybit. El 403 no equivale a volumen cero ni prueba inexistencia del par.
+- Se obtuvieron 21 respuestas preservadas: 18/21 fueron técnicamente accesibles y 3/21 devolvieron HTTP 403 de Bybit. Solo 15/21 valores se consideran comparables como turnover cotizado; los 3 `amount` de Pionex se conservan en bruto pero su unidad queda `INDETERMINATE`. El 403 no equivale a volumen cero ni prueba inexistencia del par.
 - Las solicitudes se realizaron secuencialmente en una ventana corta; los tickers de 24 h son ventanas móviles que no terminan exactamente al mismo instante. Esta tabla es descriptiva, no un ranking aprobado.
 - Gate no devolvió un timestamp de origen en el campo extraído de esta respuesta; se conserva la hora de captura y el timestamp de origen queda ausente, no inventado.
 - La dispersión entre proveedores no debe interpretarse automáticamente como discrepancia de datos: las ventanas móviles, definiciones y mecanismos de agregación pueden diferir. Antes de comparar/ordenar hay que verificar la semántica de cada campo y acumular una serie temporal.
@@ -51,7 +51,7 @@ Se analizó el segundo artefacto real posterior a la integración de PR #108:
 - Segunda observación: [workflow #39789741314, artefacto #12431375194](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/actions/runs/39789741314/artifacts/12431375194), creada a las 13:46:07.098Z.
 - Separación entre creaciones: aproximadamente 85 minutos y 2 segundos.
 - Integridad comprobada de forma local para los artefactos descargados: 21/21 respuestas de cada captura conservan un cuerpo cuya longitud coincide con `response_bytes` y cuyo SHA-256 coincide con `response_sha256`.
-- Cada captura tuvo 18/21 valores de turnover válidos y 3/21 no disponibles por HTTP 403 de Bybit. No se infiere cero ni se intenta eludir el bloqueo.
+- Cada captura tuvo 18/21 respuestas técnicamente accesibles y 3/21 HTTP 403 de Bybit; solo 15/21 valores se consideran comparables como turnover cotizado, porque los tres `amount` de Pionex tienen unidad `INDETERMINATE`. No se infiere cero ni se intenta eludir el bloqueo.
 - Las tablas comparan solo los 18 pares de observaciones válidas en ambas capturas. Los porcentajes son el cambio entre dos valores de ventana móvil de 24 h; **no son el volumen negociado durante esos 85 minutos**.
 
 | Par | Exchange | Turnover 24 h anterior (USDT) | Turnover 24 h nuevo (USDT) | Cambio observado |
@@ -90,7 +90,7 @@ La nueva captura se ejecutó en modo público read-only. La ejecución del workf
 - Workflow: [Multi-exchange Spot quote-volume probe #39791367609](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/actions/runs/39791367609).
 - Artefacto: [multi-exchange-spot-quote-volume #12430313812](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/actions/runs/39791367609/artifacts/12430313812).
 - Estado del workflow: `success`; estado de la captura: `PARTIAL`.
-- 21/21 respuestas conservadas; el recuento de bytes y SHA-256 coincide para las 21 respuestas. 18/21 valores válidos; Bybit devuelve HTTP 403 en BTC/ETH/SOL.
+- 21/21 respuestas conservadas; bytes y SHA-256 coinciden en todas. 18/21 respuestas fueron técnicamente accesibles; 15/21 valores son comparables como turnover cotizado. Bybit devuelve HTTP 403 en BTC/ETH/SOL y los tres `amount` de Pionex quedan `INDETERMINATE` por unidad no documentada.
 - Separación desde la segunda observación: 10 min 37.959 s. Separación entre primera y tercera: 1 h 35 min 40.182 s.
 
 ### Cambios observados entre la segunda y tercera captura
@@ -120,7 +120,7 @@ Los porcentajes comparan dos lecturas de ventanas móviles de 24 horas. No repre
 
 ### Qué permite concluir la tercera captura
 
-1. Se mantiene una cobertura válida de 18/21 combinaciones; el acceso a Bybit continúa sin evidencia desde este runner y no debe interpretarse como volumen cero.
+1. Se mantienen 18/21 respuestas técnicamente accesibles, pero solo 15/21 valores comparables como turnover cotizado; Bybit continúa sin evidencia accesible desde este runner y los valores brutos de Pionex no son comparables hasta demostrar su unidad.
 2. Entre la segunda y tercera muestra, los cambios de BTC varían por venue; ETH presenta variaciones pequeñas y mixtas; SOL también presenta cambios mixtos. No es una clasificación de liquidez.
 3. Tres observaciones en menos de dos horas no constituyen una muestra representativa de estabilidad de 24 h ni de regímenes de mercado. No permiten estimar percentiles robustos, colas, comportamiento semanal ni estabilidad de largo plazo.
 4. La diferencia de timestamps y las semánticas de campo siguen limitando la comparación entre venues. Gate no aporta timestamp de origen en los registros capturados; se conserva como ausente.

@@ -9,7 +9,7 @@
 
 La selección debe comparar mercados Spot con identidad de símbolo confirmada, turnover, spread, profundidad, slippage, tarifas, frescura y riesgo del activo. Un único número agregado puede ocultar incompatibilidades de unidad, libros no sincronizados, datos ausentes o una dimensión crítica deficiente.
 
-La evidencia actual es exploratoria: tres capturas de turnover móvil 24 h para BTC/ETH/SOL en siete venues (18/21 valores válidos por captura) y un snapshot de libros con 18/21 respuestas válidas. Bybit devolvió HTTP 403 en el runner; los libros no fueron sincronizados y Binance/MEXC no aportan timestamp de evento utilizable para la profundidad. La serie de turnover cubre menos de dos horas, insuficiente para derivar estabilidad de largo plazo.
+La evidencia actual es exploratoria: tres capturas de turnover móvil 24 h para BTC/ETH/SOL en siete venues (18/21 respuestas técnicamente accesibles y 15/21 valores comparables por captura; los tres `amount` de Pionex tienen unidad no documentada) y un snapshot de libros con 18/21 respuestas válidas. Bybit devolvió HTTP 403 en el runner; los libros no fueron sincronizados y Binance/MEXC no aportan timestamp de evento utilizable para la profundidad. La serie de turnover cubre menos de dos horas, insuficiente para derivar estabilidad de largo plazo.
 
 ## Decisión propuesta
 
