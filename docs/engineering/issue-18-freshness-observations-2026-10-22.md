@@ -3,7 +3,7 @@
 - **Fecha de análisis:** 2026-10-22 UTC.
 - **Tipo de evidencia:** mediciones observadas en artefactos CI de captura REST, no umbrales normativos.
 - **Estado de decisión:** `INDETERMINATE`.
-- **Alcance:** seis ejecuciones independientes; pares BTC_USDT, ETH_USDT y SOL_USDT; Pionex Spot `data.updateTime` y timestamp superior de respuesta.
+- **Alcance:** siete ejecuciones independientes; pares BTC_USDT, ETH_USDT y SOL_USDT; Pionex Spot `data.updateTime` y timestamp superior de respuesta.
 
 ## Artefactos fuente
 
@@ -15,6 +15,7 @@
 | 39727842880 | 2026-10-22 05:24:46.114 | 12/12 registros; PASS | [ZIP de evidencia](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/actions/runs/39727842880/artifacts/12404105933) |
 | 39728996907 | 2026-10-22 05:36:50.701 | 12/12 registros; PASS | [ZIP de evidencia](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/actions/runs/39728996907/artifacts/12404476457) |
 | 39729153905 | 2026-10-22 05:38:34.928 | 12/12 registros; PASS | [ZIP de evidencia](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/actions/runs/39729153905/artifacts/12404820292) |
+| 39729271972 | 2026-10-22 05:39:49.687 | 12/12 registros; PASS | [ZIP de evidencia](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/actions/runs/39729271972/artifacts/12404590467) |
 
 Se analizaron los archivos JSON originales `public-market-capture-batch.json` dentro de los ZIP, no solo el resumen impreso en los logs.
 
@@ -42,18 +43,21 @@ Se analizaron los archivos JSON originales `public-market-capture-batch.json` de
 | 39729153905 | BTC_USDT | 185 | 49 | 999 / 999 |
 | 39729153905 | ETH_USDT | 298 | 48 | 999 / 999 |
 | 39729153905 | SOL_USDT | 248 | 40 | 1000 / 1000 |
+| 39729271972 | BTC_USDT | 262 | 21 | 999 / 999 |
+| 39729271972 | ETH_USDT | 195 | 29 | 999 / 999 |
+| 39729271972 | SOL_USDT | 246 | 17 | 1000 / 1000 |
 
-Resumen descriptivo de las dieciocho observaciones:
+Resumen descriptivo de las veintiuna observaciones:
 - `response − updateTime`: mínimo 161 ms, máximo 416 ms.
 - `captura − response`: mínimo 13 ms, máximo 114 ms.
-- Las seis ejecuciones abarcan aproximadamente 38 min 02 s desde el primer artefacto hasta el sexto.
-- La quinta ejecución añadió 161/203/282 ms y 33/114/34 ms; la sexta añadió 185/298/248 ms para `response − updateTime` y 49/48/40 ms para `captura − response`. La muestra continúa siendo pequeña y se concentra en una sola ventana de menos de una hora.
+- Las siete ejecuciones abarcan aproximadamente 39 min 17 s desde el primer artefacto hasta el séptimo.
+- La séptima ejecución añadió 262/195/246 ms para `response − updateTime` y 21/29/17 ms para `captura − response`. La muestra continúa siendo pequeña y se concentra en una sola ventana de menos de una hora; aumentar la cantidad de muestras en una ventana tan estrecha no sustituye medir otros periodos y condiciones de carga.
 
 ## Qué demuestra y qué no
 
 1. Demuestra que los artefactos conservan por separado timestamp superior de respuesta, timestamp de actualización del libro y captura UTC local, y que estos campos permiten medir deltas observados.
 2. No demuestra que `updateTime` equivalga a la edad de todos los niveles, ni que todos los niveles del snapshot hayan cambiado en ese instante.
-3. Dieciocho observaciones de tres pares en un intervalo corto no estiman adecuadamente colas de latencia, degradación por carga, cortes de red, diferencias regionales ni comportamiento de producción. No son suficientes para establecer un SLA universal.
+3. Veintiuna observaciones de tres pares en un intervalo corto no estiman adecuadamente colas de latencia, degradación por carga, cortes de red, diferencias regionales ni comportamiento de producción. No son suficientes para establecer un SLA universal.
 4. La captura REST de Binance usada aquí devuelve `lastUpdateId`, que es un identificador de secuencia, no un timestamp de origen. No se calcula frescura temporal absoluta a partir de él.
 5. No se propone un límite numérico de frescura a partir de esta muestra. Los límites de prueba sintéticos usados en fixtures solo verifican ramas de código y no son configuración de producto.
 6. Para aprobar una política interna se necesita definir el horizonte de uso y el riesgo tolerable, ampliar las mediciones en ventanas y condiciones representativas, y documentar responsable, versión y referencia de aprobación. Hasta entonces, la frescura absoluta y la decisión económica siguen `INDETERMINATE`.
