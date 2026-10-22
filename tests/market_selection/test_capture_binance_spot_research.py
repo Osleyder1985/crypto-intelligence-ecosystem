@@ -104,12 +104,17 @@ class BinanceSpotResearchCaptureTests(unittest.TestCase):
              patch("scripts.market_selection.capture_binance_spot_research.capture_history", return_value=artifact):
             captured, report = capture_and_build_report(
                 symbol="BTCUSDT", interval="1h", start_time_ms=0,
-                end_time_ms_exclusive=21_600_000, config=config, asset_id="BTC",
+                end_time_ms_exclusive=21_600_000, config=config, base_asset_ticker="BTC",
             )
         self.assertEqual(captured["artifact"]["market"]["base_asset"], "BTC")
         self.assertEqual(hashlib.sha256(captured["raw_bytes"]).hexdigest(), report["pipeline"]["capture_artifact_sha256"])
         self.assertEqual(report["decision_status"], "INDETERMINATE")
+        self.assertEqual(report["asset_identity_status"], "INDETERMINATE")
+        self.assertEqual(report["market_base_asset_mapping_status"], "VERIFIED")
+        self.assertEqual(report["canonical_asset_identity_status"], "NOT_RESOLVED")
+        self.assertEqual(report["data_quality"]["status"], "INCOMPLETE_OR_UNVERIFIED")
         self.assertTrue(all(h["status"] == "INDETERMINATE" for h in report["horizons"].values()))
+        self.assertTrue(all("CANONICAL_ASSET_ID_NOT_RESOLVED" in h["reason_codes"] for h in report["horizons"].values()))
         self.assertTrue(report["network_requests_made"])
         self.assertFalse(report["orders_submitted"])
         self.assertEqual(report["pipeline"]["canonical_cross_provider_asset_id"], "NOT_RESOLVED")
@@ -145,7 +150,7 @@ class BinanceSpotResearchCaptureTests(unittest.TestCase):
             "scripts.market_selection.capture_binance_spot_research.capture_history", return_value=artifact
         ):
             with self.assertRaisesRegex(ValueError, "does not match artifact base asset"):
-                capture_and_build_report(symbol="BTCUSDT", interval="1h", start_time_ms=0, end_time_ms_exclusive=3_600_000, config=config, asset_id="ETH")
+                capture_and_build_report(symbol="BTCUSDT", interval="1h", start_time_ms=0, end_time_ms_exclusive=3_600_000, config=config, base_asset_ticker="ETH")
 
 
 if __name__ == "__main__":
