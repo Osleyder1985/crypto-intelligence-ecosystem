@@ -20,6 +20,18 @@ Fuentes oficiales:
 4. Deriva la cantidad usando el menor precio top-of-book entre bid y ask de cada venue para asegurar que el mínimo de notional se cumple en ambos sentidos. Simula consumo de asks para compra y bids para venta hasta la cantidad calculada. Si falta profundidad, el escenario queda `INDETERMINATE`; no extrapola.
 5. Añade por separado una tarifa pública de referencia por fill (Pionex 5 bps; Binance Regular User 10 bps). Calcula un coste round-trip estático orientativo solo si ambas direcciones se cubren en el snapshot.
 
+## Resultado observado de CI
+
+La ejecución [39727204612](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/actions/runs/39727204612/artifacts/12404095553) capturó 12/12 registros, ejecutó el análisis dos veces y comparó ambos JSON byte a byte. Los tres escenarios de frontera quedaron estructuralmente cubiertos en el snapshot:
+
+| Par | Cantidad base común | Notional Pionex al mejor ask | Coste round-trip Pionex | Notional Binance al mejor ask | Coste round-trip Binance |
+|---|---:|---:|---:|---:|---:|
+| BTC/USDT | 0,00013 BTC | 10,7603613 USDT | 0,01076166 USDT | 10,7625518 USDT | 0,02152640 USDT |
+| ETH/USDT | 0,0041 ETH | 10,008674 USDT | 0,01004965 USDT | 10,008674 USDT | 0,02005831 USDT |
+| SOL/USDT | 0,096 SOL | 10,09536 USDT | 0,01105488 USDT | 10,09536 USDT | 0,02114976 USDT |
+
+Estos costes combinan la diferencia bid/ask e impacto observados en el libro con la tarifa pública por fill (5 bps Pionex, 10 bps Binance). El round-trip supone compra y venta en el mismo snapshot estático. No incluye movimiento de precio entre fills, latencia de ejecución, descuentos de cuenta, componentes fiscales/especiales ni redondeos de comisión; no es beneficio/pérdida esperado ni una garantía de ejecución. El resultado global del artefacto sigue `INDETERMINATE`.
+
 ## Interpretación y límites
 
 - Es un **escenario mínimo de restricciones**, no un tamaño comercial típico aprobado ni una recomendación de operación.
