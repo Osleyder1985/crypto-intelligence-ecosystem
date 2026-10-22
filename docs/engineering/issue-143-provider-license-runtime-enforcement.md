@@ -1,6 +1,6 @@
 # Auditoría de enforcement de licencias de proveedores — Issue #143
 
-**Estado:** hallazgo abierto; no equivale a una aprobación legal ni a un control runtime implementado.
+**Estado:** enforcement runtime y puertas de consumidores implementados y probados; la aprobación legal/contractual sigue siendo específica por fuente y caso de uso.
 
 ## Hallazgo verificado
 
