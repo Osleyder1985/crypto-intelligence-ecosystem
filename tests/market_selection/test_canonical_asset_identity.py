@@ -48,6 +48,7 @@ class CanonicalAssetIdentityTests(unittest.TestCase):
         self.assertEqual(result["canonical_asset_identity_status"], "VERIFIED")
         self.assertEqual(result["asset_identity_status"], "VERIFIED")
         self.assertEqual(result["stable_id"], "registry:bitcoin")
+        self.assertRegex(result["identity_evidence"]["identity_evidence_record_sha256"], r"^[0-9a-f]{64}$")
 
     def test_ambiguous_or_unapproved_evidence_remains_unresolved(self):
         ambiguous = resolve_asset_identity(
