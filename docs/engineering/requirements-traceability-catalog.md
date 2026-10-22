@@ -96,6 +96,12 @@ Los siguientes requisitos amplían el catálogo a partir del alcance del Issue #
 | REQ-P-031 | La arquitectura de alojamiento y operación se seleccionará con condiciones oficiales vigentes y escenarios de coste/recuperación. | Alta | Se documentan cuotas, suspensión, almacenamiento, egreso, regiones, backups, límites de ejecución, condiciones de uso y coste para MVP/crecimiento; el despliegue, observación y recuperación se pueden operar sin laptop permanentemente disponible, con alertas de coste, exportación y procedimiento de salida. | Enlaces oficiales fechados, modelo de costes, prueba de despliegue, backup/restore y migración | Propuesto | Rol propuesto: Operación de plataforma y costes |
 | REQ-P-032 | La plataforma central expondrá contratos de API versionados con controles de acceso y políticas explícitas de frescura y caché. | Alta | Para cada dominio se identifica fuente de verdad, propietario, timestamp de evento/recepción, política de frescura, tratamiento de datos obsoletos, autenticación/autorización y límites; cachés locales no se convierten en fuentes divergentes y secretos de proveedores no se exponen a clientes. | Contratos OpenAPI u otro contrato versionado, pruebas de autorización, consistencia y frescura entre clientes | Propuesto | Rol propuesto: API, seguridad y gobierno de datos |
 | REQ-P-033 | Cada fase de ingeniería tendrá criterios de entrada/salida y una definición verificable de terminado basada en evidencia. | Alta | Cada entrega enlaza requisitos, riesgos, decisiones, cambios y pruebas; registra entorno/versión/comandos/resultados, controles fallidos o no ejecutados, defectos abiertos, excepciones con responsable y autorización; documentación o compilación por sí solas no satisfacen la aceptación. | Plantilla de puerta de fase, registro reproducible de pruebas y trazabilidad extremo a extremo | Propuesto | Rol propuesto: Gobernanza de ingeniería y verificación |
+| REQ-P-034 | El sistema integrará una investigación de activo desde la entrada hasta un informe reproducible por horizonte. | Crítica | Una prueba E2E identifica el activo, consulta componentes analíticos existentes y entrega resultados separados para corto, medio y largo plazo, o INDETERMINATE con motivo. | Informe E2E versionado y artefactos de ejecución | Propuesto; integración pendiente | Rol propuesto: Integración de producto analítico |
+| REQ-P-035 | El sistema investigará posibles detonantes de movimientos con fuentes y cronología verificables. | Alta | Cada evento relacionado conserva publicación/captura, fuente y clasificación de evidencia; no afirma causalidad por proximidad temporal. | Expediente de eventos, pruebas de fuentes contradictorias y causa desconocida | Propuesto; integración pendiente | Rol propuesto: Investigación de mercado y eventos |
+| REQ-P-036 | Cada evaluación ofrecerá una tesis independiente para corto, medio y largo plazo. | Alta | Cada horizonte declara metodología/versión, escenarios, evidencia favorable/adversa, riesgos, invalidaciones y límites de confianza; sus duraciones se versionan y aprueban. | Contrato del informe y pruebas de esquema/E2E | Propuesto; metodología pendiente de aprobación | Rol propuesto: Metodología cuantitativa |
+| REQ-P-037 | Las zonas de soporte y resistencia se integrarán en la evaluación con temporalidad e invalidación explícitas. | Alta | El informe enlaza zonas al método y datos de origen; las pruebas históricas demuestran ausencia de look-ahead. | Tests del analizador e informe reproducible | Parcial; integración E2E pendiente | Rol propuesto: Análisis técnico cuantitativo |
+| REQ-P-038 | La captura preservará respuestas completas hasta EOF sin límite arbitrario de bytes impuesto por el proyecto. | Crítica | Las capturas registran hash, estado de terminación, paginación, errores y truncamiento; las interrupciones no se etiquetan completas y se gestionan los límites reales documentados. | Pruebas de integridad, paginación, interrupción y reanudación | Política documentada; validación integral pendiente | Rol propuesto: Ingeniería de datos de mercado |
+| REQ-P-039 | El informe explicará calidad de evidencia, riesgos y abstención cuando no haya base suficiente. | Alta | Casos con datos ausentes, incompatibles o no verificables devuelven INDETERMINATE y detallan qué falta, sin puntuación positiva forzada. | Fixtures negativos y pruebas de contrato del informe | Propuesto; cobertura E2E pendiente | Rol propuesto: Calidad y verificación analítica |
 
 ## 7. NFR adicionales para fiabilidad científica y operación
 
@@ -109,6 +115,9 @@ Los siguientes requisitos amplían el catálogo a partir del alcance del Issue #
 | NFR-016 | Transparencia de límites | Cobertura, datos ausentes, acuerdo entre métodos, confianza y frecuencia de abstención | Casos de insuficiencia de evidencia y revisión de reportes |
 | NFR-017 | Calidad de ranking | Estabilidad temporal, sensibilidad a pesos, comparabilidad y cambios de universo | Pruebas de sensibilidad y reconstrucción de rankings históricos |
 | NFR-018 | Calidad de experiencia | Éxito de tareas, accesibilidad, legibilidad de incertidumbre, estado de trabajos y errores de interpretación | Pruebas moderadas con usuarios y tecnología de asistencia |
+| NFR-019 | Integridad de captura | Respuestas completas hasta EOF, hashes, paginación, truncamiento, reanudación y límites reales de origen/entorno | Pruebas con respuestas grandes, paginación, EOF, interrupciones, reintentos e integridad hash |
+| NFR-020 | Validez temporal de la investigación | Disponibilidad point-in-time de velas, eventos y noticias; prevención de look-ahead y sesgo de supervivencia | Pruebas adversariales temporales y evaluación fuera de muestra |
+| NFR-021 | Explicabilidad y abstención analítica | Trazabilidad de conclusiones, calidad/cobertura, incertidumbre, evidencia contraria y tasa de INDETERMINATE | Revisión de informes y fixtures de evidencia insuficiente/contradictoria |
 
 ## 8. Trazabilidad ampliada
 
@@ -167,7 +176,7 @@ Estos estados describen el tipo de afirmación, no una escala universal de confi
 
 ## 12. Índice de planificación por fase y prioridad para NFR
 
-La tabla siguiente completa la clasificación preliminar de NFR-001–NFR-018. **Fase y prioridad son propuestas de planificación, no una línea base aprobada.** La prioridad se asigna por impacto potencial si el atributo falla, dependencias de otras capacidades y alcance de la mitigación; no representa una puntuación cuantitativa de riesgo. Los umbrales numéricos quedan pendientes de requisitos de carga, coste, amenazas, datos y usuarios.
+La tabla siguiente completa la clasificación preliminar de NFR-001–NFR-021. **Fase y prioridad son propuestas de planificación, no una línea base aprobada.** La prioridad se asigna por impacto potencial si el atributo falla, dependencias de otras capacidades y alcance de la mitigación; no representa una puntuación cuantitativa de riesgo. Los umbrales numéricos quedan pendientes de requisitos de carga, coste, amenazas, datos y usuarios.
 
 | Orden | Fase primaria | ID | Prioridad propuesta | Justificación y criterio de aceptación a concretar |
 |---:|---|---|---|---|
@@ -189,14 +198,9 @@ La tabla siguiente completa la clasificación preliminar de NFR-001–NFR-018. *
 | 16 | F5 — Motor de investigación cuantitativa | NFR-017 | Alta | Rankings inestables o incomparables inducen decisiones engañosas. Definir pruebas de sensibilidad a pesos/universo, estabilidad temporal y reconstrucción histórica. |
 | 17 | F6 — Experiencia web y móvil | NFR-006 | Alta | Una interfaz no utilizable o inaccesible puede hacer que se interpreten mal datos y riesgos. Definir tareas, tasa de éxito, errores, accesibilidad y tecnología de asistencia; evaluar en plataformas objetivo. |
 | 18 | F6 — Experiencia web y móvil | NFR-018 | Alta | La comprensión de incertidumbre, errores y estados de trabajo es crítica para evitar malas interpretaciones. Definir tareas moderadas, criterios de comprensión y pruebas de accesibilidad/responsividad. |
-
-### Reglas para completar la línea base NFR
-
-- La prioridad **Crítica** indica que el fallo puede invalidar resultados, crear un riesgo de seguridad relevante o hacer que las conclusiones sean engañosas; no equivale a severidad cuantificada ni a aceptación automática del riesgo.
-- La prioridad **Alta** indica que el atributo es necesario para una entrega fiable y debe verificarse antes de la fase de salida correspondiente.
-- F0–F6 son la fase primaria de definición/entrega. Los controles de seguridad, fiabilidad, portabilidad, coste y observabilidad se vuelven a verificar en F7–F8 aunque tengan otra fase primaria.
-- Los criterios de aceptación de los NFR siguen incompletos hasta que se definan umbrales medibles, condiciones de prueba, responsable, entorno y regla PASS/FAIL. No se inventan objetivos numéricos.
-- Antes de aprobar el catálogo, el propietario debe confirmar o modificar estas prioridades, responsables y fases a la luz de los riesgos y dependencias de Issues #3–#13.
+| 19 | F6 — Experiencia web y móvil | NFR-019 | Alta | La integridad de captura debe ser verificable para que el análisis no se base en respuestas silenciosamente truncadas; probar EOF, hash, paginación, interrupción y reanudación. |
+| 20 | F6 — Experiencia web y móvil | NFR-020 | Alta | Evitar que la investigación histórica use datos futuros; exigir disponibilidad point-in-time y pruebas anti-look-ahead/sesgo de supervivencia. |
+| 21 | F6 — Experiencia web y móvil | NFR-021 | Alta | Cada conclusión debe enlazar evidencia y declarar incertidumbre; los casos insuficientes/contradictorios deben permitir abstención explícita. |
 
 ## 13. Índice de planificación por fase y prioridad
 
@@ -220,34 +224,29 @@ Esta vista es el **orden de planificación propuesto** de los requisitos de prod
 | 14 | F5 — Motor de investigación cuantitativa | REQ-P-012 | Crítica | Calidad de evidencia y abstención |
 | 15 | F5 — Motor de investigación cuantitativa | REQ-P-014 | Crítica | Validación temporal fuera de muestra |
 | 16 | F5 — Motor de investigación cuantitativa | REQ-P-020 | Crítica | Trazabilidad de conclusiones |
-| 17 | F5 — Motor de investigación cuantitativa | REQ-P-004 | Alta | Informes y evidencia analítica |
-| 18 | F5 — Motor de investigación cuantitativa | REQ-P-005 | Alta | Historial reproducible |
-| 19 | F5 — Motor de investigación cuantitativa | REQ-P-009 | Alta | Costes y sesgos cuantitativos |
-| 20 | F5 — Motor de investigación cuantitativa | REQ-P-013 | Alta | Registro de predicciones |
-| 21 | F5 — Motor de investigación cuantitativa | REQ-P-015 | Alta | Análisis fundamental/on-chain por activo |
-| 22 | F5 — Motor de investigación cuantitativa | REQ-P-016 | Alta | Motor de riesgo y escenarios |
-| 23 | F5 — Motor de investigación cuantitativa | REQ-P-017 | Alta | Benchmark analítico reproducible |
-| 24 | F5 — Motor de investigación cuantitativa | REQ-P-021 | Alta | Comparación histórica |
-| 25 | F5 — Motor de investigación cuantitativa | REQ-P-022 | Alta | Rankings comparables |
-| 26 | F5 — Motor de investigación cuantitativa | REQ-P-023 | Alta | Movimientos de mercado y eventos |
-| 27 | F5 — Motor de investigación cuantitativa | REQ-P-024 | Alta | Memoria de eventos y predicciones |
-| 28 | F5 — Motor de investigación cuantitativa | REQ-P-025 | Alta | Profundidad y liquidez spot |
-| 29 | F5 — Motor de investigación cuantitativa | REQ-P-026 | Alta | Soportes y resistencias |
-| 30 | F6 — Experiencia web y móvil | REQ-P-001 | Alta | Inicio y control del trabajo de investigación |
-| 31 | F6 — Experiencia web y móvil | REQ-P-006 | Alta | Clientes web y móviles |
-| 32 | F6 — Experiencia web y móvil | REQ-P-027 | Alta | Navegación analítica y experiencia |
-| 33 | F8 — Operación y release controlada | REQ-P-019 | Alta | Monitorización de degradación |
-
-### Cobertura de NFR
-
-Los NFR-001–NFR-018 sí cuentan con un índice de planificación propuesto en la sección 12, ordenado por fase primaria y prioridad propuesta. Esta clasificación es preliminar y no aprobada; no debe confundirse con aceptación de línea base. Los criterios medibles, condiciones de prueba y responsables siguen pendientes. La sección 13 ordena los requisitos de producto (REQ-P), mientras que la sección 12 proporciona la vista equivalente para NFR.
-
-### Reglas de lectura
-
-- Orden: fase ascendente; dentro de cada fase, prioridad Crítica antes que Alta; después, ID ascendente.
-- Las fases F0–F9 corresponden a la hoja de ruta; la asignación no declara que una capacidad esté implementada ni que la fase esté completada.
-- REQ-P-007 es un límite de seguridad transversal y aparece en F0 como condición previa, aunque debe verificarse también en seguridad y release.
-- Los requisitos de datos y análisis pueden tener dependencias cruzadas; el índice define su fase primaria para evitar duplicar el mismo ID en varias filas.
+| 17 | F5 — Motor de investigación cuantitativa | REQ-P-034 | Crítica | Integrar los componentes existentes en un flujo E2E desde la identidad del activo hasta el informe por horizonte. |
+| 18 | F5 — Motor de investigación cuantitativa | REQ-P-004 | Alta | Informes y evidencia analítica |
+| 19 | F5 — Motor de investigación cuantitativa | REQ-P-005 | Alta | Historial reproducible |
+| 20 | F5 — Motor de investigación cuantitativa | REQ-P-009 | Alta | Costes y sesgos cuantitativos |
+| 21 | F5 — Motor de investigación cuantitativa | REQ-P-013 | Alta | Registro de predicciones |
+| 22 | F5 — Motor de investigación cuantitativa | REQ-P-015 | Alta | Análisis fundamental/on-chain por activo |
+| 23 | F5 — Motor de investigación cuantitativa | REQ-P-016 | Alta | Motor de riesgo y escenarios |
+| 24 | F5 — Motor de investigación cuantitativa | REQ-P-017 | Alta | Benchmark analítico reproducible |
+| 25 | F5 — Motor de investigación cuantitativa | REQ-P-021 | Alta | Comparación histórica |
+| 26 | F5 — Motor de investigación cuantitativa | REQ-P-022 | Alta | Rankings comparables |
+| 27 | F5 — Motor de investigación cuantitativa | REQ-P-023 | Alta | Movimientos de mercado y eventos |
+| 28 | F5 — Motor de investigación cuantitativa | REQ-P-024 | Alta | Memoria de eventos y predicciones |
+| 29 | F5 — Motor de investigación cuantitativa | REQ-P-025 | Alta | Profundidad y liquidez spot |
+| 30 | F5 — Motor de investigación cuantitativa | REQ-P-026 | Alta | Soportes y resistencias |
+| 31 | F5 — Motor de investigación cuantitativa | REQ-P-035 | Alta | Investigar detonantes con fuentes verificables y distinguir hechos, correlación, hipótesis y causa desconocida. |
+| 32 | F5 — Motor de investigación cuantitativa | REQ-P-036 | Alta | Evaluar por separado corto, medio y largo plazo con escenarios, riesgos e invalidaciones versionados. |
+| 33 | F5 — Motor de investigación cuantitativa | REQ-P-037 | Alta | Integrar soportes/resistencias con temporalidad, método e invalidación sin look-ahead. |
+| 34 | F6 — Experiencia web y móvil | REQ-P-001 | Alta | Inicio y control del trabajo de investigación |
+| 35 | F6 — Experiencia web y móvil | REQ-P-006 | Alta | Clientes web y móviles |
+| 36 | F6 — Experiencia web y móvil | REQ-P-027 | Alta | Navegación analítica y experiencia |
+| 37 | F8 — Operación y release controlada | REQ-P-038 | Crítica | Preservar capturas completas, registrar integridad y distinguir capturas completas de interrumpidas. |
+| 38 | F8 — Operación y release controlada | REQ-P-019 | Alta | Monitorización de degradación |
+| 39 | F8 — Operación y release controlada | REQ-P-039 | Alta | Exponer calidad de evidencia y abstenerse cuando falten datos esenciales. |
 
 ## 14. Matriz de trazabilidad entre Issues y requisitos
 
@@ -265,6 +264,8 @@ Esta matriz propone la cobertura documental de los Issues de arquitectura y requ
 | [#10 — Alojamiento y costes](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/issues/10) | Hosting, cuotas, recuperación, operación móvil y salida del proveedor | REQ-P-001, REQ-P-010, REQ-P-031, REQ-P-032 | NFR-001, NFR-002, NFR-008, NFR-009, NFR-010, NFR-015 | Propuesta; confirmar contra criterios de aceptación del Issue |
 | [#11 — Marco maestro](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/issues/11) | Integración del marco, riesgos, hoja de ruta y Definition of Done | REQ-P-028, REQ-P-033 | NFR-007, NFR-011 | Propuesta; Issue rector, no sustituye la trazabilidad específica de los Issues subordinados |
 | [#13 — Requisitos analíticos](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/issues/13) | Historial, comparaciones, ranking, eventos, liquidez, predicciones y niveles técnicos | REQ-P-004, REQ-P-005, REQ-P-009, REQ-P-012, REQ-P-013, REQ-P-014, REQ-P-015, REQ-P-016, REQ-P-017, REQ-P-018, REQ-P-019, REQ-P-020, REQ-P-021, REQ-P-022, REQ-P-023, REQ-P-024, REQ-P-025, REQ-P-026, REQ-P-027, REQ-P-029 | NFR-003, NFR-011, NFR-012, NFR-013, NFR-014, NFR-016, NFR-017, NFR-018 | Propuesta; confirmar contra criterios de aceptación del Issue |
+| [#128 — Flujo integral de investigación por activo](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/issues/128) | Se han especificado flujo E2E, tres horizontes, investigación de detonantes, zonas técnicas, integridad de captura y abstención. | Falta auditar la implementación real y aportar prueba E2E reproducible, artefactos de salida, validación temporal y trazabilidad requisito-código-prueba. La PR documental no prueba capacidad implementada. | Especificación propuesta; verificación pendiente |
+| [#128 — Flujo integral de investigación por activo](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/issues/128) | Integración E2E de identidad, historia, eventos/detonantes, horizontes, soportes/resistencias e informe con abstención | REQ-P-034, REQ-P-035, REQ-P-036, REQ-P-037, REQ-P-039 | NFR-019, NFR-020, NFR-021 | Requisitos especificados; implementación y evidencia E2E pendientes |
 | [#16 — Calidad del libro de órdenes](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/issues/16) | Validación estructural del libro: orden, duplicados, lados vacíos, niveles inválidos y estados cruzado/bloqueado | REQ-P-025, REQ-P-029 | NFR-003, NFR-011 | Propuesta; confirmar criterios y política de libro bloqueado |
 | [#17 — Identidad de mercado spot](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/issues/17) | Identidad del par mediante símbolo, activo base/cotizado y estado spot específico del proveedor | REQ-P-025, REQ-P-029 | NFR-003, NFR-011 | Propuesta; confirmar cobertura de Binance y Pionex |
 | [#18 — Frescura y coste total](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/issues/18) | Timestamps de origen/captura, política de frescura, tarifas y coste total con incertidumbre explícita | REQ-P-009, REQ-P-025, REQ-P-029, REQ-P-032 | NFR-003, NFR-011 | Propuesta; umbrales y evidencia económica pendientes |
@@ -315,21 +316,3 @@ Para el desglose operativo de los criterios originales de los Issues #7 y #13, v
 3. Producir PoC, ADR, capturas de fuentes y pruebas de recuperación donde los Issues lo exigen; una propuesta documental no satisface esos criterios.
 4. Revisar de nuevo la matriz cuando se incorporen evidencias y actualizar estado solo con enlaces verificables.
 
-
-## 5. Requisitos integrales de evaluación por activo — Issue #128
-
-El detalle funcional, no funcional y de pruebas está en [issue-128-end-to-end-asset-research.md](issue-128-end-to-end-asset-research.md). Se añaden estos identificadores para mantener trazabilidad estable:
-
-| ID | Requisito | Prioridad | Criterio verificable | Evidencia prevista | Estado |
-|---|---|---|---|---|---|
-| REQ-P-010 | Investigar un activo desde una entrada identificable hasta un informe reproducible. | Alta | Prueba E2E con identificador válido/ambiguo y artefacto final. | Resultado E2E archivado | Especificado; integración pendiente |
-| REQ-P-011 | Reconstruir movimientos históricos y buscar detonantes con evidencia temporal. | Alta | Reglas sin look-ahead; fuentes/horas e hipótesis alternativas. | Pruebas de eventos y expediente de fuentes | Parcial; validar cobertura |
-| REQ-P-012 | Evaluar por separado corto, medio y largo plazo. | Alta | Tres resultados independientes con supuestos versionados, riesgos e invalidaciones. | Informe E2E y metodología | Requisito especificado; duración/metodología por aprobar |
-| REQ-P-013 | Calcular soportes/resistencias explicables y temporales. | Alta | Método, temporalidad, zona, invalidación y prueba anti-look-ahead. | Tests y artefacto de evaluación | Componente parcial; integración pendiente |
-| REQ-P-014 | Abstenerse cuando evidencia o calidad sea insuficiente. | Alta | Casos negativos producen INDETERMINATE con motivo. | Pruebas de regresión | Especificado; cobertura E2E pendiente |
-| REQ-P-015 | Conservar y comparar evaluaciones sin sobrescribir historial. | Alta | Repetición/comparación distingue mercado de cambios de método/proveedor. | Registros y tests deterministas | Prototipo local; persistencia central por verificar |
-| REQ-N-010 | Preservar datos completos hasta EOF sin límite arbitrario de bytes impuesto por el proyecto. | Alta | Hash, estado de captura y detección de truncamiento; límites reales de fuente/recursos declarados. | Tests de paginación, integridad e interrupción | Política documentada; cobertura integral pendiente |
-| REQ-N-011 | Evitar fuga temporal y sesgos predictivos. | Alta | Split temporal/out-of-sample, benchmarks, costes y controles de leakage/survivorship/overfitting. | Protocolo y resultados reproducibles | Validación integral pendiente |
-| REQ-N-012 | Trazar cada conclusión hasta fuente, datos, metodología y prueba. | Alta | Trazabilidad requisito→código→prueba→resultado. | Matriz y artefactos de CI/E2E | Pendiente de integración completa |
-
-Los estados anteriores son una clasificación de trabajo y deben confirmarse contra el código, pruebas y artefactos del commit que se audite. No deben interpretarse como verificación automática de implementación.
