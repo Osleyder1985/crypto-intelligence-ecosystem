@@ -1,8 +1,8 @@
 # Informe integrado de investigación — contrato inicial de Issue #130
 
 - **Estado:** primer contrato técnico propuesto; no es una recomendación de inversión ni el cierre de Issue #128.
-- **Implementación:** `scripts/market_selection/research_report.py`.
-- **Pruebas:** `tests/market_selection/test_research_report.py`.
+- **Implementación:** `scripts/market_selection/research_report.py`, `scripts/market_selection/canonical_asset_identity.py`.
+- **Pruebas:** `tests/market_selection/test_research_report.py`, `tests/market_selection/test_canonical_asset_identity.py`.
 - **Schema de salida:** `crypto-asset-research-report-v1`.
 - **Entrada:** artefacto preservado `binance-spot-ohlcv-capture-v1` y archivo de configuración de metodología con parámetros explícitos.
 
@@ -16,7 +16,7 @@ El orquestador reutiliza los analizadores existentes para generar un único arte
 - resultados separados para `short`, `medium` y `long`;
 - limitaciones, estados y causas de abstención.
 
-El CLI es offline: no descarga datos ni busca noticias. Recibe un artefacto histórico ya capturado y un archivo de configuración; por eso todavía no resuelve por sí mismo un nombre/ticker arbitrario ni sustituye la futura API/interfaz.
+El CLI es offline: no descarga datos ni busca noticias. Recibe un artefacto histórico, configuración y, si existe, evidencia canónica revisada. No busca por sí mismo nombres/tickers ni sustituye la futura API/interfaz; sin evidencia de identidad, el resultado permanece parcial.
 
 ## Reglas conservadoras
 
