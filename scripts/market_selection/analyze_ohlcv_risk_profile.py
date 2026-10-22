@@ -2,6 +2,8 @@
 from __future__ import annotations
 
 import argparse
+import base64
+import hashlib
 import json
 import math
 import statistics
@@ -56,9 +58,43 @@ def _timestamp_ms(value, field: str) -> int:
     return result
 
 
+
+def verify_page_integrity(artifact: dict) -> str:
+    pages = artifact.get("pages")
+    if not isinstance(pages, list) or not pages:
+        raise ValueError("source artifact must contain a non-empty pages list")
+    statuses = []
+    for index, page in enumerate(pages):
+        if not isinstance(page, dict):
+            raise ValueError(f"pages[{index}] must be an object")
+        encoded = page.get("response_base64")
+        if encoded is None:
+            if page.get("capture_status") == "PASS":
+                raise ValueError(f"pages[{index}] passed capture but has no preserved response body")
+            statuses.append("UNAVAILABLE")
+            continue
+        try:
+            raw = base64.b64decode(encoded, validate=True)
+        except (ValueError, TypeError) as exc:
+            raise ValueError(f"pages[{index}] response_base64 is invalid") from exc
+        if page.get("response_bytes") is not None and len(raw) != page["response_bytes"]:
+            raise ValueError(f"pages[{index}] response byte count mismatch")
+        digest = page.get("response_sha256")
+        if digest is not None and hashlib.sha256(raw).hexdigest() != digest:
+            raise ValueError(f"pages[{index}] response SHA-256 mismatch")
+        if page.get("response_bytes") is None or digest is None:
+            statuses.append("PARTIAL_METADATA")
+        else:
+            statuses.append("VERIFIED")
+    if all(status == "VERIFIED" for status in statuses):
+        return "VERIFIED"
+    return "PARTIAL" if any(status == "VERIFIED" for status in statuses) else "UNVERIFIED"
+
+
 def analyze_artifact(artifact: dict, periods_per_year: int | None = None) -> dict:
     if not isinstance(artifact, dict) or artifact.get("schema_version") != INPUT_SCHEMA:
         raise ValueError(f"expected schema_version {INPUT_SCHEMA}")
+    source_integrity_status = verify_page_integrity(artifact)
     market = artifact.get("market")
     if not isinstance(market, dict) or market.get("market_type") != "SPOT":
         raise ValueError("market.market_type must be SPOT")
@@ -151,6 +187,7 @@ def analyze_artifact(artifact: dict, periods_per_year: int | None = None) -> dic
         "analysis_status": "DESCRIPTIVE_ONLY",
         "data_quality_status": data_quality,
         "market": {"exchange": market.get("exchange"), "market_type": "SPOT", "symbol_native": symbol, "interval": interval},
+        "source_integrity_status": source_integrity_status,
         "source_artifact": {
             "schema_version": artifact.get("schema_version"),
             "overall_status": artifact.get("overall_status"),

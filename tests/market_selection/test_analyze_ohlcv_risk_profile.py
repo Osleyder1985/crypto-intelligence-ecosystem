@@ -1,3 +1,5 @@
+import base64
+import hashlib
 import unittest
 
 from scripts.market_selection.analyze_ohlcv_risk_profile import analyze_artifact
@@ -13,11 +15,13 @@ def candle(open_ms, close, *, closed=True, quote_volume="1000", base_volume="10"
 
 
 def artifact(rows):
+    raw = b"synthetic preserved response body"
     return {
         "schema_version": "binance-spot-ohlcv-capture-v1",
         "overall_status": "PASS",
         "market": {"exchange": "binance", "market_type": "SPOT", "symbol_native": "BTCUSDT", "interval": "1h"},
         "window": {"start_time_ms_inclusive": rows[0]["open_time_ms"], "end_time_ms_exclusive": rows[-1]["open_time_ms"] + 3_600_000},
+        "pages": [{"capture_status": "PASS", "response_base64": base64.b64encode(raw).decode("ascii"), "response_bytes": len(raw), "response_sha256": hashlib.sha256(raw).hexdigest()}],
         "candles": rows,
     }
 
@@ -62,6 +66,19 @@ class OHLCVRiskProfileTests(unittest.TestCase):
         self.assertIsNone(per_bar["metrics"]["annualized_log_volatility"])
         self.assertIsNotNone(annualized["metrics"]["annualized_log_volatility"])
         self.assertEqual(annualized["metrics"]["annualization_periods_per_year"], 8760)
+
+
+    def test_tampered_source_response_hash_fails_closed(self):
+        a = artifact([candle(0, "100"), candle(3_600_000, "101")])
+        a["pages"][0]["response_sha256"] = "0" * 64
+        with self.assertRaisesRegex(ValueError, "SHA-256 mismatch"):
+            analyze_artifact(a)
+
+    def test_successful_page_without_preserved_body_fails_closed(self):
+        a = artifact([candle(0, "100"), candle(3_600_000, "101")])
+        a["pages"][0]["response_base64"] = None
+        with self.assertRaisesRegex(ValueError, "no preserved response body"):
+            analyze_artifact(a)
 
     def test_duplicate_or_out_of_order_candles_fail_closed(self):
         with self.assertRaisesRegex(ValueError, "strictly increasing"):
