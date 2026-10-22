@@ -29,6 +29,7 @@ jobs:
       - run: python -m unittest discover -s tests/market_selection -p "test_analyze_depth_cost_curves.py" -v
       - run: python -m unittest discover -s tests/market_selection -p "test_issue18_live_freshness.py" -v
       - run: python -m unittest discover -s tests/market_selection -p "test_minimum_common_notional_scenario.py" -v
+      - run: python -m unittest discover -s tests/market_selection -p "test_capture_pionex_fill_fee_evidence.py" -v
   capture-offline:
     name: Test multi-pair capture offline
     needs: scope
