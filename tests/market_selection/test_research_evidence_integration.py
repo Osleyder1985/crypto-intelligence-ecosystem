@@ -1,15 +1,16 @@
 import base64
+import base64
 import copy
 import hashlib
 import unittest
 from unittest.mock import patch
-from scripts.market_selection.provider_license_gate import (
-    ASSESSMENT_SCHEMA_VERSION, POLICY_VERSION, SCHEMA_VERSION as AUTH_SCHEMA_VERSION, evaluate_provider_use,
+from scripts.market_selection.provider_license_gate import ASSESSMENT_SCHEMA_VERSION, POLICY_VERSION, SCHEMA_VERSION as AUTH_SCHEMA_VERSION
+from scripts.market_selection.event_source_registry import EVENT_SOURCE_REGISTRY
+from scripts.market_selection.capture_sec_press_releases_rss import (
+    capture_sec_press_release_article, capture_sec_press_releases_rss, promote_sec_press_release_to_event,
 )
-from scripts.market_selection.event_source_registry import EVENT_SOURCE_REGISTRY, source_entry_sha256
 
 from scripts.market_selection.research_evidence_integration import enrich_research_report
-from scripts.market_selection.external_event_evidence import INPUT_SCHEMA
 from scripts.market_selection.methodology_contract import METHODOLOGY_SCHEMA
 
 
@@ -50,7 +51,7 @@ def approved_event_source():
         "terms_sha256": hashlib.sha256(terms).hexdigest(),
         "terms_content_base64": base64.b64encode(terms).decode("ascii"),
         "reviewed_by": "offline-test-fixture",
-        "reviewed_at": "2026-10-22T00:00:00Z",
+        "reviewed_at": "2026-10-19T00:00:00Z",
         "allowed_use_cases": ["internal_analysis", "persistent_storage"],
     })
     return entry
@@ -65,7 +66,7 @@ def event_authorization(entry):
         "terms_url": entry["terms_url"],
         "terms_sha256": entry["terms_sha256"],
         "reviewed_by": "offline-test-fixture",
-        "reviewed_at": "2026-10-22T00:00:00Z",
+        "reviewed_at": "2026-10-19T00:00:00Z",
     }
 
 
@@ -86,37 +87,62 @@ def report():
     }
 
 
+class FakeResponse:
+    def __init__(self, raw, headers):
+        self.raw = raw
+        self.headers = headers
+        self.status = 200
+        self.offset = 0
+
+    def read(self, size=-1):
+        if self.offset >= len(self.raw):
+            return b""
+        end = len(self.raw) if size is None or size < 0 else min(len(self.raw), self.offset + size)
+        chunk = self.raw[self.offset:end]
+        self.offset = end
+        return chunk
+
+    def close(self):
+        pass
+
+
 def event():
     entry = approved_event_source()
     record = event_authorization(entry)
-    internal = evaluate_provider_use("sec_press_releases", "internal_analysis", record)
-    storage = evaluate_provider_use("sec_press_releases", "persistent_storage", record)
-    return {
-        "schema_version": INPUT_SCHEMA,
-        "event_id": "event-1",
-        "title": "Protocol update",
-        "event_type": "PROTOCOL_UPDATE",
-        "source": {
-            "source_type": "REGULATORY",
-            "url": "https://www.sec.gov/news/press-release/example",
-            "publisher": entry["display_name"],
-        },
-        "published_at": "2026-10-20T10:00:00Z",
-        "captured_at": "2026-10-20T10:01:00Z",
-        "entities": [{"id_type": "coingecko_id", "id": "example-asset"}],
-        "evidence": [{"url": "https://www.sec.gov/news/press-release/example", "claim": "An update was announced"}],
-        "capture_method": "fixture",
-        "content_sha256": "a" * 64,
-        "license_notes": "Synthetic test authorization; no real source approval.",
-        "metadata": {},
-        "source_id": "sec_press_releases",
-        "provider_id": "sec_press_releases",
-        "source_registry_status": "APPROVED",
-        "source_registry_entry_sha256": source_entry_sha256(entry),
-        "provider_use_assessment": internal,
-        "persistent_storage_assessment": storage,
-        "provider_policy_assessments": [internal, storage],
-    }
+    feed_raw = (
+        '<?xml version="1.0" encoding="UTF-8"?>'
+        '<rss version="2.0"><channel><title>SEC fixture feed</title>'
+        '<item><title>Protocol update</title>'
+        '<link>https://www.sec.gov/news/press-release/example</link>'
+        '<guid>https://www.sec.gov/news/press-release/example</guid>'
+        '<pubDate>Tue, 20 Oct 2026 10:00:00 GMT</pubDate>'
+        '<description>An update was announced</description></item>'
+        '</channel></rss>'
+    ).encode("utf-8")
+    article_raw = b"<html><title>Protocol update</title><body>An update was announced</body></html>"
+    mapping_raw = b"synthetic reviewed entity mapping evidence"
+    user_agent = "CryptoIntelligenceTest/1.0 (contact: offline-test-fixture)"
+    with patch.dict(EVENT_SOURCE_REGISTRY["sources"], {"sec_press_releases": entry}):
+        feed = capture_sec_press_releases_rss(
+            record, user_agent, 5, captured_at="2026-10-20T10:01:00Z",
+            opener=FakeResponse(feed_raw, {"Content-Type": "application/rss+xml"}),
+        )
+        feed_item = feed["feed_items"][0]
+        article = capture_sec_press_release_article(
+            feed_item["link"], record, user_agent, 5, captured_at="2026-10-20T10:02:00Z",
+            opener=FakeResponse(article_raw, {"Content-Type": "text/html"}),
+        )
+        return promote_sec_press_release_to_event(
+            feed, feed_item["item_id"], article, "PROTOCOL_UPDATE", "An update was announced",
+            {
+                "status": "APPROVED",
+                "reviewed_by": "offline-test-fixture",
+                "reviewed_at": "2026-10-20T10:03:00Z",
+                "evidence_record_base64": base64.b64encode(mapping_raw).decode("ascii"),
+                "evidence_record_sha256": hashlib.sha256(mapping_raw).hexdigest(),
+                "entities": [{"id_type": "coingecko_id", "id": "example-asset"}],
+            },
+        )
 
 
 class ResearchEvidenceIntegrationTests(unittest.TestCase):
@@ -147,6 +173,7 @@ class ResearchEvidenceIntegrationTests(unittest.TestCase):
     def test_rejects_event_captured_after_historical_cutoff_as_eligible(self):
         ev = event()
         ev["captured_at"] = "2026-10-22T10:01:00Z"
+        ev["source_capture_assessments"]["article"]["captured_at"] = "2026-10-22T10:01:00Z"
         with patch.dict(EVENT_SOURCE_REGISTRY["sources"], {"sec_press_releases": approved_event_source()}):
             enriched = enrich_research_report(
                 report(),
@@ -189,6 +216,7 @@ class ResearchEvidenceIntegrationTests(unittest.TestCase):
         ev.pop("provider_use_assessment")
         ev.pop("persistent_storage_assessment")
         ev.pop("provider_policy_assessments")
+        ev.pop("source_capture_assessments")
         with patch.dict(EVENT_SOURCE_REGISTRY["sources"], {"sec_press_releases": approved_event_source()}):
             with self.assertRaisesRegex(PermissionError, "event evidence blocked before use"):
                 enrich_research_report(
