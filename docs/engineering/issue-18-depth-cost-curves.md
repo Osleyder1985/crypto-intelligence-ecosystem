@@ -22,6 +22,16 @@ Cada punto incluye `slippage_plus_public_fee_reference_bps_per_fill`, una suma i
 
 La salida conserva `effective_account_fee_verified=false`. El overlay no aplica VIP, descuentos BNB, promociones de símbolo, componentes fiscales/especiales, moneda de comisión ni redondeos. No es un coste total round-trip y no se debe interpretar como tarifa efectiva del usuario. Se ofrece solo como escenario público de referencia para que el impacto de usar una tarifa base sea visible.
 
+## Restricciones oficiales de símbolo preservadas
+
+La curva también conserva restricciones de los metadatos oficiales de cada mercado:
+- Pionex `GET /api/v1/common/symbols`: identidad Spot, enable, precisión, `minAmount`, `minTradeSize`, `maxTradeSize`, `minTradeDumping`, `maxTradeDumping`, `buyCeiling` y `sellFloor`, cuando estén presentes. La documentación distingue límites de orden limit de campos de dumping para venta market.
+- Binance `GET /api/v3/exchangeInfo`: identidad, estado, permiso Spot y lista completa de filtros de símbolo, incluidos `PRICE_FILTER`, `LOT_SIZE`, `MARKET_LOT_SIZE`, `MIN_NOTIONAL`/`NOTIONAL` cuando existan.
+
+Fuentes oficiales: [Pionex Market Data / common symbols](https://pionex-doc.gitbook.io/apidocs/restful/common/market-data) y [Binance Spot REST API](https://github.com/binance/binance-spot-api-docs/blob/master/rest-api.md).
+
+El estado de captura de restricciones puede ser `PASS` si los metadatos se validan; eso **no** significa que una orden sea elegible. `order_size_eligibility` permanece `INDETERMINATE` mientras el producto no defina tamaño y tipo de orden, y mientras no se comprueben los filtros relevantes para ese tipo.
+
 ## Interpretación
 
 - `slippage_bps_vs_mid` es una medida de desviación del VWAP acumulado frente al mid del snapshot; incluye el efecto del spread y el impacto de los niveles consumidos. No es una garantía de precio de ejecución.
