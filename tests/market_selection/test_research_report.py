@@ -192,8 +192,10 @@ class ResearchReportTests(unittest.TestCase):
             artifact_path = root / "ohlcv.json"
             config_path = root / "methodology.json"
             output_path = root / "report.json"
+            identity_path = root / "identity.json"
             artifact_path.write_text(json.dumps(self.source, sort_keys=True), encoding="utf-8")
             config_path.write_text(json.dumps(config(), sort_keys=True), encoding="utf-8")
+            identity_path.write_text(json.dumps(identity_evidence(), sort_keys=True), encoding="utf-8")
 
             completed = subprocess.run(
                 [
@@ -208,6 +210,8 @@ class ResearchReportTests(unittest.TestCase):
                     str(config_path),
                     "--output",
                     str(output_path),
+                    "--identity-evidence",
+                    str(identity_path),
                 ],
                 cwd=Path(__file__).resolve().parents[2],
                 capture_output=True,
@@ -222,8 +226,9 @@ class ResearchReportTests(unittest.TestCase):
                 hashlib.sha256(artifact_path.read_bytes()).hexdigest(),
             )
             self.assertEqual(report["decision_status"], "INDETERMINATE")
-            self.assertEqual(report["asset_identity_status"], "INDETERMINATE")
-            self.assertEqual(report["canonical_asset_identity_status"], "NOT_RESOLVED")
+            self.assertEqual(report["asset_identity_status"], "VERIFIED")
+            self.assertEqual(report["canonical_asset_identity_status"], "VERIFIED")
+            self.assertEqual(report["canonical_asset_identity"]["stable_id"], "registry:bitcoin")
             self.assertEqual(set(report["horizons"]), {"short", "medium", "long"})
 
     def test_missing_explicit_method_parameter_is_rejected(self):
