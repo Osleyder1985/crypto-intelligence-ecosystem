@@ -9,6 +9,8 @@ from decimal import Decimal, InvalidOperation
 from pathlib import Path
 from typing import Any
 
+from scripts.market_selection.provider_license_gate import evaluate_artifact_use
+
 SCHEMA = "public-depth-cost-curves-v1"
 PUBLIC_FEE_REFERENCE = {
     "pionex": {
@@ -187,6 +189,9 @@ def analyze_depth_record(record: dict[str, Any], market_id: str, venue: str, sym
 def analyze_artifact(artifact: dict[str, Any]) -> dict[str, Any]:
     if not isinstance(artifact, dict) or artifact.get("schema_version") != "public-market-capture-batch-v1" or artifact.get("overall_status") != "PASS":
         raise ValueError("input must be a PASS public-market-capture-batch-v1 artifact")
+    provider_use = evaluate_artifact_use(artifact, "internal_analysis")
+    if provider_use["decision"] != "ALLOW":
+        raise PermissionError("depth cost analysis blocked before use: " + ",".join(provider_use["reason_codes"]))
     universe, records = artifact.get("universe"), artifact.get("records")
     if not isinstance(universe, list) or not isinstance(records, list):
         raise ValueError("artifact universe and records must be arrays")
