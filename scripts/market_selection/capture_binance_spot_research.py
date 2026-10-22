@@ -110,7 +110,7 @@ def capture_and_build_report(
     start_time_ms: int,
     end_time_ms_exclusive: int,
     config: dict,
-    asset_id: str,
+    base_asset_ticker: str,
 ) -> tuple[dict, dict]:
     """Capture official exchange metadata and candles, then build report from exact artifact bytes."""
     symbol = symbol.strip().upper()
@@ -136,7 +136,19 @@ def capture_and_build_report(
     capture_raw = (
         json.dumps(artifact, ensure_ascii=False, indent=2, sort_keys=True, allow_nan=False) + "\n"
     ).encode("utf-8")
-    report = build_research_report(artifact, config, asset_id, capture_raw)
+    report = build_research_report(artifact, config, base_asset_ticker, capture_raw)
+    # The exchange metadata verifies only the pair's base ticker. It does not prove
+    # a globally unique token identity across chains, wrapped assets, or providers.
+    report["asset_identity_status"] = "INDETERMINATE"
+    report["market_base_asset_mapping_status"] = "VERIFIED"
+    report["canonical_asset_identity_status"] = "NOT_RESOLVED"
+    report["asset_identity_scope"] = "Binance pair baseAsset ticker only; global cross-provider token identity is unresolved."
+    report["report_status"] = "PARTIAL"
+    report["data_quality"]["status"] = "INCOMPLETE_OR_UNVERIFIED"
+    report["data_quality"]["dimensions"]["canonical_asset_identity"] = "NOT_RESOLVED"
+    for horizon in report["horizons"].values():
+        if "CANONICAL_ASSET_ID_NOT_RESOLVED" not in horizon["reason_codes"]:
+            horizon["reason_codes"].append("CANONICAL_ASSET_ID_NOT_RESOLVED")
     report["pipeline"] = {
         "schema_version": PIPELINE_SCHEMA,
         "capture_artifact_sha256": hashlib.sha256(capture_raw).hexdigest(),
@@ -162,7 +174,7 @@ def capture_and_build_report(
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--symbol", required=True, help="Exact native Binance Spot symbol, e.g. BTCUSDT; no ticker guessing")
-    parser.add_argument("--asset-id", required=True, help="Must equal exchangeInfo baseAsset ticker; not a global token identifier")
+    parser.add_argument("--base-asset-ticker", required=True, help="Must equal exchangeInfo baseAsset ticker; not a global token identifier")
     parser.add_argument("--interval", required=True)
     parser.add_argument("--start-time-ms", required=True, type=int, help="Inclusive UTC candle boundary, Unix milliseconds")
     parser.add_argument("--end-time-ms", required=True, type=int, help="Exclusive UTC candle boundary, Unix milliseconds")
@@ -177,7 +189,7 @@ def main() -> int:
         start_time_ms=args.start_time_ms,
         end_time_ms_exclusive=args.end_time_ms,
         config=config,
-        asset_id=args.asset_id,
+        base_asset_ticker=args.base_asset_ticker,
     )
     args.capture_output.parent.mkdir(parents=True, exist_ok=True)
     args.report_output.parent.mkdir(parents=True, exist_ok=True)
@@ -193,6 +205,8 @@ def main() -> int:
         "report_status": report["report_status"],
         "decision_status": report["decision_status"],
         "asset_identity_status": report["asset_identity_status"],
+        "market_base_asset_mapping_status": report["market_base_asset_mapping_status"],
+        "canonical_asset_identity_status": report["canonical_asset_identity_status"],
         "horizons": {key: value["status"] for key, value in report["horizons"].items()},
         "orders_submitted": False,
     }, ensure_ascii=False, indent=2))
