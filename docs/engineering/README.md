@@ -6,6 +6,7 @@
 
 | Documento | Propósito | Estado |
 |---|---|---|
+| [Auditoría de brechas de implementación — Issue #128](issue-128-implementation-gap-audit.md) | Evidencia del código reutilizable, brechas E2E y prioridades de implementación | Auditoría documental; no demuestra integración |
 | [Flujo integral de investigación por activo — Issue #128](issue-128-end-to-end-asset-research.md) | Entrada de activo, expediente histórico, detonantes con evidencia, soportes/resistencias, tres horizontes, NFR y criterios E2E | Especificación propuesta; implementación integral pendiente de verificar |
 | [Marco maestro](master-framework.md) | Visión, límites, principios, gobernanza, ciclo de vida, arquitectura lógica y decisiones pendientes | Borrador |
 | [Matriz normativa](normative-matrix.md) | Referencias, estado de verificación, aplicabilidad inicial, evidencia y decisiones pendientes | Preliminar |
