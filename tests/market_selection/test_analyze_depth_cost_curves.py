@@ -39,7 +39,7 @@ def artifact():
                      "baseAsset": "BTC", "quoteAsset": "USDT",
                      "filters": [{"filterType": "LOT_SIZE", "minQty": "0.00001", "maxQty": "9000", "stepSize": "0.00001"},
                                  {"filterType": "MARKET_LOT_SIZE", "minQty": "0.00001", "maxQty": "1000", "stepSize": "0.00001"},
-                                 {"filterType": "MIN_NOTIONAL", "minNotional": "5"}]}]},
+                                 {"filterType": "MIN_NOTIONAL", "minNotional": "5"}]}],
     })
     return {"schema_version": "public-market-capture-batch-v1", "overall_status": "PASS",
             "created_at_utc": "2026-10-22T00:00:00.300Z",
