@@ -22,6 +22,12 @@ BASELINE_POLICY = {
     # Private account data is a separate authorization domain from public market data.
     "binance_spot_account_data": {u: "REQUIRES_ACCOUNT_OWNER_AND_PROVIDER_SCOPE_APPROVAL" for u in SUPPORTED_USE_CASES},
     "pionex_spot_account_data": {u: "REQUIRES_ACCOUNT_OWNER_AND_PROVIDER_SCOPE_APPROVAL" for u in SUPPORTED_USE_CASES},
+    # Multi-exchange public snapshots are persisted as evidence; each venue requires explicit scope approval.
+    "okx_spot_market_data": {u: "REQUIRES_APPROVAL" for u in SUPPORTED_USE_CASES},
+    "bybit_spot_market_data": {u: "REQUIRES_APPROVAL" for u in SUPPORTED_USE_CASES},
+    "mexc_spot_market_data": {u: "REQUIRES_APPROVAL" for u in SUPPORTED_USE_CASES},
+    "gate_spot_market_data": {u: "REQUIRES_APPROVAL" for u in SUPPORTED_USE_CASES},
+    "bitget_spot_market_data": {u: "REQUIRES_APPROVAL" for u in SUPPORTED_USE_CASES},
 }
 
 def _text(value: object, field: str) -> str:
