@@ -73,11 +73,13 @@ class ProviderLicenseEnforcementTests(unittest.TestCase):
             "reviewed_at": "2026-10-22T00:00:00Z",
             "reviewed_by": "test-reviewer",
             "account_owner_consent_ref": "consent-record-test-reference",
+            "account_owner_consent_sha256": "b" * 64,
             "credential_scope_verified": True,
         }
         result = evaluate_provider_use("binance_spot_account_data", "internal_analysis", record)
         self.assertEqual(result["decision"], "ALLOW")
         self.assertEqual(result["authorization"]["account_owner_consent_ref"], "consent-record-test-reference")
+        self.assertEqual(result["authorization"]["account_owner_consent_sha256"], "b" * 64)
         record["credential_scope_verified"] = False
         with self.assertRaises(ValueError):
             evaluate_provider_use("binance_spot_account_data", "internal_analysis", record)
