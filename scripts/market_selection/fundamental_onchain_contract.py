@@ -201,19 +201,28 @@ def validate_observation(item: object) -> dict:
             raise ValueError("OBSERVED requires a value; use an explicit non-observed status for missing data")
         if unit != metric["unit"]:
             raise ValueError(f"unit must match catalog unit {metric['unit']}")
+        categorical_units = {"categorical", "categorical_or_usd", "event_count_or_records"}
         if isinstance(value, bool) or not isinstance(value, (int, float, str)):
             raise ValueError("value must be a finite number or a categorical string")
         if isinstance(value, (int, float)) and not math.isfinite(value):
             raise ValueError("numeric value must be finite")
+        if unit in categorical_units and not isinstance(value, str):
+            raise ValueError("categorical metric values must be strings")
+        if unit not in categorical_units and not isinstance(value, (int, float)):
+            raise ValueError("quantitative metric values must be numeric")
         if isinstance(value, str) and not value.strip():
             raise ValueError("categorical value must be non-empty")
+        if unit == "fraction" and not 0 <= value <= 1:
+            raise ValueError("fraction values must be between 0 and 1")
         if category not in metric["categories"]:
             raise ValueError(f"metric {metric_id} is not defined as applicable for category {category}")
     else:
         if value is not None:
             raise ValueError(f"{status} observations must use value=null, never a fabricated zero")
-        if status == "NOT_APPLICABLE" and category in metric["categories"]:
-            raise ValueError(f"{metric_id} is listed for category {category}; NOT_APPLICABLE requires documented justification")
+        if status == "NOT_APPLICABLE" and category in metric["categories"] and not _string(
+            item.get("applicability_override_reason"), "applicability_override_reason"
+        ):
+            raise ValueError(f"{metric_id} is listed for category {category}; NOT_APPLICABLE requires a documented applicability_override_reason")
     source = item.get("source")
     if not isinstance(source, dict):
         raise ValueError("source must be an object")
@@ -252,6 +261,7 @@ def validate_observation(item: object) -> dict:
             "terms_status": _string(source.get("terms_status", "UNKNOWN"), "source.terms_status"),
         },
         "quality_notes": item.get("quality_notes", ""),
+        "applicability_override_reason": item.get("applicability_override_reason"),
         "metadata": item.get("metadata", {}) if isinstance(item.get("metadata", {}), dict) else {},
     }
 
