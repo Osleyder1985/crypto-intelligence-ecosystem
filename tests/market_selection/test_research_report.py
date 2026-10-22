@@ -1,5 +1,6 @@
 import base64
 import hashlib
+import json
 import unittest
 
 from scripts.market_selection.research_report import build_research_report
@@ -75,7 +76,7 @@ class ResearchReportTests(unittest.TestCase):
             candle(4, 8.5, 10, 8, 9.5),
             candle(5, 9.5, 11, 9, 10.5),
         ])
-        self.raw = b'{"source":"exact original artifact bytes"}'
+        self.raw = json.dumps(self.source, ensure_ascii=False, sort_keys=True).encode("utf-8")
 
     def test_assembles_existing_analyses_and_abstains_on_all_horizons(self):
         report = build_research_report(self.source, config(), "BTC", self.raw)
@@ -93,6 +94,10 @@ class ResearchReportTests(unittest.TestCase):
         self.assertFalse(report["event_causal_assessment"]["causality_claimed"])
         self.assertFalse(report["orders_submitted"])
         self.assertFalse(report["network_requests_made"])
+
+    def test_source_bytes_must_match_the_analyzed_artifact(self):
+        with self.assertRaisesRegex(ValueError, "do not match"):
+            build_research_report(self.source, config(), "BTC", b'{}')
 
     def test_missing_asset_identity_is_indeterminate_not_inferred_from_ticker(self):
         source = artifact(self.source["candles"], base_asset=None)
