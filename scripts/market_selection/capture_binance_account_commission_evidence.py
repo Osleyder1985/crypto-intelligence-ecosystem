@@ -15,6 +15,8 @@ from urllib.error import HTTPError, URLError
 from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 
+from scripts.market_selection.provider_license_gate import evaluate_provider_use
+
 DEFAULT_BASE_URL = "https://api.binance.com"
 SCHEMA_VERSION = "binance-spot-account-commission-evidence-v1"
 COMMISSION_GROUPS = ("standardCommission", "taxCommission", "specialCommission")
@@ -78,8 +80,12 @@ def capture_commission_evidence(
     *,
     timestamp_ms: int | None = None,
     opener=urlopen,
+    authorization_record: dict | None = None,
 ) -> dict[str, object]:
-    """Query a signed account endpoint; no order endpoint is called and secrets are not returned."""
+    """Query a signed account endpoint only after an explicit private-account authorization check."""
+    assessment = evaluate_provider_use("binance_spot_account_data", "internal_analysis", authorization_record)
+    if assessment["decision"] != "ALLOW":
+        raise PermissionError("Binance private-account capture blocked by provider authorization gate: " + ",".join(assessment["reason_codes"]))
     if not api_key or not api_secret:
         raise ValueError("BINANCE_API_KEY and BINANCE_API_SECRET are required")
     queried_at = now_utc()
@@ -100,6 +106,7 @@ def capture_commission_evidence(
         "validation_reason": "no valid response received",
         "response": None,
         "orders_submitted": False,
+        "provider_use_assessment": assessment,
         "limitations": [
             "The response is account- and symbol-specific at query time; re-query to verify current applicability.",
             "Structural validation does not by itself calculate total execution cost for an order scenario.",
@@ -138,11 +145,19 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--symbol", required=True, help="Exact Binance Spot symbol, e.g. BTCUSDT")
     parser.add_argument("--output", default="artifacts/binance-spot-account-commission-evidence.json")
+    parser.add_argument("--authorization-record", required=True, help="Local JSON authorization record; do not commit account consent or private data")
     args = parser.parse_args()
     api_key, api_secret = os.environ.get("BINANCE_API_KEY"), os.environ.get("BINANCE_API_SECRET")
     if not api_key or not api_secret:
         parser.error("set BINANCE_API_KEY and BINANCE_API_SECRET in the local environment; never commit them")
-    evidence = capture_commission_evidence(args.symbol, api_key, api_secret)
+    try:
+        authorization_record = json.loads(Path(args.authorization_record).read_text(encoding="utf-8"))
+        if not isinstance(authorization_record, dict):
+            raise ValueError("authorization record must be a JSON object")
+        evidence = capture_commission_evidence(args.symbol, api_key, api_secret, authorization_record=authorization_record)
+    except (ValueError, PermissionError, OSError, json.JSONDecodeError) as exc:
+        print(str(exc), file=sys.stderr)
+        return 2
     path = Path(args.output)
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(evidence, ensure_ascii=False, indent=2, sort_keys=True) + "\n", encoding="utf-8")
