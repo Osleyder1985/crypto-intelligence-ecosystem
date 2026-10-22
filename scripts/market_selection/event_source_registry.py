@@ -7,6 +7,7 @@ from __future__ import annotations
 
 from copy import deepcopy
 from datetime import datetime
+import base64
 import hashlib
 import json
 import re
@@ -34,6 +35,7 @@ EVENT_SOURCE_REGISTRY = {
             "terms_url": "https://www.sec.gov/about/developer-resources",
             "status": "TERMS_PENDING",
             "terms_sha256": None,
+            "terms_content_base64": None,
             "reviewed_by": None,
             "reviewed_at": None,
             "allowed_use_cases": [],
@@ -106,6 +108,13 @@ def validate_source_entry(entry: dict) -> dict:
             raise ValueError("approved source must declare allowed_use_cases")
         if not isinstance(terms_hash, str) or not _SOURCE_SHA256.fullmatch(terms_hash):
             raise ValueError("approved source must include a reviewed terms_sha256")
+        terms_content = _non_empty(entry.get("terms_content_base64"), "terms_content_base64")
+        try:
+            terms_bytes = base64.b64decode(terms_content, validate=True)
+        except (ValueError, base64.binascii.Error) as exc:
+            raise ValueError("terms_content_base64 must be valid base64") from exc
+        if hashlib.sha256(terms_bytes).hexdigest() != terms_hash.lower():
+            raise ValueError("terms_sha256 does not match preserved terms_content_base64")
         _non_empty(reviewed_by, "reviewed_by")
         _timestamp(reviewed_at, "reviewed_at")
     elif allowed:
@@ -114,6 +123,8 @@ def validate_source_entry(entry: dict) -> dict:
     rate = entry.get("max_requests_per_second")
     if isinstance(rate, bool) or not isinstance(rate, (int, float)) or rate <= 0:
         raise ValueError("max_requests_per_second must be positive")
+    if source_id == "sec_press_releases" and rate > 10:
+        raise ValueError("SEC source rate must not exceed its published 10 requests/second ceiling")
     max_per_invocation = entry.get("max_requests_per_invocation")
     if isinstance(max_per_invocation, bool) or not isinstance(max_per_invocation, int) or max_per_invocation != 1:
         raise ValueError("this feed adapter must issue exactly one request per invocation")
