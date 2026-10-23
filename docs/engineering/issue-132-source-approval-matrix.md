@@ -116,27 +116,26 @@ El propietario confirmó explícitamente en la conversación de trabajo que acep
 
 - **Fuentes solicitadas para evaluación individual:** `sec_press_releases`, `sec_press_release_archive`, `cftc_general_press_releases`, `cftc_press_release_archive`, `federal_reserve_press_releases` y `federal_reserve_press_release_archive`.
 - **Finalidad del proyecto:** análisis interno de noticias/eventos como evidencia candidata para investigar movimientos de criptomonedas.
-- **Contenido incluido en el alcance solicitado:** metadatos mínimos y texto oficial, únicamente cuando la revisión específica de la fuente confirme que el acceso y la persistencia previstos son admisibles.
-- **HTML completo y adjuntos:** no quedan autorizados por esta confirmación general; deben evaluarse por separado y solo usarse si existe evidencia suficiente para el caso concreto.
-- **Retención:** aplicar requisitos identificados y documentados por fuente y tipo de dato; no inventar plazos ni conservar indefinidamente por defecto. Si no puede determinarse una regla aplicable, no persistir el contenido afectado hasta resolverla.
-- **Contenido de terceros y redistribución:** excluidos del alcance autorizado por defecto. No republicar ni redistribuir contenido fuente sin autorización específica documentada.
-- **Acceso automatizado:** solo después de verificar endpoint, disponibilidad, términos, agente identificable, límites aplicables y control agregado de solicitudes.
-- **Identidad/fecha de aprobación:** la confirmación queda registrada en el comentario del Issue #132 y en el historial de esta conversación. No se atribuye una identidad legal, firma digital ni aprobación del proveedor que no haya sido verificada.
+- **Autorización funcional del propietario:** el propietario autorizó avanzar con las seis fuentes y no debe volver a preguntársele por esa misma decisión. El alcance funcional solicitado incluye evaluar y usar metadatos, texto oficial y HTML completo; evaluar adjuntos y contenido de terceros; y desarrollar acceso automatizado, almacenamiento, atribución, conservación, análisis interno y backfill.
+- **Aplicación por modalidad:** esa autorización permite continuar el trabajo de ingeniería y las validaciones, pero cada modalidad se habilita en ejecución solo cuando la evidencia oficial aplicable demuestra que el método de acceso y el tratamiento de datos son admisibles. No se interpretará el silencio de una política como permiso ilimitado, ni se redistribuirá contenido de terceros sin base documentada.
+- **Retención:** aplicar requisitos identificados y documentados por fuente y tipo de dato; no inventar plazos ni conservar indefinidamente por defecto. Si no puede determinarse una regla aplicable, mantener bloqueada la persistencia del contenido afectado hasta resolverla.
+- **Acceso automatizado:** verificar endpoint, disponibilidad, condiciones publicadas, agente identificable, límites aplicables y control agregado de solicitudes antes de habilitar tráfico. La autorización del propietario no obliga a consultar un endpoint que esté deshabilitado ni permite eludir restricciones técnicas.
+- **Identidad/fecha de aprobación:** la decisión queda registrada en el comentario del Issue #132 y en el historial de esta conversación. No se atribuye una identidad legal, firma digital ni aprobación del proveedor que no haya sido verificada.
 
 ### Qué autoriza y qué no autoriza esta confirmación
 
-Esta es una **autorización del propietario para proceder con la revisión y preparación técnica dentro del alcance descrito**. No equivale a permiso concedido por SEC, CFTC o Federal Reserve, no constituye dictamen jurídico y no demuestra que la retención de texto oficial esté permitida para cada endpoint. Por ello, **no cambia el estado operativo** de ningún origen: los seis permanecen `TERMS_PENDING` hasta completar la revisión/evidencia específica y los campos exigidos por el registro.
+Esta es una **autorización funcional expresa del propietario para avanzar con el alcance completo de las seis fuentes**, y no debe solicitarse de nuevo. No equivale a permiso concedido por SEC, CFTC o Federal Reserve, no constituye dictamen jurídico y no demuestra que cada método de acceso, persistencia o reutilización esté permitido para cada endpoint. Por ello, **no cambia por sí sola el estado operativo** de ningún origen: los seis permanecen `TERMS_PENDING` hasta documentar evidencia específica, disponibilidad y controles técnicos aplicables. La decisión del propietario está tomada; los pendientes restantes son de evidencia, disponibilidad y cumplimiento de condiciones por fuente, no una nueva solicitud de autorización al propietario.
 
-| Fuente | Autorización de alcance del propietario | Estado operativo |
+| Fuente | Autorización funcional del propietario | Estado operativo |
 |---|---|---|
-| `sec_press_releases` | Preparar revisión de metadatos y texto oficial para análisis interno | `TERMS_PENDING` |
-| `sec_press_release_archive` | Preparar revisión de metadatos y texto oficial para análisis interno | `TERMS_PENDING` |
-| `cftc_general_press_releases` | Preparar revisión de metadatos y texto oficial para análisis interno; verificar disponibilidad antes de cualquier prueba | `TERMS_PENDING` |
-| `cftc_press_release_archive` | Preparar revisión de metadatos y texto oficial para análisis interno | `TERMS_PENDING` |
-| `federal_reserve_press_releases` | Preparar revisión de metadatos y texto oficial para análisis interno | `TERMS_PENDING` |
-| `federal_reserve_press_release_archive` | Preparar revisión de metadatos y texto oficial para análisis interno | `TERMS_PENDING` |
+| `sec_press_releases` | Autorizado avanzar con todos los usos funcionales previstos, sujetos a verificación de condiciones por modalidad | `TERMS_PENDING` |
+| `sec_press_release_archive` | Autorizado avanzar con todos los usos funcionales previstos, sujetos a verificación de condiciones por modalidad | `TERMS_PENDING` |
+| `cftc_general_press_releases` | Autorizado avanzar con todos los usos funcionales previstos; no consultar mientras el RSS esté deshabilitado | `TERMS_PENDING` |
+| `cftc_press_release_archive` | Autorizado avanzar con todos los usos funcionales previstos, sujetos a verificación de condiciones por modalidad | `TERMS_PENDING` |
+| `federal_reserve_press_releases` | Autorizado avanzar con todos los usos funcionales previstos, sujetos a verificación de condiciones por modalidad | `TERMS_PENDING` |
+| `federal_reserve_press_release_archive` | Autorizado avanzar con todos los usos funcionales previstos, sujetos a verificación de condiciones por modalidad | `TERMS_PENDING` |
 
-**Próximo paso permitido:** completar la revisión documental y los controles técnicos offline por fuente. La captura real y el backfill permanecen bloqueados hasta que el uso, persistencia, retención y acceso automatizado aplicables estén respaldados por evidencia suficiente.
+**Próximo paso:** ejecutar la revisión y preparación técnica por fuente sin volver a solicitar la autorización funcional ya concedida. La captura real y el backfill se habilitarán cuando la evidencia verificable confirme disponibilidad, condiciones de acceso y controles operativos para la modalidad concreta.
 ## Control SEC: límite publicado y clasificación del agente — 2026-10-23
 
 La política oficial de seguridad de SEC.gov establece un máximo agregado de 10 solicitudes por segundo, sin importar cuántas máquinas originan las solicitudes, y advierte que no permite bots o herramientas automatizadas no clasificadas. Fuente: https://www.sec.gov/about/privacy-information
