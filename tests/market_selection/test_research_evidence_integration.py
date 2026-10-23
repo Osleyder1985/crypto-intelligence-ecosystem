@@ -244,6 +244,34 @@ def fact_review_for(event_record, decision="VERIFIED_PRIMARY_SOURCE", reviewed_a
     }
 
 
+def causal_review_for(event_record, decision="SUPPORTED_CAUSALITY", reviewed_at="2026-10-20T10:05:00Z", evidence_refs=None, alternative_explanations=None):
+    refs = evidence_refs or [
+        {"url": event_record["source"]["url"], "role": "PRIMARY_SOURCE", "publisher": "SEC"},
+        {"url": "https://data.example.org/market-snapshot/123", "role": "MARKET_DATA", "publisher": "MarketDataProvider"},
+    ]
+    alternatives = alternative_explanations or [
+        "Broad market movement may explain part of the price response.",
+        "Concurrent liquidity changes may be a confounding factor.",
+    ]
+    review_record = {
+        "schema_version": "crypto-event-causal-review-v1",
+        "event_id": event_record["event_id"],
+        "decision": decision,
+        "reviewed_by": "offline-causal-reviewer",
+        "reviewed_at": reviewed_at,
+        "rationale": "Synthetic reviewed causal rationale; fixture is not proof of real-world causality.",
+        "methodology_id": "event-causality-review-v1",
+        "evidence_refs": refs,
+        "alternative_explanations": alternatives,
+    }
+    raw = json.dumps(review_record, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    return {
+        **review_record,
+        "evidence_record_base64": base64.b64encode(raw).decode("ascii"),
+        "evidence_record_sha256": hashlib.sha256(raw).hexdigest(),
+    }
+
+
 class ResearchEvidenceIntegrationTests(unittest.TestCase):
     def test_event_for_different_stable_entity_does_not_support_movement_episode(self):
         enriched_report = report()
@@ -1224,6 +1252,131 @@ class ResearchEvidenceIntegrationTests(unittest.TestCase):
                     asset={"stable_id": "example-asset", "category": "smart_contract_token"},
                     evaluation_as_of="2026-10-21T00:00:00Z",
                 )
+
+
+
+    def test_supported_causality_requires_verified_fact_market_data_and_alternatives(self):
+        event_record = event()
+        event_record["metadata"]["fact_review"] = fact_review_for(event_record)
+        event_record["metadata"]["causal_review"] = causal_review_for(event_record)
+        with patch.dict(EVENT_SOURCE_REGISTRY["sources"], {"sec_press_releases": approved_event_source()}):
+            enriched = enrich_research_report(
+                report(),
+                events=[{
+                    "event": event_record,
+                    "target_entity": {"id_type": "coingecko_id", "id": "example-asset"},
+                    "movement_window": {"start": "2026-10-20T09:00:00Z", "end": "2026-10-20T11:00:00Z"},
+                }],
+                observations=[], methodology=methodology(),
+                asset={"stable_id": "example-asset", "category": "smart_contract_token"},
+                evaluation_as_of="2026-10-21T00:00:00Z",
+            )
+        assessment = enriched["external_event_evidence"]["assessments"][0]
+        self.assertEqual(assessment["causal_review"]["effective_decision"], "SUPPORTED_CAUSALITY")
+        self.assertEqual(assessment["causality_label"], "TEMPORAL_ASSOCIATION")
+        self.assertFalse(assessment["causality_claimed"])
+
+    def test_supported_causality_is_rejected_without_fact_verification(self):
+        event_record = event()
+        event_record["metadata"]["causal_review"] = causal_review_for(event_record)
+        with patch.dict(EVENT_SOURCE_REGISTRY["sources"], {"sec_press_releases": approved_event_source()}):
+            with self.assertRaisesRegex(ValueError, "supported causality requires fact verification"):
+                enrich_research_report(
+                    report(),
+                    events=[{
+                        "event": event_record,
+                        "target_entity": {"id_type": "coingecko_id", "id": "example-asset"},
+                        "movement_window": {"start": "2026-10-20T09:00:00Z", "end": "2026-10-20T11:00:00Z"},
+                    }],
+                    observations=[], methodology=methodology(),
+                    asset={"stable_id": "example-asset", "category": "smart_contract_token"},
+                    evaluation_as_of="2026-10-21T00:00:00Z",
+                )
+
+    def test_causal_review_after_cutoff_is_not_used_as_historical_conclusion(self):
+        event_record = event()
+        event_record["metadata"]["fact_review"] = fact_review_for(event_record)
+        event_record["metadata"]["causal_review"] = causal_review_for(
+            event_record, reviewed_at="2026-10-22T10:05:00Z",
+        )
+        with patch.dict(EVENT_SOURCE_REGISTRY["sources"], {"sec_press_releases": approved_event_source()}):
+            enriched = enrich_research_report(
+                report(),
+                events=[{
+                    "event": event_record,
+                    "target_entity": {"id_type": "coingecko_id", "id": "example-asset"},
+                    "movement_window": {"start": "2026-10-20T09:00:00Z", "end": "2026-10-20T11:00:00Z"},
+                }],
+                observations=[], methodology=methodology(),
+                asset={"stable_id": "example-asset", "category": "smart_contract_token"},
+                evaluation_as_of="2026-10-21T00:00:00Z",
+            )
+        causal = enriched["external_event_evidence"]["assessments"][0]["causal_review"]
+        self.assertEqual(causal["decision"], "SUPPORTED_CAUSALITY")
+        self.assertEqual(causal["effective_decision"], "NOT_AVAILABLE_AS_OF")
+        self.assertFalse(causal["available_as_of"])
+
+    def test_plausible_hypothesis_requires_market_evidence_and_alternatives(self):
+        event_record = event()
+        event_record["metadata"]["causal_review"] = causal_review_for(
+            event_record,
+            decision="PLAUSIBLE_HYPOTHESIS",
+            evidence_refs=[{"url": event_record["source"]["url"], "role": "PRIMARY_SOURCE", "publisher": "SEC"}],
+        )
+        with patch.dict(EVENT_SOURCE_REGISTRY["sources"], {"sec_press_releases": approved_event_source()}):
+            with self.assertRaisesRegex(ValueError, "requires market-reaction evidence"):
+                enrich_research_report(
+                    report(),
+                    events=[{
+                        "event": event_record,
+                        "target_entity": {"id_type": "coingecko_id", "id": "example-asset"},
+                        "movement_window": {"start": "2026-10-20T09:00:00Z", "end": "2026-10-20T11:00:00Z"},
+                    }],
+                    observations=[], methodology=methodology(),
+                    asset={"stable_id": "example-asset", "category": "smart_contract_token"},
+                    evaluation_as_of="2026-10-21T00:00:00Z",
+                )
+
+
+
+    def test_episode_aggregate_reports_supported_causality_only_with_reviewed_evidence(self):
+        event_record = event()
+        event_record["metadata"]["fact_review"] = fact_review_for(event_record)
+        event_record["metadata"]["causal_review"] = causal_review_for(event_record)
+        research_report = report()
+        research_report["descriptive_analyses"] = {
+            "movement_episodes": {
+                "episodes": [{
+                    "episode_id": "episode-1",
+                    "direction": "BULLISH",
+                    "classification": "OBSERVED",
+                    "segment_index": 0,
+                    "start": {"pivot_open_time_ms": 1792486800000},
+                    "end": {"pivot_open_time_ms": 1792494000000},
+                    "episode_observable_only_at_ms": 1792495800000,
+                }]
+            }
+        }
+        with patch.dict(EVENT_SOURCE_REGISTRY["sources"], {"sec_press_releases": approved_event_source()}):
+            enriched = enrich_research_report(
+                research_report,
+                events=[{
+                    "event": event_record,
+                    "target_entity": {"id_type": "coingecko_id", "id": "example-asset"},
+                    "movement_episode_id": "episode-1",
+                }],
+                observations=[], methodology=methodology(),
+                asset={"stable_id": "example-asset", "category": "smart_contract_token"},
+                evaluation_as_of="2026-10-21T00:00:00Z",
+            )
+        self.assertEqual(
+            enriched["event_causal_assessment"]["episode_assessments"][0]["status"],
+            "SUPPORTED_CAUSALITY_REVIEWED",
+        )
+        self.assertEqual(
+            enriched["external_event_evidence"]["assessments"][0]["causal_review"]["effective_decision"],
+            "SUPPORTED_CAUSALITY",
+        )
 
 
 
