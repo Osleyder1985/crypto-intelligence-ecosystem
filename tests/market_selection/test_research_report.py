@@ -13,6 +13,7 @@ from scripts.market_selection.capture_binance_spot_research import EXCHANGE_INFO
 from scripts.market_selection.provider_license_gate import ASSESSMENT_SCHEMA_VERSION, POLICY_VERSION, evaluate_provider_use
 from scripts.market_selection.canonical_asset_identity import SCHEMA_VERSION as IDENTITY_SCHEMA_VERSION
 from test_normalize_binance_live_depth_evidence import artifact as synthetic_live_depth_artifact
+from test_research_evidence_integration import methodology
 
 
 def candle(index, open_price, high, low, close, *, closed=True, quote_volume="1000"):
@@ -173,6 +174,69 @@ class ResearchReportTests(unittest.TestCase):
             candle(5, 9.5, 11, 9, 10.5),
         ])
         self.raw = json.dumps(self.source, ensure_ascii=False, sort_keys=True).encode("utf-8")
+
+    def test_capture_pipeline_attaches_supplied_event_evidence_without_live_news_fetch(self):
+        exchange_payload = {
+            "symbols": [{
+                "symbol": "BTCUSDT", "baseAsset": "BTC", "quoteAsset": "USDT",
+                "status": "TRADING", "isSpotTradingAllowed": True,
+                "baseAssetPrecision": 8, "quoteAssetPrecision": 8, "filters": [],
+            }]
+        }
+        metadata_raw = json.dumps(exchange_payload, separators=(",", ":")).encode("utf-8")
+        allowed_test_assessment = {
+            "schema_version": ASSESSMENT_SCHEMA_VERSION,
+            "policy_version": POLICY_VERSION,
+            "provider_id": "binance_spot_market_data",
+            "use_case": "internal_analysis",
+            "decision": "ALLOW",
+            "reason_codes": ["SYNTHETIC_TEST_GATE_ONLY"],
+            "authorization_evidence_status": "SYNTHETIC_TEST_GATE_ONLY",
+        }
+        with patch(
+            "scripts.market_selection.capture_binance_spot_research.urlopen",
+            return_value=FakeExchangeInfoResponse(metadata_raw),
+        ), patch(
+            "scripts.market_selection.capture_binance_spot_research.evaluate_provider_use",
+            return_value=allowed_test_assessment,
+        ), patch(
+            "scripts.market_selection.capture_binance_spot_research.capture_history",
+            return_value=self.source,
+        ), patch(
+            "scripts.market_selection.research_report.evaluate_artifact_use",
+            return_value={"decision": "ALLOW", "reason_codes": ["SYNTHETIC_TEST_GATE_ONLY"]},
+        ), patch(
+            "scripts.market_selection.analyze_ohlcv_risk_profile.evaluate_artifact_use",
+            return_value={"decision": "ALLOW", "reason_codes": ["SYNTHETIC_TEST_GATE_ONLY"]},
+        ), patch(
+            "scripts.market_selection.analyze_support_resistance.evaluate_artifact_use",
+            return_value={"decision": "ALLOW", "reason_codes": ["SYNTHETIC_TEST_GATE_ONLY"]},
+        ), patch(
+            "scripts.market_selection.detect_ohlcv_movement_events.evaluate_artifact_use",
+            return_value={"decision": "ALLOW", "reason_codes": ["SYNTHETIC_TEST_GATE_ONLY"]},
+        ):
+            _, result = capture_and_build_report(
+                symbol="BTCUSDT",
+                interval="1h",
+                start_time_ms=0,
+                end_time_ms_exclusive=6 * 3_600_000,
+                config=config(),
+                authorization_record={"synthetic_test_fixture": True},
+                requested_identifier_type="canonical_id",
+                requested_asset_identifier="registry:bitcoin",
+                identity_evidence=identity_evidence(),
+                external_events=[],
+                evidence_methodology=methodology(),
+                evidence_asset_category="native_l1",
+                evaluation_as_of="2026-10-22T00:00:00Z",
+            )
+
+        self.assertIn("external_event_evidence", result)
+        self.assertIn("event_causal_assessment", result)
+        self.assertEqual(result["decision_status"], "INDETERMINATE")
+        self.assertFalse(result["orders_submitted"])
+        self.assertTrue(result["network_requests_made"])
+        self.assertEqual(result["horizons"]["short"]["conclusion"], "INDETERMINATE")
 
     def test_offline_end_to_end_from_base_ticker_to_reproducible_report(self):
         exchange_payload = {
