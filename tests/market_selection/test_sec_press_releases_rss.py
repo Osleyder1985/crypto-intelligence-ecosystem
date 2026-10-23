@@ -16,6 +16,7 @@ from scripts.market_selection.capture_sec_press_releases_rss import (
 from scripts.market_selection.event_source_registry import (
     EVENT_SOURCE_REGISTRY,
     validate_source_entry,
+    source_is_approved,
 )
 from scripts.market_selection.provider_license_gate import SCHEMA_VERSION as AUTH_SCHEMA_VERSION
 
@@ -99,6 +100,19 @@ class SecPressReleaseConnectorTests(unittest.TestCase):
             EVENT_SOURCE_REGISTRY["sources"],
             {"sec_press_releases": approved_entry()},
         )
+
+    def test_official_regulatory_feed_candidates_are_registered_but_disabled(self):
+        expected = {
+            "cftc_general_press_releases": "https://www.cftc.gov/RSS/RSSGP/rssgp.xml",
+            "federal_reserve_press_releases": "https://www.federalreserve.gov/feeds/press_all.xml",
+        }
+        for source_id, source_url in expected.items():
+            with self.subTest(source_id=source_id):
+                entry = validate_source_entry(EVENT_SOURCE_REGISTRY["sources"][source_id])
+                self.assertEqual(entry["source_url"], source_url)
+                self.assertEqual(entry["status"], "TERMS_PENDING")
+                self.assertEqual(entry["allowed_use_cases"], [])
+                self.assertFalse(source_is_approved(entry))
 
     def test_default_source_registry_blocks_before_network(self):
         opener = Mock()
