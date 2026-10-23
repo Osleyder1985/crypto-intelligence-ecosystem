@@ -18,7 +18,7 @@ from pathlib import Path
 import threading
 import time
 from urllib.error import HTTPError, URLError
-from urllib.parse import urljoin, urlsplit, urlunsplit
+from urllib.parse import urljoin, urlsplit
 from urllib.request import HTTPRedirectHandler, Request, build_opener, urlopen
 import xml.etree.ElementTree as ET
 from typing import Any
@@ -480,7 +480,7 @@ class _ArchiveHTMLParser(HTMLParser):
             self._anchor = {"href": attrs_map.get("href"), "text": []}
 
     def handle_data(self, data):
-        text = re.sub(r"\\s+", " ", data).strip()
+        text = re.sub(r"\s+", " ", data).strip()
         if text:
             self.page_text.append(text)
             if self._anchor is not None:
@@ -488,7 +488,7 @@ class _ArchiveHTMLParser(HTMLParser):
 
     def handle_endtag(self, tag):
         if tag.casefold() == "a" and self._anchor is not None:
-            self._anchor["text"] = re.sub(r"\\s+", " ", " ".join(self._anchor["text"])).strip()
+            self._anchor["text"] = re.sub(r"\s+", " ", " ".join(self._anchor["text"])).strip()
             self.anchors.append(self._anchor)
             self._anchor = None
 
@@ -688,7 +688,7 @@ def validate_public_event_archive_candidate(archive_capture: dict, candidate_rec
     except Exception as exc:
         raise ValueError("archive index HTML could not be parsed") from exc
     archive_url = archive_capture["requested_url"]
-    candidate_url_canonical = urlunsplit((*urlsplit(candidate_url)[:4], "")) if False else candidate_url.split("#", 1)[0]
+    candidate_url_canonical = candidate_url.split("#", 1)[0]
     matching_anchors = []
     for anchor in parser.anchors:
         href = anchor.get("href")
@@ -697,7 +697,7 @@ def validate_public_event_archive_candidate(archive_capture: dict, candidate_rec
         absolute = urljoin(archive_url, href.strip()).split("#", 1)[0]
         if absolute == candidate_url_canonical:
             matching_anchors.append(anchor)
-    normalize_text = lambda value: re.sub(r"\\s+", " ", value).strip().casefold()
+    normalize_text = lambda value: re.sub(r"\s+", " ", value).strip().casefold()
     title_norm = normalize_text(title)
     if not matching_anchors or not any(title_norm in normalize_text(anchor.get("text", "")) for anchor in matching_anchors):
         raise PermissionError("candidate URL/title is not present as an anchor in the preserved archive page")
