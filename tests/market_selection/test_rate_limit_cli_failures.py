@@ -70,6 +70,30 @@ class TestStructuredRateLimitFailure(unittest.TestCase):
             network.assert_not_called()
             self._assert_failure_artifact(output)
 
+    def test_offline_archive_command_does_not_convert_coordination_error(self):
+        with tempfile.TemporaryDirectory() as directory:
+            archive_capture = Path(directory) / "archive.json"
+            archive_capture.write_text("{}", encoding="utf-8")
+            output = Path(directory) / "selected.json"
+            argv = [
+                "capture_public_event_archive.py", "select-candidate",
+                "--archive-capture", str(archive_capture),
+                "--candidate-url", "https://example.invalid/item",
+                "--title", "Synthetic title",
+                "--published-at", "2026-01-01T00:00:00Z",
+                "--publication-time-evidence", "synthetic fixture",
+                "--selected-by", "test",
+                "--selected-at", "2026-01-02T00:00:00Z",
+                "--selection-rationale", "offline regression test",
+                "--output", str(output),
+            ]
+            with patch.object(sys, "argv", argv), \\
+                 patch("scripts.market_selection.capture_public_event_archive.select_public_event_archive_candidate",
+                       side_effect=RateLimitCoordinationError("synthetic unrelated error")):
+                with self.assertRaises(RateLimitCoordinationError):
+                    capture_public_event_archive.main()
+            self.assertFalse(output.exists())
+
 
 if __name__ == "__main__":
     unittest.main()
