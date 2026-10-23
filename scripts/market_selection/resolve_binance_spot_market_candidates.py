@@ -5,8 +5,6 @@ never picks an arbitrary quote market when multiple candidates remain.
 """
 from __future__ import annotations
 
-from typing import Any
-
 SCHEMA_VERSION = "binance-spot-market-candidate-resolution-v1"
 IDENTIFIER_TYPES = {"native_symbol", "base_asset"}
 
