@@ -538,6 +538,7 @@ def main() -> int:
     parser.add_argument("--evidence-methodology", type=Path, help="Versioned crypto-investment-methodology-v1 JSON required with external evidence")
     parser.add_argument("--evidence-asset-category", help="Explicit category for evidence evaluation, e.g. native_l1 or smart_contract_token")
     parser.add_argument("--evaluation-as-of", help="Explicit ISO-8601 availability cutoff for supplied external evidence and/or order-book snapshot")
+    parser.add_argument("--horizon-assessment", type=Path, help="Optional validated crypto-investment-horizon-assessment-v1 JSON to attach without changing baseline conclusions")
     parser.add_argument("--output", required=True, type=Path, help="Path to the research report JSON")
     args = parser.parse_args()
 
@@ -570,6 +571,8 @@ def main() -> int:
         parser.error("--evaluation-as-of requires external evidence or an order-book input")
     external_events = json.loads(args.external_events.read_text(encoding="utf-8")) if args.external_events else None
     fundamental_observations = json.loads(args.fundamental_observations.read_text(encoding="utf-8")) if args.fundamental_observations else None
+    horizon_assessment_raw = args.horizon_assessment.read_bytes() if args.horizon_assessment else None
+    horizon_assessment = json.loads(horizon_assessment_raw.decode("utf-8")) if horizon_assessment_raw is not None else None
     evidence_methodology = json.loads(args.evidence_methodology.read_text(encoding="utf-8")) if args.evidence_methodology else None
     if args.live_depth_evidence:
         if order_book_artifact is not None or args.multi_exchange_order_book_probe is not None:
@@ -616,6 +619,15 @@ def main() -> int:
         evidence_asset_category=args.evidence_asset_category,
         evaluation_as_of=args.evaluation_as_of,
     )
+    if horizon_assessment is not None:
+        # Import lazily to avoid a module cycle: the attachment contract references REPORT_SCHEMA.
+        from scripts.market_selection.attach_horizon_assessment_to_report import attach_horizon_assessment
+
+        report = attach_horizon_assessment(
+            report,
+            horizon_assessment,
+            assessment_bytes=horizon_assessment_raw,
+        )
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(
         json.dumps(report, ensure_ascii=False, indent=2, sort_keys=True, allow_nan=False) + "\n",
@@ -630,6 +642,7 @@ def main() -> int:
         "canonical_asset_identity_status": report["canonical_asset_identity_status"],
         "market_base_asset_mapping_status": report["market_base_asset_mapping_status"],
         "horizons": {key: value["status"] for key, value in report["horizons"].items()},
+        "horizon_assessment_status": report.get("horizon_assessment", {}).get("status", "NOT_PROVIDED"),
     }, ensure_ascii=False, indent=2))
     return 0
 
