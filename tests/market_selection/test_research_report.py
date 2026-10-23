@@ -484,7 +484,7 @@ class ResearchReportTests(unittest.TestCase):
             candle(4, 8.5, 10, 8, 9.5),
         ]
         one_hour = artifact(rows)
-        four_hour = artifact(rows)
+        four_hour = artifact([dict(row) for row in rows])
         four_hour["market"]["interval"] = "4h"
         for index, row in enumerate(four_hour["candles"]):
             row["open_time_ms"] = index * 14_400_000
