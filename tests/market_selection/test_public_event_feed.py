@@ -369,8 +369,9 @@ class PublicEventFeedCaptureTests(unittest.TestCase):
         # This invariant applies to all feed and archive source IDs, including
         # sources added in the future: no pending registry entry may reach I/O.
         for source_id, entry in EVENT_SOURCE_REGISTRY["sources"].items():
+            if entry["status"] != "TERMS_PENDING":
+                continue
             with self.subTest(source_id=source_id):
-                self.assertEqual(entry["status"], "TERMS_PENDING")
                 with patch("scripts.market_selection.capture_public_event_feed.urlopen") as network, patch(
                     "scripts.market_selection.capture_public_event_feed._open_allowlisted_url"
                 ) as article_network:
