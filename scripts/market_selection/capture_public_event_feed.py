@@ -1686,7 +1686,6 @@ def main() -> int:
                 "duplicate_item_count": result["duplicate_item_count"],
                 "reason_codes": result["reason_codes"],
             }
-    exit_code = 0
     except RateLimitCoordinationError:
         result = {
             "schema_version": "crypto-public-event-capture-error-v1",
