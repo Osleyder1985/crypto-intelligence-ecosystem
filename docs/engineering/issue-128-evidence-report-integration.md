@@ -40,3 +40,10 @@ Los archivos `events.json` y `observations.json` deben ser arrays JSON; `methodo
 ## Límites pendientes
 
 No hay conectores de red, aprobación de términos, verificación independiente de fuentes, ingestión histórica real ni backtest/modelo predictivo. Los fixtures prueban controles contractuales, no cobertura real, causalidad, calidad de fuentes ni rentabilidad. El informe original debe generarse previamente con el orquestador de #130.
+
+
+## Integración de soportes y resistencias multi-temporalidad
+
+El informe E2E acepta opcionalmente `research-support-resistance-input-v1` mediante el parámetro `support_resistance_input` (CLI: `--support-resistance-input`). La entrada contiene la identidad estable del activo, una URL de evidencia de mapeo activo-mercado aportada por el llamador, artefactos OHLCV autorizados y parámetros explícitos de pivote/tolerancia. La capa de integración ejecuta el analizador multi-temporal existente y excluye cualquier vela cuyo cierre sea posterior a `evaluation_as_of` antes de detectar pivotes.
+
+El informe conserva zonas, eventos, huecos, calidad, integridad de fuente, parámetros y la cantidad de velas excluidas. El mapeo se etiqueta `CALLER_SUPPLIED_REQUIRES_REVIEW`: la URL no demuestra por sí sola que el par pertenezca al activo solicitado. Si no se suministra la entrada, el estado queda `NOT_AVAILABLE`. Esta integración no modifica `decision_status=INDETERMINATE`, no prueba órdenes resting y no envía órdenes.
