@@ -427,6 +427,7 @@ def adapt_defillama_protocol_tvl(
             "captured_at": captured.isoformat().replace("+00:00", "Z"),
             "source": {
                 "source_id": "defillama-free-api",
+                "provider_id": "defillama_api",
                 "source_type": "aggregator",
                 "url": source_url,
                 "methodology_url": methodology_url,
