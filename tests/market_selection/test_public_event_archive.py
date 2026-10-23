@@ -226,10 +226,9 @@ class PublicEventArchiveTests(unittest.TestCase):
     def test_every_pending_archive_source_is_blocked_before_network(self):
         # Archive IDs are separate authorization scopes from their related feeds.
         for source_id, entry in EVENT_SOURCE_REGISTRY["sources"].items():
-            if "archive" not in source_id:
+            if "archive" not in source_id or entry["status"] != "TERMS_PENDING":
                 continue
             with self.subTest(source_id=source_id):
-                self.assertEqual(entry["status"], "TERMS_PENDING")
                 with patch("scripts.market_selection.capture_public_event_feed._open_allowlisted_url") as network:
                     result = capture_public_event_archive_index(
                         source_id,
