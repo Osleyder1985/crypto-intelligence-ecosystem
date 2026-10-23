@@ -183,6 +183,15 @@ class ResearchReportTests(unittest.TestCase):
                 "reason_codes": ["SYNTHETIC_TEST_GATE_ONLY"],
                 "authorization_evidence_status": "SYNTHETIC_TEST_GATE_ONLY",
             },
+        ), patch(
+            "scripts.market_selection.analyze_ohlcv_risk_profile.evaluate_artifact_use",
+            return_value={"decision": "ALLOW", "reason_codes": ["SYNTHETIC_TEST_GATE_ONLY"]},
+        ), patch(
+            "scripts.market_selection.analyze_support_resistance.evaluate_artifact_use",
+            return_value={"decision": "ALLOW", "reason_codes": ["SYNTHETIC_TEST_GATE_ONLY"]},
+        ), patch(
+            "scripts.market_selection.detect_ohlcv_movement_events.evaluate_artifact_use",
+            return_value={"decision": "ALLOW", "reason_codes": ["SYNTHETIC_TEST_GATE_ONLY"]},
         ):
             captured, report = capture_and_build_report(
                 symbol=None,
