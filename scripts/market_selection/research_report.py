@@ -15,6 +15,7 @@ from typing import Any
 from scripts.market_selection.analyze_ohlcv_risk_profile import analyze_artifact
 from scripts.market_selection.analyze_support_resistance import analyze_support_resistance
 from scripts.market_selection.detect_ohlcv_movement_events import analyze_movement_events
+from scripts.market_selection.analyze_order_book_snapshot import analyze_order_book_snapshot
 try:
     from scripts.market_selection.canonical_asset_identity import resolve_asset_identity
 except ModuleNotFoundError:
@@ -179,6 +180,7 @@ def build_research_report(
     requested_identifier_type: str = "symbol",
     requested_chain_id: str | None = None,
     identity_evidence: dict | None = None,
+    order_book_artifact: dict | None = None,
 ) -> dict:
     """Build a deterministic report from one preserved normalized Spot OHLCV artifact.
 
@@ -240,6 +242,12 @@ def build_research_report(
         config["support_resistance"]["pivot_right"],
         config["support_resistance"]["tolerance_bps"],
     )
+    order_book_analysis = None
+    if order_book_artifact is not None:
+        order_book_analysis = analyze_order_book_snapshot(order_book_artifact)
+        order_market = order_book_analysis["market"]
+        if order_market["exchange"].lower() != exchange.lower() or order_market["symbol_native"].upper() != symbol.upper():
+            raise ValueError("order-book artifact exchange and symbol must match the OHLCV report market")
 
     source_integrity = {
         "sha256": _sha256(source_bytes),
@@ -376,6 +384,10 @@ def build_research_report(
             "risk_profile": risk,
             "movement_events": movement,
             "support_resistance": support_resistance,
+            "order_book": order_book_analysis if order_book_analysis is not None else {
+                "status": "NOT_PROVIDED",
+                "reason": "No authorized normalized order-book snapshot was supplied.",
+            },
         },
         "horizons": horizons,
         "event_causal_assessment": {
@@ -387,6 +399,7 @@ def build_research_report(
             "This report combines descriptive module outputs; it is not a validated investment recommendation.",
             "The three horizons remain INDETERMINATE until horizon-specific methods and evidence coverage are approved.",
             "No news, regulatory-event, project-announcement, fundamental or on-chain connector is called.",
+            "Order-book analysis is included only when a matching authorized snapshot is supplied; snapshots are not full or persistent market depth.",
             "No ranking, forecast probability, expected return or guarantee of profitability is produced.",
             "A verified source hash proves byte integrity, not source authority or analytical validity.",
             "No order is submitted and no trading credentials are used.",
@@ -404,6 +417,7 @@ def main() -> int:
     parser.add_argument("--identity-evidence", type=Path, help="Reviewed crypto-canonical-asset-identity-v1 JSON; without it canonical identity remains unresolved")
     parser.add_argument("--artifact", required=True, type=Path, help="Preserved normalized Spot OHLCV JSON")
     parser.add_argument("--config", required=True, type=Path, help="Versioned JSON with explicit analysis parameters")
+    parser.add_argument("--order-book-artifact", type=Path, help="Optional authorized crypto-spot-order-book-snapshot-v1 JSON matching the selected exchange and symbol")
     parser.add_argument("--output", required=True, type=Path, help="Path to the research report JSON")
     args = parser.parse_args()
 
@@ -411,11 +425,13 @@ def main() -> int:
     artifact = json.loads(raw.decode("utf-8"))
     config = json.loads(args.config.read_text(encoding="utf-8"))
     identity_evidence = json.loads(args.identity_evidence.read_text(encoding="utf-8")) if args.identity_evidence else None
+    order_book_artifact = json.loads(args.order_book_artifact.read_text(encoding="utf-8")) if args.order_book_artifact else None
     report = build_research_report(
         artifact, config, args.asset_id, raw,
         requested_identifier_type=args.asset_id_type,
         requested_chain_id=args.asset_chain_id,
         identity_evidence=identity_evidence,
+        order_book_artifact=order_book_artifact,
     )
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(
