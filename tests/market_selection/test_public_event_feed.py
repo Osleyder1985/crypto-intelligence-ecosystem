@@ -365,5 +365,27 @@ class PublicEventFeedCaptureTests(unittest.TestCase):
         self.assertIn("FINAL_URL_OUTSIDE_ALLOWLIST", result["reason_codes"])
 
 
+    def test_every_registry_source_pending_is_blocked_before_network(self):
+        # This invariant applies to all feed and archive source IDs, including
+        # sources added in the future: no pending registry entry may reach I/O.
+        for source_id, entry in EVENT_SOURCE_REGISTRY["sources"].items():
+            with self.subTest(source_id=source_id):
+                self.assertEqual(entry["status"], "TERMS_PENDING")
+                with patch("scripts.market_selection.capture_public_event_feed.urlopen") as network, patch(
+                    "scripts.market_selection.capture_public_event_feed._open_allowlisted_url"
+                ) as article_network:
+                    result = capture_public_event_feed(
+                        source_id,
+                        authorization_record=None,
+                        user_agent=USER_AGENT,
+                        captured_at=self.captured_at,
+                    )
+                network.assert_not_called()
+                article_network.assert_not_called()
+                self.assertEqual(result["capture_status"], "BLOCKED")
+                self.assertFalse(result["network_request_made"])
+                self.assertIn("SOURCE_TERMS_PENDING", result["reason_codes"])
+
+
 if __name__ == "__main__":
     unittest.main()
