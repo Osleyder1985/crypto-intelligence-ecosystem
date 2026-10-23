@@ -995,14 +995,21 @@ def capture_public_event_archive_article(
     captured_at: str | None = None,
 ) -> dict:
     """Capture the article linked by a validated official archive candidate."""
-    candidate = validate_public_event_archive_candidate(archive_capture, candidate_record)
-    source_id = candidate["source_id"]
+    if not isinstance(archive_capture, dict) or archive_capture.get("schema_version") != ARCHIVE_CAPTURE_SCHEMA:
+        raise ValueError("archive_capture has an invalid schema")
+    source_id = archive_capture.get("source_id")
+    if not isinstance(source_id, str) or not source_id.strip():
+        raise ValueError("archive_capture.source_id is required")
     captured = _normalize_timestamp(captured_at)
     source, assessments, blockers, registry_hash = _authorization_state(
         source_id, authorization_record, user_agent, timeout_seconds
     )
+    candidate_id = candidate_record.get("candidate_id", "unvalidated-candidate") if isinstance(candidate_record, dict) else "unvalidated-candidate"
     if blockers:
-        return _blocked_article_result(source, registry_hash, candidate["candidate_id"], captured, assessments, blockers)
+        return _blocked_article_result(source, registry_hash, candidate_id, captured, assessments, blockers)
+    candidate = validate_public_event_archive_candidate(archive_capture, candidate_record)
+    if candidate["source_id"] != source_id:
+        raise PermissionError("archive candidate source ID does not match archive capture")
     if archive_capture.get("source_registry_entry_sha256") != registry_hash:
         raise PermissionError("archive capture source registry evidence is stale")
     for use_case in _REQUIRED_USE_CASES:
