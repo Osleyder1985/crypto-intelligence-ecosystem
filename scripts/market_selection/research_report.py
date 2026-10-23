@@ -290,6 +290,14 @@ def build_research_report(
                 raise ValueError("order-book captured_at_utc must be ISO-8601 with timezone")
             if order_book_capture_ms > evaluation_cutoff_ms:
                 raise ValueError("order-book snapshot captured after evaluation_as_of cutoff")
+        order_quote_asset = order_market.get("quote_asset")
+        ohlcv_quote_asset = market.get("quote_asset")
+        if (
+            isinstance(order_quote_asset, str) and order_quote_asset.strip()
+            and isinstance(ohlcv_quote_asset, str) and ohlcv_quote_asset.strip()
+            and order_quote_asset.strip().upper() != ohlcv_quote_asset.strip().upper()
+        ):
+            raise ValueError("order-book artifact quote asset must match the OHLCV report market quote asset")
 
     source_integrity = {
         "sha256": _sha256(source_bytes),
