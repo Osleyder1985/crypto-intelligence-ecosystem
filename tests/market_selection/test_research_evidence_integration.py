@@ -193,6 +193,56 @@ def event():
 
 
 class ResearchEvidenceIntegrationTests(unittest.TestCase):
+    def test_episode_summary_reports_temporal_association_without_causal_claim(self):
+        enriched_report = report()
+        start_ms = 1792486800000
+        end_ms = 1792494000000
+        enriched_report["descriptive_analyses"] = {
+            "movement_episodes": {
+                "schema_version": "ohlcv-movement-episodes-v1",
+                "episodes": [{
+                    "episode_id": "swing-1", "direction": "BULLISH",
+                    "start": {"pivot_open_time_ms": start_ms},
+                    "end": {"pivot_open_time_ms": end_ms},
+                    "episode_observable_only_at_ms": end_ms + 1,
+                }],
+            },
+        }
+        with patch.dict(EVENT_SOURCE_REGISTRY["sources"], {"sec_press_releases": approved_event_source()}):
+            enriched = enrich_research_report(
+                enriched_report,
+                events=[{
+                    "event": event(),
+                    "target_entity": {"id_type": "coingecko_id", "id": "example-asset"},
+                    "movement_episode_id": "swing-1",
+                }],
+                observations=[], methodology=methodology(),
+                asset={"stable_id": "example-asset", "category": "smart_contract_token"},
+                evaluation_as_of="2026-10-21T00:00:00Z",
+            )
+        summary = enriched["event_causal_assessment"]["episode_assessments"][0]
+        self.assertEqual(summary["status"], "TEMPORAL_ASSOCIATION_ONLY")
+        self.assertEqual(summary["event_ids"], ["event-1"])
+        self.assertFalse(summary["causality_claimed"])
+
+    def test_episode_summary_does_not_claim_absence_of_cause_without_evidence(self):
+        enriched_report = report()
+        enriched_report["descriptive_analyses"] = {
+            "movement_episodes": {"episodes": [{
+                "episode_id": "swing-1", "direction": "BEARISH",
+                "start": {"pivot_open_time_ms": 1}, "end": {"pivot_open_time_ms": 2},
+            }]},
+        }
+        enriched = enrich_research_report(
+            enriched_report, events=[], observations=[], methodology=methodology(),
+            asset={"stable_id": "example-asset", "category": "smart_contract_token"},
+            evaluation_as_of="2026-10-21T00:00:00Z",
+        )
+        summary = enriched["event_causal_assessment"]["episode_assessments"][0]
+        self.assertEqual(summary["status"], "NOT_ASSESSED_NO_EVENT_EVIDENCE_SUPPLIED")
+        self.assertFalse(summary["causality_claimed"])
+        self.assertIn("does not prove", summary["interpretation"])
+
     def test_derives_event_window_from_report_movement_episode(self):
         enriched_report = report()
         start_ms = int(__import__("datetime").datetime.fromisoformat("2026-10-20T09:00:00+00:00").timestamp() * 1000)
