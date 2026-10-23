@@ -28,7 +28,7 @@ ARTICLE_HTML = b"<html><head><title>CFTC Announces Crypto-Related Enforcement Ac
 
 
 def capture_archive(entry):
-    with patch.dict(EVENT_SOURCE_REGISTRY["sources"], {"cftc_general_press_releases": entry}), patch(
+    with patch.dict(EVENT_SOURCE_REGISTRY["sources"], {"cftc_press_release_archive": entry}), patch(
         "scripts.market_selection.capture_public_event_feed._open_allowlisted_url",
         return_value=FakeResponse(
             ARCHIVE_HTML,
@@ -37,7 +37,7 @@ def capture_archive(entry):
         ),
     ):
         return capture_public_event_archive_index(
-            "cftc_general_press_releases",
+            "cftc_press_release_archive",
             ARCHIVE_URL,
             authorization_record(entry),
             USER_AGENT,
@@ -46,8 +46,8 @@ def capture_archive(entry):
 
 
 def candidate_from(archive_capture):
-    entry = approved_source()
-    with patch.dict(EVENT_SOURCE_REGISTRY["sources"], {"cftc_general_press_releases": entry}):
+    entry = approved_source("cftc_press_release_archive")
+    with patch.dict(EVENT_SOURCE_REGISTRY["sources"], {"cftc_press_release_archive": entry}):
         return select_public_event_archive_candidate(
             archive_capture,
             candidate_url=ARTICLE_URL,
@@ -64,7 +64,7 @@ class PublicEventArchiveTests(unittest.TestCase):
     def test_archive_capture_blocks_terms_pending_source_before_network(self):
         with patch("scripts.market_selection.capture_public_event_feed._open_allowlisted_url") as network:
             result = capture_public_event_archive_index(
-                "cftc_general_press_releases",
+                "cftc_press_release_archive",
                 ARCHIVE_URL,
                 authorization_record=None,
                 user_agent=USER_AGENT,
@@ -77,7 +77,7 @@ class PublicEventArchiveTests(unittest.TestCase):
 
     def test_archive_article_capture_blocks_before_candidate_validation_when_terms_pending(self):
         blocked_archive = capture_public_event_archive_index(
-            "cftc_general_press_releases",
+            "cftc_press_release_archive",
             ARCHIVE_URL,
             authorization_record=None,
             user_agent=USER_AGENT,
@@ -96,13 +96,13 @@ class PublicEventArchiveTests(unittest.TestCase):
         self.assertFalse(result["network_request_made"])
 
     def test_archive_path_prefix_does_not_allow_similar_unregistered_path(self):
-        entry = approved_source()
+        entry = approved_source("cftc_press_release_archive")
         bad_url = "https://www.cftc.gov/PressRoom/PressReleasesEvil?page=0"
-        with patch.dict(EVENT_SOURCE_REGISTRY["sources"], {"cftc_general_press_releases": entry}), patch(
+        with patch.dict(EVENT_SOURCE_REGISTRY["sources"], {"cftc_press_release_archive": entry}), patch(
             "scripts.market_selection.capture_public_event_feed._open_allowlisted_url"
         ) as network:
             result = capture_public_event_archive_index(
-                "cftc_general_press_releases",
+                "cftc_press_release_archive",
                 bad_url,
                 authorization_record=authorization_record(entry),
                 user_agent=USER_AGENT,
@@ -113,12 +113,12 @@ class PublicEventArchiveTests(unittest.TestCase):
         self.assertIn("ARCHIVE_URL_OUTSIDE_ALLOWLIST", result["reason_codes"])
 
     def test_archive_candidate_requires_url_title_and_date_evidence(self):
-        entry = approved_source()
+        entry = approved_source("cftc_press_release_archive")
         archive_capture = capture_archive(entry)
         candidate = candidate_from(archive_capture)
         self.assertEqual(candidate["candidate_url"], ARTICLE_URL)
         self.assertEqual(candidate["published_at"], "2026-10-20T10:00:00Z")
-        with patch.dict(EVENT_SOURCE_REGISTRY["sources"], {"cftc_general_press_releases": entry}):
+        with patch.dict(EVENT_SOURCE_REGISTRY["sources"], {"cftc_press_release_archive": entry}):
             with self.assertRaisesRegex(PermissionError, "URL/title"):
                 select_public_event_archive_candidate(
                     archive_capture,
@@ -132,10 +132,10 @@ class PublicEventArchiveTests(unittest.TestCase):
                 )
 
     def test_archive_article_promotion_and_report_integration(self):
-        entry = approved_source()
+        entry = approved_source("cftc_press_release_archive")
         archive_capture = capture_archive(entry)
         candidate = candidate_from(archive_capture)
-        with patch.dict(EVENT_SOURCE_REGISTRY["sources"], {"cftc_general_press_releases": entry}), patch(
+        with patch.dict(EVENT_SOURCE_REGISTRY["sources"], {"cftc_press_release_archive": entry}), patch(
             "scripts.market_selection.capture_public_event_feed._open_allowlisted_url",
             return_value=FakeResponse(
                 ARTICLE_HTML,
@@ -160,7 +160,7 @@ class PublicEventArchiveTests(unittest.TestCase):
             "evidence_record_sha256": hashlib.sha256(mapping_bytes).hexdigest(),
             "entities": [{"id_type": "coingecko_id", "id": "example-asset"}],
         }
-        with patch.dict(EVENT_SOURCE_REGISTRY["sources"], {"cftc_general_press_releases": entry}):
+        with patch.dict(EVENT_SOURCE_REGISTRY["sources"], {"cftc_press_release_archive": entry}):
             event_record = promote_public_archive_candidate_to_event(
                 archive_capture,
                 candidate,
