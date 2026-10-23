@@ -56,7 +56,7 @@ class RequirementsCatalogueValidatorTests(unittest.TestCase):
         start = self.content.index(heading)
         prefix, matrix = self.content[:start], self.content[start:]
         row = next(line for line in matrix.splitlines() if line.startswith("| [#132 —"))
-        mutated = prefix + matrix.replace(row + "\\n", "", 1)
+        mutated = prefix + matrix.replace(row + "\n", "", 1)
         errors = validator.validate_issue_traceability(mutated)
         self.assertTrue(
             any("missing rows for" in error and "#132" in error for error in errors),
@@ -68,7 +68,7 @@ class RequirementsCatalogueValidatorTests(unittest.TestCase):
         start = self.content.index(heading)
         prefix, review = self.content[:start], self.content[start:]
         row = next(line for line in review.splitlines() if line.startswith("| [#132 —"))
-        mutated = prefix + review.replace(row + "\\n", "", 1)
+        mutated = prefix + review.replace(row + "\n", "", 1)
         errors = validator.validate_issue_acceptance_review(mutated)
         self.assertTrue(
             any("missing rows for" in error and "#132" in error for error in errors),
