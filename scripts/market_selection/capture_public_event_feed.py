@@ -15,8 +15,6 @@ import json
 from html.parser import HTMLParser
 import re
 from pathlib import Path
-import threading
-import time
 from urllib.error import HTTPError, URLError
 from urllib.parse import urljoin, urlsplit
 from urllib.request import HTTPRedirectHandler, Request, build_opener, urlopen
@@ -40,15 +38,13 @@ from scripts.market_selection.provider_license_gate import (
     evaluate_provider_use,
 )
 
+from scripts.market_selection.shared_request_rate_limiter import wait_for_rate_slot as _wait_for_rate_slot
+
 FEED_CAPTURE_SCHEMA = "crypto-public-event-feed-capture-v1"
 ARTICLE_CAPTURE_SCHEMA = "crypto-public-event-article-capture-v1"
 ARCHIVE_CAPTURE_SCHEMA = "crypto-public-event-archive-capture-v1"
 ARCHIVE_CANDIDATE_SCHEMA = "crypto-public-event-archive-candidate-v1"
 _REQUIRED_USE_CASES = ("internal_analysis", "persistent_storage")
-_RATE_LOCK = threading.Lock()
-_LAST_REQUEST_MONOTONIC: dict[str, float] = {}
-
-
 def _utc_now() -> str:
     return datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
 
@@ -288,18 +284,6 @@ def _blocked_result(
         "duplicate_item_count": 0,
         "errors": [],
     }
-
-
-def _wait_for_rate_slot(source_id: str, requests_per_second: float) -> None:
-    interval = 1.0 / requests_per_second
-    with _RATE_LOCK:
-        now = time.monotonic()
-        last = _LAST_REQUEST_MONOTONIC.get(source_id)
-        if last is not None:
-            delay = interval - (now - last)
-            if delay > 0:
-                time.sleep(delay)
-        _LAST_REQUEST_MONOTONIC[source_id] = time.monotonic()
 
 
 def capture_public_event_feed(
