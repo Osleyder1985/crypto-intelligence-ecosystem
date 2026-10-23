@@ -17,6 +17,7 @@ from scripts.market_selection.capture_public_event_feed import (
 from scripts.market_selection.event_source_registry import EVENT_SOURCE_REGISTRY
 from scripts.market_selection.research_report import build_research_report
 from scripts.market_selection.research_evidence_integration import enrich_research_report
+from scripts.market_selection.attach_horizon_assessment_to_report import attach_horizon_assessment
 
 from test_public_event_feed import (
     FakeResponse as GenericFeedFakeResponse,
@@ -31,6 +32,7 @@ from test_research_evidence_integration import (
     fundamental_observation,
     methodology,
 )
+from test_attach_horizon_assessment_to_report import assessment as horizon_assessment_fixture
 
 
 class CombinedResearchPipelineE2ETests(unittest.TestCase):
@@ -204,6 +206,21 @@ class CombinedResearchPipelineE2ETests(unittest.TestCase):
         )
         self.assertEqual(enriched["decision_status"], "INDETERMINATE")
         self.assertFalse(enriched["orders_submitted"])
+
+        horizon_assessment = copy.deepcopy(horizon_assessment_fixture())
+        horizon_assessment["asset_id"] = enriched["requested_asset_id"]
+        combined = attach_horizon_assessment(enriched, horizon_assessment)
+        attached = combined["horizon_assessment"]["assessment"]
+        self.assertEqual(attached["horizons"]["short"]["conclusion"], "FAVORABLE")
+        self.assertEqual(attached["horizons"]["medium"]["conclusion"], "BASE")
+        self.assertEqual(attached["horizons"]["long"]["conclusion"], "ADVERSE")
+        self.assertEqual(attached["aggregation"], "NONE")
+        self.assertEqual(combined["horizons"], enriched["horizons"])
+        self.assertTrue(
+            all(item["conclusion"] == "INDETERMINATE" for item in combined["horizons"].values())
+        )
+        self.assertEqual(combined["decision_status"], "INDETERMINATE")
+        self.assertFalse(combined["orders_submitted"])
 
 
 if __name__ == "__main__":
