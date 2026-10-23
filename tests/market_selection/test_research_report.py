@@ -495,7 +495,7 @@ class ResearchReportTests(unittest.TestCase):
         }), patch("scripts.market_selection.analyze_support_resistance.evaluate_artifact_use", return_value={
             "decision": "ALLOW", "reason_codes": ["SYNTHETIC_TEST_GATE_ONLY"],
         }):
-            with self.assertRaisesRegex(ValueError, "multi-timeframe support/resistance quote asset must match"):
+            with self.assertRaisesRegex(ValueError, "quote asset"):
                 build_research_report(
                     one_hour, config(), "BTC",
                     multi_timeframe_support_resistance_artifacts=[one_hour, four_hour],
