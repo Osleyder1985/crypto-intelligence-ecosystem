@@ -46,7 +46,8 @@ def capture_exchange_info(symbol: str, *, use_case: str = "internal_analysis", a
     assessment = evaluate_provider_use("binance_spot_market_data", use_case, authorization_record)
     if assessment["decision"] != "ALLOW":
         raise PermissionError("Binance provider use blocked before exchangeInfo request: " + ";".join(assessment["reason_codes"]))
-    # Preserve the full exchangeInfo universe. No local response-size ceiling or server-side symbol filter.\n    url = EXCHANGE_INFO_URL
+    # Preserve the full exchangeInfo universe. No local response-size ceiling or server-side symbol filter.
+    url = EXCHANGE_INFO_URL
     started = utc_now()
     request = Request(
         url,
