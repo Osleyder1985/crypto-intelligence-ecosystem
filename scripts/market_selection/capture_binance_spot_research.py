@@ -155,6 +155,13 @@ def capture_and_build_report(
     requested_asset_identifier: str | None = None,
     requested_chain_id: str | None = None,
     identity_evidence: dict | None = None,
+    order_book_artifact: dict | None = None,
+    order_book_authorization_registry: dict | None = None,
+    external_events: list[dict] | None = None,
+    fundamental_observations: list[dict] | None = None,
+    evidence_methodology: dict | None = None,
+    evidence_asset_category: str | None = None,
+    evaluation_as_of: str | None = None,
 ) -> tuple[dict, dict]:
     """Capture full market metadata, resolve one market, and build a reproducible report."""
     if symbol is not None:
@@ -206,6 +213,13 @@ def capture_and_build_report(
         requested_identifier_type=requested_identifier_type,
         requested_chain_id=requested_chain_id,
         identity_evidence=identity_evidence,
+        order_book_artifact=order_book_artifact,
+        order_book_authorization_registry=order_book_authorization_registry,
+        external_events=external_events,
+        fundamental_observations=fundamental_observations,
+        evidence_methodology=evidence_methodology,
+        evidence_asset_category=evidence_asset_category,
+        evaluation_as_of=evaluation_as_of,
     )
     # ExchangeInfo proves only the market base ticker. Canonical identity requires
     # separate, unique, reviewed evidence linked to that base asset.
@@ -268,12 +282,32 @@ def main() -> int:
     parser.add_argument("--asset-identifier", help="Identifier checked against reviewed evidence; for example Bitcoin, registry:bitcoin, or a contract address")
     parser.add_argument("--asset-chain-id", help="Required when --asset-id-type=contract_address")
     parser.add_argument("--identity-evidence", type=Path, help="Reviewed canonical identity evidence JSON")
+    parser.add_argument("--order-book-artifact", type=Path, help="Instantánea normalizada del libro de órdenes del mismo mercado")
+    parser.add_argument("--provider-authorization-registry", type=Path, help="Registro de autorización de uso para los proveedores")
+    parser.add_argument("--external-events", type=Path, help="Eventos preservados en JSON; no realiza búsquedas ni capturas de noticias")
+    parser.add_argument("--fundamental-observations", type=Path, help="Observaciones fundamentales/on-chain preservadas en JSON")
+    parser.add_argument("--evidence-methodology", type=Path, help="Metodología versionada requerida para evaluar evidencia externa")
+    parser.add_argument("--evidence-asset-category", help="Categoría explícita del activo para la evidencia externa")
+    parser.add_argument("--evaluation-as-of", help="Corte temporal ISO-8601 para evidencia externa y/o libro de órdenes")
     parser.add_argument("--capture-output", required=True, type=Path)
     parser.add_argument("--report-output", required=True, type=Path)
     args = parser.parse_args()
     config = json.loads(args.config.read_text(encoding="utf-8"))
     authorization_record = json.loads(args.authorization_record.read_text(encoding="utf-8")) if args.authorization_record else None
     identity_evidence = json.loads(args.identity_evidence.read_text(encoding="utf-8")) if args.identity_evidence else None
+    order_book_artifact = json.loads(args.order_book_artifact.read_text(encoding="utf-8")) if args.order_book_artifact else None
+    authorization_registry = json.loads(args.provider_authorization_registry.read_text(encoding="utf-8")) if args.provider_authorization_registry else None
+    evidence_requested = args.external_events is not None or args.fundamental_observations is not None
+    order_book_requested = args.order_book_artifact is not None
+    if evidence_requested and not (args.evidence_methodology and args.evidence_asset_category and args.evaluation_as_of):
+        parser.error("--external-events/--fundamental-observations requieren --evidence-methodology, --evidence-asset-category y --evaluation-as-of")
+    if not evidence_requested and (args.evidence_methodology or args.evidence_asset_category):
+        parser.error("--evidence-methodology/--evidence-asset-category requieren evidencia externa")
+    if args.evaluation_as_of and not (evidence_requested or order_book_requested):
+        parser.error("--evaluation-as-of requiere evidencia externa o --order-book-artifact")
+    external_events = json.loads(args.external_events.read_text(encoding="utf-8")) if args.external_events else None
+    fundamental_observations = json.loads(args.fundamental_observations.read_text(encoding="utf-8")) if args.fundamental_observations else None
+    evidence_methodology = json.loads(args.evidence_methodology.read_text(encoding="utf-8")) if args.evidence_methodology else None
     if args.asset_id_type != "symbol" and not args.asset_identifier:
         parser.error("--asset-identifier is required when --asset-id-type is not symbol")
     if args.asset_identifier and not args.identity_evidence:
