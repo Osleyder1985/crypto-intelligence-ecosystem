@@ -281,6 +281,14 @@ def build_research_report(
         order_market = order_book_analysis["market"]
         if order_market["exchange"].lower() != exchange.lower() or order_market["symbol_native"].upper() != symbol.upper():
             raise ValueError("order-book artifact exchange and symbol must match the OHLCV report market")
+        order_quote_asset = order_market.get("quote_asset")
+        ohlcv_quote_asset = market.get("quote_asset")
+        if (
+            isinstance(order_quote_asset, str) and order_quote_asset.strip()
+            and isinstance(ohlcv_quote_asset, str) and ohlcv_quote_asset.strip()
+            and order_quote_asset.strip().upper() != ohlcv_quote_asset.strip().upper()
+        ):
+            raise ValueError("order-book artifact quote asset must match the OHLCV report market quote asset")
 
     source_integrity = {
         "sha256": _sha256(source_bytes),
