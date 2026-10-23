@@ -142,23 +142,36 @@ def capture_exchange_info(
 
 def capture_and_build_report(
     *,
-    symbol: str,
+    symbol: str | None,
     interval: str,
     start_time_ms: int,
     end_time_ms_exclusive: int,
     config: dict,
-    base_asset_ticker: str,
+    base_asset_ticker: str | None = None,
+    quote_asset: str | None = None,
     use_case: str = "internal_analysis",
     authorization_record: dict | None = None,
     requested_identifier_type: str = "symbol",
     requested_chain_id: str | None = None,
     identity_evidence: dict | None = None,
 ) -> tuple[dict, dict]:
-    """Capture official exchange metadata and candles, then build report from exact artifact bytes."""
-    symbol = symbol.strip().upper()
-    if not symbol:
-        raise ValueError("symbol must be non-empty")
-    metadata = capture_exchange_info(symbol, use_case=use_case, authorization_record=authorization_record)
+    """Capture full market metadata, resolve one market, and build a reproducible report."""
+    if symbol is not None:
+        symbol = symbol.strip().upper()
+        if not symbol:
+            raise ValueError("symbol must be non-empty when provided")
+        metadata = capture_exchange_info(symbol, use_case=use_case, authorization_record=authorization_record)
+    else:
+        if not isinstance(base_asset_ticker, str) or not base_asset_ticker.strip():
+            raise ValueError("base_asset_ticker is required when symbol is not provided")
+        metadata = capture_exchange_info(
+            None, base_asset_ticker=base_asset_ticker, quote_asset=quote_asset,
+            use_case=use_case, authorization_record=authorization_record,
+        )
+        symbol = metadata["symbol_native"]
+    if base_asset_ticker is not None and base_asset_ticker.strip().casefold() != metadata["base_asset"].casefold():
+        raise ValueError("base_asset_ticker does not match the resolved Binance market base asset")
+    base_asset_ticker = metadata["base_asset"]
     artifact = capture_history(symbol, interval, start_time_ms, end_time_ms_exclusive, use_case=use_case, authorization_record=authorization_record)
     artifact["market"].update({
         "base_asset": metadata["base_asset"],
