@@ -86,7 +86,7 @@ EVENT_SOURCE_REGISTRY = {
             "source_type": "PRIMARY_OFFICIAL",
             "source_url": "https://www.federalreserve.gov/feeds/press_all.xml",
             "allowed_article_hosts": ["www.federalreserve.gov", "federalreserve.gov"],
-            "allowed_archive_path_prefixes": ["/newsevents/pressreleases"],
+            "allowed_archive_path_prefixes": ["/newsevents/pressreleases", "/newsevents/pressreleases.htm"],
             "terms_url": "https://www.federalreserve.gov/policies.htm",
             "status": "TERMS_PENDING",
             "terms_sha256": None,
