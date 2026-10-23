@@ -18,6 +18,7 @@ from urllib.parse import urlsplit
 
 from scripts.market_selection.external_event_evidence import assess_temporal_association, parse_timestamp, validate_event
 from scripts.market_selection.fundamental_onchain_contract import evaluate_observations
+from scripts.market_selection.analyze_multi_timeframe_support_resistance import analyze_multi_timeframe_support_resistance
 from scripts.market_selection.methodology_contract import validate_methodology
 from scripts.market_selection.provider_license_gate import evaluate_artifact_use, evaluate_provider_use
 from scripts.market_selection.event_source_registry import get_source, source_entry_sha256, source_is_approved
@@ -26,6 +27,7 @@ from scripts.market_selection.capture_public_event_feed import _parse_feed as _p
 
 REPORT_SCHEMA = "crypto-asset-research-report-v2"
 BUNDLE_SCHEMA = "crypto-research-evidence-bundle-v1"
+SUPPORT_RESISTANCE_INPUT_SCHEMA = "research-support-resistance-input-v1"
 _SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
 FUNDAMENTAL_SOURCE_BINDINGS = {
     "defillama-free-api": {
@@ -342,6 +344,106 @@ def _verify_promoted_public_feed_event(event_record: dict, source_entry: dict, r
         raise PermissionError("generic feed event must not claim causality")
 
 
+def _assess_support_resistance_input(
+    raw_input: dict | None,
+    *,
+    stable_id: str,
+    category: str,
+    evaluation_as_of: str,
+) -> dict:
+    """Analyze caller-supplied, authorized OHLCV artifacts without look-ahead."""
+    if raw_input is None:
+        return {
+            "status": "NOT_AVAILABLE",
+            "reason_code": "NO_SUPPORT_RESISTANCE_INPUT_SUPPLIED",
+            "analysis": None,
+        }
+    source = _object(raw_input, "support_resistance_input")
+    if source.get("schema_version") != SUPPORT_RESISTANCE_INPUT_SCHEMA:
+        raise ValueError(f"support_resistance_input.schema_version must be {SUPPORT_RESISTANCE_INPUT_SCHEMA}")
+    source_asset = _object(source.get("asset"), "support_resistance_input.asset")
+    if (
+        not isinstance(source_asset.get("stable_id"), str)
+        or source_asset["stable_id"].strip().casefold() != stable_id.strip().casefold()
+        or source_asset.get("category") != category
+    ):
+        raise ValueError("support_resistance_input.asset must match the target stable_id and category")
+    mapping_url = source.get("asset_mapping_evidence_url")
+    parsed_mapping_url = urlsplit(mapping_url) if isinstance(mapping_url, str) else None
+    if (
+        parsed_mapping_url is None
+        or parsed_mapping_url.scheme != "https"
+        or not parsed_mapping_url.hostname
+        or parsed_mapping_url.port not in (None, 443)
+        or parsed_mapping_url.username is not None
+        or parsed_mapping_url.password is not None
+    ):
+        raise ValueError("support_resistance_input.asset_mapping_evidence_url must be an absolute HTTPS URL")
+
+    artifacts = source.get("artifacts")
+    if not isinstance(artifacts, list) or not artifacts:
+        raise ValueError("support_resistance_input.artifacts must be a non-empty list")
+    parameters = _object(source.get("parameters"), "support_resistance_input.parameters")
+    allowed_parameters = {"pivot_left", "pivot_right", "tolerance_bps", "confluence_tolerance_bps"}
+    unknown_parameters = set(parameters) - allowed_parameters
+    if unknown_parameters:
+        raise ValueError("support_resistance_input.parameters has unknown fields: " + ",".join(sorted(unknown_parameters)))
+    for required in ("pivot_left", "pivot_right", "tolerance_bps"):
+        if required not in parameters:
+            raise ValueError(f"support_resistance_input.parameters.{required} is required")
+
+    cutoff = parse_timestamp(evaluation_as_of, "evaluation_as_of")
+    cutoff_ms = int(cutoff.timestamp() * 1000)
+    filtered_artifacts = []
+    excluded_after_cutoff = 0
+    for artifact_index, raw_artifact in enumerate(artifacts):
+        artifact = _object(raw_artifact, f"support_resistance_input.artifacts[{artifact_index}]")
+        candles = artifact.get("candles")
+        if not isinstance(candles, list):
+            raise ValueError(f"support_resistance_input.artifacts[{artifact_index}].candles must be a list")
+        eligible_candles = []
+        for candle_index, raw_candle in enumerate(candles):
+            candle = _object(
+                raw_candle,
+                f"support_resistance_input.artifacts[{artifact_index}].candles[{candle_index}]",
+            )
+            close_time_ms = candle.get("close_time_ms")
+            if isinstance(close_time_ms, bool) or not isinstance(close_time_ms, int) or close_time_ms < 0:
+                raise ValueError("support/resistance candle close_time_ms must be a non-negative integer")
+            if close_time_ms > cutoff_ms:
+                excluded_after_cutoff += 1
+            else:
+                eligible_candles.append(candle)
+        filtered_artifacts.append({**artifact, "candles": eligible_candles})
+
+    analysis = analyze_multi_timeframe_support_resistance(
+        filtered_artifacts,
+        pivot_left=parameters["pivot_left"],
+        pivot_right=parameters["pivot_right"],
+        tolerance_bps=parameters["tolerance_bps"],
+        confluence_tolerance_bps=parameters.get("confluence_tolerance_bps"),
+    )
+    return {
+        "status": "ASSESSED",
+        "schema_version": SUPPORT_RESISTANCE_INPUT_SCHEMA,
+        "evaluation_as_of": cutoff.isoformat().replace("+00:00", "Z"),
+        "asset_mapping": {
+            "stable_id": stable_id.strip(),
+            "category": category,
+            "evidence_url": mapping_url,
+            "status": "CALLER_SUPPLIED_REQUIRES_REVIEW",
+        },
+        "input_artifact_count": len(artifacts),
+        "excluded_after_cutoff_candle_count": excluded_after_cutoff,
+        "analysis": analysis,
+        "limitations": [
+            "Candles closing after evaluation_as_of are excluded before pivot analysis.",
+            "Asset-to-market mapping evidence is supplied by the caller and is not independently verified by this integration layer.",
+            "Support/resistance zones are descriptive OHLCV heuristics, not proof of resting orders or guaranteed price reactions.",
+        ],
+    }
+
+
 def enrich_research_report(
     report: dict,
     *,
@@ -352,6 +454,7 @@ def enrich_research_report(
     evaluation_as_of: str,
     provider_authorization_registry: dict | None = None,
     fundamental_freshness_policy_seconds: dict[str, int] | None = None,
+    support_resistance_input: dict | None = None,
 ) -> dict:
     """Validate and attach supplied evidence while retaining fail-closed decision states.
 
@@ -592,6 +695,12 @@ def enrich_research_report(
     }
     output["fundamental_onchain_assessment"] = fundamental
     output["fundamental_source_use_assessments"] = fundamental_source_use_assessments
+    output["technical_structure_assessment"] = _assess_support_resistance_input(
+        support_resistance_input,
+        stable_id=stable_id,
+        category=category,
+        evaluation_as_of=cutoff,
+    )
     output["downstream_use_assessment"] = provider_use
     output["downstream_storage_assessment"] = provider_storage
     output["methodology_assessment"] = {
@@ -624,6 +733,10 @@ def enrich_research_report(
                 reasons.append(reason)
         output["horizons"][horizon]["reason_codes"] = reasons
     output["limitations"] = list(output.get("limitations", []))
+    if output["technical_structure_assessment"]["status"] == "NOT_AVAILABLE":
+        output["limitations"].append("Support/resistance was not assessed because no support_resistance_input was supplied.")
+    else:
+        output["limitations"].append("Support/resistance asset mapping is caller-supplied and requires review; it is not independently verified.")
     output["limitations"].append(
         "External events must pass source-registry approval plus provider authorization for internal analysis and persistent storage. These controls enforce recorded policy but do not prove legal authority, source completeness, or predictive value."
     )
@@ -651,6 +764,10 @@ def main() -> int:
         "--fundamental-freshness-policy", type=Path,
         help="Optional JSON object mapping metric IDs to maximum observation age in seconds",
     )
+    parser.add_argument(
+        "--support-resistance-input", type=Path,
+        help="Optional research-support-resistance-input-v1 JSON with authorized OHLCV artifacts and parameters",
+    )
     parser.add_argument("--output", required=True, type=Path)
     args = parser.parse_args()
     report = json.loads(args.report.read_text(encoding="utf-8"))
@@ -661,6 +778,10 @@ def main() -> int:
         json.loads(args.fundamental_freshness_policy.read_text(encoding="utf-8"))
         if args.fundamental_freshness_policy is not None else None
     )
+    support_resistance_input = (
+        json.loads(args.support_resistance_input.read_text(encoding="utf-8"))
+        if args.support_resistance_input is not None else None
+    )
     enriched = enrich_research_report(
         report,
         events=events,
@@ -669,6 +790,7 @@ def main() -> int:
         asset={"stable_id": args.asset_stable_id, "category": args.asset_category},
         evaluation_as_of=args.evaluation_as_of,
         fundamental_freshness_policy_seconds=freshness_policy,
+        support_resistance_input=support_resistance_input,
     )
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(enriched, ensure_ascii=False, indent=2, sort_keys=True, allow_nan=False) + "\n", encoding="utf-8")
