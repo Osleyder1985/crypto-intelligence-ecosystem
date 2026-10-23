@@ -4,6 +4,32 @@
 - **Issues rectores:** [#11](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/issues/11), [#13](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/issues/13) y [#128](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/issues/128).
 - **Alcance inicial:** investigación de mercados Spot y fuentes públicas/read-only. La ejecución de órdenes reales permanece fuera de alcance.
 
+## Estado de implementación verificado — 2026-10-23
+
+Este estado describe código existente; **no declara cerrado este Issue ni que el producto esté listo para producción**.
+
+| Tramo | Evidencia en el repositorio | Estado y límite |
+|---|---|---|
+| Captura de mercado e histórico | `scripts/market_selection/capture_binance_spot_research.py`, `scripts/market_selection/capture_binance_spot_ohlcv.py` | Implementado para un símbolo nativo exacto de Binance Spot y OHLCV. No resuelve automáticamente un nombre/ticker ambiguo ni cubre todas las fuentes del expediente. |
+| Integridad de captura | `tests/market_selection/test_capture_binance_spot_research.py` | Hay pruebas de lectura hasta EOF, hash y conservación de respuestas superiores a 5 MiB. No se aplica un límite arbitrario de bytes del proyecto. |
+| Composición de informe | `scripts/market_selection/research_report.py` | Produce JSON descriptivo con riesgo OHLCV, eventos de movimiento, soportes/resistencias, procedencia y tres horizontes. |
+| Identidad canónica | `scripts/market_selection/canonical_asset_identity.py` | Valida evidencia proporcionada y revisada; no descubre ni verifica por sí mismo la autoridad real de una fuente externa. |
+| Autorización de fuentes | `scripts/market_selection/provider_license_gate.py` | Falla de forma cerrada. La prueba técnica no autoriza el análisis interno; no hay que fabricar ni inferir permisos. |
+| Noticias, catalizadores y on-chain | Integración de evidencia existente, con registros de fuentes y autorizaciones | Cobertura incompleta; no equivale a una investigación automática completa de noticias, fundamentales y datos on-chain. |
+| Evaluación por horizontes | Contrato `crypto-asset-research-report-v2` | Los tres horizontes se emiten, pero permanecen `INDETERMINATE` mientras falten metodología aprobada y evidencia suficiente. |
+| Producto utilizable por el usuario | No se acredita una API/UI desplegada con resolución automática, historial central y experiencia completa | Pendiente. El CLI requiere parámetros y artefactos explícitos. |
+
+### Bloqueadores para afirmar «introducir una criptomoneda y recibir una evaluación integral»
+
+1. Disponer de autorización real y revisada para cada uso de datos requerido; la disponibilidad técnica de una API no prueba derechos de uso.
+2. Resolver el activo canónico y los pares sin inferencias por ticker; para tokens y wrapped assets se necesita cadena y contrato cuando corresponda.
+3. Orquestar fuentes adicionales autorizadas (liquidez, eventos/noticias, fundamentales y on-chain), con integridad, cobertura y tiempos de captura verificables.
+4. Aprobar metodologías versionadas para los tres horizontes y validar cualquier afirmación predictiva con pruebas temporales fuera de muestra.
+5. Añadir persistencia/versionado y una interfaz que acepte un identificador de activo sin exigir que el usuario prepare manualmente todos los artefactos.
+6. Ejecutar y conservar una prueba E2E con evidencias reales autorizadas. Los fixtures sintéticos demuestran comportamiento del código, no permisos de proveedores ni cobertura real de mercado.
+
+El siguiente incremento debe cerrar bloqueadores con evidencia verificable; no debe convertir una captura técnica o un informe descriptivo parcial en una señal favorable/desfavorable sin respaldo.
+
 ## 1. Resultado de producto
 
 El usuario introduce un activo y el ecosistema produce un expediente histórico y una evaluación explicable para **corto, medio y largo plazo**, cada horizonte por separado. El resultado puede ser favorable, desfavorable o **INDETERMINATE**. El sistema no está obligado a encontrar una oportunidad y no promete rentabilidad.

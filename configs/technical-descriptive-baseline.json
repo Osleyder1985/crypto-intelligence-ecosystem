@@ -1,0 +1,14 @@
+{
+  "methodology_id": "technical-descriptive-baseline-experimental",
+  "methodology_version": "0.1.0",
+  "movement": {
+    "lookback_bars": 2,
+    "return_threshold_pct": 5,
+    "volume_ratio_threshold": 3
+  },
+  "support_resistance": {
+    "pivot_left": 1,
+    "pivot_right": 1,
+    "tolerance_bps": 100
+  }
+}
