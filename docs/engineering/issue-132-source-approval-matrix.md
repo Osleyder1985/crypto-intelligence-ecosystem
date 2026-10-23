@@ -137,3 +137,14 @@ Esta es una **autorización del propietario para proceder con la revisión y pre
 | `federal_reserve_press_release_archive` | Preparar revisión de metadatos y texto oficial para análisis interno | `TERMS_PENDING` |
 
 **Próximo paso permitido:** completar la revisión documental y los controles técnicos offline por fuente. La captura real y el backfill permanecen bloqueados hasta que el uso, persistencia, retención y acceso automatizado aplicables estén respaldados por evidencia suficiente.
+## Control SEC: límite publicado y clasificación del agente — 2026-10-23
+
+La política oficial de seguridad de SEC.gov establece un máximo agregado de 10 solicitudes por segundo, sin importar cuántas máquinas originan las solicitudes, y advierte que no permite bots o herramientas automatizadas no clasificadas. Fuente: https://www.sec.gov/about/privacy-information
+
+Consecuencias para `sec_press_releases` y `sec_press_release_archive`:
+- El valor de 10 solicitudes/segundo del registro puede trazarse al techo general publicado de SEC.gov, no únicamente a la FAQ de EDGAR.
+- Ese techo es un máximo, no una frecuencia objetivo. El proyecto puede usar un límite menor como control interno si queda identificado como tal.
+- Antes de habilitar tráfico, debe utilizarse un User-Agent identificable y revisado, y el límite debe aplicarse de forma agregada entre procesos y máquinas que compartan la salida de red. El control local por host no basta para demostrar el límite global.
+- No se modifica el estado de ninguna fuente ni se habilita tráfico con este ajuste documental. Las políticas deben preservarse en bytes verificables y calcularse su hash sobre esos bytes antes de completar el expediente técnico.
+
+Esta precisión no modifica la autorización funcional del propietario, ya registrada arriba, y no se le volverá a solicitar para las seis fuentes enumeradas.
