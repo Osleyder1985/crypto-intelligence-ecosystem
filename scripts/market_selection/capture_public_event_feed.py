@@ -681,11 +681,10 @@ def promote_public_feed_candidate_to_event(
     event_type: str,
     claim: str,
     entity_resolution: dict,
+    article_capture: dict,
 ) -> dict:
-    """Promote a feed candidate only with explicit reviewed stable-entity mapping.
+    """Promote a feed candidate only with a preserved article and reviewed stable-entity mapping."""
 
-    The article link is evidence metadata only; this function does not fetch it.
-    """
     if not isinstance(feed_capture, dict) or feed_capture.get("schema_version") != FEED_CAPTURE_SCHEMA:
         raise ValueError("feed_capture has an invalid schema")
     source_id = feed_capture.get("source_id")
@@ -732,8 +731,8 @@ def promote_public_feed_candidate_to_event(
     if candidate.get("publication_time_status") != "PARSED" or not candidate.get("published_at"):
         raise ValueError("candidate has no eligible publication timestamp")
     published = parse_timestamp(candidate["published_at"], "candidate.published_at")
-    captured = parse_timestamp(feed_capture.get("captured_at"), "feed_capture.captured_at")
-    if published > captured:
+    feed_captured = parse_timestamp(feed_capture.get("captured_at"), "feed_capture.captured_at")
+    if published > feed_captured:
         raise ValueError("candidate publication timestamp is after the capture cutoff")
     allowed_hosts = {host.casefold() for host in source.get("allowed_article_hosts", [])}
     parts = urlsplit(candidate["url"])
@@ -745,6 +744,51 @@ def promote_public_feed_candidate_to_event(
         or parts.password is not None
     ):
         raise PermissionError("candidate URL is outside the approved source host allowlist")
+
+    if not isinstance(article_capture, dict) or article_capture.get("schema_version") != ARTICLE_CAPTURE_SCHEMA:
+        raise ValueError("a valid preserved article_capture is required for promotion")
+    if (
+        article_capture.get("source_id") != source_id
+        or article_capture.get("candidate_id") != candidate_id
+        or article_capture.get("capture_status") != "PASS"
+        or article_capture.get("network_request_made") is not True
+        or article_capture.get("capture_truncated") is not False
+        or article_capture.get("source_registry_status") != "APPROVED"
+        or article_capture.get("source_registry_entry_sha256") != current_registry_hash
+        or article_capture.get("requested_url") != candidate["url"]
+    ):
+        raise PermissionError("article capture is incomplete, stale, or does not match the selected feed candidate")
+    article_captured = parse_timestamp(article_capture.get("captured_at"), "article_capture.captured_at")
+    if article_captured < feed_captured or article_captured < published:
+        raise ValueError("article capture time precedes feed capture or publication time")
+    final_parts = urlsplit(article_capture.get("final_url", ""))
+    if (
+        final_parts.scheme != "https"
+        or (final_parts.hostname or "").casefold() not in allowed_hosts
+        or final_parts.port not in (None, 443)
+        or final_parts.username is not None
+        or final_parts.password is not None
+    ):
+        raise PermissionError("article final URL is outside the approved HTTPS host allowlist")
+    article_b64 = article_capture.get("raw_response_base64")
+    article_hash = article_capture.get("raw_response_sha256")
+    article_size = article_capture.get("raw_response_bytes")
+    if not isinstance(article_b64, str) or not isinstance(article_hash, str) or not re.fullmatch(r"[0-9a-f]{64}", article_hash):
+        raise PermissionError("article body or SHA-256 is missing")
+    try:
+        article_raw = base64.b64decode(article_b64, validate=True)
+    except (ValueError, base64.binascii.Error) as exc:
+        raise PermissionError("article body base64 is invalid") from exc
+    if hashlib.sha256(article_raw).hexdigest() != article_hash or len(article_raw) != article_size:
+        raise PermissionError("article body integrity check failed")
+    content_type = article_capture.get("content_type")
+    if not isinstance(content_type, str) or content_type.split(";", 1)[0].strip().lower() not in {"text/html", "application/xhtml+xml"}:
+        raise PermissionError("article content type must be HTML or XHTML")
+    for use_case in _REQUIRED_USE_CASES:
+        assessment_key = "provider_use_assessment" if use_case == "internal_analysis" else "persistent_storage_assessment"
+        assessment = article_capture.get(assessment_key)
+        if not isinstance(assessment, dict) or assessment.get("decision") != "ALLOW" or assessment.get("provider_id") != source["provider_id"]:
+            raise PermissionError(f"article capture does not authorize {use_case}")
 
     if not isinstance(entity_resolution, dict) or entity_resolution.get("status") != "APPROVED":
         raise ValueError("entity_resolution.status APPROVED is required")
@@ -784,15 +828,15 @@ def promote_public_feed_candidate_to_event(
             "publisher": source["display_name"],
         },
         "published_at": candidate["published_at"],
-        "captured_at": feed_capture["captured_at"],
+        "captured_at": article_capture["captured_at"],
         "entities": entities,
         "evidence": [{"url": candidate["url"], "claim": claim_text}],
         "capture_method": "public_event_feed_rss_atom_v1",
-        "content_sha256": candidate["item_xml_sha256"],
+        "content_sha256": article_hash,
         "license_notes": (
             "Source registry and provider authorization allow internal_analysis and persistent_storage; "
-            f"registry_entry_sha256={current_registry_hash}. Feed metadata only; article body was not fetched. "
-            "Causality has not been assessed."
+            f"registry_entry_sha256={current_registry_hash}. Full article body captured and hashed; "
+            "source claim still requires factual review. Causality has not been assessed."
         ),
         "metadata": {
             "source_id": source_id,
@@ -804,6 +848,8 @@ def promote_public_feed_candidate_to_event(
             "entity_resolution_evidence_record_sha256": evidence_hash.lower(),
             "entity_resolution_evidence_record_base64": evidence_b64,
             "causality_status": "NOT_ASSESSED",
+            "article_raw_response_sha256": article_hash,
+            "article_content_type": content_type,
         },
     }
     normalized = validate_event(event)
@@ -825,7 +871,8 @@ def promote_public_feed_candidate_to_event(
                     "raw_response_sha256", "raw_response_base64", "provider_use_assessment",
                     "persistent_storage_assessment", "provider_policy_assessments",
                 )
-            }
+            },
+            "article": article_capture,
         },
         "orders_submitted": False,
         "causality_claimed": False,
