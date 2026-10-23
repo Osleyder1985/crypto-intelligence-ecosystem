@@ -486,6 +486,128 @@ def _assess_support_resistance_input(
     }
 
 
+EVENT_FACT_REVIEW_SCHEMA = "crypto-event-fact-review-v1"
+_EVENT_FACT_REVIEW_DECISIONS = {
+    "VERIFIED_PRIMARY_SOURCE",
+    "CONFLICTING_SOURCES",
+    "REJECTED",
+    "INSUFFICIENT_EVIDENCE",
+}
+_FACT_REVIEW_EVIDENCE_ROLES = {"PRIMARY_SOURCE", "SECONDARY_SOURCE", "MARKET_DATA", "COUNTER_EVIDENCE"}
+
+
+def _assess_event_fact_review(event_record: dict, *, evaluation_as_of: str) -> dict:
+    """Validate a separately reviewed fact claim; never infer verification from timing."""
+    metadata = _object(event_record.get("metadata", {}), "event.metadata")
+    review = metadata.get("fact_review")
+    if review is None:
+        return {
+            "schema_version": EVENT_FACT_REVIEW_SCHEMA,
+            "status": "NOT_REVIEWED",
+            "decision": "NOT_REVIEWED",
+            "effective_decision": "NOT_REVIEWED",
+            "available_as_of": False,
+            "reason": "No explicit fact-review record was supplied; article capture and temporal proximity are not fact verification.",
+        }
+    review = _object(review, "event.metadata.fact_review")
+    if review.get("schema_version") != EVENT_FACT_REVIEW_SCHEMA:
+        raise ValueError(f"event.metadata.fact_review.schema_version must be {EVENT_FACT_REVIEW_SCHEMA}")
+    event_id = event_record.get("event_id")
+    if review.get("event_id") != event_id:
+        raise PermissionError("fact review event_id does not match the event")
+    decision = review.get("decision")
+    if not isinstance(decision, str) or decision not in _EVENT_FACT_REVIEW_DECISIONS:
+        raise ValueError("fact review decision is unsupported")
+    reviewer = review.get("reviewed_by")
+    if not isinstance(reviewer, str) or not reviewer.strip():
+        raise ValueError("fact review reviewed_by is required")
+    reviewed_at = parse_timestamp(review.get("reviewed_at"), "fact_review.reviewed_at")
+    rationale = review.get("rationale")
+    if not isinstance(rationale, str) or not rationale.strip():
+        raise ValueError("fact review rationale is required")
+    refs = review.get("evidence_refs")
+    if not isinstance(refs, list):
+        raise ValueError("fact review evidence_refs must be a list")
+    normalized_refs = []
+    for index, raw_ref in enumerate(refs):
+        ref = _object(raw_ref, f"fact_review.evidence_refs[{index}]")
+        url = ref.get("url")
+        role = ref.get("role")
+        parts = urlsplit(url) if isinstance(url, str) else None
+        if (
+            parts is None or parts.scheme != "https" or not parts.netloc
+            or parts.username is not None or parts.password is not None
+        ):
+            raise ValueError(f"fact_review.evidence_refs[{index}].url must be an absolute HTTPS URL")
+        if role not in _FACT_REVIEW_EVIDENCE_ROLES:
+            raise ValueError(f"fact_review.evidence_refs[{index}].role is unsupported")
+        normalized_ref = {"url": url, "role": role}
+        if "publisher" in ref:
+            publisher = ref.get("publisher")
+            if not isinstance(publisher, str):
+                raise ValueError(f"fact_review.evidence_refs[{index}].publisher must be text")
+            normalized_ref["publisher"] = publisher.strip()
+        normalized_refs.append(normalized_ref)
+
+    record_b64 = review.get("evidence_record_base64")
+    record_hash = review.get("evidence_record_sha256")
+    if not isinstance(record_b64, str) or not record_b64:
+        raise ValueError("fact review evidence_record_base64 is required")
+    if not isinstance(record_hash, str) or not _SHA256_RE.fullmatch(record_hash):
+        raise ValueError("fact review evidence_record_sha256 must be a SHA-256")
+    try:
+        record_bytes = base64.b64decode(record_b64, validate=True)
+    except (ValueError, base64.binascii.Error) as exc:
+        raise ValueError("fact review evidence_record_base64 is invalid") from exc
+    if hashlib.sha256(record_bytes).hexdigest() != record_hash:
+        raise PermissionError("fact review evidence record SHA-256 mismatch")
+    try:
+        record = json.loads(record_bytes.decode("utf-8"))
+    except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+        raise ValueError("fact review evidence record must be UTF-8 JSON") from exc
+    record = _object(record, "fact review evidence record")
+    expected = {
+        "schema_version": EVENT_FACT_REVIEW_SCHEMA,
+        "event_id": event_id,
+        "decision": decision,
+        "reviewed_by": reviewer.strip(),
+        "reviewed_at": reviewed_at.isoformat().replace("+00:00", "Z"),
+        "rationale": rationale.strip(),
+        "evidence_refs": normalized_refs,
+    }
+    if record != expected:
+        raise PermissionError("fact review evidence record does not match its declared review fields")
+    if decision == "VERIFIED_PRIMARY_SOURCE":
+        event_source = _object(event_record.get("source"), "event.source")
+        if not any(ref["role"] == "PRIMARY_SOURCE" and ref["url"] == event_source.get("url") for ref in normalized_refs):
+            raise ValueError("verified primary-source review must reference the event's primary source URL")
+    if decision == "CONFLICTING_SOURCES" and len({ref["url"] for ref in normalized_refs}) < 2:
+        raise ValueError("conflicting-sources review must reference at least two distinct URLs")
+    if decision in {"REJECTED", "VERIFIED_PRIMARY_SOURCE"} and not normalized_refs:
+        raise ValueError("fact review decision requires evidence references")
+
+    cutoff = parse_timestamp(evaluation_as_of, "evaluation_as_of")
+    available = reviewed_at <= cutoff
+    effective = decision if available else "NOT_AVAILABLE_AS_OF"
+    return {
+        "schema_version": EVENT_FACT_REVIEW_SCHEMA,
+        "status": "REVIEWED" if available else "NOT_AVAILABLE_AS_OF",
+        "decision": decision,
+        "effective_decision": effective,
+        "available_as_of": available,
+        "reviewed_by": reviewer.strip(),
+        "reviewed_at": reviewed_at.isoformat().replace("+00:00", "Z"),
+        "rationale": rationale.strip(),
+        "evidence_refs": normalized_refs,
+        "evidence_record_sha256": record_hash.lower(),
+        "reason": (
+            "Fact review is explicitly recorded and available by the evaluation cutoff."
+            if available else
+            "Fact review occurred after the evaluation cutoff and cannot be used as information available at that time."
+        ),
+    }
+
+
 EVENT_SOURCE_COVERAGE_SCHEMA = "crypto-event-source-coverage-v1"
 _EVENT_CAPTURE_STATUSES = {"BLOCKED", "NETWORK_ERROR", "PARTIAL", "HTTP_ERROR", "PARSE_ERROR", "PASS"}
 
@@ -769,6 +891,7 @@ def enrich_research_report(
             pre_movement_window_minutes=pre_movement_window_minutes,
             post_movement_window_minutes=post_movement_window_minutes,
         )
+        fact_review_assessment = _assess_event_fact_review(event, evaluation_as_of=cutoff)
         if episode_context is not None:
             published_ms = parse_timestamp(event["published_at"], "published_at").timestamp() * 1000
             start_ms = episode_context["start_pivot_open_time_ms"]
@@ -788,6 +911,7 @@ def enrich_research_report(
             }
         event_assessments.append({
             **temporal_assessment,
+            "fact_verification": fact_review_assessment,
             **({"movement_episode": episode_context} if episode_context is not None else {}),
             "source_use_assessment": event_use,
             "source_storage_assessment": event_storage,
@@ -831,7 +955,10 @@ def enrich_research_report(
                 elif not linked:
                     status = "NOT_ASSESSED_NO_EPISODE_LINKED_EVIDENCE"
                 elif any(
-                    item.get("entity_match") is True and item.get("causality_label") == "TEMPORAL_ASSOCIATION"
+                    item.get("entity_match") is True
+                    and item.get("causality_label") == "TEMPORAL_ASSOCIATION"
+                    and (item.get("fact_verification") or {}).get("effective_decision")
+                    in {"NOT_REVIEWED", "VERIFIED_PRIMARY_SOURCE"}
                     for item in linked
                 ):
                     status = "TEMPORAL_ASSOCIATION_ONLY"
