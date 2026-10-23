@@ -116,7 +116,7 @@ class CombinedResearchPipelineE2ETests(unittest.TestCase):
         )
         self.assertEqual(
             enriched["event_causal_assessment"]["episode_assessments"][0]["event_ids"],
-            [],
+            [assessment["event_id"]],
         )
         self.assertFalse(enriched["external_event_evidence"]["causality_claimed"])
         self.assertFalse(enriched["event_causal_assessment"]["causality_claimed"])
