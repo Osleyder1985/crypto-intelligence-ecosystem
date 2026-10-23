@@ -1,0 +1,42 @@
+name: Research report forecast scoring integration tests
+
+on:
+  pull_request:
+    paths:
+      - "scripts/market_selection/attach_forecast_scoring_to_report.py"
+      - "scripts/market_selection/forecast_scoring.py"
+      - "scripts/market_selection/research_report.py"
+      - "tests/market_selection/test_attach_forecast_scoring_to_report.py"
+      - "tests/market_selection/test_forecast_scoring.py"
+      - "docs/engineering/issue-133-report-forecast-scoring-integration.md"
+      - ".github/workflows/report-forecast-scoring-integration-tests.yml"
+  push:
+    branches:
+      - main
+    paths:
+      - "scripts/market_selection/attach_forecast_scoring_to_report.py"
+      - "scripts/market_selection/forecast_scoring.py"
+      - "scripts/market_selection/research_report.py"
+      - "tests/market_selection/test_attach_forecast_scoring_to_report.py"
+      - "tests/market_selection/test_forecast_scoring.py"
+      - "docs/engineering/issue-133-report-forecast-scoring-integration.md"
+      - ".github/workflows/report-forecast-scoring-integration-tests.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97d
+        with:
+          python-version: "3.12"
+      - name: Run forecast scoring and report integration tests
+        run: |
+          python -m unittest discover -s tests/market_selection -p "test_forecast_scoring.py" -v
+          python -m unittest discover -s tests/market_selection -p "test_attach_forecast_scoring_to_report.py" -v
