@@ -25,6 +25,13 @@ from scripts.market_selection.capture_sec_press_releases_rss import parse_sec_pr
 REPORT_SCHEMA = "crypto-asset-research-report-v2"
 BUNDLE_SCHEMA = "crypto-research-evidence-bundle-v1"
 _SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
+FUNDAMENTAL_SOURCE_BINDINGS = {
+    "defillama-free-api": {
+        "provider_id": "defillama_api",
+        "allowed_host": "api.llama.fi",
+        "allowed_path_prefix": "/protocol/",
+    },
+}
 
 
 def _object(value: Any, field: str) -> dict:
@@ -56,6 +63,23 @@ def _verify_fundamental_observation_sources(observations: list[dict]) -> list[di
             raise PermissionError(f"fundamental source id missing at observations[{index}]")
         if not isinstance(provider_id, str) or not provider_id.strip():
             raise PermissionError(f"fundamental provider id missing at observations[{index}]")
+        binding = FUNDAMENTAL_SOURCE_BINDINGS.get(source_id)
+        if binding is None:
+            raise PermissionError(f"fundamental source is not registered at observations[{index}]")
+        if provider_id != binding["provider_id"]:
+            raise PermissionError(f"fundamental provider id does not match source registry at observations[{index}]")
+        source_url = source.get("url")
+        parsed_source_url = urlsplit(source_url) if isinstance(source_url, str) else None
+        if (
+            parsed_source_url is None
+            or parsed_source_url.scheme != "https"
+            or parsed_source_url.hostname != binding["allowed_host"]
+            or parsed_source_url.port not in (None, 443)
+            or parsed_source_url.username is not None
+            or parsed_source_url.password is not None
+            or not parsed_source_url.path.startswith(binding["allowed_path_prefix"])
+        ):
+            raise PermissionError(f"fundamental source URL is outside registry allowlist at observations[{index}]")
         if source.get("terms_status") != "APPROVED":
             raise PermissionError(
                 f"fundamental source terms are not approved at observations[{index}]"
