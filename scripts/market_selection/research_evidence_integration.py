@@ -543,7 +543,7 @@ def _assess_event_source_coverage(
             "interpretation": (
                 "Zero items were present in the returned feed only; this does not establish absence of a catalyst."
                 if coverage_status == "CAPTURED_NO_ITEMS_IN_RETURNED_FEED"
-                else "Coverage is limited to this source capture and its declared scope."
+                else "Coverage is limited to this source capture and its declared scope; it does not establish absence of a catalyst."
             ),
         })
     statuses = sorted({item["coverage_status"] for item in sources})
