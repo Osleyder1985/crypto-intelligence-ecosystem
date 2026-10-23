@@ -268,6 +268,19 @@ def build_research_report(
             tolerance_bps=config["support_resistance"]["tolerance_bps"],
             confluence_tolerance_bps=multi_timeframe_confluence_tolerance_bps,
         )
+        report_quote_asset = market.get("quote_asset")
+        for index, timeframe_artifact in enumerate(multi_timeframe_support_resistance_artifacts):
+            timeframe_market = _require_object(
+                _require_object(timeframe_artifact, f"multi_timeframe_support_resistance_artifacts[{index}]").get("market"),
+                f"multi_timeframe_support_resistance_artifacts[{index}].market",
+            )
+            timeframe_quote_asset = timeframe_market.get("quote_asset")
+            if (
+                isinstance(timeframe_quote_asset, str) and timeframe_quote_asset.strip()
+                and isinstance(report_quote_asset, str) and report_quote_asset.strip()
+                and timeframe_quote_asset.strip().upper() != report_quote_asset.strip().upper()
+            ):
+                raise ValueError("multi-timeframe support/resistance quote asset must match the OHLCV report market quote asset")
         multi_market = multi_timeframe_support_resistance["market"]
         if (
             multi_market["exchange"].lower() != exchange.lower()
