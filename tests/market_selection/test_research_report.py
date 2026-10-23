@@ -14,6 +14,7 @@ from scripts.market_selection.capture_binance_spot_research import EXCHANGE_INFO
 from scripts.market_selection.provider_license_gate import ASSESSMENT_SCHEMA_VERSION, POLICY_VERSION, evaluate_provider_use
 from scripts.market_selection.canonical_asset_identity import SCHEMA_VERSION as IDENTITY_SCHEMA_VERSION
 from test_attach_horizon_assessment_to_report import assessment as horizon_assessment_fixture
+from test_attach_horizon_assessment_to_report import approved_methodology as approved_horizon_methodology_fixture
 from test_normalize_binance_live_depth_evidence import artifact as synthetic_live_depth_artifact
 from test_research_evidence_integration import methodology
 
@@ -833,12 +834,15 @@ class ResearchReportTests(unittest.TestCase):
             artifact_path = root / "ohlcv.json"
             config_path = root / "config.json"
             assessment_path = root / "horizon-assessment.json"
+            methodology_path = root / "horizon-methodology.json"
             output_path = root / "report.json"
             artifact_path.write_bytes(self.raw)
             config_path.write_text(json.dumps(config()), encoding="utf-8")
             assessment = horizon_assessment_fixture()
             assessment["asset_id"] = "BTC"
             assessment_path.write_text(json.dumps(assessment), encoding="utf-8")
+            methodology = approved_horizon_methodology_fixture()
+            methodology_path.write_text(json.dumps(methodology), encoding="utf-8")
 
             argv = [
                 "research_report",
@@ -846,6 +850,7 @@ class ResearchReportTests(unittest.TestCase):
                 "--artifact", str(artifact_path),
                 "--config", str(config_path),
                 "--horizon-assessment", str(assessment_path),
+                "--horizon-methodology", str(methodology_path),
                 "--output", str(output_path),
             ]
             allow = {"decision": "ALLOW", "reason_codes": ["SYNTHETIC_TEST_GATE_ONLY"]}

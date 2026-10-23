@@ -33,6 +33,7 @@ from test_research_evidence_integration import (
     methodology,
 )
 from test_attach_horizon_assessment_to_report import assessment as horizon_assessment_fixture
+from test_attach_horizon_assessment_to_report import approved_methodology as approved_horizon_methodology_fixture
 
 
 class CombinedResearchPipelineE2ETests(unittest.TestCase):
@@ -209,7 +210,9 @@ class CombinedResearchPipelineE2ETests(unittest.TestCase):
 
         horizon_assessment = copy.deepcopy(horizon_assessment_fixture())
         horizon_assessment["asset_id"] = enriched["requested_asset_id"]
-        combined = attach_horizon_assessment(enriched, horizon_assessment)
+        combined = attach_horizon_assessment(
+            enriched, horizon_assessment, methodology=approved_horizon_methodology_fixture()
+        )
         attached = combined["horizon_assessment"]["assessment"]
         self.assertEqual(attached["horizons"]["short"]["conclusion"], "FAVORABLE")
         self.assertEqual(attached["horizons"]["medium"]["conclusion"], "BASE")

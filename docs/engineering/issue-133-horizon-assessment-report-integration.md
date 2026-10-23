@@ -8,9 +8,9 @@
 
 ## Comportamiento
 
-La herramienta valida el contrato de la evaluación y exige coincidencia exacta entre `assessment.asset_id` y `report.requested_asset_id`. Adjunta evaluaciones separadas para corto, medio y largo plazo, incluidas dimensiones de calidad de evidencia, riesgo, oportunidad y confianza, factores incluidos/excluidos y escenarios con reglas de invalidación.
+La herramienta valida el contrato de la evaluación, exige coincidencia exacta entre `assessment.asset_id` y `report.requested_asset_id`, y requiere una metodología `APPROVED` cuyo identificador y versión coincidan con la evaluación. Adjunta evaluaciones separadas para corto, medio y largo plazo, incluidas dimensiones de calidad de evidencia, riesgo, oportunidad y confianza, factores incluidos/excluidos y escenarios con reglas de invalidación.
 
-Se conservan los bytes originales de informe y evaluación mediante SHA-256. Si se proporcionan bytes de origen, deben decodificar como UTF-8 JSON y corresponder exactamente con los objetos recibidos. No se permite sobrescribir un apéndice existente.
+Se conservan los bytes originales de informe, evaluación y metodología mediante SHA-256. Si se proporcionan bytes de origen, deben decodificar como UTF-8 JSON y corresponder exactamente con los objetos recibidos. No se permite sobrescribir un apéndice existente.
 
 ## Controles conservadores
 
@@ -19,6 +19,7 @@ Se conservan los bytes originales de informe y evaluación mediante SHA-256. Si 
 - Mantiene `decision_status=INDETERMINATE` y `orders_submitted=false`.
 - Rechaza factores observados o capturados después de `data_as_of`.
 - Las salidas favorables/adversas son conclusiones registradas en el apéndice, no una autorización de inversión.
+- El estado `APPROVED` y la evidencia de aprobación son datos declarados por el expediente; el adaptador no autentica de forma independiente al aprobador ni el enlace de aprobación.
 - La validez del contrato no demuestra que las fuentes sean auténticas, que los factores tengan relevancia económica ni que una predicción funcione fuera de muestra.
 
 ## Uso
@@ -27,6 +28,7 @@ Se conservan los bytes originales de informe y evaluación mediante SHA-256. Si 
 python -m scripts.market_selection.attach_horizon_assessment_to_report \
   --report artifacts/crypto-asset-research-report.json \
   --assessment artifacts/horizon-assessment.json \
+  --methodology configs/approved-methodology.json \
   --output artifacts/crypto-asset-research-report-with-horizons.json
 ```
 
