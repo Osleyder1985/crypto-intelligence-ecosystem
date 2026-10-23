@@ -48,8 +48,9 @@ class AnalyzeOrderBookSnapshotTests(unittest.TestCase):
     def test_rejects_unsorted_levels(self):
         artifact = snapshot()
         artifact["bids"] = [["98", "2"], ["99", "3"]]
-        with self.assertRaises(ValueError):
-            analyze_order_book_snapshot(artifact)
+        with patch("scripts.market_selection.analyze_order_book_snapshot.evaluate_provider_use", return_value={"decision": "ALLOW", "reason_codes": []}):
+            with self.assertRaises(ValueError):
+                analyze_order_book_snapshot(artifact, {"binance_spot_market_data": {"trusted": True}})
 
     def test_rejects_failed_capture(self):
         artifact = snapshot()
