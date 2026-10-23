@@ -12,6 +12,7 @@ from scripts.market_selection.research_report import build_research_report
 from scripts.market_selection.capture_binance_spot_research import EXCHANGE_INFO_URL, capture_and_build_report
 from scripts.market_selection.provider_license_gate import ASSESSMENT_SCHEMA_VERSION, POLICY_VERSION, evaluate_provider_use
 from scripts.market_selection.canonical_asset_identity import SCHEMA_VERSION as IDENTITY_SCHEMA_VERSION
+from test_normalize_binance_live_depth_evidence import artifact as synthetic_live_depth_artifact
 
 
 def candle(index, open_price, high, low, close, *, closed=True, quote_volume="1000"):
@@ -391,6 +392,51 @@ class ResearchReportTests(unittest.TestCase):
             self.assertEqual(report["canonical_asset_identity_status"], "VERIFIED")
             self.assertEqual(report["canonical_asset_identity"]["stable_id"], "registry:bitcoin")
             self.assertEqual(set(report["horizons"]), {"short", "medium", "long"})
+
+    def test_cli_integrates_verified_live_depth_for_matching_ohlcv_market(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            artifact_path = root / "ohlcv.json"
+            config_path = root / "methodology.json"
+            identity_path = root / "identity.json"
+            live_depth_path = root / "live-depth.json"
+            authorization_path = root / "provider-authorization.json"
+            output_path = root / "report.json"
+            artifact_path.write_text(json.dumps(self.source, sort_keys=True), encoding="utf-8")
+            config_path.write_text(json.dumps(config(), sort_keys=True), encoding="utf-8")
+            identity_path.write_text(json.dumps(identity_evidence(), sort_keys=True), encoding="utf-8")
+            live_depth_path.write_text(json.dumps(synthetic_live_depth_artifact(), sort_keys=True), encoding="utf-8")
+            authorization_path.write_text(json.dumps({
+                "binance_spot_market_data": {
+                    "schema_version": "crypto-provider-authorization-v1",
+                    "provider_id": "binance_spot_market_data",
+                    "status": "APPROVED",
+                    "authorized_use_cases": ["internal_analysis"],
+                    "terms_url": "https://www.binance.com/en/terms",
+                    "terms_sha256": "a" * 64,
+                    "reviewed_by": "offline-test-fixture",
+                    "reviewed_at": "2026-10-22T00:00:00Z",
+                },
+            }, sort_keys=True), encoding="utf-8")
+
+            completed = subprocess.run(
+                [
+                    sys.executable, "-m", "scripts.market_selection.research_report",
+                    "--asset-id", "BTC", "--artifact", str(artifact_path),
+                    "--config", str(config_path), "--identity-evidence", str(identity_path),
+                    "--live-depth-evidence", str(live_depth_path),
+                    "--provider-authorization-registry", str(authorization_path),
+                    "--output", str(output_path),
+                ],
+                cwd=Path(__file__).resolve().parents[2],
+                capture_output=True, text=True, check=False,
+            )
+            self.assertEqual(completed.returncode, 0, completed.stderr)
+            report = json.loads(output_path.read_text(encoding="utf-8"))
+            self.assertEqual(report["descriptive_analyses"]["order_book"]["status"], "DESCRIPTIVE_SNAPSHOT")
+            self.assertEqual(report["descriptive_analyses"]["order_book"]["market"]["symbol_native"], "BTCUSDT")
+            self.assertEqual(report["decision_status"], "INDETERMINATE")
+            self.assertFalse(report["orders_submitted"])
 
     def test_missing_explicit_method_parameter_is_rejected(self):
         invalid = config()
