@@ -330,6 +330,7 @@ def evaluate_observations(
         raise ValueError("observation_id values must be unique within an assessment")
     groups: dict[str, list[dict]] = {}
     rejected_future = []
+    rejected_future_evidence = []
     stale_ids_by_metric: dict[str, set[str]] = {}
     for obs in validated:
         if obs["asset"]["stable_id"].casefold() != target_id.casefold() or obs["asset"]["category"] != target_category:
@@ -339,6 +340,7 @@ def evaluate_observations(
             time_fields = ("published_at",) + time_fields
         if any(parse_timestamp(obs[field], field) > cutoff for field in time_fields):
             rejected_future.append(obs["observation_id"])
+            rejected_future_evidence.append(obs)
             continue
         groups.setdefault(obs["metric_id"], []).append(obs)
         max_age = freshness_policy_seconds.get(obs["metric_id"])
@@ -383,6 +385,18 @@ def evaluate_observations(
             "unit": definition["unit"],
             "applicable_to_category": applicable,
             "observation_ids": [e["observation_id"] for e in entries],
+            "observation_evidence": [
+                {
+                    **e,
+                    "assessment_status": (
+                        "STALE" if e["observation_id"] in stale_ids else e["status"]
+                    ),
+                    "assessment_value": (
+                        None if e["observation_id"] in stale_ids else e["value"]
+                    ),
+                }
+                for e in entries
+            ],
             "stale_observation_ids": [e["observation_id"] for e in entries if e["observation_id"] in stale_ids],
             "freshness_policy_max_age_seconds": freshness_policy_seconds.get(metric_id),
             "source_ids": sorted({e["source"]["source_id"] for e in entries}),
@@ -402,6 +416,7 @@ def evaluate_observations(
             "observed_metric_count": available,
             "applicable_coverage_ratio": available / applicable_count if applicable_count else None,
             "rejected_after_cutoff_observation_ids": rejected_future,
+            "rejected_after_cutoff_observations": rejected_future_evidence,
             "stale_observation_ids": sorted(
                 observation_id for ids in stale_ids_by_metric.values() for observation_id in ids
             ),
