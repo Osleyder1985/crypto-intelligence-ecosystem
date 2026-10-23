@@ -190,7 +190,7 @@ def analyze_support_resistance(artifact: dict, pivot_left: int, pivot_right: int
                     "event_type": "pivot_confirmed", "zone_id": None, "kind": kind,
                     "pivot_open_time_ms": candidate["pivot_open_time_ms"],
                     "event_time_ms": event_time, "available_from_ms": available_from,
-                    "pivot_price": str(price),
+                    "pivot_price": str(price), "segment_index": segment_index,
                 })
                 matching = [
                     zone for zone in zones
