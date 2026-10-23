@@ -1,6 +1,7 @@
 import base64
 import copy
 import hashlib
+import json
 import unittest
 from unittest.mock import patch
 from scripts.market_selection.provider_license_gate import ASSESSMENT_SCHEMA_VERSION, POLICY_VERSION, SCHEMA_VERSION as AUTH_SCHEMA_VERSION
@@ -693,6 +694,46 @@ class ResearchEvidenceIntegrationTests(unittest.TestCase):
                 asset={"stable_id": "example-asset", "category": "smart_contract_token"},
                 evaluation_as_of="2026-10-21T00:00:00Z",
             )
+
+
+    def test_integrated_report_is_deterministic_for_identical_historical_inputs(self):
+        base_report = report()
+        original_report = copy.deepcopy(base_report)
+        original_methodology = methodology()
+        original_support_input = support_resistance_input()
+
+        first = enrich_research_report(
+            copy.deepcopy(base_report),
+            events=[],
+            observations=[],
+            methodology=copy.deepcopy(original_methodology),
+            asset={"stable_id": "example-asset", "category": "smart_contract_token"},
+            evaluation_as_of="2026-10-20T04:59:59.999Z",
+            support_resistance_input=copy.deepcopy(original_support_input),
+        )
+        second = enrich_research_report(
+            copy.deepcopy(base_report),
+            events=[],
+            observations=[],
+            methodology=copy.deepcopy(original_methodology),
+            asset={"stable_id": "example-asset", "category": "smart_contract_token"},
+            evaluation_as_of="2026-10-20T04:59:59.999Z",
+            support_resistance_input=copy.deepcopy(original_support_input),
+        )
+
+        canonical_first = json.dumps(first, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
+        canonical_second = json.dumps(second, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
+        self.assertEqual(
+            hashlib.sha256(canonical_first.encode("utf-8")).hexdigest(),
+            hashlib.sha256(canonical_second.encode("utf-8")).hexdigest(),
+        )
+        self.assertEqual(first, second)
+        self.assertEqual(base_report, original_report)
+        self.assertEqual(original_methodology, methodology())
+        self.assertEqual(original_support_input, support_resistance_input())
+        self.assertEqual(first["decision_status"], "INDETERMINATE")
+        self.assertFalse(first["orders_submitted"])
+        self.assertFalse(first["network_requests_made"])
 
 
 if __name__ == "__main__":
