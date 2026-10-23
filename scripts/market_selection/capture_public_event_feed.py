@@ -8,7 +8,6 @@ from __future__ import annotations
 
 import argparse
 import base64
-from copy import deepcopy
 from datetime import datetime, timezone
 from email.utils import parsedate_to_datetime
 import hashlib
@@ -29,7 +28,6 @@ from scripts.market_selection.event_source_registry import (
 from scripts.market_selection.external_event_evidence import parse_timestamp
 from scripts.market_selection.provider_license_gate import (
     ASSESSMENT_SCHEMA_VERSION,
-    POLICY_VERSION,
     evaluate_provider_use,
 )
 
@@ -132,7 +130,7 @@ def _item_key(guid: str | None, link: str | None, title: str | None, published_a
     return "content:" + hashlib.sha256(canonical.encode("utf-8")).hexdigest()
 
 
-def _parse_feed(raw: bytes, source: dict) -> tuple[list[dict], int]:
+def _parse_feed(raw: bytes, source: dict) -> tuple[list[dict], int, int]:
     root = ET.fromstring(raw)
     nodes = [node for node in root.iter() if _local_name(node.tag) in {"item", "entry"}]
     allowed_hosts = {host.casefold() for host in source.get("allowed_article_hosts", [])}
@@ -175,7 +173,7 @@ def _parse_feed(raw: bytes, source: dict) -> tuple[list[dict], int]:
             "asset_identity_status": "NOT_RESOLVED",
             "event_verification_status": "CANDIDATE_ONLY",
         })
-    return items, duplicates
+    return items, duplicates, len(nodes)
 
 
 def _assessment(provider_id: str, use_case: str, authorization_record: dict | None) -> dict:
@@ -208,6 +206,10 @@ def _authorization_state(
     blockers: list[str] = []
     if source.get("status") != "APPROVED":
         blockers.append("SOURCE_TERMS_PENDING")
+    source_parts = urlsplit(source.get("source_url", ""))
+    allowed_hosts = {host.casefold() for host in source.get("allowed_article_hosts", [])}
+    if source_parts.scheme != "https" or (source_parts.hostname or "").casefold() not in allowed_hosts:
+        blockers.append("SOURCE_URL_OUTSIDE_ALLOWLIST")
     if not set(source.get("allowed_use_cases", [])).issuperset(_REQUIRED_USE_CASES):
         blockers.append("SOURCE_USE_CASES_NOT_APPROVED")
     if not isinstance(authorization_record, dict):
@@ -355,18 +357,27 @@ def capture_public_event_feed(
     errors = []
     items: list[dict] = []
     duplicates = 0
+    feed_item_count = 0
+    reason_codes: list[str] = []
     if read_error is not None:
         capture_status = "PARTIAL"
+        reason_codes.append("RESPONSE_READ_INCOMPLETE")
         errors.append({"type": type(read_error).__name__, "message": str(read_error)})
     elif status_code != 200:
         capture_status = "HTTP_ERROR"
+        reason_codes.append("HTTP_STATUS_UNEXPECTED")
         errors.append({"type": "HTTP_STATUS", "message": f"unexpected HTTP status {status_code}"})
     else:
         try:
-            items, duplicates = _parse_feed(raw, source)
+            items, duplicates, feed_item_count = _parse_feed(raw, source)
+            captured_dt = parse_timestamp(captured, "captured_at")
+            for item in items:
+                if item.get("published_at") and parse_timestamp(item["published_at"], "published_at") > captured_dt:
+                    item["publication_time_status"] = "AFTER_CAPTURE_CUTOFF"
             capture_status = "PASS"
         except (ET.ParseError, ValueError) as exc:
             capture_status = "PARSE_ERROR"
+            reason_codes.append("FEED_PARSE_ERROR")
             errors.append({"type": type(exc).__name__, "message": str(exc)})
 
     return {
@@ -387,11 +398,11 @@ def capture_public_event_feed(
         "raw_response_bytes": len(raw),
         "raw_response_sha256": hashlib.sha256(raw).hexdigest(),
         "raw_response_base64": base64.b64encode(raw).decode("ascii"),
-        "capture_truncated": False,
+        "capture_truncated": read_error is not None,
         "provider_policy_assessments": assessments,
-        "reason_codes": [],
+        "reason_codes": reason_codes,
         "feed_items": items,
-        "feed_item_count": len([n for n in ET.fromstring(raw).iter() if _local_name(n.tag) in {"item", "entry"}]) if capture_status == "PASS" else 0,
+        "feed_item_count": feed_item_count,
         "unique_item_count": len(items),
         "duplicate_item_count": duplicates,
         "errors": errors,

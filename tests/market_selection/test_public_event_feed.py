@@ -130,6 +130,27 @@ class PublicEventFeedCaptureTests(unittest.TestCase):
         self.assertFalse(result["events_promoted"])
         self.assertFalse(result["orders_submitted"])
 
+    def test_future_publication_timestamp_is_flagged_against_capture_cutoff(self):
+        entry = approved_source()
+        raw = (
+            b'<rss><channel><item><title>Scheduled notice</title>'
+            b'<link>https://www.cftc.gov/PressRoom/press-future</link><guid>future-1</guid>'
+            b'<pubDate>Fri, 23 Oct 2026 12:00:00 GMT</pubDate></item></channel></rss>'
+        )
+        with patch.dict(EVENT_SOURCE_REGISTRY["sources"], {"cftc_general_press_releases": entry}), patch(
+            "scripts.market_selection.capture_public_event_feed.urlopen",
+            return_value=FakeResponse(raw),
+        ):
+            result = capture_public_event_feed(
+                "cftc_general_press_releases",
+                authorization_record=authorization_record(entry),
+                user_agent=USER_AGENT,
+                captured_at=self.captured_at,
+            )
+        self.assertEqual(result["capture_status"], "PASS")
+        self.assertEqual(result["feed_items"][0]["publication_time_status"], "AFTER_CAPTURE_CUTOFF")
+        self.assertEqual(result["feed_items"][0]["event_verification_status"], "CANDIDATE_ONLY")
+
     def test_missing_user_agent_blocks_before_network(self):
         entry = approved_source()
         with patch.dict(EVENT_SOURCE_REGISTRY["sources"], {"cftc_general_press_releases": entry}), patch(
