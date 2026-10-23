@@ -251,8 +251,14 @@ def assess_temporal_association(
     movement_end: str,
     evaluation_as_of: str,
     target_entity: dict,
+    availability_cutoff: str | None = None,
 ) -> dict:
-    """Assess entity match and temporal eligibility, never infer causality from proximity alone."""
+    """Assess temporal eligibility without confusing retrospective knowledge with event-time availability.
+
+    ``evaluation_as_of`` bounds the assessment dataset. ``availability_cutoff`` optionally
+    bounds what was actually observable at a decision time (for example, episode confirmation).
+    When omitted, legacy behavior uses ``evaluation_as_of`` for both purposes.
+    """
     normalized = validate_event(event)
     if not isinstance(target_entity, dict):
         raise ValueError("target_entity must be an explicit stable asset identifier")
@@ -267,13 +273,19 @@ def assess_temporal_association(
     start = parse_timestamp(movement_start, "movement_start")
     end = parse_timestamp(movement_end, "movement_end")
     as_of = parse_timestamp(evaluation_as_of, "evaluation_as_of")
+    availability_as_of = parse_timestamp(
+        availability_cutoff if availability_cutoff is not None else evaluation_as_of,
+        "availability_cutoff" if availability_cutoff is not None else "evaluation_as_of",
+    )
     published = parse_timestamp(normalized["published_at"], "published_at")
     captured = parse_timestamp(normalized["captured_at"], "captured_at")
     if end < start:
         raise ValueError("movement_end must not precede movement_start")
 
-    # For a reproducible historical backtest, require both publication and actual capture by as-of.
+    # Retrospective data cutoff and decision-time availability are separate constraints.
+    # A later capture must not be treated as information available during the movement.
     available_by_as_of = published <= as_of and captured <= as_of
+    available_at_cutoff = published <= availability_as_of and captured <= availability_as_of
     overlaps_window = start <= published <= end
     if not entity_matches:
         status = "ENTITY_NOT_MATCHED"
@@ -283,6 +295,10 @@ def assess_temporal_association(
         status = "NOT_AVAILABLE_AS_OF"
         label = "CAUSE_UNIDENTIFIED"
         reason = "The event was published or captured after the evaluation cutoff."
+    elif not available_at_cutoff:
+        status = "NOT_AVAILABLE_AT_DECISION_TIME"
+        label = "CAUSE_UNIDENTIFIED"
+        reason = "The event was published or captured after the decision-time availability cutoff."
     elif overlaps_window:
         status = "TEMPORALLY_ELIGIBLE"
         label = "TEMPORAL_ASSOCIATION"
@@ -305,6 +321,7 @@ def assess_temporal_association(
             "end": end.isoformat().replace("+00:00", "Z"),
         },
         "evaluation_as_of": as_of.isoformat().replace("+00:00", "Z"),
+        "availability_cutoff": availability_as_of.isoformat().replace("+00:00", "Z"),
         "reason": reason,
         "evidence_urls": [item["url"] for item in normalized["evidence"]],
         "causality_claimed": False,
