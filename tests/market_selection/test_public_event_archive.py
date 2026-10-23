@@ -208,7 +208,7 @@ class PublicEventArchiveTests(unittest.TestCase):
                 events=[{
                     "event": event_record,
                     "target_entity": {"id_type": "coingecko_id", "id": "example-asset"},
-                    "movement_window": {"start": "2026-10-20T09:00:00Z", "end": "2026-10-20T11:00:00Z"},
+                    "movement_window": {"start": "2026-10-22T11:00:00Z", "end": "2026-10-22T13:00:00Z"},
                 }],
                 observations=[],
                 methodology=methodology(),
