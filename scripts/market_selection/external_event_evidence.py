@@ -10,7 +10,7 @@ import json
 import re
 import unicodedata
 from datetime import datetime, timezone
-from urllib.parse import urldefrag, urlsplit, urlunsplit
+from urllib.parse import parse_qsl, urlencode, urldefrag, urlsplit, urlunsplit
 
 INPUT_SCHEMA = "crypto-external-event-record-v1"
 OUTPUT_SCHEMA = "crypto-event-evidence-assessment-v1"
@@ -141,6 +141,44 @@ def _normalized_title(title: str) -> str:
     return " ".join(re.findall(r"\w+", folded, flags=re.UNICODE))
 
 
+
+_TRACKING_QUERY_KEYS = {"fbclid", "gclid", "dclid", "mc_cid", "mc_eid", "ref_src"}
+
+
+def _canonical_source_url(value: str) -> str:
+    """Normalize common tracking variants without discarding meaningful query parameters."""
+    parts = urlsplit(urldefrag(value).url)
+    hostname = (parts.hostname or "").casefold()
+    if ":" in hostname and not hostname.startswith("["):
+        hostname = f"[{hostname}]"
+    try:
+        port = parts.port
+    except ValueError as exc:
+        raise ValueError("source.url contains an invalid port") from exc
+    if port is not None and not (
+        (parts.scheme.casefold() == "http" and port == 80)
+        or (parts.scheme.casefold() == "https" and port == 443)
+    ):
+        hostname = f"{hostname}:{port}"
+    if parts.username or parts.password:
+        credentials = parts.netloc.rsplit("@", 1)[0] + "@"
+        hostname = credentials + hostname
+    query_items = []
+    for key, item_value in parse_qsl(parts.query, keep_blank_values=True):
+        folded_key = key.casefold()
+        if folded_key.startswith("utm_") or folded_key in _TRACKING_QUERY_KEYS:
+            continue
+        query_items.append((key, item_value))
+    query_items.sort()
+    return urlunsplit((
+        parts.scheme.casefold(),
+        hostname,
+        parts.path.rstrip("/") or ("/" if parts.path.startswith("/") else ""),
+        urlencode(query_items, doseq=True),
+        "",
+    ))
+
+
 def deduplication_key(event: dict) -> str:
     """Prefer stable source identifiers; only fall back to exact publisher/title matching."""
     normalized = validate_event(event)
@@ -150,8 +188,7 @@ def deduplication_key(event: dict) -> str:
     if isinstance(provider_id, str) and provider_id.strip():
         basis = f"provider:{source['publisher'].casefold()}:{provider_id.strip()}"
     else:
-        url = urlsplit(urldefrag(source["url"]).url)
-        canonical = urlunsplit((url.scheme.casefold(), url.netloc.casefold(), url.path.rstrip("/"), url.query, ""))
+        canonical = _canonical_source_url(source["url"])
         basis = f"url:{canonical}"
         # Different URL variants may point to the same syndicated story; use exact publisher/title
         # only when the source URL is absent (which validation intentionally forbids).
