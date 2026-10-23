@@ -105,6 +105,10 @@ El informe debe conservar la cotización del par (por ejemplo, `BTC/USDT`) adem�
 
 El informe expone `source_artifact.historical_coverage` con estado (`COMPLETE`, `PARTIAL` o `INDETERMINATE`), número solicitado y capturado de velas, concordancia entre el contador declarado y el payload, ratio de cobertura y las listas completas `missing_open_time_ms` y `unexpected_open_time_ms`. No se truncan esas listas. Si los contadores/listas requeridos no existen o no son válidos, la cobertura se marca `INDETERMINATE`; no se presume completitud. El informe solo puede considerarse de calidad completa si la captura declara `PASS`, la cobertura queda `COMPLETE`, la identidad está verificada y los controles de integridad analítica pasan.
 
+## Medición de frescura sin umbrales implícitos
+
+El informe expone `source_artifact.freshness_observation` con el cierre de la última vela cerrada elegible, su timestamp de captura y la edad medida en milisegundos en el momento de captura. Si no hay vela cerrada elegible, el timestamp falta o es inválido, el resultado queda `INDETERMINATE` o `INVALID` según corresponda. La conclusión de frescura permanece `NOT_ASSESSED` porque no se aplica una política aprobada de umbrales; una edad medida no se etiqueta automáticamente como fresca o caducada.
+
 ## Limitaciones pendientes
 
 - El generador offline no captura ni selecciona por sí mismo las fuentes históricas; el capturador integrado actual cubre solamente metadatos de mercado y OHLCV de Binance Spot.
