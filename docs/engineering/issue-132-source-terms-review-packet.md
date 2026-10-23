@@ -427,3 +427,33 @@ Por tanto:
 - avanzar en paralelo con preparación offline, adaptación de código, pruebas sintéticas y recopilación documental verificable; reservar las pruebas externas y el backfill para cuando la disponibilidad y las condiciones aplicables hayan sido comprobadas.
 
 Fuentes de la decisión del propietario: comentario registrado en el [Issue #132](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/issues/132) y aclaración de la conversación del 2026-10-23.
+
+## 19. Revalidación de las páginas oficiales — 2026-10-23
+
+Se revisaron de nuevo las páginas oficiales accesibles en esta fecha. Esta sección registra el contenido visible en la página; no representa una descarga preservada de sus bytes, por lo que no asigna hashes ni rellena `terms_content_base64`, `terms_sha256`, `reviewed_by` o `reviewed_at` en el registro operativo.
+
+### SEC
+
+- La política de seguridad general de SEC.gov establece un límite de no más de 10 solicitudes por segundo en total, sin importar cuántas máquinas se utilicen, y declara que no permite bots o herramientas automatizadas no clasificadas. Referencia: https://www.sec.gov/about/privacy-information
+- El límite es un máximo agregado publicado, no una frecuencia objetivo. La implementación debe tener agente identificable, control agregado efectivo y política de errores/backoff; si no puede demostrar ese límite, debe fallar de forma segura.
+- La página de Developer Resources también menciona el máximo de 10 solicitudes por segundo en el contexto de acceso a contenido EDGAR: https://www.sec.gov/about/developer-resources. Para la justificación general del sitio, usar la política de seguridad y no extrapolar exclusivamente desde EDGAR.
+
+### CFTC
+
+- La página oficial RSS actualmente declara expresamente que, a octubre de 2026, todos los feeds RSS enumerados están temporalmente deshabilitados y se reactivarán en una fecha posterior: https://www.cftc.gov/RSS/index.htm
+- En consecuencia, `cftc_general_press_releases` no debe realizar solicitudes a ese feed mientras se mantenga el aviso. No usar reintentos repetitivos ni cambiar automáticamente a otro endpoint. `cftc_press_release_archive` es un origen separado y requiere validación propia de disponibilidad, frecuencia y cobertura.
+- La política web oficial sigue siendo la referencia para atribución y tratamiento de contenido de terceros: https://www.cftc.gov/WebPolicy/index.htm. La existencia de un índice público no demuestra que un feed deshabilitado esté disponible.
+
+### Federal Reserve Board
+
+- El disclaimer del Board indica que, salvo indicación contraria, la información del sitio es de dominio público y puede copiarse y distribuirse citando al Board; fotografías, gráficos u otros materiales identificados como procedentes de terceros pueden requerir permiso independiente: https://www.federalreserve.gov/disclaimer.htm
+- El archivo de comunicados muestra años y publicaciones, y señala que los comunicados anteriores a 2006 están disponibles en su archivo: https://www.federalreserve.gov/newsevents/pressreleases.htm. Esto demuestra una ruta visible de archivo, no que el proyecto haya recorrido o verificado cobertura histórica exhaustiva.
+- La página de feeds enumera el feed de todos los comunicados: https://www.federalreserve.gov/feeds/feeds.htm. La presencia en el índice no sustituye una prueba técnica controlada del endpoint.
+
+### Efecto sobre el estado del proyecto
+
+- La autorización funcional del propietario para las seis fuentes ya está registrada y no debe solicitarse otra vez.
+- Esta revisión pública actualiza las observaciones documentales; no es una captura preservada de las páginas de políticas ni una decisión jurídica. No se han descargado feeds o artículos, no se ha ejecutado backfill y no se ha comprobado E2E con evidencia histórica real.
+- Los seis orígenes permanecen `TERMS_PENDING` porque faltan artefactos verificables y controles operativos demostrados, no porque falte autorización funcional del propietario.
+- Para completar el expediente: preservar los bytes exactos de cada política revisada, calcular SHA-256 sobre esos bytes, registrar URL/fecha/estado/código HTTP/tipo de contenido cuando se obtengan mediante una consulta permitida, y verificar los controles de acceso y almacenamiento. No sustituir evidencia ausente con hashes inventados.
+- La investigación de eventos debe distinguir entre evento publicado, hora de publicación, hora de captura, ventana de movimiento y evidencia de mecanismo causal. Una coincidencia temporal se registra como hipótesis candidata, no como causa demostrada.
