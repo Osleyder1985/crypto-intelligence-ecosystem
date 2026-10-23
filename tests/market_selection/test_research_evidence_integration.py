@@ -193,6 +193,66 @@ def event():
 
 
 class ResearchEvidenceIntegrationTests(unittest.TestCase):
+    def test_derives_event_window_from_report_movement_episode(self):
+        enriched_report = report()
+        start_ms = int(__import__("datetime").datetime.fromisoformat("2026-10-20T09:00:00+00:00").timestamp() * 1000)
+        end_ms = int(__import__("datetime").datetime.fromisoformat("2026-10-20T11:00:00+00:00").timestamp() * 1000)
+        enriched_report["descriptive_analyses"] = {
+            "movement_episodes": {
+                "schema_version": "ohlcv-movement-episodes-v1",
+                "episodes": [{
+                    "episode_id": "swing-1",
+                    "direction": "BULLISH",
+                    "classification": "TECHNICAL_SWING_CANDIDATE",
+                    "segment_index": 0,
+                    "start": {"pivot_open_time_ms": start_ms},
+                    "end": {"pivot_open_time_ms": end_ms},
+                    "episode_observable_only_at_ms": end_ms + 1,
+                }],
+            },
+        }
+        with patch.dict(EVENT_SOURCE_REGISTRY["sources"], {"sec_press_releases": approved_event_source()}):
+            enriched = enrich_research_report(
+                enriched_report,
+                events=[{
+                    "event": event(),
+                    "target_entity": {"id_type": "coingecko_id", "id": "example-asset"},
+                    "movement_episode_id": "swing-1",
+                }],
+                observations=[],
+                methodology=methodology(),
+                asset={"stable_id": "example-asset", "category": "smart_contract_token"},
+                evaluation_as_of="2026-10-21T00:00:00Z",
+            )
+        assessment = enriched["external_event_evidence"]["assessments"][0]
+        self.assertEqual(assessment["causality_label"], "TEMPORAL_ASSOCIATION")
+        self.assertEqual(assessment["movement_episode"]["episode_id"], "swing-1")
+        self.assertEqual(assessment["movement_episode"]["direction"], "BULLISH")
+        self.assertFalse(assessment["causality_claimed"])
+
+    def test_rejects_ambiguous_manual_window_and_episode_id(self):
+        enriched_report = report()
+        enriched_report["descriptive_analyses"] = {
+            "movement_episodes": {"episodes": [{
+                "episode_id": "swing-1", "start": {"pivot_open_time_ms": 1},
+                "end": {"pivot_open_time_ms": 2},
+            }]},
+        }
+        with patch.dict(EVENT_SOURCE_REGISTRY["sources"], {"sec_press_releases": approved_event_source()}):
+            with self.assertRaisesRegex(ValueError, "not both"):
+                enrich_research_report(
+                    enriched_report,
+                    events=[{
+                        "event": event(),
+                        "target_entity": {"id_type": "coingecko_id", "id": "example-asset"},
+                        "movement_episode_id": "swing-1",
+                        "movement_window": {"start": "2026-10-20T09:00:00Z", "end": "2026-10-20T11:00:00Z"},
+                    }],
+                    observations=[], methodology=methodology(),
+                    asset={"stable_id": "example-asset", "category": "smart_contract_token"},
+                    evaluation_as_of="2026-10-21T00:00:00Z",
+                )
+
     def test_integrates_contracts_without_promoting_investment_decision(self):
         with patch.dict(EVENT_SOURCE_REGISTRY["sources"], {"sec_press_releases": approved_event_source()}):
             enriched = enrich_research_report(
