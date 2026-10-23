@@ -170,3 +170,29 @@ Decisiones admitidas:
 El registro requiere event_id, decision, reviewed_by, reviewed_at, rationale, methodology_id, evidence_refs, alternative_explanations, evidence_record_base64 y evidence_record_sha256. El JSON preservado debe coincidir con los campos declarados y su hash. Las revisiones posteriores al corte de evaluación se marcan NOT_AVAILABLE_AS_OF.
 
 Estos controles son requisitos estructurales y de trazabilidad, no una prueba matemática de causalidad ni una garantía de que el revisor acertó. Una etiqueta SUPPORTED_CAUSALITY solo expresa una conclusión explícitamente revisada bajo la metodología declarada; no debe generarse por coincidencia temporal ni por una sola noticia. Si faltan fuentes, reacción de mercado o explicaciones alternativas, la hipótesis o causalidad respaldada debe rechazarse y mantenerse la conclusión conservadora.
+
+## 13. Backfill de archivos históricos oficiales
+
+El capturador dispone de un flujo separado para páginas HTML de archivo; no sustituye silenciosamente el RSS. Las rutas permitidas se declaran en allowed_archive_path_prefixes del registro de fuente y las redirecciones del índice quedan limitadas a esos prefijos.
+
+Páginas oficiales documentadas para futuras capturas autorizadas:
+
+- SEC Press Releases: https://www.sec.gov/newsroom/press-releases (la página expone filtros por año/mes y paginación; el archivo anterior a 2012 tiene una ruta separada).
+- CFTC Press Releases: https://www.cftc.gov/PressRoom/PressReleases (incluye filtros por tipo, año, palabra clave y paginación). El feed RSS puede estar deshabilitado aunque el índice HTML esté disponible.
+- Federal Reserve Board Press Releases: https://www.federalreserve.gov/newsevents/pressreleases.htm (índice por año; las páginas históricas se organizan por año y existe un archivo anterior a 2006).
+
+El proceso por cada segmento es: capturar una página de archivo completa, seleccionar manualmente un candidato cuyo URL/título/fecha se encuentren en los bytes preservados, capturar el artículo, revisar la identidad estable del activo y promover el evento. Cada página tiene su propio URL, timestamp, tamaño y SHA-256. No se declara cobertura histórica completa hasta registrar todas las páginas/años consultados y sus límites.
+
+Ejemplo de flujo (plantillas; no se ejecutan mientras el registro esté TERMS_PENDING):
+
+```bash
+python -m scripts.market_selection.capture_public_event_archive capture-index --source-id <source_id> --archive-url <official_archive_page_url> --provider-authorization-registry <authorization.json> --user-agent "<reviewed User-Agent>" --output <archive-capture.json>
+
+python -m scripts.market_selection.capture_public_event_archive select-candidate --archive-capture <archive-capture.json> --candidate-url <article_url> --title "<exact archive title>" --published-at <ISO-8601> --publication-time-evidence "<date text from archive>" --selected-by <reviewer> --selected-at <ISO-8601> --selection-rationale "<review rationale>" --output <candidate.json>
+
+python -m scripts.market_selection.capture_public_event_archive capture-article --source-id <source_id> --archive-capture <archive-capture.json> --candidate <candidate.json> --provider-authorization-registry <authorization.json> --user-agent "<reviewed User-Agent>" --output <article-capture.json>
+
+python -m scripts.market_selection.capture_public_event_archive promote --archive-capture <archive-capture.json> --candidate <candidate.json> --article-capture <article-capture.json> --entity-resolution <reviewed-entity-resolution.json> --event-type <event_type> --claim "<explicit factual claim>" --output <event.json>
+```
+
+Los cuatro pasos preservan evidencia distinta: índice de archivo, selección revisada, artículo completo y resolución de entidad. La revisión factual y la revisión causal siguen siendo contratos independientes. El flujo no habilita ninguna fuente por sí mismo.
