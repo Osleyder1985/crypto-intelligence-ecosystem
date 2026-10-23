@@ -706,13 +706,14 @@ def validate_public_event_archive_candidate(archive_capture: dict, candidate_rec
     except Exception as exc:
         raise ValueError("archive index HTML could not be parsed") from exc
     archive_url = archive_capture["requested_url"]
+    archive_base_url = archive_capture.get("final_url") or archive_url
     candidate_url_canonical = candidate_url.split("#", 1)[0]
     matching_anchors = []
     for anchor in parser.anchors:
         href = anchor.get("href")
         if not isinstance(href, str) or not href.strip():
             continue
-        absolute = urljoin(archive_url, href.strip()).split("#", 1)[0]
+        absolute = urljoin(archive_base_url, href.strip()).split("#", 1)[0]
         if absolute == candidate_url_canonical:
             matching_anchors.append(anchor)
     normalize_text = lambda value: re.sub(r"\s+", " ", value).strip().casefold()
