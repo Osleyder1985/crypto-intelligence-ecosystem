@@ -319,6 +319,10 @@ def _verify_promoted_public_feed_event(event_record: dict, source_entry: dict, r
         raise PermissionError("event article capture has an unexpected Content-Type")
     if article_capture.get("captured_at") != event_record.get("captured_at"):
         raise PermissionError("event captured_at does not match article capture time")
+    if parse_timestamp(article_capture.get("captured_at"), "article_capture.captured_at") < parse_timestamp(
+        feed_capture.get("captured_at"), "feed_capture.captured_at"
+    ):
+        raise PermissionError("article capture precedes feed capture")
     final_url = article_capture.get("final_url")
     final_parts = urlsplit(final_url) if isinstance(final_url, str) else None
     allowed_hosts = {host.casefold() for host in source_entry.get("allowed_article_hosts", [])}
