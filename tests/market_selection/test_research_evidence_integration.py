@@ -275,6 +275,40 @@ class ResearchEvidenceIntegrationTests(unittest.TestCase):
         self.assertIn("SOURCE_TERMS_PENDING", result["reason_codes"])
         self.assertIn("SOURCE_USE_CASES_NOT_APPROVED", result["reason_codes"])
 
+    def test_event_captured_after_evaluation_cutoff_is_not_available_as_of(self):
+        enriched_report = report()
+        enriched_report["descriptive_analyses"] = {
+            "movement_episodes": {"episodes": [{
+                "episode_id": "swing-evaluation-cutoff",
+                "direction": "BEARISH",
+                "start": {"pivot_open_time_ms": 1792483200000},  # 08:00Z
+                "end": {"pivot_open_time_ms": 1792488600000},    # 09:30Z
+                "episode_observable_only_at_ms": 1792488660000,  # 09:31Z
+            }]},
+        }
+        with patch.dict(EVENT_SOURCE_REGISTRY["sources"], {"sec_press_releases": approved_event_source()}):
+            enriched = enrich_research_report(
+                enriched_report,
+                events=[{
+                    "event": event(),  # published 10:00Z, captured 10:02Z
+                    "target_entity": {"id_type": "coingecko_id", "id": "example-asset"},
+                    "movement_episode_id": "swing-evaluation-cutoff",
+                }],
+                observations=[],
+                methodology=methodology(),
+                asset={"stable_id": "example-asset", "category": "smart_contract_token"},
+                evaluation_as_of="2026-10-20T10:01:00Z",
+            )
+
+        assessment = enriched["external_event_evidence"]["assessments"][0]
+        summary = enriched["event_causal_assessment"]["episode_assessments"][0]
+        self.assertEqual(assessment["status"], "NOT_AVAILABLE_AS_OF")
+        self.assertEqual(assessment["causality_label"], "CAUSE_UNIDENTIFIED")
+        self.assertEqual(assessment["movement_episode"]["event_relation_to_swing"], "FOLLOWS_SWING")
+        self.assertEqual(summary["status"], "NO_SUPPORTING_EVENT_IN_SUPPLIED_EVIDENCE")
+        self.assertFalse(assessment["causality_claimed"])
+        self.assertFalse(summary["causality_claimed"])
+
     def test_episode_summary_reports_temporal_association_without_causal_claim(self):
         enriched_report = report()
         start_ms = 1792486800000
