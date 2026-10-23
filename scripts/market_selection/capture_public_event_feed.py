@@ -459,7 +459,7 @@ class _AllowlistedRedirectHandler(HTTPRedirectHandler):
             or parts.port not in (None, 443)
             or (
                 self.allowed_path_prefixes
-                and not any(parts.path.startswith(prefix) for prefix in self.allowed_path_prefixes)
+                and not any(_path_has_prefix(parts.path, prefix) for prefix in self.allowed_path_prefixes)
             )
         ):
             return None
@@ -503,6 +503,11 @@ class _ArchiveHTMLParser(HTMLParser):
             self._anchor = None
 
 
+def _path_has_prefix(path: str, prefix: str) -> bool:
+    normalized = prefix.rstrip("/")
+    return path == normalized or path.startswith(normalized + "/")
+
+
 def _archive_url_allowed(source: dict, value: object) -> bool:
     parts = urlsplit(value) if isinstance(value, str) else None
     prefixes = source.get("allowed_archive_path_prefixes", [])
@@ -514,7 +519,7 @@ def _archive_url_allowed(source: dict, value: object) -> bool:
         and parts.port in (None, 443)
         and parts.username is None
         and parts.password is None
-        and any(parts.path.startswith(prefix) for prefix in prefixes)
+        and any(_path_has_prefix(parts.path, prefix) for prefix in prefixes)
     )
 
 
