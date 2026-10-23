@@ -1064,18 +1064,18 @@ class ResearchEvidenceIntegrationTests(unittest.TestCase):
                 events=[{
                     "event": event(),
                     "target_entity": {"id_type": "coingecko_id", "id": "example-asset"},
-                    "movement_window": {"start": "2026-10-22T09:00:00Z", "end": "2026-10-22T09:59:00Z"},
+                    "movement_window": {"start": "2026-10-20T09:00:00Z", "end": "2026-10-20T09:59:00Z"},
                     "post_movement_window_minutes": 1,
                 }],
                 observations=[], methodology=methodology(),
                 asset={"stable_id": "example-asset", "category": "smart_contract_token"},
-                evaluation_as_of="2026-10-23T00:00:00Z",
+                evaluation_as_of="2026-10-21T00:00:00Z",
             )
         assessment = enriched["external_event_evidence"]["assessments"][0]
         self.assertEqual(assessment["status"], "TEMPORALLY_ELIGIBLE")
         self.assertEqual(assessment["causality_label"], "TEMPORAL_ASSOCIATION")
         self.assertEqual(assessment["post_movement_window_minutes"], 1)
-        self.assertEqual(assessment["association_window"]["end"], "2026-10-22T10:00:00Z")
+        self.assertEqual(assessment["association_window"]["end"], "2026-10-20T10:00:00Z")
         self.assertIn("follows movement end", assessment["reason"].lower())
         self.assertFalse(assessment["causality_claimed"])
 
@@ -1087,12 +1087,12 @@ class ResearchEvidenceIntegrationTests(unittest.TestCase):
                     events=[{
                         "event": event(),
                         "target_entity": {"id_type": "coingecko_id", "id": "example-asset"},
-                        "movement_window": {"start": "2026-10-22T09:00:00Z", "end": "2026-10-22T09:59:00Z"},
+                        "movement_window": {"start": "2026-10-20T09:00:00Z", "end": "2026-10-20T09:59:00Z"},
                         "post_movement_window_minutes": True,
                     }],
                     observations=[], methodology=methodology(),
                     asset={"stable_id": "example-asset", "category": "smart_contract_token"},
-                    evaluation_as_of="2026-10-23T00:00:00Z",
+                    evaluation_as_of="2026-10-21T00:00:00Z",
                 )
 
 
