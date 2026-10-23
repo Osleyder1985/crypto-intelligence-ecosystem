@@ -434,6 +434,20 @@ class PublicEventFeedCaptureTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "outside allowed_article_hosts"):
             source_entry_sha256(entry)
 
+    def test_approved_source_rejects_archive_endpoint_outside_path_prefix(self):
+        entry = approved_source("cftc_press_release_archive")
+        entry["approval_scope"]["automated_access"]["approved_endpoint"] = (
+            "https://www.cftc.gov/PressRoom/PressReleasesEvil"
+        )
+        with self.assertRaisesRegex(ValueError, "outside allowed_archive_path_prefixes"):
+            source_entry_sha256(entry)
+
+    def test_approved_source_rejects_invalid_registry_rate_before_comparison(self):
+        entry = approved_source()
+        entry["max_requests_per_second"] = "not-a-number"
+        with self.assertRaisesRegex(ValueError, "max_requests_per_second must be positive"):
+            source_entry_sha256(entry)
+
 
 if __name__ == "__main__":
     unittest.main()
