@@ -214,6 +214,9 @@ class ResearchReportTests(unittest.TestCase):
         ), patch(
             "scripts.market_selection.detect_ohlcv_movement_events.evaluate_artifact_use",
             return_value={"decision": "ALLOW", "reason_codes": ["SYNTHETIC_TEST_GATE_ONLY"]},
+        ), patch(
+            "scripts.market_selection.research_evidence_integration.evaluate_artifact_use",
+            return_value={"decision": "ALLOW", "reason_codes": ["SYNTHETIC_TEST_GATE_ONLY"]},
         ):
             _, result = capture_and_build_report(
                 symbol="BTCUSDT",
