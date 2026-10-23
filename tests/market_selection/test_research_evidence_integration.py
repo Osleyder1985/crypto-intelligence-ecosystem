@@ -273,6 +273,41 @@ class ResearchEvidenceIntegrationTests(unittest.TestCase):
         self.assertEqual(summary["event_ids"], [enriched["external_event_evidence"]["assessments"][0]["event_id"]])
         self.assertFalse(summary["causality_claimed"])
 
+    def test_episode_link_excludes_event_captured_after_observability_cutoff(self):
+        enriched_report = report()
+        enriched_report["descriptive_analyses"] = {
+            "movement_episodes": {"episodes": [{
+                "episode_id": "swing-cutoff",
+                "direction": "BEARISH",
+                "start": {"pivot_open_time_ms": 1792483200000},  # 08:00Z
+                "end": {"pivot_open_time_ms": 1792488600000},    # 09:30Z
+                "episode_observable_only_at_ms": 1792490460000,  # 10:01Z
+            }]},
+        }
+        with patch.dict(EVENT_SOURCE_REGISTRY["sources"], {"sec_press_releases": approved_event_source()}):
+            enriched = enrich_research_report(
+                enriched_report,
+                events=[{
+                    "event": event(),  # published 10:00Z, captured 10:02Z
+                    "target_entity": {"id_type": "coingecko_id", "id": "example-asset"},
+                    "movement_episode_id": "swing-cutoff",
+                    "movement_window": {"start": "2026-10-20T09:00:00Z", "end": "2026-10-20T11:00:00Z"},
+                }],
+                observations=[],
+                methodology=methodology(),
+                asset={"stable_id": "example-asset", "category": "smart_contract_token"},
+                evaluation_as_of="2026-10-21T00:00:00Z",
+            )
+
+        assessment = enriched["external_event_evidence"]["assessments"][0]
+        summary = enriched["event_causal_assessment"]["episode_assessments"][0]
+        self.assertEqual(assessment["status"], "NOT_AVAILABLE_AT_DECISION_TIME")
+        self.assertEqual(assessment["causality_label"], "CAUSE_UNIDENTIFIED")
+        self.assertEqual(assessment["movement_episode"]["event_relation_to_swing"], "FOLLOWS_SWING")
+        self.assertEqual(summary["status"], "NO_SUPPORTING_EVENT_IN_SUPPLIED_EVIDENCE")
+        self.assertFalse(assessment["causality_claimed"])
+        self.assertFalse(summary["causality_claimed"])
+
     def test_episode_summary_does_not_claim_absence_of_cause_without_evidence(self):
         enriched_report = report()
         enriched_report["descriptive_analyses"] = {
