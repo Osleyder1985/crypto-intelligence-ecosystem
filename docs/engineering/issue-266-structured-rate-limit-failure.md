@@ -15,7 +15,7 @@ Ante `RateLimitCoordinationError`, los CLI de feed/artículo y de índice/artíc
 - `errors[0].type: RATE_LIMIT_COORDINATION`
 - Un mensaje estable que no revela la ruta local de SQLite ni detalles internos.
 
-El comando termina con código cero únicamente porque produjo el artefacto de captura solicitado; el estado del artefacto indica explícitamente el bloqueo. Los consumidores deben evaluar `capture_status`, no interpretar el código del proceso como una captura correcta.
+El comando persiste el artefacto bloqueado y termina con código de salida distinto de cero. Los consumidores deben evaluar tanto el código de salida como `capture_status`; el JSON proporciona evidencia estructurada, pero no convierte el intento bloqueado en una captura correcta.
 
 ## Seguridad y alcance
 
@@ -27,4 +27,4 @@ El comando termina con código cero únicamente porque produjo el artefacto de c
 
 ## Validación
 
-La prueba `tests/market_selection/test_rate_limit_cli_failures.py` cubre los CLI de feed y archivo: error de coordinación inyectado, artefacto JSON persistido, código de razón estable y ausencia de llamada de red.
+La prueba `tests/market_selection/test_rate_limit_cli_failures.py` cubre los CLI de feed y archivo: error de coordinación inyectado, artefacto JSON persistido, código de razón estable, código de salida no exitoso y ausencia de llamada de red. El CLI de archivo limita el manejo del error a `capture-index` y `capture-article`; los comandos offline propagan otros errores sin clasificarlos como bloqueos del limitador.
