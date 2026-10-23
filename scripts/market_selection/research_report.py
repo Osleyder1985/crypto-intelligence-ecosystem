@@ -180,8 +180,54 @@ def build_research_report(
         },
     }
     input_capture_status = artifact.get("overall_status")
+    candles = artifact.get("candles")
+    captured_payload_count = len(candles) if isinstance(candles, list) else None
+    requested_count = artifact.get("requested_open_candle_count")
+    declared_captured_count = artifact.get("captured_candle_count")
+    missing_open_times = artifact.get("missing_open_time_ms")
+    unexpected_open_times = artifact.get("unexpected_open_time_ms")
+    count_fields_valid = (
+        isinstance(requested_count, int) and not isinstance(requested_count, bool) and requested_count > 0
+        and isinstance(declared_captured_count, int) and not isinstance(declared_captured_count, bool)
+        and declared_captured_count >= 0
+        and isinstance(captured_payload_count, int)
+        and isinstance(missing_open_times, list)
+        and isinstance(unexpected_open_times, list)
+    )
+    declared_count_matches_payload = (
+        count_fields_valid and declared_captured_count == captured_payload_count
+    )
+    coverage_ratio = (
+        captured_payload_count / requested_count
+        if count_fields_valid and requested_count > 0
+        else None
+    )
+    if not count_fields_valid:
+        coverage_status = "INDETERMINATE"
+    elif (
+        input_capture_status == "PASS"
+        and declared_count_matches_payload
+        and declared_captured_count == requested_count
+        and not missing_open_times
+        and not unexpected_open_times
+    ):
+        coverage_status = "COMPLETE"
+    else:
+        coverage_status = "PARTIAL"
+    historical_coverage = {
+        "status": coverage_status,
+        "requested_candle_count": requested_count if count_fields_valid else None,
+        "captured_candle_count": captured_payload_count,
+        "declared_captured_candle_count": declared_captured_count if count_fields_valid else None,
+        "declared_count_matches_payload": declared_count_matches_payload,
+        "coverage_ratio": coverage_ratio,
+        "missing_open_time_ms": missing_open_times if isinstance(missing_open_times, list) else None,
+        "unexpected_open_time_ms": unexpected_open_times if isinstance(unexpected_open_times, list) else None,
+        "basis": "capture artifact counts and explicit open-time gap lists",
+    }
     analysis_quality = {
         "capture_status": input_capture_status if input_capture_status in {"PASS", "PARTIAL"} else "INDETERMINATE",
+        "historical_coverage": coverage_status,
         "canonical_asset_identity": identity_resolution["canonical_asset_identity_status"],
         "risk_profile": risk.get("data_quality_status", "INDETERMINATE"),
         "movement_events": movement.get("data_quality_status", "INDETERMINATE"),
@@ -189,6 +235,7 @@ def build_research_report(
     }
     quality_complete = (
         input_capture_status == "PASS"
+        and coverage_status == "COMPLETE"
         and identity_status == "VERIFIED"
         and all(value in {"COMPLETE", "PASS", "VERIFIED"} for key, value in analysis_quality.items() if key != "capture_status")
         and all(value == "VERIFIED" for value in source_integrity["page_integrity_status"].values())
@@ -242,6 +289,7 @@ def build_research_report(
         "source_artifact": {
             "schema_version": artifact["schema_version"],
             "capture_status": input_capture_status,
+            "historical_coverage": historical_coverage,
             "provider_use_assessment": artifact.get("provider_use_assessment"),
             "downstream_use_assessment": downstream_use,
             **source_integrity,
