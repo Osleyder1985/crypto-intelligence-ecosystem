@@ -281,6 +281,15 @@ def build_research_report(
         order_market = order_book_analysis["market"]
         if order_market["exchange"].lower() != exchange.lower() or order_market["symbol_native"].upper() != symbol.upper():
             raise ValueError("order-book artifact exchange and symbol must match the OHLCV report market")
+        if evaluation_as_of is not None:
+            evaluation_cutoff_ms = _utc_timestamp_ms(evaluation_as_of)
+            if evaluation_cutoff_ms is None:
+                raise ValueError("evaluation_as_of must be ISO-8601 with timezone when validating order-book snapshot timing")
+            order_book_capture_ms = _utc_timestamp_ms(order_book_analysis["captured_at_utc"])
+            if order_book_capture_ms is None:
+                raise ValueError("order-book captured_at_utc must be ISO-8601 with timezone")
+            if order_book_capture_ms > evaluation_cutoff_ms:
+                raise ValueError("order-book snapshot captured after evaluation_as_of cutoff")
         order_quote_asset = order_market.get("quote_asset")
         ohlcv_quote_asset = market.get("quote_asset")
         if (
@@ -515,7 +524,7 @@ def main() -> int:
     parser.add_argument("--fundamental-observations", type=Path, help="Optional JSON array of validated fundamental/on-chain observations")
     parser.add_argument("--evidence-methodology", type=Path, help="Versioned crypto-investment-methodology-v1 JSON required with external evidence")
     parser.add_argument("--evidence-asset-category", help="Explicit category for evidence evaluation, e.g. native_l1 or smart_contract_token")
-    parser.add_argument("--evaluation-as-of", help="Explicit ISO-8601 cutoff for evidence eligibility; required with external evidence")
+    parser.add_argument("--evaluation-as-of", help="Explicit ISO-8601 availability cutoff for supplied external evidence and/or order-book snapshot")
     parser.add_argument("--output", required=True, type=Path, help="Path to the research report JSON")
     args = parser.parse_args()
 
@@ -537,10 +546,15 @@ def main() -> int:
         multi_timeframe_support_resistance_artifacts = None
     authorization_registry = json.loads(args.provider_authorization_registry.read_text(encoding="utf-8")) if args.provider_authorization_registry else None
     evidence_requested = args.external_events is not None or args.fundamental_observations is not None
+    order_book_requested = any((
+        args.order_book_artifact, args.live_depth_evidence, args.multi_exchange_order_book_probe,
+    ))
     if evidence_requested and not (args.evidence_methodology and args.evidence_asset_category and args.evaluation_as_of):
         parser.error("--external-events/--fundamental-observations require --evidence-methodology, --evidence-asset-category and --evaluation-as-of")
-    if not evidence_requested and any((args.evidence_methodology, args.evidence_asset_category, args.evaluation_as_of)):
-        parser.error("evidence methodology/category/as-of require --external-events or --fundamental-observations")
+    if not evidence_requested and (args.evidence_methodology or args.evidence_asset_category):
+        parser.error("evidence methodology/category require --external-events or --fundamental-observations")
+    if args.evaluation_as_of and not (evidence_requested or order_book_requested):
+        parser.error("--evaluation-as-of requires external evidence or an order-book input")
     external_events = json.loads(args.external_events.read_text(encoding="utf-8")) if args.external_events else None
     fundamental_observations = json.loads(args.fundamental_observations.read_text(encoding="utf-8")) if args.fundamental_observations else None
     evidence_methodology = json.loads(args.evidence_methodology.read_text(encoding="utf-8")) if args.evidence_methodology else None
