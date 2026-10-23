@@ -449,5 +449,22 @@ class PublicEventFeedCaptureTests(unittest.TestCase):
             source_entry_sha256(entry)
 
 
+    def test_official_terms_urls_match_review_packet_and_pending_sources_stay_disabled(self):
+        sources = EVENT_SOURCE_REGISTRY["sources"]
+        expected_urls = {
+            "cftc_general_press_releases": "https://www.cftc.gov/WebPolicy/index.htm",
+            "cftc_press_release_archive": "https://www.cftc.gov/WebPolicy/index.htm",
+            "federal_reserve_press_releases": "https://www.federalreserve.gov/disclaimer.htm",
+            "federal_reserve_press_release_archive": "https://www.federalreserve.gov/disclaimer.htm",
+        }
+        for source_id, expected_url in expected_urls.items():
+            with self.subTest(source_id=source_id):
+                self.assertEqual(sources[source_id]["terms_url"], expected_url)
+        for source_id, entry in sources.items():
+            with self.subTest(source_id=source_id):
+                self.assertEqual(entry["status"], "TERMS_PENDING")
+                self.assertEqual(entry["allowed_use_cases"], [])
+
+
 if __name__ == "__main__":
     unittest.main()
