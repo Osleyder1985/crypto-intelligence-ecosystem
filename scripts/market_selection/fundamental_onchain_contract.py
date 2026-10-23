@@ -307,7 +307,10 @@ def evaluate_observations(observations: list[dict], *, asset: dict, evaluation_a
         entries = groups.get(metric_id, [])
         observed = [e for e in entries if e["status"] == "OBSERVED"]
         explicit_statuses = {e["status"] for e in entries}
-        if len(observed) > 1:
+        if "CONFLICT" in explicit_statuses:
+            # An explicit source conflict cannot be erased by another source's observed value.
+            status, value = "CONFLICT", None
+        elif len(observed) > 1:
             values = {(type(e["value"]).__name__, json.dumps(e["value"], sort_keys=True)) for e in observed}
             if len(values) > 1:
                 status, value = "CONFLICT", None
@@ -316,8 +319,6 @@ def evaluate_observations(observations: list[dict], *, asset: dict, evaluation_a
                 status, value = "OBSERVED", observed[0]["value"]
         elif len(observed) == 1:
             status, value = "OBSERVED", observed[0]["value"]
-        elif "CONFLICT" in explicit_statuses:
-            status, value = "CONFLICT", None
         elif entries:
             # Preserve the most conservative explicit missing-data state; never coerce to zero.
             priority = ["PROVIDER_ERROR", "INACCESSIBLE", "PARTIAL", "STALE", "NOT_AVAILABLE", "NOT_APPLICABLE"]

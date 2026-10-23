@@ -6,6 +6,7 @@ on:
       - "scripts/market_selection/research_evidence_integration.py"
       - "scripts/market_selection/external_event_evidence.py"
       - "scripts/market_selection/fundamental_onchain_contract.py"
+      - "tests/market_selection/test_fundamental_onchain_contract.py"
       - "scripts/market_selection/methodology_contract.py"
       - "tests/market_selection/test_research_evidence_integration.py"
       - ".github/workflows/research-evidence-integration-tests.yml"
@@ -16,6 +17,7 @@ on:
       - "scripts/market_selection/research_evidence_integration.py"
       - "scripts/market_selection/external_event_evidence.py"
       - "scripts/market_selection/fundamental_onchain_contract.py"
+      - "tests/market_selection/test_fundamental_onchain_contract.py"
       - "scripts/market_selection/methodology_contract.py"
       - "tests/market_selection/test_research_evidence_integration.py"
       - ".github/workflows/research-evidence-integration-tests.yml"
@@ -36,3 +38,5 @@ jobs:
           python-version: "3.12"
       - name: Run evidence integration tests
         run: python -m unittest discover -s tests/market_selection -p "test_research_evidence_integration.py" -v
+      - name: Run fundamental/on-chain contract tests
+        run: python -m unittest discover -s tests/market_selection -p "test_fundamental_onchain_contract.py" -v

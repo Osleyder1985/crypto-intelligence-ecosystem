@@ -94,6 +94,29 @@ class FundamentalOnchainContractTests(unittest.TestCase):
         self.assertEqual(result["metrics"]["supply.circulating"]["status"], "CONFLICT")
         self.assertIsNone(result["metrics"]["supply.circulating"]["value"])
 
+    def test_explicit_provider_conflict_cannot_be_overridden_by_an_observed_value(self):
+        conflict = obs(
+            observation_id="obs-conflict",
+            status="CONFLICT",
+            value=None,
+            source={
+                "source_id": "provider-b",
+                "source_type": "market_data_provider",
+                "url": "https://other.example.org/asset",
+                "methodology_url": None,
+                "terms_status": "UNKNOWN",
+            },
+        )
+        result = evaluate_observations(
+            [obs(), conflict],
+            asset={"category": "smart_contract_token", "stable_id": "ethereum:0xabc"},
+            evaluation_as_of="2026-10-21T00:00:00Z",
+        )
+        metric = result["metrics"]["supply.circulating"]
+        self.assertEqual(metric["status"], "CONFLICT")
+        self.assertIsNone(metric["value"])
+        self.assertEqual(metric["observation_ids"], ["obs-1", "obs-conflict"])
+
     def test_agreeing_provider_values_are_retained_with_both_sources(self):
         second = obs(observation_id="obs-2", source={
             "source_id": "provider-b", "source_type": "market_data_provider",
