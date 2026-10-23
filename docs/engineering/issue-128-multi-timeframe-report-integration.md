@@ -18,3 +18,6 @@ Ejemplo de entrada:
 El ejemplo solo ilustra el envoltorio; cada objeto debe ser una captura completa válida, no un objeto parcial como el fragmento de ejemplo. Los resultados se conservan por intervalo y el informe declara `cross_timeframe_confluence=NOT_COMPUTED`. No se genera una puntuación combinada, recomendación ni orden. Si no se proporciona el argumento, el informe devuelve `status=NOT_PROVIDED` para esta sección.
 
 Pruebas de integración: incorporación al informe y rechazo de un símbolo incompatible.
+
+
+La CLI admite opcionalmente `--multi-timeframe-confluence-tolerance-bps` junto con `--multi-timeframe-support-resistance-artifacts`. El parámetro debe ser explícito para calcular confluencia; no existe valor predeterminado. Los grupos se basan únicamente en coincidencia de tipo de zona y distancia de precio, y no constituyen una señal de trading.

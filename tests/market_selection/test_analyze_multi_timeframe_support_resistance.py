@@ -51,6 +51,31 @@ class MultiTimeframeSupportResistanceTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "duplicate timeframe"):
             self.analyze([self.fixture("1h"), self.fixture("1h")])
 
+    def test_explicit_tolerance_computes_cross_timeframe_confluence_groups(self):
+        result = analyze_multi_timeframe_support_resistance(
+            [self.fixture("1h"), self.fixture("4h")],
+            pivot_left=1, pivot_right=1, tolerance_bps=100,
+            confluence_tolerance_bps=25,
+        )
+        self.assertEqual(result["cross_timeframe_confluence"], "COMPUTED_BY_EXPLICIT_PRICE_TOLERANCE")
+        self.assertEqual(result["confluence_tolerance_bps"], 25)
+        self.assertTrue(result["confluence_groups"])
+        self.assertTrue(all(group["timeframe_count"] >= 2 for group in result["confluence_groups"]))
+        self.assertTrue(all(len({ref["interval"] for ref in group["zone_refs"]}) == group["timeframe_count"] for group in result["confluence_groups"]))
+
+    def test_confluence_remains_uncomputed_without_explicit_tolerance(self):
+        result = self.analyze([self.fixture("1h"), self.fixture("4h")])
+        self.assertEqual(result["cross_timeframe_confluence"], "NOT_COMPUTED")
+        self.assertEqual(result["confluence_groups"], [])
+
+    def test_rejects_invalid_confluence_tolerance(self):
+        with self.assertRaisesRegex(ValueError, "confluence_tolerance_bps"):
+            analyze_multi_timeframe_support_resistance(
+                [self.fixture("1h"), self.fixture("4h")],
+                pivot_left=1, pivot_right=1, tolerance_bps=100,
+                confluence_tolerance_bps=float("nan"),
+            )
+
     def test_rejects_empty_inputs(self):
         with self.assertRaisesRegex(ValueError, "non-empty list"):
             self.analyze([])

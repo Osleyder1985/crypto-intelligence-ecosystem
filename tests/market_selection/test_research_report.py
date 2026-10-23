@@ -502,6 +502,34 @@ class ResearchReportTests(unittest.TestCase):
         self.assertEqual(multi["cross_timeframe_confluence"], "NOT_COMPUTED")
         self.assertEqual(multi["market"]["symbol_native"], "BTCUSDT")
 
+    def test_report_can_compute_explicit_multi_timeframe_confluence(self):
+        rows = [
+            candle(0, 10, 11, 9, 10),
+            candle(1, 10, 11, 8, 9),
+            candle(2, 9, 10, 7, 8),
+            candle(3, 8, 9, 8, 8.5),
+            candle(4, 8.5, 10, 8, 9.5),
+        ]
+        one_hour = artifact(rows)
+        four_hour = artifact([dict(row) for row in rows])
+        four_hour["market"]["interval"] = "4h"
+        for index, row in enumerate(four_hour["candles"]):
+            row["open_time_ms"] = index * 14_400_000
+            row["close_time_ms"] = (index + 1) * 14_400_000 - 1
+        with patch("scripts.market_selection.research_report.evaluate_artifact_use", return_value={
+            "decision": "ALLOW", "reason_codes": ["SYNTHETIC_TEST_GATE_ONLY"],
+        }), patch("scripts.market_selection.analyze_support_resistance.evaluate_artifact_use", return_value={
+            "decision": "ALLOW", "reason_codes": ["SYNTHETIC_TEST_GATE_ONLY"],
+        }):
+            report = build_research_report(
+                one_hour, config(), "BTC",
+                multi_timeframe_support_resistance_artifacts=[one_hour, four_hour],
+                multi_timeframe_confluence_tolerance_bps=25,
+            )
+        multi = report["descriptive_analyses"]["support_resistance_multi_timeframe"]
+        self.assertEqual(multi["cross_timeframe_confluence"], "COMPUTED_BY_EXPLICIT_PRICE_TOLERANCE")
+        self.assertTrue(multi["confluence_groups"])
+
     def test_rejects_multi_timeframe_support_resistance_for_different_market(self):
         rows = [
             candle(0, 10, 11, 9, 10),

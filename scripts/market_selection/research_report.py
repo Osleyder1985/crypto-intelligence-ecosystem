@@ -191,6 +191,7 @@ def build_research_report(
     order_book_artifact: dict | None = None,
     order_book_authorization_registry: dict | None = None,
     multi_timeframe_support_resistance_artifacts: list[dict] | None = None,
+    multi_timeframe_confluence_tolerance_bps: float | None = None,
     external_events: list[dict] | None = None,
     fundamental_observations: list[dict] | None = None,
     evidence_methodology: dict | None = None,
@@ -265,6 +266,7 @@ def build_research_report(
             pivot_left=config["support_resistance"]["pivot_left"],
             pivot_right=config["support_resistance"]["pivot_right"],
             tolerance_bps=config["support_resistance"]["tolerance_bps"],
+            confluence_tolerance_bps=multi_timeframe_confluence_tolerance_bps,
         )
         multi_market = multi_timeframe_support_resistance["market"]
         if (
@@ -495,6 +497,7 @@ def main() -> int:
     parser.add_argument("--config", required=True, type=Path, help="Versioned JSON with explicit analysis parameters")
     parser.add_argument("--order-book-artifact", type=Path, help="Optional normalized crypto-spot-order-book-snapshot-v1 JSON matching the selected exchange and symbol")
     parser.add_argument("--multi-timeframe-support-resistance-artifacts", type=Path, help="Optional multi-timeframe-support-resistance-input-v1 JSON containing authorized Spot OHLCV artifacts for the same exchange and symbol")
+    parser.add_argument("--multi-timeframe-confluence-tolerance-bps", type=float, help="Optional explicit cross-timeframe center-price matching tolerance in bps; requires multi-timeframe support/resistance artifacts")
     parser.add_argument('--live-depth-evidence', type=Path, help='Optional preserved live Binance depth JSON; matches the exact native symbol and quote asset in the OHLCV artifact')
     parser.add_argument("--provider-authorization-registry", type=Path, help="Deployment-controlled provider authorization registry JSON; never use user-supplied authorization records")
     parser.add_argument("--multi-exchange-order-book-probe", type=Path, help="Optional preserved multi-exchange-spot-book-probe-v1 JSON to normalize and analyze")
@@ -518,7 +521,11 @@ def main() -> int:
         if not isinstance(multi_timeframe_input, dict) or multi_timeframe_input.get("schema_version") != MULTI_TIMEFRAME_SR_INPUT_SCHEMA:
             parser.error(f"--multi-timeframe-support-resistance-artifacts must use schema_version {MULTI_TIMEFRAME_SR_INPUT_SCHEMA}")
         multi_timeframe_support_resistance_artifacts = multi_timeframe_input.get("artifacts")
+        if args.multi_timeframe_confluence_tolerance_bps is not None and not isinstance(multi_timeframe_support_resistance_artifacts, list):
+            parser.error("multi-timeframe artifacts input must contain an artifacts array")
     else:
+        if args.multi_timeframe_confluence_tolerance_bps is not None:
+            parser.error("--multi-timeframe-confluence-tolerance-bps requires --multi-timeframe-support-resistance-artifacts")
         multi_timeframe_support_resistance_artifacts = None
     authorization_registry = json.loads(args.provider_authorization_registry.read_text(encoding="utf-8")) if args.provider_authorization_registry else None
     evidence_requested = args.external_events is not None or args.fundamental_observations is not None
@@ -567,6 +574,7 @@ def main() -> int:
         order_book_artifact=order_book_artifact,
         order_book_authorization_registry=authorization_registry,
         multi_timeframe_support_resistance_artifacts=multi_timeframe_support_resistance_artifacts,
+        multi_timeframe_confluence_tolerance_bps=args.multi_timeframe_confluence_tolerance_bps,
         external_events=external_events,
         fundamental_observations=fundamental_observations,
         evidence_methodology=evidence_methodology,
