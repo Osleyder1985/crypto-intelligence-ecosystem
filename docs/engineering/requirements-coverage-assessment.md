@@ -161,7 +161,7 @@ Estos PR se citan como entregas relacionadas, no como prueba suficiente de cierr
 
 ### 8.2 Próxima acción de trazabilidad
 
-1. **Completado en esta iteración documental:** se amplió el catálogo maestro existente, sin crear otro catálogo, con filas de trazabilidad y revisión de cobertura para los Issues #128, #130, #132, #133, #134, #266 y #270. Las relaciones son propuestas documentales y no prueban implementación ni cierre; la validación automatizada aún debe comprobarse en el nuevo HEAD.
+1. **Completado en esta iteración documental:** se amplió el catálogo maestro existente, sin crear otro catálogo, con filas de trazabilidad y revisión de cobertura para los Issues #128, #130, #132, #133, #134, #266 y #270. Las relaciones son propuestas documentales y no prueban implementación ni cierre; el validador automatizado se amplió para exigir las filas en ambas matrices y se añadieron pruebas de mutación; la ejecución de CI del nuevo HEAD sigue pendiente.
 2. Para cada relación de la tabla, inspeccionar el Issue, PR/commit y pruebas reales antes de asignar estados de implementación o verificación.
 3. Mantener separadas la cobertura documental, la evidencia de código, la ejecución de pruebas y la aprobación del propietario.
 4. No cerrar Issues ni declarar la auditoría integral terminada por esta ampliación documental.
