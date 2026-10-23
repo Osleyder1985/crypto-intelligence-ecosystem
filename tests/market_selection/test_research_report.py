@@ -83,7 +83,7 @@ def artifact(rows, *, base_asset="BTC", overall_status="PASS"):
         },
         "window": {
             "start_time_ms_inclusive": rows[0]["open_time_ms"],
-            "end_time_ms_exclusive": rows[-1]["open_time_ms"] + 3_600_000,
+            "end_time_ms_exclusive": rows[-1]["open_time_ms"] + (7_200_000 if overall_status == "PARTIAL" else 3_600_000),
         },
         "pages": [{
             "capture_status": "PASS",
