@@ -218,6 +218,69 @@ class ResearchEvidenceIntegrationTests(unittest.TestCase):
         self.assertFalse(enriched["network_requests_made"])
 
 
+    def test_links_event_to_report_episode_without_manual_window(self):
+        start_ms = 1792486800000  # 2026-10-20T09:00:00Z
+        end_ms = 1792494000000    # 2026-10-20T11:00:00Z
+        report_with_episode = report()
+        report_with_episode["descriptive_analyses"] = {
+            "movement_episodes": {
+                "episodes": [{
+                    "episode_id": "swing-1",
+                    "direction": "BULLISH",
+                    "start": {"pivot_open_time_ms": start_ms},
+                    "end": {"pivot_open_time_ms": end_ms},
+                    "episode_observable_only_at_ms": 1792497600000,
+                }]
+            }
+        }
+        with patch.dict(EVENT_SOURCE_REGISTRY["sources"], {"sec_press_releases": approved_event_source()}):
+            enriched = enrich_research_report(
+                report_with_episode,
+                events=[{
+                    "event": event(),
+                    "target_entity": {"id_type": "coingecko_id", "id": "example-asset"},
+                    "episode_id": "swing-1",
+                }],
+                observations=[],
+                methodology=methodology(),
+                asset={"stable_id": "example-asset", "category": "smart_contract_token"},
+                evaluation_as_of="2026-10-21T00:00:00Z",
+            )
+        assessment = enriched["external_event_evidence"]["assessments"][0]
+        self.assertEqual(assessment["causality_label"], "TEMPORAL_ASSOCIATION")
+        self.assertEqual(assessment["episode_link"]["episode_id"], "swing-1")
+        self.assertEqual(assessment["episode_link"]["direction"], "BULLISH")
+        self.assertEqual(assessment["episode_link"]["event_relation_to_swing"], "DURING_SWING")
+        self.assertFalse(assessment["causality_claimed"])
+
+    def test_episode_link_is_rejected_before_episode_confirmation_availability(self):
+        report_with_episode = report()
+        report_with_episode["descriptive_analyses"] = {
+            "movement_episodes": {
+                "episodes": [{
+                    "episode_id": "swing-1",
+                    "direction": "BULLISH",
+                    "start": {"pivot_open_time_ms": 1792486800000},
+                    "end": {"pivot_open_time_ms": 1792494000000},
+                    "episode_observable_only_at_ms": 1792497600000,
+                }]
+            }
+        }
+        with patch.dict(EVENT_SOURCE_REGISTRY["sources"], {"sec_press_releases": approved_event_source()}):
+            with self.assertRaisesRegex(ValueError, "was not observable at evaluation_as_of"):
+                enrich_research_report(
+                    report_with_episode,
+                    events=[{
+                        "event": event(),
+                        "target_entity": {"id_type": "coingecko_id", "id": "example-asset"},
+                        "episode_id": "swing-1",
+                    }],
+                    observations=[],
+                    methodology=methodology(),
+                    asset={"stable_id": "example-asset", "category": "smart_contract_token"},
+                    evaluation_as_of="2026-10-20T10:30:00Z",
+                )
+
     def test_fundamental_observation_from_terms_pending_provider_is_blocked(self):
         with self.assertRaisesRegex(PermissionError, "fundamental source terms are not approved"):
             enrich_research_report(
