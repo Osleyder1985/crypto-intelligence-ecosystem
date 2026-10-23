@@ -130,6 +130,37 @@ class EvaluationRecordTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "non-finite"):
             self.build(results={"metric": float("nan")})
 
+    def test_explicit_base_asset_must_match_declared_asset(self):
+        with self.assertRaisesRegex(ValueError, "base_asset_id must match asset_id"):
+            self.build(market_metadata={"base_asset_id": "ETH", "quote_asset_id": "USDT", "market_type": "SPOT"})
+
+    def test_delimited_market_pair_must_match_explicit_quote_asset(self):
+        with self.assertRaisesRegex(ValueError, "quote_asset_id must match the delimited market pair"):
+            self.build(market_id="okx:BTC-USDT:SPOT",
+                       market_metadata={"base_asset_id": "BTC", "quote_asset_id": "USD", "market_type": "SPOT"})
+
+    def test_explicit_market_type_must_match_market_id(self):
+        with self.assertRaisesRegex(ValueError, "market_type must match market_id"):
+            self.build(market_metadata={"market_type": "FUTURES"})
+
+    def test_valid_explicit_market_metadata_is_persisted(self):
+        record = self.build(market_id="okx:BTC-USDT:SPOT",
+                            market_metadata={"base_asset_id": "BTC", "quote_asset_id": "USDT", "market_type": "SPOT"})
+        self.assertEqual(record["market_metadata"], {
+            "base_asset_id": "BTC", "quote_asset_id": "USDT", "market_type": "SPOT"
+        })
+
+    def test_market_metadata_change_makes_comparison_scope_incompatible(self):
+        old = self.build(market_id="okx:BTC-USDT:SPOT",
+                         market_metadata={"base_asset_id": "BTC", "quote_asset_id": "USDT", "market_type": "SPOT"})
+        new = build_evaluation_record(
+            manifest(self.source, market_id="okx:BTC-USDT:SPOT",
+                     market_metadata={"base_asset_id": "BTC", "quote_asset_id": "USDC", "market_type": "SPOT"}),
+            self.archive, self.root / "records2")
+        result = compare_evaluation_records(old, new)
+        self.assertFalse(result["scope_compatible"])
+        self.assertEqual(result["attribution_status"], "INCOMPATIBLE_SCOPE")
+
     def test_source_artifact_metadata_is_required(self):
         data = manifest(self.source)
         data["source_artifacts"][0]["endpoint"] = ""
