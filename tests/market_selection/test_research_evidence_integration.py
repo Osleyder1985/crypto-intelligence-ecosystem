@@ -776,5 +776,56 @@ class ResearchEvidenceIntegrationTests(unittest.TestCase):
         self.assertFalse(enriched["network_requests_made"])
         self.assertFalse(enriched["orders_submitted"])
 
+    def test_composes_market_movement_levels_events_and_fundamentals_in_one_report(self):
+        enriched_report = report()
+        enriched_report["descriptive_analyses"] = {
+            "movement_episodes": {
+                "schema_version": "ohlcv-movement-episodes-v1",
+                "episodes": [{
+                    "episode_id": "swing-composite-1",
+                    "direction": "BULLISH",
+                    "start": {"pivot_open_time_ms": 1792486800000},
+                    "end": {"pivot_open_time_ms": 1792494000000},
+                    "episode_observable_only_at_ms": 1792494000001,
+                }],
+            },
+            "order_book": {
+                "status": "DESCRIPTIVE_SNAPSHOT",
+                "captured_at_utc": "2026-10-20T10:00:00Z",
+                "limitations": ["Visible depth is not the full market and does not guarantee execution."],
+            },
+        }
+        observation = fundamental_observation(terms_status="APPROVED")
+        with patch.dict(EVENT_SOURCE_REGISTRY["sources"], {"sec_press_releases": approved_event_source()}):
+            enriched = enrich_research_report(
+                enriched_report,
+                events=[{
+                    "event": event(),
+                    "target_entity": {"id_type": "coingecko_id", "id": "example-asset"},
+                    "movement_episode_id": "swing-composite-1",
+                }],
+                observations=[observation],
+                methodology=methodology(),
+                asset={"stable_id": "example-asset", "category": "smart_contract_token"},
+                evaluation_as_of="2026-10-21T00:00:00Z",
+                support_resistance_input=support_resistance_input(),
+                provider_authorization_registry={
+                    "defillama_api": approved_defillama_authorization_fixture()
+                },
+            )
+
+        self.assertEqual(enriched["technical_structure_assessment"]["status"], "ASSESSED")
+        self.assertEqual(enriched["external_event_evidence"]["event_count"], 1)
+        self.assertEqual(enriched["external_event_evidence"]["assessments"][0]["causality_label"], "TEMPORAL_ASSOCIATION")
+        self.assertFalse(enriched["external_event_evidence"]["causality_claimed"])
+        self.assertEqual(enriched["fundamental_onchain_assessment"]["coverage"]["observed_metric_count"], 1)
+        self.assertEqual(len(enriched["fundamental_source_use_assessments"]), 2)
+        self.assertTrue(all(item["decision"] == "ALLOW" for item in enriched["fundamental_source_use_assessments"]))
+        self.assertEqual(enriched["descriptive_analyses"]["order_book"]["status"], "DESCRIPTIVE_SNAPSHOT")
+        self.assertEqual(enriched["decision_status"], "INDETERMINATE")
+        self.assertFalse(enriched["methodology_assessment"]["predictive_performance_validated"])
+        self.assertFalse(enriched["orders_submitted"])
+        self.assertFalse(enriched["network_requests_made"])
+
 if __name__ == "__main__":
     unittest.main()
