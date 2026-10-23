@@ -11,6 +11,7 @@ import base64
 from datetime import datetime, timezone
 from email.utils import parsedate_to_datetime
 import hashlib
+import math
 import json
 from html.parser import HTMLParser
 import re
@@ -238,6 +239,7 @@ def _authorization_state(
     if (
         isinstance(timeout_seconds, bool)
         or not isinstance(timeout_seconds, (int, float))
+        or not math.isfinite(timeout_seconds)
         or timeout_seconds <= 0
     ):
         blockers.append("INVALID_TIMEOUT_SECONDS")
