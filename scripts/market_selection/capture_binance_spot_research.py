@@ -21,6 +21,7 @@ from scripts.market_selection.capture_binance_spot_ohlcv import (
 )
 from scripts.market_selection.research_report import build_research_report
 from scripts.market_selection.provider_license_gate import evaluate_provider_use, SUPPORTED_USE_CASES
+from scripts.market_selection.resolve_binance_spot_market_candidates import resolve_spot_market_candidates
 
 EXCHANGE_INFO_URL = "https://data-api.binance.vision/api/v3/exchangeInfo"
 PIPELINE_SCHEMA = "crypto-asset-live-capture-report-v1"
@@ -41,8 +42,25 @@ def read_complete(response) -> bytes:
     return b"".join(chunks)
 
 
-def capture_exchange_info(symbol: str, *, use_case: str = "internal_analysis", authorization_record: dict | None = None) -> dict:
-    """Capture the complete exchangeInfo response, then select one native symbol locally."""
+def capture_exchange_info(
+    symbol: str | None = None,
+    *,
+    base_asset_ticker: str | None = None,
+    quote_asset: str | None = None,
+    use_case: str = "internal_analysis",
+    authorization_record: dict | None = None,
+) -> dict:
+    """Capture full exchangeInfo and resolve exactly one eligible Spot market."""
+    if (symbol is None) == (base_asset_ticker is None):
+        raise ValueError("provide exactly one of symbol or base_asset_ticker")
+    if symbol is not None:
+        symbol = symbol.strip().upper()
+        if not symbol:
+            raise ValueError("symbol must be non-empty")
+    if base_asset_ticker is not None:
+        base_asset_ticker = base_asset_ticker.strip().upper()
+        if not base_asset_ticker:
+            raise ValueError("base_asset_ticker must be non-empty")
     assessment = evaluate_provider_use("binance_spot_market_data", use_case, authorization_record)
     if assessment["decision"] != "ALLOW":
         raise PermissionError("Binance provider use blocked before exchangeInfo request: " + ";".join(assessment["reason_codes"]))
@@ -80,23 +98,37 @@ def capture_exchange_info(symbol: str, *, use_case: str = "internal_analysis", a
         raise RuntimeError("Binance exchangeInfo returned invalid UTF-8 JSON") from exc
     if not isinstance(payload, dict) or not isinstance(payload.get("symbols"), list):
         raise RuntimeError("Binance exchangeInfo response has no symbols array")
-    matches = [item for item in payload["symbols"] if isinstance(item, dict) and item.get("symbol") == symbol]
+
+    if symbol is not None:
+        resolution = resolve_spot_market_candidates(payload, symbol, identifier_type="native_symbol")
+    else:
+        resolution = resolve_spot_market_candidates(
+            payload, base_asset_ticker, identifier_type="base_asset", quote_asset=quote_asset
+        )
+    if resolution["resolution_status"] != "UNIQUE_MARKET":
+        candidates = [item["symbol_native"] for item in resolution["candidates"]]
+        raise ValueError(
+            f"market resolution {resolution['resolution_status']} for "
+            f"{symbol if symbol is not None else base_asset_ticker}; candidates={candidates}"
+        )
+    selected_symbol = resolution["selected_market"]["symbol_native"]
+    matches = [
+        item for item in payload["symbols"]
+        if isinstance(item, dict) and item.get("symbol") == selected_symbol
+    ]
     if len(matches) != 1:
-        raise ValueError(f"expected exactly one exchangeInfo entry for {symbol}, found {len(matches)}")
+        raise ValueError(f"expected exactly one exchangeInfo entry for {selected_symbol}, found {len(matches)}")
     item = matches[0]
-    if item.get("status") != "TRADING":
-        raise ValueError(f"{symbol} is not in TRADING status: {item.get('status')!r}")
-    if item.get("isSpotTradingAllowed") is not True:
-        raise ValueError(f"{symbol} is not explicitly marked as spot-trading allowed")
     base_asset = item.get("baseAsset")
-    quote_asset = item.get("quoteAsset")
+    quote = item.get("quoteAsset")
     if not isinstance(base_asset, str) or not base_asset.strip():
         raise ValueError("exchangeInfo baseAsset is missing")
-    if not isinstance(quote_asset, str) or not quote_asset.strip():
+    if not isinstance(quote, str) or not quote.strip():
         raise ValueError("exchangeInfo quoteAsset is missing")
     return {
+        "symbol_native": selected_symbol,
         "base_asset": base_asset,
-        "quote_asset": quote_asset,
+        "quote_asset": quote,
         "symbol_status": item["status"],
         "is_spot_trading_allowed": item["isSpotTradingAllowed"],
         "base_asset_precision": item.get("baseAssetPrecision"),
@@ -104,9 +136,9 @@ def capture_exchange_info(symbol: str, *, use_case: str = "internal_analysis", a
         "filters": item.get("filters", []),
         "permissions": item.get("permissions"),
         "permission_sets": item.get("permissionSets"),
+        "market_resolution": resolution,
         "captured_exchange_info": evidence,
     }
-
 
 def capture_and_build_report(
     *,
