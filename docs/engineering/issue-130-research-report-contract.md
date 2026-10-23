@@ -101,6 +101,10 @@ El archivo de configuración debe contener `methodology_id`, `methodology_versio
 
 El informe debe conservar la cotización del par (por ejemplo, `BTC/USDT`) además del símbolo nativo y del activo base. Cuando la captura integrada resuelve el mercado, el artefacto preserva también el estado de negociación, el indicador de disponibilidad Spot y el resultado de resolución (`UNIQUE_MARKET`, candidato seleccionado y candidatos considerados). Esta procedencia describe la selección del par de mercado; no demuestra identidad canónica global del activo ni sustituye la evidencia de identidad revisada.
 
+## Cobertura histórica y huecos
+
+El informe expone `source_artifact.historical_coverage` con estado (`COMPLETE`, `PARTIAL` o `INDETERMINATE`), número solicitado y capturado de velas, concordancia entre el contador declarado y el payload, ratio de cobertura y las listas completas `missing_open_time_ms` y `unexpected_open_time_ms`. No se truncan esas listas. Si los contadores/listas requeridos no existen o no son válidos, la cobertura se marca `INDETERMINATE`; no se presume completitud. El informe solo puede considerarse de calidad completa si la captura declara `PASS`, la cobertura queda `COMPLETE`, la identidad está verificada y los controles de integridad analítica pasan.
+
 ## Limitaciones pendientes
 
 - El generador offline no captura ni selecciona por sí mismo las fuentes históricas; el capturador integrado actual cubre solamente metadatos de mercado y OHLCV de Binance Spot.
