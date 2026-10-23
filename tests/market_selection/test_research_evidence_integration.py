@@ -253,6 +253,38 @@ class ResearchEvidenceIntegrationTests(unittest.TestCase):
         self.assertEqual(assessment["episode_link"]["event_relation_to_swing"], "DURING_SWING")
         self.assertFalse(assessment["causality_claimed"])
 
+    def test_explicit_pre_movement_window_flags_preceding_event_without_claiming_cause(self):
+        report_with_episode = report()
+        report_with_episode["descriptive_analyses"] = {
+            "movement_episodes": {
+                "episodes": [{
+                    "episode_id": "swing-2",
+                    "direction": "BULLISH",
+                    "start": {"pivot_open_time_ms": 1792494000000},  # 11:00Z
+                    "end": {"pivot_open_time_ms": 1792501200000},    # 13:00Z
+                    "episode_observable_only_at_ms": 1792504800000,  # 14:00Z
+                }]
+            }
+        }
+        with patch.dict(EVENT_SOURCE_REGISTRY["sources"], {"sec_press_releases": approved_event_source()}):
+            enriched = enrich_research_report(
+                report_with_episode,
+                events=[{
+                    "event": event(),  # published at 10:00Z
+                    "target_entity": {"id_type": "coingecko_id", "id": "example-asset"},
+                    "episode_id": "swing-2",
+                    "movement_window": {"start": "2026-10-20T09:00:00Z", "end": "2026-10-20T14:00:00Z"},
+                }],
+                observations=[],
+                methodology=methodology(),
+                asset={"stable_id": "example-asset", "category": "smart_contract_token"},
+                evaluation_as_of="2026-10-21T00:00:00Z",
+            )
+        assessment = enriched["external_event_evidence"]["assessments"][0]
+        self.assertEqual(assessment["causality_label"], "TEMPORAL_ASSOCIATION")
+        self.assertEqual(assessment["episode_link"]["event_relation_to_swing"], "PRECEDES_SWING")
+        self.assertFalse(assessment["causality_claimed"])
+
     def test_episode_link_is_rejected_before_episode_confirmation_availability(self):
         report_with_episode = report()
         report_with_episode["descriptive_analyses"] = {
