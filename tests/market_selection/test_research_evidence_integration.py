@@ -87,7 +87,7 @@ def report():
     }
 
 
-def support_resistance_input(*, stable_id="example-asset", category="smart_contract_token", future_candle=False):
+def support_resistance_input(*, stable_id="example-asset", category="smart_contract_token"):
     rows = [
         support_candle(0, 10, 11, 9, 10),
         support_candle(1, 10, 11, 8, 9),
@@ -419,7 +419,7 @@ class ResearchEvidenceIntegrationTests(unittest.TestCase):
         self.assertFalse(assessment["causality_claimed"])
 
     def test_integrates_multi_timeframe_support_resistance_without_promoting_decision(self):
-        source = support_resistance_input(future_candle=True)
+        source = support_resistance_input()
         enriched = enrich_research_report(
             report(), events=[], observations=[], methodology=methodology(),
             asset={"stable_id": "example-asset", "category": "smart_contract_token"},
