@@ -28,7 +28,8 @@ class SharedRequestRateLimiterTests(unittest.TestCase):
                 ).fetchone()[0]
 
             self.assertAlmostEqual(next_allowed, 100.2)
-            self.assertEqual(waits, [0.1])
+            self.assertEqual(len(waits), 1)
+            self.assertAlmostEqual(waits[0], 0.1)
 
     def test_concurrent_reservations_share_one_ledger(self):
         with tempfile.TemporaryDirectory() as directory:
