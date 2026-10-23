@@ -516,7 +516,7 @@ def _assess_event_fact_review(event_record: dict, *, evaluation_as_of: str) -> d
     if review.get("event_id") != event_id:
         raise PermissionError("fact review event_id does not match the event")
     decision = review.get("decision")
-    if decision not in _EVENT_FACT_REVIEW_DECISIONS:
+    if not isinstance(decision, str) or decision not in _EVENT_FACT_REVIEW_DECISIONS:
         raise ValueError("fact review decision is unsupported")
     reviewer = review.get("reviewed_by")
     if not isinstance(reviewer, str) or not reviewer.strip():
@@ -541,10 +541,13 @@ def _assess_event_fact_review(event_record: dict, *, evaluation_as_of: str) -> d
             raise ValueError(f"fact_review.evidence_refs[{index}].url must be an absolute HTTPS URL")
         if role not in _FACT_REVIEW_EVIDENCE_ROLES:
             raise ValueError(f"fact_review.evidence_refs[{index}].role is unsupported")
-        publisher = ref.get("publisher", "")
-        if not isinstance(publisher, str):
-            raise ValueError(f"fact_review.evidence_refs[{index}].publisher must be text")
-        normalized_refs.append({"url": url, "role": role, "publisher": publisher.strip()})
+        normalized_ref = {"url": url, "role": role}
+        if "publisher" in ref:
+            publisher = ref.get("publisher")
+            if not isinstance(publisher, str):
+                raise ValueError(f"fact_review.evidence_refs[{index}].publisher must be text")
+            normalized_ref["publisher"] = publisher.strip()
+        normalized_refs.append(normalized_ref)
 
     record_b64 = review.get("evidence_record_base64")
     record_hash = review.get("evidence_record_sha256")
