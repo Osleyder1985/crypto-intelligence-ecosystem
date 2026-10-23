@@ -736,5 +736,45 @@ class ResearchEvidenceIntegrationTests(unittest.TestCase):
         self.assertFalse(first["network_requests_made"])
 
 
+    def test_missing_evidence_remains_explicitly_unavailable_without_zero_fill(self):
+        enriched_report = report()
+        enriched_report["descriptive_analyses"] = {
+            "movement_episodes": {
+                "schema_version": "ohlcv-movement-episodes-v1",
+                "episodes": [{
+                    "episode_id": "swing-no-evidence",
+                    "direction": "BEARISH",
+                    "start": {"pivot_open_time_ms": 1792486800000},
+                    "end": {"pivot_open_time_ms": 1792494000000},
+                    "episode_observable_only_at_ms": 1792494000001,
+                }],
+            },
+        }
+        enriched = enrich_research_report(
+            enriched_report,
+            events=[],
+            observations=[],
+            methodology=methodology(),
+            asset={"stable_id": "example-asset", "category": "smart_contract_token"},
+            evaluation_as_of="2026-10-21T00:00:00Z",
+        )
+
+        self.assertEqual(enriched["external_event_evidence"]["status"], "NOT_AVAILABLE")
+        self.assertEqual(enriched["external_event_evidence"]["event_count"], 0)
+        self.assertFalse(enriched["external_event_evidence"]["causality_claimed"])
+        self.assertEqual(enriched["event_causal_assessment"]["status"], "NOT_ASSESSED")
+        self.assertEqual(
+            enriched["event_causal_assessment"]["episode_assessments"][0]["status"],
+            "NOT_ASSESSED_NO_EVENT_EVIDENCE_SUPPLIED",
+        )
+        self.assertEqual(
+            enriched["fundamental_onchain_assessment"]["coverage"]["observed_metric_count"], 0
+        )
+        self.assertEqual(enriched["technical_structure_assessment"]["status"], "NOT_AVAILABLE")
+        self.assertEqual(enriched["decision_status"], "INDETERMINATE")
+        self.assertFalse(enriched["methodology_assessment"]["predictive_performance_validated"])
+        self.assertFalse(enriched["network_requests_made"])
+        self.assertFalse(enriched["orders_submitted"])
+
 if __name__ == "__main__":
     unittest.main()
