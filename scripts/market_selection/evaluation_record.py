@@ -279,6 +279,19 @@ def compare_evaluation_records(old: dict, new: dict) -> dict:
     new_sources = new.get("source_artifacts", [])
     source_signature = lambda rows: sorted((x.get("source"), x.get("endpoint")) for x in rows)
     source_set_changed = source_signature(old_sources) != source_signature(new_sources)
+    source_metadata_signature = lambda rows: sorted(
+        (
+            x.get("source"),
+            x.get("endpoint"),
+            x.get("window_start_utc"),
+            x.get("window_end_utc"),
+            x.get("quality_status"),
+        )
+        for x in rows
+    )
+    source_metadata_changed = (
+        source_metadata_signature(old_sources) != source_metadata_signature(new_sources)
+    )
     old_quality, new_quality = old.get("quality"), new.get("quality")
     quality_changed = old_quality != new_quality
     old_hashes = sorted(x.get("sha256") for x in old_sources)
@@ -298,7 +311,13 @@ def compare_evaluation_records(old: dict, new: dict) -> dict:
     results_payload_changed = old.get("results") != new.get("results")
     if not scope_compatible:
         attribution = "INCOMPATIBLE_SCOPE"
-    elif methodology_changed or implementation_changed or source_set_changed or quality_changed:
+    elif (
+        methodology_changed
+        or implementation_changed
+        or source_set_changed
+        or source_metadata_changed
+        or quality_changed
+    ):
         attribution = "MIXED_OR_INCOMPATIBLE_CAUSES"
     elif input_data_changed and results_payload_changed:
         attribution = "COMPARABLE_OBSERVED_CHANGE_CANDIDATE"
@@ -316,6 +335,7 @@ def compare_evaluation_records(old: dict, new: dict) -> dict:
         "methodology_changed": methodology_changed,
         "implementation_changed": implementation_changed,
         "source_set_changed": source_set_changed,
+        "source_metadata_changed": source_metadata_changed,
         "quality_changed": quality_changed,
         "input_data_changed": input_data_changed,
         "results_payload_changed": results_payload_changed,
