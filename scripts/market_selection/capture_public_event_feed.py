@@ -1686,6 +1686,7 @@ def main() -> int:
                 "duplicate_item_count": result["duplicate_item_count"],
                 "reason_codes": result["reason_codes"],
             }
+    exit_code = 0
     except RateLimitCoordinationError:
         result = {
             "schema_version": "crypto-public-event-capture-error-v1",
@@ -1698,6 +1699,7 @@ def main() -> int:
                 "message": "Shared request-rate coordination is unavailable; no network request was made.",
             }],
         }
+        exit_code = 2
         summary = {
             "output": str(args.output),
             "source_id": args.source_id,
@@ -1708,7 +1710,7 @@ def main() -> int:
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(result, ensure_ascii=False, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     print(json.dumps(summary, ensure_ascii=False, indent=2))
-    return 0
+    return 2 if result.get("capture_status") == "BLOCKED_RATE_LIMIT_COORDINATION" else 0
 
 
 if __name__ == "__main__":
