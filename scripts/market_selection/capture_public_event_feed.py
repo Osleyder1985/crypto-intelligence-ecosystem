@@ -444,9 +444,10 @@ def capture_public_event_feed(
 class _AllowlistedRedirectHandler(HTTPRedirectHandler):
     """Permit redirects only to HTTPS hosts explicitly allowed for the source."""
 
-    def __init__(self, allowed_hosts: set[str]):
+    def __init__(self, allowed_hosts: set[str], allowed_path_prefixes: list[str] | None = None):
         super().__init__()
         self.allowed_hosts = {host.casefold() for host in allowed_hosts}
+        self.allowed_path_prefixes = list(allowed_path_prefixes or [])
 
     def redirect_request(self, req, fp, code, msg, headers, newurl):
         parts = urlsplit(newurl)
@@ -456,13 +457,22 @@ class _AllowlistedRedirectHandler(HTTPRedirectHandler):
             or parts.username is not None
             or parts.password is not None
             or parts.port not in (None, 443)
+            or (
+                self.allowed_path_prefixes
+                and not any(parts.path.startswith(prefix) for prefix in self.allowed_path_prefixes)
+            )
         ):
             return None
         return super().redirect_request(req, fp, code, msg, headers, newurl)
 
 
-def _open_allowlisted_url(request: Request, timeout_seconds: float, allowed_hosts: set[str]):
-    opener = build_opener(_AllowlistedRedirectHandler(allowed_hosts))
+def _open_allowlisted_url(
+    request: Request,
+    timeout_seconds: float,
+    allowed_hosts: set[str],
+    allowed_path_prefixes: list[str] | None = None,
+):
+    opener = build_opener(_AllowlistedRedirectHandler(allowed_hosts, allowed_path_prefixes))
     return opener.open(request, timeout=float(timeout_seconds))
 
 
@@ -568,7 +578,10 @@ def capture_public_event_archive_index(
     read_error = None
     final_url = archive_url
     try:
-        with _open_allowlisted_url(request, float(timeout_seconds), set(source["allowed_article_hosts"])) as response:
+        with _open_allowlisted_url(
+            request, float(timeout_seconds), set(source["allowed_article_hosts"]),
+            source.get("allowed_archive_path_prefixes", []),
+        ) as response:
             status_code = int(getattr(response, "status", 200))
             headers = _safe_headers(getattr(response, "headers", None))
             geturl = getattr(response, "geturl", None)
