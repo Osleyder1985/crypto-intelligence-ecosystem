@@ -148,7 +148,11 @@ def analyze_multi_timeframe_support_resistance(
         "confluence_groups": confluence_groups,
         "limitations": [
             "Each timeframe is analyzed independently with its own closed candles and confirmation timestamps.",
-            "Zone prices and event counts are not combined across timeframes; cross-timeframe confluence is not computed.",
+            (
+                "Zone prices and event counts are not combined across timeframes; cross-timeframe confluence is not computed."
+                if confluence_tolerance_bps is None
+                else "Cross-timeframe confluence groups are computed only from same-kind zones whose center prices fall within the explicit symmetric midpoint-relative tolerance; zone prices and event counts are not averaged or combined."
+            ),
             "Different timeframe inputs may cover different periods; compare coverage before interpreting differences.",
             "A zone is a descriptive OHLCV heuristic, not proof of resting orders, guaranteed reaction, or an investment recommendation.",
             "Each input must pass the existing provider-use authorization and source-integrity checks.",
