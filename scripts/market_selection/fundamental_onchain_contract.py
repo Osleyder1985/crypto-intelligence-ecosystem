@@ -278,7 +278,13 @@ def validate_observation(item: object) -> dict:
     }
 
 
-def evaluate_observations(observations: list[dict], *, asset: dict, evaluation_as_of: str) -> dict:
+def evaluate_observations(
+    observations: list[dict],
+    *,
+    asset: dict,
+    evaluation_as_of: str,
+    freshness_policy_seconds: dict[str, int] | None = None,
+) -> dict:
     """Evaluate a single stable asset and cutoff; conflicts are not silently resolved."""
     if not isinstance(observations, list):
         raise ValueError("observations must be a list")
@@ -287,12 +293,22 @@ def evaluate_observations(observations: list[dict], *, asset: dict, evaluation_a
     target_category = _string(asset.get("category"), "asset.category")
     target_id = _string(asset.get("stable_id"), "asset.stable_id")
     cutoff = parse_timestamp(evaluation_as_of, "evaluation_as_of")
+    if freshness_policy_seconds is None:
+        freshness_policy_seconds = {}
+    if not isinstance(freshness_policy_seconds, dict):
+        raise ValueError("freshness_policy_seconds must be an object keyed by metric_id")
+    for metric_id, max_age in freshness_policy_seconds.items():
+        if metric_id not in METRIC_CATALOG:
+            raise ValueError(f"freshness policy references unknown metric_id: {metric_id}")
+        if isinstance(max_age, bool) or not isinstance(max_age, int) or max_age <= 0:
+            raise ValueError(f"freshness policy for {metric_id} must be a positive integer number of seconds")
     validated = [validate_observation(o) for o in observations]
     observation_ids = [item["observation_id"] for item in validated]
     if len(observation_ids) != len(set(observation_ids)):
         raise ValueError("observation_id values must be unique within an assessment")
     groups: dict[str, list[dict]] = {}
     rejected_future = []
+    stale_ids_by_metric: dict[str, set[str]] = {}
     for obs in validated:
         if obs["asset"]["stable_id"].casefold() != target_id.casefold() or obs["asset"]["category"] != target_category:
             raise ValueError("all observations must match the exact target stable_id and category")
@@ -303,13 +319,21 @@ def evaluate_observations(observations: list[dict], *, asset: dict, evaluation_a
             rejected_future.append(obs["observation_id"])
             continue
         groups.setdefault(obs["metric_id"], []).append(obs)
+        max_age = freshness_policy_seconds.get(obs["metric_id"])
+        if obs["status"] == "OBSERVED" and max_age is not None:
+            age_seconds = (cutoff - parse_timestamp(obs["observed_at"], "observed_at")).total_seconds()
+            if age_seconds > max_age:
+                stale_ids_by_metric.setdefault(obs["metric_id"], set()).add(obs["observation_id"])
 
     metrics = {}
     for metric_id, definition in METRIC_CATALOG.items():
         applicable = target_category in definition["categories"]
         entries = groups.get(metric_id, [])
-        observed = [e for e in entries if e["status"] == "OBSERVED"]
+        stale_ids = stale_ids_by_metric.get(metric_id, set())
+        observed = [e for e in entries if e["status"] == "OBSERVED" and e["observation_id"] not in stale_ids]
         explicit_statuses = {e["status"] for e in entries}
+        if stale_ids:
+            explicit_statuses.add("STALE")
         if "CONFLICT" in explicit_statuses:
             # An explicit source conflict cannot be erased by another source's observed value.
             status, value = "CONFLICT", None
@@ -337,6 +361,8 @@ def evaluate_observations(observations: list[dict], *, asset: dict, evaluation_a
             "unit": definition["unit"],
             "applicable_to_category": applicable,
             "observation_ids": [e["observation_id"] for e in entries],
+            "stale_observation_ids": [e["observation_id"] for e in entries if e["observation_id"] in stale_ids],
+            "freshness_policy_max_age_seconds": freshness_policy_seconds.get(metric_id),
             "source_ids": sorted({e["source"]["source_id"] for e in entries}),
             "definition": definition["definition"],
             "caveat": definition["caveat"],
@@ -354,6 +380,10 @@ def evaluate_observations(observations: list[dict], *, asset: dict, evaluation_a
             "observed_metric_count": available,
             "applicable_coverage_ratio": available / applicable_count if applicable_count else None,
             "rejected_after_cutoff_observation_ids": rejected_future,
+            "stale_observation_ids": sorted(
+                observation_id for ids in stale_ids_by_metric.values() for observation_id in ids
+            ),
+            "freshness_policy_seconds": dict(sorted(freshness_policy_seconds.items())),
         },
         "metrics": metrics,
         "interpretation": "No investment conclusion is computed by this contract; coverage, methodology, comparability and validation are prerequisites.",
