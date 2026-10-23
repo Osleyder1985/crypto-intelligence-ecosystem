@@ -34,6 +34,9 @@ BASELINE_POLICY = {
     "bitget_spot_market_data": {u: "REQUIRES_APPROVAL" for u in SUPPORTED_USE_CASES},
     # SEC press-release RSS is a candidate source; the machine-readable source registry keeps it disabled until terms are reviewed.
     "sec_press_releases": {u: "REQUIRES_APPROVAL" for u in SUPPORTED_USE_CASES},
+    # Official regulatory feeds remain blocked until their source registry and use authorization are approved.
+    "cftc_general_press_releases": {u: "REQUIRES_APPROVAL" for u in SUPPORTED_USE_CASES},
+    "federal_reserve_press_releases": {u: "REQUIRES_APPROVAL" for u in SUPPORTED_USE_CASES},
 }
 
 def _text(value: object, field: str) -> str:

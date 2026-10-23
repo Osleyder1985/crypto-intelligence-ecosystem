@@ -25,9 +25,9 @@
 2. Revisar el alcance concreto: análisis interno, persistencia, retención, reproducción de texto y redistribución.
 3. Registrar responsable y fecha de revisión; definir User-Agent, rate limit, timeout y cobertura.
 4. Añadir una autorización de proveedor coherente con la fuente y el uso solicitado.
-5. Implementar y probar un adaptador de captura específico para cada fuente aprobada, con timestamps de publicación y captura separados, deduplicación y registro de errores.
+5. Implementar y probar un adaptador de captura para cada fuente aprobada, con timestamps de publicación y captura separados, deduplicación y registro de errores.
 6. Mantener la fuente bloqueada hasta completar esos pasos.
 
 ## Estado funcional
 
-Este PR amplía el registro de candidatos; **no** añade adaptadores de captura para CFTC o Federal Reserve, no realiza solicitudes de red, no autoriza persistencia y no declara cobertura real de noticias. El flujo principal solo puede integrar registros de eventos preservados y previamente validados. La relación temporal con un movimiento sigue siendo evidencia contextual, no causalidad demostrada.
+El adaptador genérico `capture_public_event_feed.py` puede capturar feeds RSS/Atom registrados cuando el registro de fuente y la autorización del proveedor permiten explícitamente el análisis interno y el almacenamiento persistente. Actualmente CFTC y Federal Reserve siguen `TERMS_PENDING`, por lo que el adaptador debe bloquearlos antes de cualquier solicitud. El adaptador conserva el cuerpo completo del feed, normaliza los timestamps disponibles y deduplica ítems dentro de una captura; no descarga artículos, no resuelve activos, no crea eventos verificados ni cubre archivos históricos. El flujo principal solo puede integrar registros de eventos preservados y previamente validados. La relación temporal con un movimiento sigue siendo evidencia contextual, no causalidad demostrada.
