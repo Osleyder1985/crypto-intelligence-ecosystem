@@ -101,3 +101,8 @@ Para cerrar #134 faltan adaptadores de fuentes autorizadas, capturas históricas
 La evaluación admite un mapa opcional `freshness_policy_seconds`, indexado por ID de métrica. Si se declara una edad máxima positiva, una observación `OBSERVED` más antigua que ese umbral se excluye del valor actual y se informa como `STALE`, con su ID conservado. Si coexisten observaciones antiguas y una observación vigente, se usa solo la vigente y se mantienen visibles las IDs obsoletas. La política y los IDs afectados quedan incluidos en la salida y en la cobertura.
 
 No hay umbrales universales incorporados: el llamador debe definirlos de acuerdo con la cadencia y semántica de cada métrica. Sin una política explícita, el comportamiento anterior se conserva y no se deduce frescura solo por antigüedad.
+
+
+### Uso en el informe integrado
+
+El informe integrado expone la misma política mediante el argumento opcional `fundamental_freshness_policy_seconds`. En la CLI puede pasarse un archivo JSON con el mapa de `metric_id` a edad máxima en segundos mediante `--fundamental-freshness-policy`. El artefacto resultante conserva la política y las observaciones obsoletas; la decisión global continúa en `INDETERMINATE`.
