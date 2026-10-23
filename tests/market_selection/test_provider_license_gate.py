@@ -4,6 +4,7 @@ import unittest
 from scripts.market_selection.provider_license_gate import (
     SCHEMA_VERSION,
     POLICY_VERSION,
+    SUPPORTED_USE_CASES,
     evaluate_artifact_use,
     evaluate_provider_use,
 )
@@ -59,6 +60,13 @@ class ProviderLicenseGateTests(unittest.TestCase):
         self.assertEqual(allowed["authorization_evidence_status"], "NOT_A_COMMERCIAL_LICENSE")
         blocked = evaluate_provider_use("binance_spot_market_data", "persistent_storage")
         self.assertEqual(blocked["decision"], "BLOCK")
+
+    def test_sec_press_releases_is_registered_but_requires_explicit_authorization(self):
+        for use_case in SUPPORTED_USE_CASES:
+            with self.subTest(use_case=use_case):
+                result = evaluate_provider_use("sec_press_releases", use_case, None)
+                self.assertEqual(result["decision"], "BLOCK")
+                self.assertIn("AUTHORIZATION_RECORD_MISSING", result["reason_codes"])
 
     def test_unknown_provider_fails_closed(self):
         result = evaluate_provider_use("unknown_feed", "internal_analysis")

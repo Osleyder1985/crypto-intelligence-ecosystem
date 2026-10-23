@@ -1,16 +1,16 @@
 # Contrato de evidencia de noticias y eventos externos — Issue #132
 
-- **Estado:** propuesta técnica implementada en rama de trabajo; pendiente de revisión y validación CI.
+- **Estado:** contrato offline integrado; esta rama añade un adaptador SEC RSS/artículo, probado con respuestas sintéticas y deshabilitado hasta aprobar términos.
 - **Issue:** [#132](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/issues/132)
 - **Dependencia de producto:** [#128](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/issues/128)
-- **Implementación:** `scripts/market_selection/external_event_evidence.py`
-- **Pruebas:** `tests/market_selection/test_external_event_evidence.py`
+- **Implementación:** `scripts/market_selection/external_event_evidence.py`, `scripts/market_selection/event_source_registry.py`, `scripts/market_selection/capture_sec_press_releases_rss.py`
+- **Pruebas:** `tests/market_selection/test_external_event_evidence.py`, `tests/market_selection/test_sec_press_releases_rss.py`, `tests/market_selection/test_research_evidence_integration.py`
 - **Contrato de entrada:** `crypto-external-event-record-v1`
 - **Contrato de evaluación:** `crypto-event-evidence-assessment-v1`
 
 ## 1. Alcance y no-objetivos
 
-La primera entrega valida, normaliza y relaciona de forma conservadora registros de eventos externos. Es un módulo offline y agnóstico al proveedor. **No descarga noticias, no certifica la veracidad de una fuente, no construye un archivo histórico por sí solo y no prueba causalidad.** La disponibilidad de fuentes, su cobertura y sus términos deben resolverse en adaptadores y decisiones posteriores.
+El contrato de evento valida, normaliza y relaciona de forma conservadora registros externos. El contrato base es offline y no prueba causalidad. Esta rama añade un adaptador SEC RSS/artículo; por defecto la fuente sigue `TERMS_PENDING`, por lo que no descarga nada. El adaptador preserva el feed y artículos completos cuando la fuente esté aprobada, pero requiere revisión humana de entidad antes de promover un feed item a evento.
 
 ## 2. Campos obligatorios de cada evento
 
@@ -68,8 +68,17 @@ La mera precedencia temporal, una nota de prensa o la correlación de precios nu
 - Deben documentarse límites de acceso, licencias, condiciones de uso, retención, robots/API y cobertura antes de activar un conector en producción.
 - La ausencia de resultados solo es interpretable junto con cobertura, errores, rango temporal y fuentes consultadas. Cero registros no demuestra que no ocurrió ningún evento.
 
-## 7. Pruebas implementadas
+## 7. Registry de fuentes y gate antes de integración
+
+- `event_source_registry.py` mantiene el feed SEC en `TERMS_PENDING`. No se hace red hasta que los bytes de los términos y su SHA-256 coincidan, se complete la revisión y se declaren los casos de uso permitidos.
+- El adaptador exige autorización independiente para `internal_analysis` y `persistent_storage`, un User-Agent proporcionado por el operador y un timeout explícito antes de abrir la conexión. El código no certifica que SEC considere clasificado el User-Agent.
+- `capture_sec_press_releases_rss.py` preserva la respuesta completa hasta EOF, sin límite local de tamaño; incluye bytes base64, tamaño, SHA-256, headers y errores HTTP. Las respuestas mayores de 5 MiB y los errores de lectura parcial tienen pruebas offline.
+- Los titulares no crean eventos automáticamente. La promoción requiere captura completa del artículo, mapeo de entidades con IDs estables y evidencia de mapeo preservada con hash. El registro conserva el gate del proveedor y el hash del registry.
+- `research_evidence_integration.enrich_research_report` vuelve a validar cada evento: autorización para análisis y almacenamiento, fuente registrada/aprobada, hash de registry actual, host HTTPS allowlisted, editor y tipo de fuente coincidentes. Verifica base64, tamaño y SHA-256 de las capturas RSS/artículo, vuelve a parsear el RSS y comprueba que título, URL y publicación coincidan, además de verificar la evidencia del mapeo de entidades. Eventos sin estos datos quedan bloqueados.
+- La evaluación temporal mantiene `causality_claimed=false`; la captura y el enlace temporal no prueban causalidad.
+
+## 8. Pruebas implementadas
 
 Los once tests cubren normalización de tiempo, rechazo de entidades identificadas solo por ticker, timestamps sin zona horaria, captura anterior a publicación, duplicados con conflicto, captura posterior al corte histórico, coincidencia temporal sin afirmación causal, evento fuera de ventana, ausencia de evidencia, activo no coincidente y preservación de registros de fuentes independientes.
 
-**Estado de validación:** los archivos y tests se han añadido a una rama GitHub. La ejecución CI debe confirmar la integración con el entorno real; hasta ese momento no se declara la entrega validada. El módulo no se ha integrado en el informe `crypto-asset-research-report-v1`, no consulta fuentes externas y no cierra por sí solo Issue #132.
+**Estado de validación:** el contrato offline ya está en `main`; esta rama añade un adaptador SEC y gates de fuente/uso probados con respuestas sintéticas. No se ha hecho captura real porque el registro mantiene `TERMS_PENDING`. La integración con `crypto-asset-research-report-v2` acepta únicamente eventos promovidos explícitamente y vuelve a verificar autorización y registry. No se infiere entidad ni causalidad automáticamente. Issue #132 permanece abierto hasta completar revisión de fuente y validar una captura autorizada real.

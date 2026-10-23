@@ -5,6 +5,12 @@ on:
     paths:
       - "scripts/market_selection/external_event_evidence.py"
       - "tests/market_selection/test_external_event_evidence.py"
+      - "scripts/market_selection/event_source_registry.py"
+      - "scripts/market_selection/capture_sec_press_releases_rss.py"
+      - "scripts/market_selection/provider_license_gate.py"
+      - "scripts/market_selection/research_evidence_integration.py"
+      - "tests/market_selection/test_research_evidence_integration.py"
+      - "tests/market_selection/test_sec_press_releases_rss.py"
       - ".github/workflows/external-event-evidence-tests.yml"
   push:
     branches:
@@ -12,6 +18,12 @@ on:
     paths:
       - "scripts/market_selection/external_event_evidence.py"
       - "tests/market_selection/test_external_event_evidence.py"
+      - "scripts/market_selection/event_source_registry.py"
+      - "scripts/market_selection/capture_sec_press_releases_rss.py"
+      - "scripts/market_selection/provider_license_gate.py"
+      - "scripts/market_selection/research_evidence_integration.py"
+      - "tests/market_selection/test_research_evidence_integration.py"
+      - "tests/market_selection/test_sec_press_releases_rss.py"
       - ".github/workflows/external-event-evidence-tests.yml"
   workflow_dispatch:
 
@@ -29,4 +41,7 @@ jobs:
         with:
           python-version: "3.12"
       - name: Run external event evidence tests
-        run: python -m unittest discover -s tests/market_selection -p "test_external_event_evidence.py" -v
+        run: |
+          python -m unittest discover -s tests/market_selection -p "test_external_event_evidence.py" -v
+          python -m unittest discover -s tests/market_selection -p "test_sec_press_releases_rss.py" -v
+          python -m unittest discover -s tests/market_selection -p "test_research_evidence_integration.py" -v

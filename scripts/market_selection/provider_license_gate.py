@@ -10,7 +10,7 @@ import re
 from urllib.parse import urlsplit
 
 SCHEMA_VERSION = "crypto-provider-authorization-v1"
-POLICY_VERSION = "1.1.0"
+POLICY_VERSION = "1.2.0"
 ASSESSMENT_SCHEMA_VERSION = "crypto-provider-use-assessment-v1"
 _SHA256 = re.compile(r"^[0-9a-fA-F]{64}$")
 SUPPORTED_USE_CASES = {
@@ -32,6 +32,8 @@ BASELINE_POLICY = {
     "mexc_spot_market_data": {u: "REQUIRES_APPROVAL" for u in SUPPORTED_USE_CASES},
     "gate_spot_market_data": {u: "REQUIRES_APPROVAL" for u in SUPPORTED_USE_CASES},
     "bitget_spot_market_data": {u: "REQUIRES_APPROVAL" for u in SUPPORTED_USE_CASES},
+    # SEC press-release RSS is a candidate source; the machine-readable source registry keeps it disabled until terms are reviewed.
+    "sec_press_releases": {u: "REQUIRES_APPROVAL" for u in SUPPORTED_USE_CASES},
 }
 
 def _text(value: object, field: str) -> str:

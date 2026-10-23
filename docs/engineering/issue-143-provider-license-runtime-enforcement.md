@@ -1,6 +1,6 @@
 # Auditoría de enforcement de licencias de proveedores — Issue #143
 
-**Estado:** hallazgo abierto; no equivale a una aprobación legal ni a un control runtime implementado.
+**Estado:** enforcement runtime y puertas de consumidores implementados y probados; la aprobación legal/contractual sigue siendo específica por fuente y caso de uso.
 
 ## Hallazgo verificado
 
@@ -70,17 +70,20 @@ La revisión recursiva de los archivos Python del repositorio identificó los si
 | `capture_multi_exchange_spot_ticker_probe.capture_one` | Los mismos siete venues, REST ticker | `persistent_storage` por proveedor |
 | `capture_public_market_batch.request_capture` | Proveedores públicos declarados por configuración | Caso declarado; gate antes de `urlopen` |
 | `capture_public_market_data.request_capture` | Proveedores públicos declarados por configuración | Caso declarado; gate antes de `urlopen` |
+| `capture_sec_press_releases_rss.capture_sec_press_releases_rss` | SEC RSS | `internal_analysis` + `persistent_storage`, registro de fuente `APPROVED`, autorización y User-Agent antes de `urlopen` |
+| `capture_sec_press_releases_rss.capture_sec_press_release_article` | Artículos enlazados por el RSS SEC | Igual que el RSS; HTTPS y host `sec.gov` allowlisted antes de `urlopen` |
 | `binance_public.BinancePublicSpotReader` / `_default_http_get` | Binance REST exchangeInfo/depth | `internal_analysis` por defecto |
 | `pionex_public.PionexPublicSpotReader` / `_default_http_get` | Pionex REST symbols | `internal_analysis` por defecto |
 
 
 ### Consumidores de artefactos y uso interno
 
-La política se versiona como `1.1.0`. Cada evaluación autorizada incluye el hash canónico del registro de autorización y la lista explícita de casos autorizados, sin exponer secretos. `evaluate_artifact_use` rechaza artefactos antiguos sin versión/política, capturas permitidas solo como `live_technical_test`, registros sin hash o registros cuyo alcance no incluye el uso solicitado.
+La política se versiona como `1.2.0`. Cada evaluación autorizada incluye el hash canónico del registro de autorización y la lista explícita de casos autorizados, sin exponer secretos. `evaluate_artifact_use` rechaza artefactos antiguos sin versión/política, capturas permitidas solo como `live_technical_test`, registros sin hash o registros cuyo alcance no incluye el uso solicitado.
 
 Los siguientes consumidores bloquean antes de analizar si el artefacto no contiene evidencia válida de autorización para `internal_analysis`:
 
 - `research_report.build_research_report`
+- `research_evidence_integration.enrich_research_report`
 - `selector.evaluate_market`
 - `analyze_ohlcv_risk_profile.analyze_artifact`
 - `detect_ohlcv_movement_events.analyze_movement_events`
@@ -92,5 +95,5 @@ Los siguientes consumidores bloquean antes de analizar si el artefacto no contie
 
 Los cálculos matemáticos puros y helpers de parsing no abren conexiones; el control se coloca en la frontera que convierte artefactos de proveedor en análisis o decisiones. La evidencia almacenada es una comprobación de política del software, no prueba de autenticidad de documentos ni dictamen legal.
 
-**Controles transversales:** el gate se evalúa tanto en los coordinadores como en los entrypoints de bajo nivel que abren conexiones. Los rechazos se producen antes de `urlopen` o `websocket.create_connection`. Los usos de `live_technical_test` permitidos por la política no equivalen a licencia comercial, autorización de redistribución ni elegibilidad regional. La evidencia de un registro aprobado sigue requiriendo verificación humana de los términos oficiales y del alcance real.
+**Controles transversales:** el gate se evalúa tanto en los coordinadores como en los entrypoints de bajo nivel que abren conexiones. El conector SEC se registra como proveedor revisable, pero la fuente sigue `TERMS_PENDING` y el código bloquea antes de red hasta que se preserven/revisen los términos y se aprueben los casos de uso. Los rechazos se producen antes de `urlopen` o `websocket.create_connection`. Los usos de `live_technical_test` permitidos por la política no equivalen a licencia comercial, autorización de redistribución ni elegibilidad regional. La evidencia de un registro aprobado sigue requiriendo verificación humana de los términos oficiales y del alcance real.
 

@@ -6,17 +6,25 @@ approve methodology, infer causality, or issue investment recommendations.
 from __future__ import annotations
 
 import argparse
+import base64
+import hashlib
 import json
+import re
+import xml.etree.ElementTree as ET
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlsplit
 
-from scripts.market_selection.external_event_evidence import assess_temporal_association, validate_event
+from scripts.market_selection.external_event_evidence import assess_temporal_association, parse_timestamp, validate_event
 from scripts.market_selection.fundamental_onchain_contract import evaluate_observations
 from scripts.market_selection.methodology_contract import validate_methodology
 from scripts.market_selection.provider_license_gate import evaluate_artifact_use
+from scripts.market_selection.event_source_registry import get_source, source_entry_sha256, source_is_approved
+from scripts.market_selection.capture_sec_press_releases_rss import parse_sec_press_releases_rss
 
 REPORT_SCHEMA = "crypto-asset-research-report-v2"
 BUNDLE_SCHEMA = "crypto-research-evidence-bundle-v1"
+_SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
 
 
 def _object(value: Any, field: str) -> dict:
@@ -29,6 +37,130 @@ def _timestamp(value: Any, field: str) -> str:
     if not isinstance(value, str) or not value.strip():
         raise ValueError(f"{field} must be a non-empty ISO-8601 timestamp with offset")
     return value.strip()
+
+
+def _verify_source_capture(
+    capture: dict,
+    *,
+    field: str,
+    source_entry: dict,
+    registry_hash: str,
+    expected_requested_url: str,
+) -> bytes:
+    capture = _object(capture, field)
+    if capture.get("capture_status") != "PASS" or capture.get("capture_truncated") is not False:
+        raise PermissionError(f"{field} is not a complete PASS capture")
+    if capture.get("network_request_made") is not True:
+        raise PermissionError(f"{field} does not prove a network capture")
+    if capture.get("source_registry_status") != "APPROVED":
+        raise PermissionError(f"{field} source registry was not approved")
+    if capture.get("source_registry_entry_sha256") != registry_hash:
+        raise PermissionError(f"{field} source registry hash is stale")
+    if capture.get("source_url") != source_entry["source_url"]:
+        raise PermissionError(f"{field} source URL does not match registry")
+    if capture.get("requested_url") != expected_requested_url:
+        raise PermissionError(f"{field} requested URL does not match expected source")
+    for key, use_case in (
+        ("provider_use_assessment", "internal_analysis"),
+        ("persistent_storage_assessment", "persistent_storage"),
+    ):
+        assessment = _object(capture.get(key), f"{field}.{key}")
+        if assessment.get("provider_id") != source_entry["provider_id"] or assessment.get("decision") != "ALLOW":
+            raise PermissionError(f"{field} does not authorize {use_case}")
+    encoded = capture.get("raw_response_base64")
+    if not isinstance(encoded, str):
+        raise PermissionError(f"{field} raw response bytes are missing")
+    try:
+        raw = base64.b64decode(encoded, validate=True)
+    except (ValueError, base64.binascii.Error) as exc:
+        raise PermissionError(f"{field} raw response base64 is invalid") from exc
+    digest = capture.get("raw_response_sha256")
+    size = capture.get("raw_response_bytes")
+    if not isinstance(digest, str) or not _SHA256_RE.fullmatch(digest):
+        raise PermissionError(f"{field} raw response SHA-256 is invalid")
+    if hashlib.sha256(raw).hexdigest() != digest:
+        raise PermissionError(f"{field} raw response SHA-256 mismatch")
+    if isinstance(size, bool) or not isinstance(size, int) or len(raw) != size:
+        raise PermissionError(f"{field} raw response byte count mismatch")
+    return raw
+
+
+def _verify_promoted_sec_event(event_record: dict, source_entry: dict, registry_hash: str) -> None:
+    captures = _object(event_record.get("source_capture_assessments"), "event.source_capture_assessments")
+    feed_capture = _object(captures.get("feed"), "event.source_capture_assessments.feed")
+    article_capture = _object(captures.get("article"), "event.source_capture_assessments.article")
+    event_source = _object(event_record.get("source"), "event.source")
+    event_url = event_source.get("url")
+
+    feed_raw = _verify_source_capture(
+        feed_capture, field="event.feed_capture", source_entry=source_entry,
+        registry_hash=registry_hash, expected_requested_url=source_entry["source_url"],
+    )
+    article_raw = _verify_source_capture(
+        article_capture, field="event.article_capture", source_entry=source_entry,
+        registry_hash=registry_hash, expected_requested_url=event_url,
+    )
+    content_type = next(
+        (value.split(";", 1)[0].strip().lower() for key, value in article_capture.get("response_headers", {}).items()
+         if key.lower() == "content-type"),
+        "",
+    )
+    if content_type not in {"text/html", "application/xhtml+xml"}:
+        raise PermissionError("event article capture has an unexpected Content-Type")
+    if article_capture.get("captured_at") != event_record.get("captured_at"):
+        raise PermissionError("event captured_at does not match article capture time")
+
+    metadata = _object(event_record.get("metadata"), "event.metadata")
+    feed_hash = feed_capture["raw_response_sha256"]
+    article_hash = article_capture["raw_response_sha256"]
+    if metadata.get("feed_raw_response_sha256") != feed_hash:
+        raise PermissionError("event feed response hash does not match preserved capture")
+    if metadata.get("article_raw_response_sha256") != article_hash or event_record.get("content_sha256") != article_hash:
+        raise PermissionError("event article hash does not match preserved capture")
+
+    try:
+        parsed_items = parse_sec_press_releases_rss(feed_raw)
+    except (ET.ParseError, ValueError) as exc:
+        raise PermissionError("event feed capture is not valid RSS/RDF") from exc
+    item_id = metadata.get("feed_item_id")
+    matched = next((item for item in parsed_items if item.get("item_id") == item_id), None)
+    if matched is None:
+        raise PermissionError("event feed item is not present in preserved RSS bytes")
+    item_record = _object(metadata.get("feed_item_record"), "event.metadata.feed_item_record")
+    for key in ("item_id", "title", "link", "published_at_utc", "normalized_item_sha256"):
+        if item_record.get(key) != matched.get(key):
+            raise PermissionError(f"event feed item metadata mismatch: {key}")
+    if metadata.get("normalized_feed_item_sha256") != matched.get("normalized_item_sha256"):
+        raise PermissionError("event normalized feed item hash mismatch")
+    if (
+        event_record.get("title") != matched.get("title")
+        or event_record.get("published_at") != matched.get("published_at_utc")
+        or event_url != matched.get("link")
+    ):
+        raise PermissionError("event title, URL, or publication time is not grounded in the captured feed")
+    if article_capture.get("requested_url") != matched.get("link"):
+        raise PermissionError("article capture URL does not match the RSS item")
+
+    mapping_b64 = metadata.get("entity_resolution_evidence_record_base64")
+    mapping_hash = metadata.get("entity_resolution_evidence_record_sha256")
+    if not isinstance(mapping_b64, str) or not isinstance(mapping_hash, str) or not _SHA256_RE.fullmatch(mapping_hash):
+        raise PermissionError("reviewed entity-mapping evidence is missing")
+    try:
+        mapping_raw = base64.b64decode(mapping_b64, validate=True)
+    except (ValueError, base64.binascii.Error) as exc:
+        raise PermissionError("reviewed entity-mapping evidence base64 is invalid") from exc
+    if hashlib.sha256(mapping_raw).hexdigest() != mapping_hash:
+        raise PermissionError("reviewed entity-mapping evidence SHA-256 mismatch")
+    reviewer = metadata.get("entity_resolution_reviewed_by")
+    reviewed_at = metadata.get("entity_resolution_reviewed_at")
+    if not isinstance(reviewer, str) or not reviewer.strip():
+        raise PermissionError("reviewed entity-mapping reviewer is missing")
+    try:
+        parse_timestamp(reviewed_at, "entity_resolution_reviewed_at")
+    except ValueError as exc:
+        raise PermissionError("reviewed entity-mapping timestamp is invalid") from exc
+    if metadata.get("causality_status") != "NOT_ASSESSED":
+        raise PermissionError("event evidence must not claim causality")
 
 
 def enrich_research_report(
@@ -53,6 +185,9 @@ def enrich_research_report(
     provider_use = evaluate_artifact_use(report, "internal_analysis")
     if provider_use["decision"] != "ALLOW":
         raise PermissionError("evidence integration blocked before use: " + ",".join(provider_use["reason_codes"]))
+    provider_storage = evaluate_artifact_use(report, "persistent_storage")
+    if provider_storage["decision"] != "ALLOW":
+        raise PermissionError("evidence integration storage blocked before use: " + ",".join(provider_storage["reason_codes"]))
     if not isinstance(events, list):
         raise ValueError("events must be a list")
     if not isinstance(observations, list):
@@ -71,20 +206,81 @@ def enrich_research_report(
     seen_event_ids = set()
     for index, item in enumerate(events):
         item = _object(item, f"events[{index}]")
-        event = validate_event(item.get("event"))
+        event_record = _object(item.get("event"), f"events[{index}].event")
+        event_use = evaluate_artifact_use(event_record, "internal_analysis")
+        if event_use["decision"] != "ALLOW":
+            raise PermissionError(
+                f"event evidence blocked before use at events[{index}]: " + ",".join(event_use["reason_codes"])
+            )
+        event_storage = evaluate_artifact_use(event_record, "persistent_storage")
+        if event_storage["decision"] != "ALLOW":
+            raise PermissionError(
+                f"event evidence storage blocked before use at events[{index}]: " + ",".join(event_storage["reason_codes"])
+            )
+
+        source_id = event_record.get("source_id")
+        if not isinstance(source_id, str) or not source_id.strip():
+            raise PermissionError(f"event source registry id missing at events[{index}]")
+        try:
+            source_entry = get_source(source_id)
+        except (KeyError, ValueError) as exc:
+            raise PermissionError(f"event source is not registered at events[{index}]") from exc
+        if not source_is_approved(source_entry):
+            raise PermissionError(f"event source registry is not approved at events[{index}]")
+        if event_record.get("provider_id") != source_entry.get("provider_id"):
+            raise PermissionError(f"event provider id does not match registry at events[{index}]")
+        for assessment_field in ("provider_use_assessment", "persistent_storage_assessment"):
+            assessment = _object(event_record.get(assessment_field), f"events[{index}].event.{assessment_field}")
+            if assessment.get("provider_id") != source_entry.get("provider_id") or assessment.get("decision") != "ALLOW":
+                raise PermissionError(f"event {assessment_field} does not match the approved source at events[{index}]")
+        registry_hash = source_entry_sha256(source_entry)
+        if (
+            event_record.get("source_registry_status") != "APPROVED"
+            or event_record.get("source_registry_entry_sha256") != registry_hash
+        ):
+            raise PermissionError(f"event source registry evidence is missing or stale at events[{index}]")
+        if source_id == "sec_press_releases":
+            _verify_promoted_sec_event(event_record, source_entry, registry_hash)
+        event_source = _object(event_record.get("source"), f"events[{index}].event.source")
+        source_url = event_source.get("url")
+        parsed_source_url = urlsplit(source_url) if isinstance(source_url, str) else None
+        allowed_hosts = set(source_entry.get("allowed_article_hosts") or [])
+        if not allowed_hosts:
+            base_host = urlsplit(source_entry["source_url"]).hostname
+            allowed_hosts = {base_host} if base_host else set()
+        if (
+            parsed_source_url is None
+            or parsed_source_url.scheme != "https"
+            or parsed_source_url.hostname not in allowed_hosts
+            or parsed_source_url.port not in (None, 443)
+            or parsed_source_url.username is not None
+            or parsed_source_url.password is not None
+        ):
+            raise PermissionError(f"event source URL is outside registry allowlist at events[{index}]")
+        if event_source.get("source_type") != source_entry.get("source_type"):
+            raise PermissionError(f"event source type does not match registry at events[{index}]")
+        if event_source.get("publisher") != source_entry.get("display_name"):
+            raise PermissionError(f"event publisher does not match registry at events[{index}]")
+
+        event = validate_event(event_record)
         event_id = event["event_id"]
         if event_id in seen_event_ids:
             raise ValueError(f"duplicate event_id in evidence bundle: {event_id}")
         seen_event_ids.add(event_id)
         window = _object(item.get("movement_window"), f"events[{index}].movement_window")
-        assessment = assess_temporal_association(
+        temporal_assessment = assess_temporal_association(
             event,
             movement_start=_timestamp(window.get("start"), f"events[{index}].movement_window.start"),
             movement_end=_timestamp(window.get("end"), f"events[{index}].movement_window.end"),
             evaluation_as_of=cutoff,
             target_entity=item.get("target_entity") or {},
         )
-        event_assessments.append(assessment)
+        event_assessments.append({
+            **temporal_assessment,
+            "source_use_assessment": event_use,
+            "source_storage_assessment": event_storage,
+            "source_registry_entry_sha256": registry_hash,
+        })
 
     fundamental = evaluate_observations(
         observations,
@@ -106,6 +302,7 @@ def enrich_research_report(
     }
     output["fundamental_onchain_assessment"] = fundamental
     output["downstream_use_assessment"] = provider_use
+    output["downstream_storage_assessment"] = provider_storage
     output["methodology_assessment"] = {
         "schema_version": validated_methodology["schema_version"],
         "methodology_id": validated_methodology["methodology_id"],
@@ -137,7 +334,10 @@ def enrich_research_report(
         output["horizons"][horizon]["reason_codes"] = reasons
     output["limitations"] = list(output.get("limitations", []))
     output["limitations"].append(
-        "External events and fundamental/on-chain observations are contract-validated supplied inputs; this command does not fetch sources or prove their authority, completeness, licensing, or predictive value."
+        "External events must pass source-registry approval plus provider authorization for internal analysis and persistent storage. These controls enforce recorded policy but do not prove legal authority, source completeness, or predictive value."
+    )
+    output["limitations"].append(
+        "Fundamental/on-chain observations remain supplied, contract-validated inputs; this integration does not fetch them or prove their source authority."
     )
     output["limitations"].append(
         "Methodology contract validity is not a backtest result; no predictive performance, calibrated confidence, or investment recommendation is claimed."
