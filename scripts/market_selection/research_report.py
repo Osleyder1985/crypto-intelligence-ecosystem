@@ -181,6 +181,7 @@ def build_research_report(
     requested_chain_id: str | None = None,
     identity_evidence: dict | None = None,
     order_book_artifact: dict | None = None,
+    order_book_authorization_registry: dict | None = None,
 ) -> dict:
     """Build a deterministic report from one preserved normalized Spot OHLCV artifact.
 
@@ -244,7 +245,7 @@ def build_research_report(
     )
     order_book_analysis = None
     if order_book_artifact is not None:
-        order_book_analysis = analyze_order_book_snapshot(order_book_artifact)
+        order_book_analysis = analyze_order_book_snapshot(order_book_artifact, order_book_authorization_registry)
         order_market = order_book_analysis["market"]
         if order_market["exchange"].lower() != exchange.lower() or order_market["symbol_native"].upper() != symbol.upper():
             raise ValueError("order-book artifact exchange and symbol must match the OHLCV report market")
@@ -417,7 +418,8 @@ def main() -> int:
     parser.add_argument("--identity-evidence", type=Path, help="Reviewed crypto-canonical-asset-identity-v1 JSON; without it canonical identity remains unresolved")
     parser.add_argument("--artifact", required=True, type=Path, help="Preserved normalized Spot OHLCV JSON")
     parser.add_argument("--config", required=True, type=Path, help="Versioned JSON with explicit analysis parameters")
-    parser.add_argument("--order-book-artifact", type=Path, help="Optional authorized crypto-spot-order-book-snapshot-v1 JSON matching the selected exchange and symbol")
+    parser.add_argument("--order-book-artifact", type=Path, help="Optional normalized crypto-spot-order-book-snapshot-v1 JSON matching the selected exchange and symbol")
+    parser.add_argument("--provider-authorization-registry", type=Path, help="Deployment-controlled provider authorization registry JSON; never use user-supplied authorization records")
     parser.add_argument("--output", required=True, type=Path, help="Path to the research report JSON")
     args = parser.parse_args()
 
@@ -426,12 +428,14 @@ def main() -> int:
     config = json.loads(args.config.read_text(encoding="utf-8"))
     identity_evidence = json.loads(args.identity_evidence.read_text(encoding="utf-8")) if args.identity_evidence else None
     order_book_artifact = json.loads(args.order_book_artifact.read_text(encoding="utf-8")) if args.order_book_artifact else None
+    authorization_registry = json.loads(args.provider_authorization_registry.read_text(encoding="utf-8")) if args.provider_authorization_registry else None
     report = build_research_report(
         artifact, config, args.asset_id, raw,
         requested_identifier_type=args.asset_id_type,
         requested_chain_id=args.asset_chain_id,
         identity_evidence=identity_evidence,
         order_book_artifact=order_book_artifact,
+        order_book_authorization_registry=authorization_registry,
     )
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(
