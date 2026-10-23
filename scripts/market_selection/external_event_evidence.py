@@ -253,6 +253,7 @@ def assess_temporal_association(
     target_entity: dict,
     availability_cutoff: str | None = None,
     pre_movement_window_minutes: int = 0,
+    post_movement_window_minutes: int = 0,
 ) -> dict:
     """Assess temporal eligibility without confusing retrospective knowledge with event-time availability.
 
@@ -275,9 +276,12 @@ def assess_temporal_association(
     )
     if isinstance(pre_movement_window_minutes, bool) or not isinstance(pre_movement_window_minutes, int) or pre_movement_window_minutes < 0:
         raise ValueError("pre_movement_window_minutes must be a non-negative integer")
+    if isinstance(post_movement_window_minutes, bool) or not isinstance(post_movement_window_minutes, int) or post_movement_window_minutes < 0:
+        raise ValueError("post_movement_window_minutes must be a non-negative integer")
     start = parse_timestamp(movement_start, "movement_start")
     end = parse_timestamp(movement_end, "movement_end")
     association_start = start - timedelta(minutes=pre_movement_window_minutes)
+    association_end = end + timedelta(minutes=post_movement_window_minutes)
     as_of = parse_timestamp(evaluation_as_of, "evaluation_as_of")
     availability_as_of = parse_timestamp(
         availability_cutoff if availability_cutoff is not None else evaluation_as_of,
@@ -292,7 +296,7 @@ def assess_temporal_association(
     # A later capture must not be treated as information available during the movement.
     available_by_as_of = published <= as_of and captured <= as_of
     available_at_cutoff = published <= availability_as_of and captured <= availability_as_of
-    overlaps_window = association_start <= published <= end
+    overlaps_window = association_start <= published <= association_end
     if not entity_matches:
         status = "ENTITY_NOT_MATCHED"
         label = "CAUSE_UNIDENTIFIED"
@@ -312,6 +316,11 @@ def assess_temporal_association(
             reason = (
                 "Publication precedes movement start but falls within the configured pre-movement "
                 "lead window; temporal proximity is not causality."
+            )
+        elif published > end:
+            reason = (
+                "Publication follows movement end but falls within the configured post-movement "
+                "window; temporal proximity is not causality."
             )
         else:
             reason = "Publication overlaps the defined movement window; temporal proximity is not causality."
@@ -334,9 +343,10 @@ def assess_temporal_association(
         },
         "association_window": {
             "start": association_start.isoformat().replace("+00:00", "Z"),
-            "end": end.isoformat().replace("+00:00", "Z"),
+            "end": association_end.isoformat().replace("+00:00", "Z"),
         },
         "pre_movement_window_minutes": pre_movement_window_minutes,
+        "post_movement_window_minutes": post_movement_window_minutes,
         "evaluation_as_of": as_of.isoformat().replace("+00:00", "Z"),
         "availability_cutoff": availability_as_of.isoformat().replace("+00:00", "Z"),
         "reason": reason,
