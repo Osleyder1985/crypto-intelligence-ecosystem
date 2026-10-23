@@ -627,5 +627,46 @@ class ResearchReportTests(unittest.TestCase):
                 )
 
 
+    def test_rejects_order_book_with_mismatched_quote_asset(self):
+        order_book = {
+            "schema_version": "crypto-spot-order-book-snapshot-v1",
+            "capture_status": "PASS",
+            "provider_id": "binance_spot_market_data",
+            "market": {"exchange": "binance", "symbol_native": "BTCUSDT", "quote_asset": "USDC"},
+            "captured_at_utc": "2026-10-22T00:00:00Z",
+            "bids": [["9.4", "10"]],
+            "asks": [["9.6", "8"]],
+        }
+        with patch(
+            "scripts.market_selection.analyze_order_book_snapshot.evaluate_provider_use",
+            return_value={"decision": "ALLOW", "reason_codes": ["SYNTHETIC_TEST_GATE_ONLY"]},
+        ):
+            with self.assertRaisesRegex(ValueError, "quote asset must match"):
+                build_research_report(
+                    self.source, config(), "BTC", self.raw, order_book_artifact=order_book,
+                    order_book_authorization_registry={"binance_spot_market_data": {"trusted": True}},
+                )
+
+    def test_order_book_without_quote_asset_remains_compatible(self):
+        order_book = {
+            "schema_version": "crypto-spot-order-book-snapshot-v1",
+            "capture_status": "PASS",
+            "provider_id": "binance_spot_market_data",
+            "market": {"exchange": "binance", "symbol_native": "BTCUSDT"},
+            "captured_at_utc": "2026-10-22T00:00:00Z",
+            "bids": [["9.4", "10"]],
+            "asks": [["9.6", "8"]],
+        }
+        with patch(
+            "scripts.market_selection.analyze_order_book_snapshot.evaluate_provider_use",
+            return_value={"decision": "ALLOW", "reason_codes": ["SYNTHETIC_TEST_GATE_ONLY"]},
+        ):
+            report = build_research_report(
+                self.source, config(), "BTC", self.raw, order_book_artifact=order_book,
+                order_book_authorization_registry={"binance_spot_market_data": {"trusted": True}},
+            )
+        self.assertEqual(report["descriptive_analyses"]["order_book"]["status"], "DESCRIPTIVE_SNAPSHOT")
+
+
 if __name__ == "__main__":
     unittest.main()
