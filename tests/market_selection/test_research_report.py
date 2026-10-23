@@ -48,6 +48,10 @@ def artifact(rows, *, base_asset="BTC", overall_status="PASS"):
                               "authorized_use_cases": ["internal_analysis"], "authorization_record_sha256": "b" * 64},
         },
         "overall_status": overall_status,
+        "requested_open_candle_count": len(rows) + (1 if overall_status == "PARTIAL" else 0),
+        "captured_candle_count": len(rows),
+        "missing_open_time_ms": [rows[-1]["open_time_ms"] + 3_600_000] if overall_status == "PARTIAL" else [],
+        "unexpected_open_time_ms": [],
         "market": {
             "exchange": "binance",
             "market_type": "SPOT",
@@ -261,6 +265,10 @@ class ResearchReportTests(unittest.TestCase):
         self.assertEqual(report["market"]["market_resolution"]["resolution_status"], "UNIQUE_MARKET")
         self.assertEqual(report["source_artifact"]["hash_basis"], "RAW_SOURCE_FILE_BYTES")
         self.assertEqual(report["source_artifact"]["sha256"], hashlib.sha256(self.raw).hexdigest())
+        self.assertEqual(report["source_artifact"]["historical_coverage"]["status"], "COMPLETE")
+        self.assertEqual(report["source_artifact"]["historical_coverage"]["requested_candle_count"], len(self.source["candles"]))
+        self.assertEqual(report["source_artifact"]["historical_coverage"]["coverage_ratio"], 1.0)
+        self.assertEqual(report["source_artifact"]["historical_coverage"]["missing_open_time_ms"], [])
         self.assertIn("risk_profile", report["descriptive_analyses"])
         self.assertIn("movement_events", report["descriptive_analyses"])
         self.assertIn("support_resistance", report["descriptive_analyses"])
@@ -315,6 +323,12 @@ class ResearchReportTests(unittest.TestCase):
         self.assertEqual(report["report_status"], "PARTIAL")
         self.assertEqual(report["data_quality"]["status"], "INCOMPLETE_OR_UNVERIFIED")
         self.assertEqual(report["source_artifact"]["capture_status"], "PARTIAL")
+        coverage = report["source_artifact"]["historical_coverage"]
+        self.assertEqual(coverage["status"], "PARTIAL")
+        self.assertEqual(coverage["requested_candle_count"], len(source["candles"]) + 1)
+        self.assertEqual(coverage["captured_candle_count"], len(source["candles"]))
+        self.assertLess(coverage["coverage_ratio"], 1.0)
+        self.assertEqual(coverage["missing_open_time_ms"], [source["candles"][-1]["open_time_ms"] + 3_600_000])
 
     def test_cli_end_to_end_writes_a_report_from_preserved_artifact(self):
         with tempfile.TemporaryDirectory() as directory:
