@@ -276,5 +276,27 @@ class PublicEventFeedCaptureTests(unittest.TestCase):
         self.assertFalse(result["events_promoted"])
 
 
+    def test_invalid_authorization_record_fails_closed_without_network(self):
+        entry = approved_source()
+        invalid_authorization = {"schema_version": "invalid-schema"}
+        with patch.dict(EVENT_SOURCE_REGISTRY["sources"], {"cftc_general_press_releases": entry}), patch(
+            "scripts.market_selection.capture_public_event_feed.urlopen"
+        ) as network:
+            result = capture_public_event_feed(
+                "cftc_general_press_releases",
+                authorization_record=invalid_authorization,
+                user_agent=USER_AGENT,
+                captured_at=self.captured_at,
+            )
+        network.assert_not_called()
+        self.assertEqual(result["capture_status"], "BLOCKED")
+        self.assertFalse(result["network_request_made"])
+        self.assertTrue(any(
+            reason in result["reason_codes"]
+            for reason in ("AUTHORIZATION_RECORD_INVALID", "AUTHORIZATION_TERMS_HASH_MISMATCH")
+        ))
+
+
+
 if __name__ == "__main__":
     unittest.main()
