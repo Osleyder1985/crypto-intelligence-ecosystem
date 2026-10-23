@@ -15,6 +15,7 @@ on:
       - "scripts/market_selection/provider_license_gate.py"
       - "scripts/market_selection/event_source_registry.py"
       - "tests/market_selection/test_research_report.py"
+      - "tests/market_selection/test_research_pipeline_e2e.py"
       - "tests/market_selection/test_research_evidence_integration.py"
       - "tests/market_selection/test_external_event_evidence.py"
       - "tests/market_selection/test_fundamental_onchain_contract.py"
@@ -70,6 +71,8 @@ jobs:
           python-version: "3.12"
       - name: Test primary report E2E contract
         run: python -m unittest discover -s tests/market_selection -p "test_research_report.py" -v
+      - name: Test combined research pipeline E2E
+        run: python -m unittest discover -s tests/market_selection -p "test_research_pipeline_e2e.py" -v
       - name: Test external event and fundamental evidence integration
         run: python -m unittest discover -s tests/market_selection -p "test_research_evidence_integration.py" -v
       - name: Test generic public RSS/Atom capture and promotion
