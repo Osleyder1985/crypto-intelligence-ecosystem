@@ -24,7 +24,7 @@ Completar un registro independiente para cada `source_id`, tanto para feeds como
 | Persistencia | Qué campos y bytes se guardan, por qué son necesarios y por cuánto tiempo |
 | Reproducción y distribución | No distribuir contenido fuente salvo que exista autorización documentada para ello |
 | Atribución | Formato de atribución y enlace de origen que acompañarán a cada registro |
-| Acceso automatizado | Endpoint oficial, agente identificable, límite de solicitudes, timeout, redirecciones permitidas y controles agregados entre procesos |
+| Acceso automatizado | Endpoint oficial, agente identificable, límite de solicitudes, timeout, redirecciones permitidas y controles agregados entre procesos y límites de topología |
 | Integridad | SHA-256, tamaño, fecha/hora UTC de captura, código HTTP y bytes originales cuando la retención esté autorizada |
 | Retirada/corrección | Cómo se registra una corrección, retirada, restricción nueva o solicitud de eliminación |
 | Responsable y evidencia | Identidad del responsable, fecha UTC, URL de política revisada, copia preservada de la política y SHA-256 |
@@ -36,7 +36,7 @@ No usar una casilla genérica de “términos revisados” como sustituto de las
 
 | `source_id` | Contenido/alcance | Observaciones para la revisión | Estado actual |
 |---|---|---|---|
-| `sec_press_releases` | Feed RSS actual | Confirmar el agente y el control agregado de solicitudes; el RSS no representa el archivo completo. Separar metadatos, texto oficial y HTML completo. | `TERMS_PENDING` |
+| `sec_press_releases` | Feed RSS actual | Confirmar el agente y el control agregado de solicitudes; documentar si todas las invocaciones compartirán el mismo ledger local. El RSS no representa el archivo completo. Separar metadatos, texto oficial y HTML completo. | `TERMS_PENDING` |
 | `sec_press_release_archive` | Índice histórico SEC | Limitar rutas al prefijo permitido; registrar cada página/segmento y no tratar recursos de terceros como contenido oficial. | `TERMS_PENDING` |
 | `cftc_general_press_releases` | Feed RSS actual | Verificar disponibilidad del endpoint antes de planificar captura; no asumir que el RSS está operativo. | `TERMS_PENDING` |
 | `cftc_press_release_archive` | Índice histórico CFTC | Capturar únicamente páginas oficiales dentro de la allowlist; excluir la sección de cobertura mediática del adaptador de comunicados. | `TERMS_PENDING` |
@@ -101,7 +101,7 @@ Las pruebas usan únicamente una decisión sintética marcada como fixture. No m
 1. La entrada del registro, el registro de autorización del proveedor y la evidencia de política deben coincidir en `source_id`, finalidad y alcance.
 2. La captura debe fallar cerrada antes de la red cuando el origen o cualquiera de los usos requeridos no esté aprobado.
 3. La allowlist de host y rutas debe ser específica para cada feed/archivo; validar también cada redirección.
-4. El control de frecuencia debe ser agregado entre procesos y máquinas. Un límite por invocación no es por sí solo un limitador global.
+4. El control de frecuencia debe ser agregado en la topología real de despliegue. La implementación actual coordina procesos del mismo usuario y host que comparten una base SQLite; no coordina varios hosts ni usuarios con bases distintas. Si la fuente se captura desde varios hosts, se debe aportar un coordinador compartido antes de activar ese despliegue. Un límite por invocación no es por sí solo un limitador agregado.
 5. El informe debe diferenciar `BLOCKED_BY_SOURCE_POLICY`, `UNAVAILABLE`, `PARTIAL_OR_FAILED` y una captura correcta sin entradas. Ninguno de estos estados permite afirmar que no ocurrió un evento.
 6. Solo después de documentar la decisión se podrá planificar una prueba real de alcance reducido. Preservar la solicitud, la respuesta, los hashes, las decisiones de identidad y la cobertura obtenida, sin afirmar exhaustividad más allá del alcance declarado.
 
