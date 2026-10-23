@@ -1,5 +1,5 @@
 """Pruebas sintéticas del limitador persistente de solicitudes."""
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import ProcessPoolExecutor
 import sqlite3
 import tempfile
 from pathlib import Path
@@ -9,6 +9,18 @@ from scripts.market_selection.shared_request_rate_limiter import (
     RateLimitCoordinationError,
     wait_for_rate_slot,
 )
+
+
+def _reserve_in_process(arguments):
+    database, _index = arguments
+    wait_for_rate_slot(
+        "synthetic_source",
+        20,
+        database,
+        sleep=lambda _delay: None,
+        clock=lambda: 500.0,
+    )
+    return True
 
 
 class SharedRequestRateLimiterTests(unittest.TestCase):
@@ -36,17 +48,9 @@ class SharedRequestRateLimiterTests(unittest.TestCase):
             database = Path(directory) / "rate.sqlite3"
             count = 12
 
-            def reserve(_):
-                wait_for_rate_slot(
-                    "synthetic_source",
-                    20,
-                    database,
-                    sleep=lambda _delay: None,
-                    clock=lambda: 500.0,
-                )
-
-            with ThreadPoolExecutor(max_workers=count) as executor:
-                list(executor.map(reserve, range(count)))
+            with ProcessPoolExecutor(max_workers=count) as executor:
+                results = list(executor.map(_reserve_in_process, [(str(database), index) for index in range(count)]))
+            self.assertEqual(results, [True] * count)
 
             with sqlite3.connect(database) as connection:
                 next_allowed = connection.execute(
