@@ -53,6 +53,8 @@ class SupportResistanceTests(unittest.TestCase):
         self.assertEqual(created[0]["pivot_open_time_ms"], 2 * 3_600_000)
         self.assertEqual(created[0]["event_time_ms"], 3 * 3_600_000 + 3_599_999)
         self.assertEqual(created[0]["available_from_ms"], 4 * 3_600_000)
+        pivot_event = next(e for e in result["events"] if e["event_type"] == "pivot_confirmed" and e["kind"] == "support")
+        self.assertEqual(pivot_event["segment_index"], 0)
 
     def test_future_candles_do_not_change_events_before_cutoff(self):
         base = [
