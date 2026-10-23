@@ -5,6 +5,7 @@ from scripts.market_selection.fundamental_onchain_contract import (
     METRIC_CATALOG,
     OBSERVATION_SCHEMA,
     adapt_defillama_protocol_tvl,
+    adapt_defillama_protocol_fee_metric,
     evaluate_observations,
     validate_observation,
 )
@@ -399,6 +400,63 @@ class FundamentalOnchainContractTests(unittest.TestCase):
                 asset_category="defi_protocol_token",
                 asset_stable_id="ethereum:0xabc",
                 captured_at="2026-10-22T10:00:00Z",
+                mapping_evidence_url="https://example.org/token-protocol-relationship",
+            )
+
+    def test_defillama_adapter_normalizes_fees_and_revenue_as_distinct_metrics(self):
+        payload = {
+            "name": "Example",
+            "methodologyURL": "https://example.org/fees-methodology",
+            "totalDataChart": [[1792368000, 120.5], [1792454400, 130.0]],
+        }
+        fees = adapt_defillama_protocol_fee_metric(
+            payload, metric_id="protocol.fees", protocol_slug="example-protocol",
+            asset_category="defi_protocol_token", asset_stable_id="ethereum:0xabc",
+            captured_at="2026-10-20T10:00:00Z",
+            mapping_evidence_url="https://example.org/token-protocol-relationship",
+        )
+        revenue = adapt_defillama_protocol_fee_metric(
+            payload, metric_id="protocol.revenue", protocol_slug="example-protocol",
+            asset_category="defi_protocol_token", asset_stable_id="ethereum:0xabc",
+            captured_at="2026-10-20T10:00:00Z",
+            mapping_evidence_url="https://example.org/token-protocol-relationship",
+        )
+        self.assertEqual([row["metric_id"] for row in fees], ["protocol.fees", "protocol.fees"])
+        self.assertEqual([row["metric_id"] for row in revenue], ["protocol.revenue", "protocol.revenue"])
+        self.assertIn("dataType=dailyFees", fees[0]["source"]["url"])
+        self.assertIn("dataType=dailyRevenue", revenue[0]["source"]["url"])
+        self.assertIn("Gross user fees", fees[0]["quality_notes"])
+        self.assertIn("not interchangeable", revenue[0]["quality_notes"])
+        self.assertEqual(validate_observation(fees[0])["value"], 120.5)
+        self.assertEqual(validate_observation(revenue[0])["value"], 120.5)
+
+    def test_defillama_fee_metric_rejects_wrong_asset_category(self):
+        with self.assertRaisesRegex(ValueError, "cannot be attributed"):
+            adapt_defillama_protocol_fee_metric(
+                {"totalDataChart": [[1792368000, 120.5]]},
+                metric_id="protocol.revenue", protocol_slug="example-protocol",
+                asset_category="native_l1", asset_stable_id="ethereum:0xabc",
+                captured_at="2026-10-20T10:00:00Z",
+                mapping_evidence_url="https://example.org/token-protocol-relationship",
+            )
+
+    def test_defillama_fee_metric_rejects_future_samples(self):
+        with self.assertRaisesRegex(ValueError, "cannot be after capture time"):
+            adapt_defillama_protocol_fee_metric(
+                {"totalDataChart": [[1792540800, 120.5]]},
+                metric_id="protocol.fees", protocol_slug="example-protocol",
+                asset_category="defi_protocol_token", asset_stable_id="ethereum:0xabc",
+                captured_at="2026-10-20T10:00:00Z",
+                mapping_evidence_url="https://example.org/token-protocol-relationship",
+            )
+
+    def test_defillama_fee_metric_rejects_conflicting_duplicate_timestamps(self):
+        with self.assertRaisesRegex(ValueError, "conflicting DefiLlama fees/revenue values"):
+            adapt_defillama_protocol_fee_metric(
+                {"totalDataChart": [[1792368000, 100.0], [1792368000, 101.0]]},
+                metric_id="protocol.fees", protocol_slug="example-protocol",
+                asset_category="defi_protocol_token", asset_stable_id="ethereum:0xabc",
+                captured_at="2026-10-20T10:00:00Z",
                 mapping_evidence_url="https://example.org/token-protocol-relationship",
             )
 
