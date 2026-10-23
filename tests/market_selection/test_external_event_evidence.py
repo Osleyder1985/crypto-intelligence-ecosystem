@@ -84,7 +84,11 @@ class ExternalEventEvidenceTests(unittest.TestCase):
 
     def test_same_url_with_changed_publication_time_requires_review(self):
         first = event()
-        revised = event(event_id="event-revised", published_at="2026-10-22T10:02:00Z")
+        revised = event(
+            event_id="event-revised",
+            published_at="2026-10-22T10:02:00Z",
+            captured_at="2026-10-22T10:03:00Z",
+        )
         result = deduplicate_events([first, revised])
         self.assertEqual(result["unique_count"], 1)
         self.assertTrue(result["duplicates"][0]["conflict"])
