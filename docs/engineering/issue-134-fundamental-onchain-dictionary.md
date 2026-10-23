@@ -85,6 +85,8 @@ Cada observación usa `crypto-fundamental-observation-v1` y contiene:
 - `source.source_id`, `source.source_type`, `source.url`, `source.methodology_url`, `source.terms_status`.
 - `period_start`, `period_end`, `block_height` cuando correspondan, además de notas de calidad y metadata específica del adaptador.
 
+El validador normaliza los límites del periodo a UTC, rechaza intervalos con inicio posterior al fin y exige que `block_height` sea un entero no negativo o `null`. `metadata` debe ser un objeto y `quality_notes` una cadena: los campos malformados se rechazan en vez de descartarse silenciosamente.
+
 ## 6. Limitaciones pendientes
 
 La base inicial implementa el catálogo versionado, validación offline y pruebas sintéticas. Los PR [#161](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/pull/161), [#162](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/pull/162) y [#163](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/pull/163) ya reforzaron el flujo integrado: los conflictos explícitos prevalecen sobre observaciones válidas aisladas; cada observación fundamental pasa por la puerta de autorización para `internal_analysis` y `persistent_storage`; y `source_id` debe vincularse al `provider_id` y al host/ruta HTTPS registrados. Las evaluaciones de uso quedan incluidas en el informe E2E.
