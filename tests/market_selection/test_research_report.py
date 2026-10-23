@@ -28,6 +28,7 @@ def candle(index, open_price, high, low, close, *, closed=True, quote_volume="10
         "trade_count": 10,
         "closed_at_capture": closed,
         "eligible_for_closed_candle_analysis": closed,
+        "captured_at_utc": "2026-10-22T00:00:00Z",
     }
 
 
@@ -269,6 +270,11 @@ class ResearchReportTests(unittest.TestCase):
         self.assertEqual(report["source_artifact"]["historical_coverage"]["requested_candle_count"], len(self.source["candles"]))
         self.assertEqual(report["source_artifact"]["historical_coverage"]["coverage_ratio"], 1.0)
         self.assertEqual(report["source_artifact"]["historical_coverage"]["missing_open_time_ms"], [])
+        freshness = report["source_artifact"]["freshness_observation"]
+        self.assertEqual(freshness["status"], "MEASURED")
+        self.assertGreater(freshness["age_ms_at_capture"], 0)
+        self.assertEqual(freshness["freshness_policy_status"], "NOT_APPROVED")
+        self.assertEqual(freshness["freshness_conclusion"], "NOT_ASSESSED")
         self.assertIn("risk_profile", report["descriptive_analyses"])
         self.assertIn("movement_events", report["descriptive_analyses"])
         self.assertIn("support_resistance", report["descriptive_analyses"])
@@ -316,6 +322,17 @@ class ResearchReportTests(unittest.TestCase):
     def test_mismatched_asset_identity_fails_closed(self):
         with self.assertRaisesRegex(ValueError, "canonical asset identity evidence conflicts"):
             build_research_report(self.source, config(), "ETH")
+
+    def test_freshness_is_indeterminate_when_no_closed_candle_is_eligible(self):
+        rows = [candle(index, 100 + index, 102 + index, 99 + index, 101 + index, closed=False)
+                for index in range(6)]
+        source = artifact(rows)
+        report = build_research_report(source, config(), "BTC")
+        freshness = report["source_artifact"]["freshness_observation"]
+        self.assertEqual(freshness["status"], "INDETERMINATE")
+        self.assertEqual(freshness["reason_code"], "NO_CLOSED_CANDLE_ELIGIBLE_AT_CAPTURE")
+        self.assertEqual(freshness["freshness_conclusion"], "NOT_ASSESSED")
+        self.assertIsNone(freshness["age_ms_at_capture"])
 
     def test_partial_capture_is_not_reported_complete(self):
         source = artifact(self.source["candles"], overall_status="PARTIAL")
