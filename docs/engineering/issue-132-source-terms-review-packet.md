@@ -289,3 +289,45 @@ Esta actualización registra únicamente lo que muestran las páginas oficiales 
 3. La revisión del propietario autoriza preparar y verificar el flujo de trabajo; no representa una aprobación del proveedor, una licencia de terceros ni una opinión legal.
 4. Los seis source_id permanecen TERMS_PENDING; no se ha modificado el registro operativo ni se ha ejecutado captura externa o backfill.
 5. Antes de un E2E real se debe preservar evidencia verificable de las páginas de política consultadas, calcular sus hashes sobre los bytes realmente preservados, completar las decisiones de uso/contenido/retención/atribución/acceso por source_id y verificar la disponibilidad actual del endpoint. No declarar exhaustividad histórica sin manifiesto de segmentos y cobertura.
+
+
+## 15. Verificación de disponibilidad y alcance visible de los endpoints oficiales — 2026-10-23
+
+Esta revisión consultó páginas públicas oficiales mediante navegación para comprobar los enlaces publicados, el estado comunicado y el alcance visible. **No equivale a una captura del adaptador del proyecto, no preserva una copia de respuesta para el registro técnico y no autoriza cambiar el estado operativo.** Los seis orígenes siguen `TERMS_PENDING`.
+
+### SEC — feed anunciado oficialmente
+
+- El índice oficial de RSS de SEC enumera los comunicados como uno de los feeds de materiales recientes y fue actualizado el 24 de junio de 2026: https://www.sec.gov/about/rss-feeds
+- El enlace oficial de comunicados apunta a `https://www.sec.gov/news/pressreleases.rss`. El navegador de consulta no pudo representar el tipo MIME RSS (`application/rss+xml`); esto **no** demuestra que el feed esté caído ni sustituye una prueba de disponibilidad del adaptador.
+- El archivo oficial de comunicados se publica por separado en https://www.sec.gov/newsroom/press-releases. El feed actual y el archivo histórico son coberturas distintas; no se puede inferir cobertura histórica completa desde el feed.
+- Decisión pendiente: confirmar endpoint y acceso automatizado aplicables, agente identificable, control agregado de solicitudes, contenido de terceros, alcance de persistencia y regla de retención antes de cualquier ejecución real.
+
+### CFTC — RSS no disponible, archivo HTML con publicaciones actuales
+
+- La página oficial RSS mantiene el aviso: en octubre de 2026 todos los feeds RSS enumerados están temporalmente deshabilitados y se reactivarán más adelante: https://www.cftc.gov/RSS/index.htm
+- La página oficial del archivo HTML sí muestra entradas recientes, incluida una publicación del 21 de octubre de 2026, y ofrece filtros por palabras clave, tipo, número de comunicado, etiqueta y año: https://www.cftc.gov/PressRoom/PressReleases
+- La lista visible en la página consultada no prueba por sí sola cobertura histórica exhaustiva; los segmentos/años y los resultados de filtros deben inventariarse explícitamente. No usar el RSS deshabilitado ni intentar sortear su indisponibilidad.
+- La disponibilidad visible del archivo no concede permiso automático para captura automatizada o persistencia. La entrada `cftc_press_release_archive` necesita una revisión independiente de rutas, páginas/segmentos, frecuencia, contenido guardado y retención.
+
+### Federal Reserve Board — feed oficial y archivo por años
+
+- El índice oficial de feeds enumera un feed de todos los comunicados y feeds por categorías: https://www.federalreserve.gov/feeds/feeds.htm
+- El enlace oficial “All Press Releases” apunta a `https://www.federalreserve.gov/feeds/press_all.xml`. El navegador de consulta no pudo representar el tipo MIME XML (`text/xml`); esto no demuestra indisponibilidad. La disponibilidad real debe verificarse mediante una ejecución controlada únicamente después de completar las autorizaciones requeridas.
+- El archivo oficial muestra enlaces por año desde 2006 y un enlace adicional “Archive”; la página indica que los comunicados anteriores a 2006 se encuentran en el archivo: https://www.federalreserve.gov/newsevents/pressreleases.htm
+- Por tanto, el manifiesto histórico debe representar separadamente los segmentos anuales disponibles y el archivo anterior a 2006. La página principal no constituye por sí sola evidencia de que todos los comunicados históricos estén capturados.
+- Decisión pendiente: distinguir el feed actual del archivo, delimitar los segmentos, documentar acceso automatizado, contenido de terceros, persistencia y retención.
+
+### Consecuencias para la matriz
+
+| `source_id` | Hallazgo actual | Siguiente evidencia necesaria | Estado |
+|---|---|---|---|
+| `sec_press_releases` | Feed anunciado por la SEC; el navegador no representó el MIME RSS | Política preservada con hash y validación autorizada del endpoint/adaptador | `TERMS_PENDING` |
+| `sec_press_release_archive` | Archivo oficial separado del feed | Decisión de acceso/persistencia y manifiesto de segmentos | `TERMS_PENDING` |
+| `cftc_general_press_releases` | RSS oficialmente deshabilitado temporalmente | Revalidar el aviso antes de cualquier posible activación; no solicitar el feed mientras esté deshabilitado | `TERMS_PENDING` |
+| `cftc_press_release_archive` | Índice HTML oficial muestra publicaciones recientes y filtros | Revisión de alcance por segmento, acceso automatizado, persistencia y retención | `TERMS_PENDING` |
+| `federal_reserve_press_releases` | Feed oficial listado; navegador no representó el MIME XML | Política preservada con hash y validación autorizada del endpoint/adaptador | `TERMS_PENDING` |
+| `federal_reserve_press_release_archive` | Archivo oficial enlaza segmentos anuales y archivo anterior a 2006 | Manifiesto de cobertura por año/segmento y decisión de persistencia | `TERMS_PENDING` |
+
+### Límite de esta revisión
+
+No se cambió `event_source_registry.py`, no se habilitó ninguna fuente, no se ejecutó el adaptador de captura, no se persistieron artículos y no se generó un backfill. Las páginas consultadas son evidencia de descubrimiento y alcance visible; antes de aprobar un origen se deben preservar los bytes reales de las políticas pertinentes, calcular el hash sobre esos bytes, completar la decisión individual y verificar el endpoint bajo el control de acceso aprobado.
