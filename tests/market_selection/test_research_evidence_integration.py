@@ -1339,5 +1339,46 @@ class ResearchEvidenceIntegrationTests(unittest.TestCase):
 
 
 
+    def test_episode_aggregate_reports_supported_causality_only_with_reviewed_evidence(self):
+        event_record = event()
+        event_record["metadata"]["fact_review"] = fact_review_for(event_record)
+        event_record["metadata"]["causal_review"] = causal_review_for(event_record)
+        research_report = report()
+        research_report["descriptive_analyses"] = {
+            "movement_episodes": {
+                "episodes": [{
+                    "episode_id": "episode-1",
+                    "direction": "BULLISH",
+                    "classification": "OBSERVED",
+                    "segment_index": 0,
+                    "start": {"pivot_open_time_ms": 1792486800000},
+                    "end": {"pivot_open_time_ms": 1792494000000},
+                    "episode_observable_only_at_ms": 1792495800000,
+                }]
+            }
+        }
+        with patch.dict(EVENT_SOURCE_REGISTRY["sources"], {"sec_press_releases": approved_event_source()}):
+            enriched = enrich_research_report(
+                research_report,
+                events=[{
+                    "event": event_record,
+                    "target_entity": {"id_type": "coingecko_id", "id": "example-asset"},
+                    "movement_episode_id": "episode-1",
+                }],
+                observations=[], methodology=methodology(),
+                asset={"stable_id": "example-asset", "category": "smart_contract_token"},
+                evaluation_as_of="2026-10-21T00:00:00Z",
+            )
+        self.assertEqual(
+            enriched["event_causal_assessment"]["episode_assessments"][0]["status"],
+            "SUPPORTED_CAUSALITY_REVIEWED",
+        )
+        self.assertEqual(
+            enriched["external_event_evidence"]["assessments"][0]["causal_review"]["effective_decision"],
+            "SUPPORTED_CAUSALITY",
+        )
+
+
+
 if __name__ == "__main__":
     unittest.main()
