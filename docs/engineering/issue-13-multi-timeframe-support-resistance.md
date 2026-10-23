@@ -28,3 +28,8 @@ python -m scripts.market_selection.analyze_multi_timeframe_support_resistance \
 ## Límites
 
 Este módulo organiza resultados independientes; no calcula todavía confluencia entre temporalidades ni un score de fortaleza combinado. Las zonas describen estructura OHLCV y no demuestran órdenes resting, reacción futura ni recomendación de inversión. Las entradas pueden cubrir ventanas diferentes, por lo que el informe debe comparar sus coberturas antes de interpretar diferencias.
+
+
+## Confluencia opcional entre temporalidades
+
+El parámetro opcional `confluence_tolerance_bps` permite agrupar zonas del mismo tipo entre temporalidades distintas cuando sus precios centrales están dentro de esa tolerancia explícita. No se aplica un umbral por defecto. Cada grupo conserva las referencias de zonas, temporalidades y rangos de precios observados; no calcula una puntuación de fortaleza ni afirma que el nivel vaya a reaccionar. Si no se suministra la tolerancia, la salida conserva `cross_timeframe_confluence=NOT_COMPUTED`.
