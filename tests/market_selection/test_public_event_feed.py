@@ -11,6 +11,9 @@ from scripts.market_selection.capture_public_event_feed import (
 )
 from scripts.market_selection.event_source_registry import EVENT_SOURCE_REGISTRY
 from scripts.market_selection.provider_license_gate import SCHEMA_VERSION as AUTH_SCHEMA_VERSION
+from scripts.market_selection.capture_public_event_feed import promote_public_feed_candidate_to_event
+from scripts.market_selection.research_evidence_integration import _verify_promoted_public_feed_event
+from scripts.market_selection.event_source_registry import source_entry_sha256
 
 
 TERMS = b"Synthetic reviewed source terms fixture"
@@ -129,6 +132,73 @@ class PublicEventFeedCaptureTests(unittest.TestCase):
         self.assertEqual(result["feed_items"][0]["asset_identity_status"], "NOT_RESOLVED")
         self.assertFalse(result["events_promoted"])
         self.assertFalse(result["orders_submitted"])
+
+    def test_promotes_candidate_only_with_explicit_reviewed_stable_entity_mapping(self):
+        entry = approved_source()
+        with patch.dict(EVENT_SOURCE_REGISTRY["sources"], {"cftc_general_press_releases": entry}), patch(
+            "scripts.market_selection.capture_public_event_feed.urlopen",
+            return_value=FakeResponse(feed_xml()),
+        ):
+            capture = capture_public_event_feed(
+                "cftc_general_press_releases",
+                authorization_record=authorization_record(entry),
+                user_agent=USER_AGENT,
+                captured_at=self.captured_at,
+            )
+        evidence = b'{"asset":"example-asset","mapping":"reviewed"}'
+        resolution = {
+            "status": "APPROVED",
+            "reviewed_by": "offline-reviewer",
+            "reviewed_at": "2026-10-22T12:20:00Z",
+            "entities": [{"id_type": "coingecko_id", "id": "example-asset"}],
+            "evidence_record_base64": base64.b64encode(evidence).decode("ascii"),
+            "evidence_record_sha256": hashlib.sha256(evidence).hexdigest(),
+        }
+        with patch.dict(EVENT_SOURCE_REGISTRY["sources"], {"cftc_general_press_releases": entry}):
+            event = promote_public_feed_candidate_to_event(
+                capture,
+                capture["feed_items"][0]["candidate_id"],
+                "REGULATORY_ENFORCEMENT",
+                "The preserved feed summary reports a regulatory announcement.",
+                resolution,
+            )
+        self.assertEqual(event["source_id"], "cftc_general_press_releases")
+        self.assertEqual(event["entities"], [{"id_type": "coingecko_id", "id": "example-asset"}])
+        self.assertFalse(event["causality_claimed"])
+        self.assertFalse(event["orders_submitted"])
+        self.assertEqual(event["metadata"]["causality_status"], "NOT_ASSESSED")
+        _verify_promoted_public_feed_event(event, entry, source_entry_sha256(entry))
+
+    def test_promotion_rejects_ticker_only_entity_mapping(self):
+        entry = approved_source()
+        with patch.dict(EVENT_SOURCE_REGISTRY["sources"], {"cftc_general_press_releases": entry}), patch(
+            "scripts.market_selection.capture_public_event_feed.urlopen",
+            return_value=FakeResponse(feed_xml()),
+        ):
+            capture = capture_public_event_feed(
+                "cftc_general_press_releases",
+                authorization_record=authorization_record(entry),
+                user_agent=USER_AGENT,
+                captured_at=self.captured_at,
+            )
+        evidence = b'{"ticker":"BTC"}'
+        resolution = {
+            "status": "APPROVED",
+            "reviewed_by": "offline-reviewer",
+            "reviewed_at": "2026-10-22T12:20:00Z",
+            "entities": [{"id_type": "ticker", "id": "BTC"}],
+            "evidence_record_base64": base64.b64encode(evidence).decode("ascii"),
+            "evidence_record_sha256": hashlib.sha256(evidence).hexdigest(),
+        }
+        with patch.dict(EVENT_SOURCE_REGISTRY["sources"], {"cftc_general_press_releases": entry}):
+            with self.assertRaisesRegex(ValueError, "stable identifier"):
+                promote_public_feed_candidate_to_event(
+                    capture,
+                    capture["feed_items"][0]["candidate_id"],
+                    "REGULATORY_ENFORCEMENT",
+                    "Explicit claim from the preserved feed.",
+                    resolution,
+                )
 
     def test_future_publication_timestamp_is_flagged_against_capture_cutoff(self):
         entry = approved_source()

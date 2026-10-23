@@ -22,6 +22,7 @@ from scripts.market_selection.methodology_contract import validate_methodology
 from scripts.market_selection.provider_license_gate import evaluate_artifact_use, evaluate_provider_use
 from scripts.market_selection.event_source_registry import get_source, source_entry_sha256, source_is_approved
 from scripts.market_selection.capture_sec_press_releases_rss import parse_sec_press_releases_rss
+from scripts.market_selection.capture_public_event_feed import _parse_feed as _parse_public_feed
 
 REPORT_SCHEMA = "crypto-asset-research-report-v2"
 BUNDLE_SCHEMA = "crypto-research-evidence-bundle-v1"
@@ -281,6 +282,66 @@ def _verify_promoted_sec_event(event_record: dict, source_entry: dict, registry_
         raise PermissionError("event evidence must not claim causality")
 
 
+def _verify_promoted_public_feed_event(event_record: dict, source_entry: dict, registry_hash: str) -> None:
+    captures = _object(event_record.get("source_capture_assessments"), "event.source_capture_assessments")
+    feed_capture = _object(captures.get("feed"), "event.source_capture_assessments.feed")
+    event_source = _object(event_record.get("source"), "event.source")
+    event_url = event_source.get("url")
+    feed_raw = _verify_source_capture(
+        feed_capture,
+        field="event.feed_capture",
+        source_entry=source_entry,
+        registry_hash=registry_hash,
+        expected_requested_url=source_entry["source_url"],
+    )
+    if feed_capture.get("captured_at") != event_record.get("captured_at"):
+        raise PermissionError("event captured_at does not match generic feed capture time")
+    metadata = _object(event_record.get("metadata"), "event.metadata")
+    if metadata.get("feed_raw_response_sha256") != feed_capture.get("raw_response_sha256"):
+        raise PermissionError("event feed response hash does not match preserved capture")
+    try:
+        parsed_items, _, _ = _parse_public_feed(feed_raw, source_entry)
+    except (ET.ParseError, ValueError) as exc:
+        raise PermissionError("event feed capture is not valid RSS/Atom") from exc
+    candidate_id = metadata.get("feed_candidate_id")
+    matched = next((item for item in parsed_items if item.get("candidate_id") == candidate_id), None)
+    if matched is None:
+        raise PermissionError("event candidate is not present in preserved feed bytes")
+    item_record = _object(metadata.get("feed_item_record"), "event.metadata.feed_item_record")
+    for key in ("candidate_id", "title", "url", "guid", "published_at", "publication_time_status", "item_xml_sha256"):
+        if item_record.get(key) != matched.get(key):
+            raise PermissionError(f"event feed item metadata mismatch: {key}")
+    if (
+        event_record.get("title") != matched.get("title")
+        or event_record.get("published_at") != matched.get("published_at")
+        or event_url != matched.get("url")
+        or event_record.get("content_sha256") != matched.get("item_xml_sha256")
+    ):
+        raise PermissionError("event title, URL, publication time or item hash is not grounded in captured feed")
+    if matched.get("url_status") != "ALLOWLISTED_SOURCE_HOST" or matched.get("publication_time_status") != "PARSED":
+        raise PermissionError("event candidate did not pass URL and publication-time eligibility")
+    mapping_b64 = metadata.get("entity_resolution_evidence_record_base64")
+    mapping_hash = metadata.get("entity_resolution_evidence_record_sha256")
+    if not isinstance(mapping_b64, str) or not isinstance(mapping_hash, str) or not _SHA256_RE.fullmatch(mapping_hash):
+        raise PermissionError("reviewed entity-mapping evidence is missing")
+    try:
+        mapping_raw = base64.b64decode(mapping_b64, validate=True)
+    except (ValueError, base64.binascii.Error) as exc:
+        raise PermissionError("reviewed entity-mapping evidence base64 is invalid") from exc
+    if hashlib.sha256(mapping_raw).hexdigest() != mapping_hash:
+        raise PermissionError("reviewed entity-mapping evidence SHA-256 mismatch")
+    reviewer = metadata.get("entity_resolution_reviewed_by")
+    reviewed_at = metadata.get("entity_resolution_reviewed_at")
+    if not isinstance(reviewer, str) or not reviewer.strip():
+        raise PermissionError("reviewed entity-mapping reviewer is missing")
+    try:
+        parse_timestamp(reviewed_at, "entity_resolution_reviewed_at")
+    except ValueError as exc:
+        raise PermissionError("reviewed entity-mapping timestamp is invalid") from exc
+    if metadata.get("causality_status") != "NOT_ASSESSED" or event_record.get("causality_claimed") is not False:
+        raise PermissionError("generic feed event must not claim causality")
+
+
 def enrich_research_report(
     report: dict,
     *,
@@ -360,6 +421,10 @@ def enrich_research_report(
             raise PermissionError(f"event source registry evidence is missing or stale at events[{index}]")
         if source_id == "sec_press_releases":
             _verify_promoted_sec_event(event_record, source_entry, registry_hash)
+        elif event_record.get("capture_method") == "public_event_feed_rss_atom_v1":
+            _verify_promoted_public_feed_event(event_record, source_entry, registry_hash)
+        else:
+            raise PermissionError(f"generic event source requires verified feed-capture evidence at events[{index}]")
         event_source = _object(event_record.get("source"), f"events[{index}].event.source")
         source_url = event_source.get("url")
         parsed_source_url = urlsplit(source_url) if isinstance(source_url, str) else None

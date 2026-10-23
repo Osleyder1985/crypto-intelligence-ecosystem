@@ -12,6 +12,7 @@ from datetime import datetime, timezone
 from email.utils import parsedate_to_datetime
 import hashlib
 import json
+import re
 from pathlib import Path
 import threading
 import time
@@ -24,10 +25,16 @@ from typing import Any
 from scripts.market_selection.event_source_registry import (
     get_source,
     source_entry_sha256,
+    source_is_approved,
 )
-from scripts.market_selection.external_event_evidence import parse_timestamp
+from scripts.market_selection.external_event_evidence import (
+    INPUT_SCHEMA as EVENT_SCHEMA,
+    parse_timestamp,
+    validate_event,
+)
 from scripts.market_selection.provider_license_gate import (
     ASSESSMENT_SCHEMA_VERSION,
+    evaluate_artifact_use,
     evaluate_provider_use,
 )
 
@@ -253,6 +260,7 @@ def _blocked_result(
         "source_registry_status": source["status"],
         "source_registry_entry_sha256": registry_hash,
         "source_url": source["source_url"],
+        "requested_url": source["source_url"],
         "captured_at": captured_at,
         "capture_status": "BLOCKED",
         "network_request_made": False,
@@ -266,6 +274,8 @@ def _blocked_result(
         "raw_response_base64": None,
         "capture_truncated": False,
         "provider_policy_assessments": assessments,
+        "provider_use_assessment": assessments[0],
+        "persistent_storage_assessment": assessments[1],
         "reason_codes": blockers,
         "feed_items": [],
         "feed_item_count": 0,
@@ -339,6 +349,7 @@ def capture_public_event_feed(
             "source_registry_status": source["status"],
             "source_registry_entry_sha256": registry_hash,
             "source_url": source["source_url"],
+            "requested_url": source["source_url"],
             "captured_at": captured,
             "capture_status": "NETWORK_ERROR",
             "network_request_made": True,
@@ -352,6 +363,8 @@ def capture_public_event_feed(
             "raw_response_base64": "",
             "capture_truncated": False,
             "provider_policy_assessments": assessments,
+            "provider_use_assessment": assessments[0],
+            "persistent_storage_assessment": assessments[1],
             "reason_codes": ["NETWORK_REQUEST_FAILED"],
             "feed_items": [],
             "feed_item_count": 0,
@@ -393,6 +406,7 @@ def capture_public_event_feed(
         "source_registry_status": source["status"],
         "source_registry_entry_sha256": registry_hash,
         "source_url": source["source_url"],
+        "requested_url": source["source_url"],
         "publisher": source["display_name"],
         "source_type": source["source_type"],
         "coverage_scope": source["coverage_scope"],
@@ -406,6 +420,8 @@ def capture_public_event_feed(
         "raw_response_base64": base64.b64encode(raw).decode("ascii"),
         "capture_truncated": read_error is not None,
         "provider_policy_assessments": assessments,
+        "provider_use_assessment": assessments[0],
+        "persistent_storage_assessment": assessments[1],
         "reason_codes": reason_codes,
         "feed_items": items,
         "feed_item_count": feed_item_count,
@@ -417,6 +433,164 @@ def capture_public_event_feed(
         "orders_submitted": False,
         "network_requests_made": True,
     }
+
+
+def promote_public_feed_candidate_to_event(
+    feed_capture: dict,
+    candidate_id: str,
+    event_type: str,
+    claim: str,
+    entity_resolution: dict,
+) -> dict:
+    """Promote a feed candidate only with explicit reviewed stable-entity mapping.
+
+    The article link is evidence metadata only; this function does not fetch it.
+    """
+    if not isinstance(feed_capture, dict) or feed_capture.get("schema_version") != FEED_CAPTURE_SCHEMA:
+        raise ValueError("feed_capture has an invalid schema")
+    source_id = feed_capture.get("source_id")
+    if not isinstance(source_id, str) or not source_id.strip():
+        raise ValueError("feed_capture.source_id is required")
+    source = get_source(source_id)
+    if not source_is_approved(source):
+        raise PermissionError("source registry is not approved")
+    if feed_capture.get("capture_status") != "PASS" or feed_capture.get("capture_truncated") is not False:
+        raise PermissionError("feed capture must be a complete PASS capture")
+    if feed_capture.get("network_request_made") is not True:
+        raise PermissionError("feed capture must prove a network request")
+    current_registry_hash = source_entry_sha256(source)
+    if (
+        feed_capture.get("source_registry_status") != "APPROVED"
+        or feed_capture.get("source_registry_entry_sha256") != current_registry_hash
+    ):
+        raise PermissionError("source registry evidence is missing or stale")
+    if feed_capture.get("source_url") != source["source_url"]:
+        raise PermissionError("feed capture source URL does not match the source registry")
+    for use_case in ("internal_analysis", "persistent_storage"):
+        if evaluate_artifact_use(feed_capture, use_case)["decision"] != "ALLOW":
+            raise PermissionError(f"feed capture does not authorize {use_case}")
+    raw_b64 = feed_capture.get("raw_response_base64")
+    if not isinstance(raw_b64, str):
+        raise PermissionError("feed capture raw response is missing")
+    try:
+        raw = base64.b64decode(raw_b64, validate=True)
+    except (ValueError, base64.binascii.Error) as exc:
+        raise PermissionError("feed capture raw response base64 is invalid") from exc
+    if hashlib.sha256(raw).hexdigest() != feed_capture.get("raw_response_sha256"):
+        raise PermissionError("feed capture raw response hash mismatch")
+    if len(raw) != feed_capture.get("raw_response_bytes"):
+        raise PermissionError("feed capture raw response byte count mismatch")
+
+    candidate = next(
+        (item for item in feed_capture.get("feed_items", []) if item.get("candidate_id") == candidate_id),
+        None,
+    )
+    if candidate is None:
+        raise ValueError("candidate_id was not present in feed_capture")
+    if candidate.get("url_status") != "ALLOWLISTED_SOURCE_HOST":
+        raise PermissionError("candidate URL is outside the source host allowlist")
+    if candidate.get("publication_time_status") != "PARSED" or not candidate.get("published_at"):
+        raise ValueError("candidate has no eligible publication timestamp")
+    published = parse_timestamp(candidate["published_at"], "candidate.published_at")
+    captured = parse_timestamp(feed_capture.get("captured_at"), "feed_capture.captured_at")
+    if published > captured:
+        raise ValueError("candidate publication timestamp is after the capture cutoff")
+    allowed_hosts = {host.casefold() for host in source.get("allowed_article_hosts", [])}
+    parts = urlsplit(candidate["url"])
+    if (
+        parts.scheme != "https"
+        or (parts.hostname or "").casefold() not in allowed_hosts
+        or parts.port not in (None, 443)
+        or parts.username is not None
+        or parts.password is not None
+    ):
+        raise PermissionError("candidate URL is outside the approved source host allowlist")
+
+    if not isinstance(entity_resolution, dict) or entity_resolution.get("status") != "APPROVED":
+        raise ValueError("entity_resolution.status APPROVED is required")
+    reviewer = entity_resolution.get("reviewed_by")
+    if not isinstance(reviewer, str) or not reviewer.strip():
+        raise ValueError("entity_resolution.reviewed_by is required")
+    reviewed_at = parse_timestamp(entity_resolution.get("reviewed_at"), "entity_resolution.reviewed_at")
+    entities = entity_resolution.get("entities")
+    if not isinstance(entities, list) or not entities:
+        raise ValueError("entity_resolution.entities must contain stable identifiers")
+    evidence_b64 = entity_resolution.get("evidence_record_base64")
+    evidence_hash = entity_resolution.get("evidence_record_sha256")
+    if not isinstance(evidence_b64, str) or not evidence_b64:
+        raise ValueError("entity_resolution.evidence_record_base64 is required")
+    if not isinstance(evidence_hash, str) or not re.fullmatch(r"[0-9a-fA-F]{64}", evidence_hash):
+        raise ValueError("entity_resolution.evidence_record_sha256 must be a SHA-256")
+    try:
+        evidence_bytes = base64.b64decode(evidence_b64, validate=True)
+    except (ValueError, base64.binascii.Error) as exc:
+        raise ValueError("entity_resolution.evidence_record_base64 is invalid") from exc
+    if hashlib.sha256(evidence_bytes).hexdigest() != evidence_hash.lower():
+        raise ValueError("entity-resolution evidence SHA-256 mismatch")
+    event_type_text = event_type.strip() if isinstance(event_type, str) else ""
+    claim_text = claim.strip() if isinstance(claim, str) else ""
+    if not event_type_text or not claim_text:
+        raise ValueError("event_type and claim must be explicit; the connector does not infer causality")
+
+    event_id = f"{source_id}:" + hashlib.sha256(candidate_id.encode("utf-8")).hexdigest()
+    event = {
+        "schema_version": EVENT_SCHEMA,
+        "event_id": event_id,
+        "title": candidate.get("title") or source["display_name"],
+        "event_type": event_type_text,
+        "source": {
+            "source_type": source["source_type"],
+            "url": candidate["url"],
+            "publisher": source["display_name"],
+        },
+        "published_at": candidate["published_at"],
+        "captured_at": feed_capture["captured_at"],
+        "entities": entities,
+        "evidence": [{"url": candidate["url"], "claim": claim_text}],
+        "capture_method": "public_event_feed_rss_atom_v1",
+        "content_sha256": candidate["item_xml_sha256"],
+        "license_notes": (
+            "Source registry and provider authorization allow internal_analysis and persistent_storage; "
+            f"registry_entry_sha256={current_registry_hash}. Feed metadata only; article body was not fetched. "
+            "Causality has not been assessed."
+        ),
+        "metadata": {
+            "source_id": source_id,
+            "feed_candidate_id": candidate_id,
+            "feed_raw_response_sha256": feed_capture["raw_response_sha256"],
+            "feed_item_record": candidate,
+            "entity_resolution_reviewed_by": reviewer.strip(),
+            "entity_resolution_reviewed_at": reviewed_at.isoformat().replace("+00:00", "Z"),
+            "entity_resolution_evidence_record_sha256": evidence_hash.lower(),
+            "entity_resolution_evidence_record_base64": evidence_b64,
+            "causality_status": "NOT_ASSESSED",
+        },
+    }
+    normalized = validate_event(event)
+    normalized.update({
+        "source_id": source_id,
+        "provider_id": source["provider_id"],
+        "source_registry_status": "APPROVED",
+        "source_registry_entry_sha256": current_registry_hash,
+        "provider_use_assessment": feed_capture["provider_use_assessment"],
+        "persistent_storage_assessment": feed_capture["persistent_storage_assessment"],
+        "provider_policy_assessments": feed_capture["provider_policy_assessments"],
+        "source_capture_assessments": {
+            "feed": {
+                key: feed_capture.get(key)
+                for key in (
+                    "capture_status", "network_request_made", "capture_truncated",
+                    "source_registry_status", "source_registry_entry_sha256", "source_url",
+                    "requested_url", "captured_at", "response_headers", "raw_response_bytes",
+                    "raw_response_sha256", "raw_response_base64", "provider_use_assessment",
+                    "persistent_storage_assessment", "provider_policy_assessments",
+                )
+            }
+        },
+        "orders_submitted": False,
+        "causality_claimed": False,
+    })
+    return normalized
 
 
 def main() -> int:
