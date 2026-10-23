@@ -148,6 +148,8 @@ def main() -> int:
             )
     
     except RateLimitCoordinationError:
+        if args.command not in {"capture-index", "capture-article"}:
+            raise
         result = {
             "schema_version": "crypto-public-event-capture-error-v1",
             "source_id": getattr(args, "source_id", None),
@@ -170,7 +172,7 @@ def main() -> int:
         "missing_pages": result.get("missing_pages", []),
         "reason_codes": result.get("reason_codes", []),
     }, ensure_ascii=False, indent=2))
-    return 0
+    return 2 if result.get("capture_status") == "BLOCKED_RATE_LIMIT_COORDINATION" else 0
 
 
 if __name__ == "__main__":
