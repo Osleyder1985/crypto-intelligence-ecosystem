@@ -16,6 +16,12 @@ class MultiTimeframeSupportResistanceTests(unittest.TestCase):
             candle(4, 8.5, 10, 8, 9.5),
         ])
         value["market"]["interval"] = interval
+        duration_ms = {"1h": 3_600_000, "4h": 14_400_000, "1d": 86_400_000}.get(interval)
+        if duration_ms is None:
+            raise ValueError("unsupported test interval")
+        for index, row in enumerate(value["candles"]):
+            row["open_time_ms"] = index * duration_ms
+            row["close_time_ms"] = (index + 1) * duration_ms - 1
         value["market"]["symbol_native"] = symbol
         value["market"]["exchange"] = exchange
         return value
