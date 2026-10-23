@@ -118,6 +118,26 @@ class EvaluationRecordTests(unittest.TestCase):
         self.assertFalse(result["scope_compatible"])
         self.assertEqual(result["attribution_status"], "INCOMPATIBLE_SCOPE")
 
+    def test_source_window_metadata_change_blocks_comparable_attribution(self):
+        old = self.build()
+        changed_window = manifest(
+            self.source,
+            generated_at_utc="2026-10-22T13:00:00Z",
+            source_artifacts=[{
+                "path": str(self.source),
+                "source": "binance",
+                "endpoint": "/api/v3/klines",
+                "window_start_utc": "2026-10-21T13:00:00Z",
+                "window_end_utc": "2026-10-22T13:00:00Z",
+                "quality_status": "PASS",
+            }],
+        )
+        new = build_evaluation_record(changed_window, self.archive, self.root / "records2")
+        result = compare_evaluation_records(old, new)
+        self.assertFalse(result["input_data_changed"])
+        self.assertTrue(result["source_metadata_changed"])
+        self.assertEqual(result["attribution_status"], "MIXED_OR_INCOMPATIBLE_CAUSES")
+
     def test_identical_inputs_with_changed_results_are_flagged(self):
         old = self.build()
         new = build_evaluation_record(manifest(self.source, generated_at_utc="2026-10-22T13:00:00Z",
