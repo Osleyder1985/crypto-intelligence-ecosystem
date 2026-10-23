@@ -433,29 +433,19 @@ class ResearchReportTests(unittest.TestCase):
         order_book = {
             "schema_version": "crypto-spot-order-book-snapshot-v1",
             "capture_status": "PASS",
-            "provider_use_assessment": {
-                "schema_version": ASSESSMENT_SCHEMA_VERSION,
-                "policy_version": POLICY_VERSION,
-                "provider_id": "binance_spot_market_data",
-                "use_case": "internal_analysis",
-                "decision": "ALLOW",
-                "reason_codes": ["SYNTHETIC_TEST_GATE_ONLY"],
-                "authorization": {
-                    "authorized_use_cases": ["internal_analysis"],
-                    "authorization_record_sha256": "b" * 64,
-                },
-            },
+            "provider_id": "binance_spot_market_data",
             "market": {"exchange": "binance", "symbol_native": "BTCUSDT", "quote_asset": "USDT"},
             "captured_at_utc": "2026-10-22T00:00:00Z",
             "bids": [["9.4", "10"], ["9.3", "20"]],
             "asks": [["9.6", "8"], ["9.7", "12"]],
         }
         with patch(
-            "scripts.market_selection.analyze_order_book_snapshot.evaluate_artifact_use",
+            "scripts.market_selection.analyze_order_book_snapshot.evaluate_provider_use",
             return_value={"decision": "ALLOW", "reason_codes": ["SYNTHETIC_TEST_GATE_ONLY"]},
         ):
             report = build_research_report(
                 self.source, config(), "BTC", self.raw, order_book_artifact=order_book,
+                order_book_authorization_registry={"binance_spot_market_data": {"trusted": True}},
             )
         book = report["descriptive_analyses"]["order_book"]
         self.assertEqual(book["status"], "DESCRIPTIVE_SNAPSHOT")
@@ -468,18 +458,7 @@ class ResearchReportTests(unittest.TestCase):
         order_book = {
             "schema_version": "crypto-spot-order-book-snapshot-v1",
             "capture_status": "PASS",
-            "provider_use_assessment": {
-                "schema_version": ASSESSMENT_SCHEMA_VERSION,
-                "policy_version": POLICY_VERSION,
-                "provider_id": "binance_spot_market_data",
-                "use_case": "internal_analysis",
-                "decision": "ALLOW",
-                "reason_codes": ["SYNTHETIC_TEST_GATE_ONLY"],
-                "authorization": {
-                    "authorized_use_cases": ["internal_analysis"],
-                    "authorization_record_sha256": "b" * 64,
-                },
-            },
+            "provider_id": "binance_spot_market_data",
             "market": {"exchange": "binance", "symbol_native": "ETHUSDT", "quote_asset": "USDT"},
             "captured_at_utc": "2026-10-22T00:00:00Z",
             "bids": [["9.4", "10"]],
