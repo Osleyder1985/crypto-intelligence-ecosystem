@@ -403,3 +403,27 @@ Esta decisión permite continuar la implementación y la validación técnica de
 - **Evidencia técnica pendiente:** preservar los bytes reales de las páginas de políticas revisadas, calcular sus SHA-256 sobre esos bytes, registrar metadatos de captura y actualizar el registro únicamente con evidencia verificable.
 
 La autorización del propietario no vuelve disponibles los endpoints ni elimina restricciones de terceros. No se ha ejecutado captura de feeds, descarga de artículos ni backfill como parte de esta revisión.
+
+## 18. Aclaración de alcance: autorización funcional completa del propietario — 2026-10-23
+
+Esta sección prevalece sobre cualquier redacción anterior del paquete que describa la decisión del propietario como limitada a preparar una revisión o que indique que el propietario no autorizó HTML completo o adjuntos. El propietario ha autorizado avanzar con las seis fuentes y ha indicado expresamente que no se le vuelva a preguntar por esa misma autorización.
+
+El alcance funcional autorizado para desarrollar y evaluar comprende:
+- metadatos y texto oficial;
+- HTML completo;
+- adjuntos y contenido de terceros, que deben identificarse y tratarse según las condiciones aplicables a cada recurso;
+- acceso automatizado y validación de disponibilidad;
+- almacenamiento, atribución, conservación y disposición de los datos;
+- análisis interno, ejecución E2E y backfill histórico;
+- integración de las seis fuentes al flujo de investigación de eventos del producto.
+
+Esta autorización es una decisión del propietario del proyecto y permite continuar con el trabajo técnico sin pedirle que repita la decisión. No se convierte en una licencia de terceros ni modifica por sí sola el estado técnico del registro. La implementación debe seguir las condiciones publicadas aplicables, identificar materiales de terceros y demostrar los controles de acceso, frecuencia, atribución y ciclo de vida de los datos.
+
+Por tanto:
+- no volver a solicitar al propietario autorización funcional para las seis fuentes ni para las modalidades enumeradas;
+- no confundir una autorización ya concedida con una evidencia técnica todavía pendiente;
+- no cambiar `TERMS_PENDING`, rellenar hashes ni registrar una revisión de políticas hasta que exista evidencia verificable para esos campos;
+- no consultar un endpoint anunciado como deshabilitado ni eludir controles de acceso;
+- avanzar en paralelo con preparación offline, adaptación de código, pruebas sintéticas y recopilación documental verificable; reservar las pruebas externas y el backfill para cuando la disponibilidad y las condiciones aplicables hayan sido comprobadas.
+
+Fuentes de la decisión del propietario: comentario registrado en el [Issue #132](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/issues/132) y aclaración de la conversación del 2026-10-23.
