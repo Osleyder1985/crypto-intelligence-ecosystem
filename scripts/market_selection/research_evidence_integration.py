@@ -952,7 +952,10 @@ def enrich_research_report(
                 elif not linked:
                     status = "NOT_ASSESSED_NO_EPISODE_LINKED_EVIDENCE"
                 elif any(
-                    item.get("entity_match") is True and item.get("causality_label") == "TEMPORAL_ASSOCIATION"
+                    item.get("entity_match") is True
+                    and item.get("causality_label") == "TEMPORAL_ASSOCIATION"
+                    and (item.get("fact_verification") or {}).get("effective_decision")
+                    in {"NOT_REVIEWED", "VERIFIED_PRIMARY_SOURCE"}
                     for item in linked
                 ):
                     status = "TEMPORAL_ASSOCIATION_ONLY"
