@@ -54,6 +54,30 @@ def approved_event_source():
         "reviewed_by": "offline-test-fixture",
         "reviewed_at": "2026-10-19T00:00:00Z",
         "allowed_use_cases": ["internal_analysis", "persistent_storage"],
+        "approval_scope": {
+            "allowed_content": {
+                "metadata": True,
+                "official_text": True,
+                "full_html": True,
+                "attachments": False,
+            },
+            "third_party_content": {"handling": "EXCLUDED"},
+            "retention": {
+                "stored_fields": ["source URL", "original response bytes", "SHA-256"],
+                "duration": "Synthetic fixture only; not a production retention policy",
+                "deletion_or_recheck_rule": "Re-review before any non-test use",
+            },
+            "attribution": {"required": True, "format": "Synthetic test fixture; source URL"},
+            "automated_access": {
+                "approved_endpoint": entry["source_url"],
+                "user_agent": "CryptoIntelligenceTest/1.0 (contact: offline-test-fixture)",
+                "max_aggregate_requests_per_second": entry["max_requests_per_second"],
+                "timeout_seconds": 5,
+                "redirect_policy": "HTTPS only; each redirect must remain inside the source allowlist",
+            },
+            "limitations": ["Synthetic approval fixture; grants no real-world permission"],
+            "decision_rationale": "Fixture solely for offline contract tests.",
+        },
     })
     return entry
 
