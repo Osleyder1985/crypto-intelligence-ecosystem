@@ -204,6 +204,71 @@ class ExternalEventEvidenceTests(unittest.TestCase):
         )
         self.assertEqual(result["causality_label"], "CAUSE_UNIDENTIFIED")
 
+    def test_configured_pre_movement_window_accepts_prior_publication_as_temporal_only(self):
+        value = event(
+            published_at="2026-10-22T09:45:00Z",
+            captured_at="2026-10-22T09:46:00Z",
+        )
+        result = assess_temporal_association(
+            value,
+            movement_start="2026-10-22T10:00:00Z",
+            movement_end="2026-10-22T11:00:00Z",
+            evaluation_as_of="2026-10-22T12:00:00Z",
+            target_entity={"id_type": "coingecko_id", "id": "example-coin"},
+            pre_movement_window_minutes=30,
+        )
+        self.assertEqual(result["status"], "TEMPORALLY_ELIGIBLE")
+        self.assertEqual(result["causality_label"], "TEMPORAL_ASSOCIATION")
+        self.assertFalse(result["causality_claimed"])
+        self.assertEqual(result["pre_movement_window_minutes"], 30)
+        self.assertEqual(result["association_window"]["start"], "2026-10-22T09:30:00Z")
+        self.assertIn("precedes movement start", result["reason"])
+
+    def test_publication_before_configured_pre_movement_window_is_not_associated(self):
+        value = event(
+            published_at="2026-10-22T09:29:00Z",
+            captured_at="2026-10-22T09:30:00Z",
+        )
+        result = assess_temporal_association(
+            value,
+            movement_start="2026-10-22T10:00:00Z",
+            movement_end="2026-10-22T11:00:00Z",
+            evaluation_as_of="2026-10-22T12:00:00Z",
+            target_entity={"id_type": "coingecko_id", "id": "example-coin"},
+            pre_movement_window_minutes=30,
+        )
+        self.assertEqual(result["status"], "OUTSIDE_MOVEMENT_WINDOW")
+        self.assertEqual(result["causality_label"], "CAUSE_UNIDENTIFIED")
+        self.assertFalse(result["causality_claimed"])
+
+    def test_pre_movement_window_defaults_to_zero_for_backward_compatibility(self):
+        value = event(
+            published_at="2026-10-22T09:45:00Z",
+            captured_at="2026-10-22T09:46:00Z",
+        )
+        result = assess_temporal_association(
+            value,
+            movement_start="2026-10-22T10:00:00Z",
+            movement_end="2026-10-22T11:00:00Z",
+            evaluation_as_of="2026-10-22T12:00:00Z",
+            target_entity={"id_type": "coingecko_id", "id": "example-coin"},
+        )
+        self.assertEqual(result["pre_movement_window_minutes"], 0)
+        self.assertEqual(result["status"], "OUTSIDE_MOVEMENT_WINDOW")
+
+    def test_rejects_invalid_pre_movement_window(self):
+        for invalid in (-1, True, 1.5, "30"):
+            with self.subTest(invalid=invalid):
+                with self.assertRaisesRegex(ValueError, "non-negative integer"):
+                    assess_temporal_association(
+                        event(),
+                        movement_start="2026-10-22T09:00:00Z",
+                        movement_end="2026-10-22T11:00:00Z",
+                        evaluation_as_of="2026-10-22T12:00:00Z",
+                        target_entity={"id_type": "coingecko_id", "id": "example-coin"},
+                        pre_movement_window_minutes=invalid,
+                    )
+
     def test_rejects_missing_evidence(self):
         value = event(evidence=[])
         with self.assertRaisesRegex(ValueError, "at least one evidence reference"):
