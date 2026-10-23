@@ -449,5 +449,26 @@ class PublicEventFeedCaptureTests(unittest.TestCase):
             source_entry_sha256(entry)
 
 
+    def test_non_finite_and_non_positive_timeouts_block_before_network(self):
+        entry = approved_source()
+        for timeout in (float("nan"), float("inf"), float("-inf"), 0, -1):
+            with self.subTest(timeout=timeout), patch.dict(
+                EVENT_SOURCE_REGISTRY["sources"], {"cftc_general_press_releases": entry}
+            ), patch(
+                "scripts.market_selection.capture_public_event_feed.urlopen"
+            ) as network:
+                result = capture_public_event_feed(
+                    "cftc_general_press_releases",
+                    authorization_record=authorization_record(entry),
+                    user_agent=USER_AGENT,
+                    timeout_seconds=timeout,
+                    captured_at=self.captured_at,
+                )
+            network.assert_not_called()
+            self.assertEqual(result["capture_status"], "BLOCKED")
+            self.assertIn("INVALID_TIMEOUT_SECONDS", result["reason_codes"])
+            self.assertFalse(result["network_request_made"])
+
+
 if __name__ == "__main__":
     unittest.main()
