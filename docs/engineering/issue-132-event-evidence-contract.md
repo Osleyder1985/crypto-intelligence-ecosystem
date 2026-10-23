@@ -100,3 +100,25 @@ La integración deriva estados explícitos:
 - \`INCONSISTENT_CAPTURE_POLICY\`: los metadatos afirman éxito incompatible con la autorización/solicitud registrada.
 
 La cobertura se limita al alcance declarado por cada proveedor; un RSS actual no es un archivo histórico completo. Los estados de cobertura no elevan un titular a evento verificado ni demuestran causalidad. Si no se suministra el artefacto de cobertura, el informe declara explícitamente \`NOT_PROVIDED\` en vez de inferir una búsqueda negativa.
+
+## 9. Captura de artículo HTML y promoción de eventos RSS/Atom
+
+El capturador genérico ahora ofrece \`capture_public_event_article\` y modo CLI con \`--feed-capture <feed.json> --article-candidate-id <candidate_id>\`. La captura de artículo reutiliza la autorización del proveedor y el estado del registro, verifica la integridad de los bytes del feed y que el candidato exista en el feed preservado, valida la URL HTTPS contra la allowlist y sigue redirecciones solo si el destino sigue dentro de los hosts HTTPS permitidos.
+
+El cuerpo del artículo se lee hasta EOF, se conserva en base64 y se identifica con SHA-256 y tamaño exacto; no se aplica un límite local arbitrario de bytes. Las capturas incompletas, los errores HTTP/red y destinos fuera de la allowlist no se pueden promover. La promoción de un candidato genérico requiere ahora una captura de artículo completa, autorización para \`internal_analysis\` y \`persistent_storage\`, y una resolución de entidad revisada con ID estable y evidencia hasheada.
+
+La integración del informe verifica de nuevo los bytes del feed y del artículo, la relación entre el candidato y la URL, el hash del cuerpo, los timestamps y el registro de fuente. El artículo capturado respalda el contenido de la afirmación; la revisión humana sigue siendo responsable de decidir si el hecho está correctamente interpretado y si se relaciona con el activo. Esto no demuestra causalidad con el movimiento de precio.
+
+Ejemplo de captura de feed:
+
+\`\`\`bash
+python -m scripts.market_selection.capture_public_event_feed --source-id <source_id> --provider-authorization-registry <authorization.json> --user-agent "<reviewed User-Agent>" --output <feed-capture.json>
+\`\`\`
+
+Después de revisar el candidato y confirmar que la fuente está autorizada:
+
+\`\`\`bash
+python -m scripts.market_selection.capture_public_event_feed --source-id <source_id> --provider-authorization-registry <authorization.json> --user-agent "<reviewed User-Agent>" --feed-capture <feed-capture.json> --article-candidate-id <candidate_id> --output <article-capture.json>
+\`\`\`
+
+Ambos comandos deben devolver un bloqueo sin tráfico de red mientras la fuente o los usos requeridos estén pendientes. Los ejemplos son plantillas; no se ejecutaron solicitudes reales al añadir esta funcionalidad.
