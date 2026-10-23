@@ -327,11 +327,21 @@ def _validate_approval_scope(entry: dict) -> None:
     allowed_hosts = set(entry.get("allowed_article_hosts") or [])
     if endpoint_parts.hostname not in allowed_hosts:
         raise ValueError("approval_scope.automated_access.approved_endpoint host is outside allowed_article_hosts")
+    archive_prefixes = entry.get("allowed_archive_path_prefixes") or []
+    endpoint_path = endpoint_parts.path or "/"
+    if archive_prefixes and not any(
+        endpoint_path == prefix or endpoint_path.startswith(prefix.rstrip("/") + "/")
+        for prefix in archive_prefixes
+    ):
+        raise ValueError("approval_scope.automated_access.approved_endpoint path is outside allowed_archive_path_prefixes")
     _non_empty(access.get("user_agent"), "approval_scope.automated_access.user_agent")
     max_rate = access.get("max_aggregate_requests_per_second")
     if isinstance(max_rate, bool) or not isinstance(max_rate, (int, float)) or max_rate <= 0:
         raise ValueError("approval_scope.automated_access.max_aggregate_requests_per_second must be positive")
-    if max_rate > entry.get("max_requests_per_second", 0):
+    registry_rate = entry.get("max_requests_per_second")
+    if isinstance(registry_rate, bool) or not isinstance(registry_rate, (int, float)) or registry_rate <= 0:
+        raise ValueError("max_requests_per_second must be positive before approval scope validation")
+    if max_rate > registry_rate:
         raise ValueError("approval_scope aggregate request rate exceeds the source registry ceiling")
     timeout = access.get("timeout_seconds")
     if isinstance(timeout, bool) or not isinstance(timeout, (int, float)) or timeout <= 0:
