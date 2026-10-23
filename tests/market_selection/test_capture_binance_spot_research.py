@@ -199,5 +199,45 @@ class BinanceSpotResearchCaptureTests(unittest.TestCase):
                 capture_and_build_report(symbol="BTCUSDT", interval="1h", start_time_ms=0, end_time_ms_exclusive=3_600_000, config=config, base_asset_ticker="ETH", use_case="live_technical_test")
 
 
+    def test_requested_name_is_passed_separately_from_market_ticker(self):
+        metadata_raw = json.dumps(exchange_info_payload()).encode("utf-8")
+        artifact = {
+            "schema_version": "binance-spot-ohlcv-capture-v1",
+            "overall_status": "PASS",
+            "market": {
+                "exchange": "binance", "market_type": "SPOT",
+                "symbol_native": "BTCUSDT", "interval": "1h",
+            },
+            "pages": [],
+            "candles": [],
+        }
+        report = {
+            "canonical_asset_identity_status": "NOT_RESOLVED",
+            "asset_identity_status": "INDETERMINATE",
+            "report_status": "PARTIAL",
+            "data_quality": {"status": "INCOMPLETE_OR_UNVERIFIED", "dimensions": {}},
+            "horizons": {name: {"reason_codes": []} for name in ("short", "medium", "long")},
+            "canonical_asset_identity": {"stable_id": None},
+            "limitations": [],
+        }
+        with patch(
+            "scripts.market_selection.capture_binance_spot_research.urlopen",
+            return_value=FakeResponse(metadata_raw),
+        ), patch(
+            "scripts.market_selection.capture_binance_spot_research.capture_history",
+            return_value=artifact,
+        ), patch(
+            "scripts.market_selection.capture_binance_spot_research.build_research_report",
+            return_value=report,
+        ) as build:
+            capture_and_build_report(
+                symbol="BTCUSDT", interval="1h", start_time_ms=0,
+                end_time_ms_exclusive=3_600_000, config={},
+                base_asset_ticker="BTC", use_case="live_technical_test",
+                requested_identifier_type="name", requested_asset_identifier="Bitcoin",
+            )
+        self.assertEqual(build.call_args.args[2], "Bitcoin")
+        self.assertEqual(build.call_args.kwargs["requested_identifier_type"], "name")
+
 if __name__ == "__main__":
     unittest.main()
