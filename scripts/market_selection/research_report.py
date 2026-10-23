@@ -281,6 +281,15 @@ def build_research_report(
         order_market = order_book_analysis["market"]
         if order_market["exchange"].lower() != exchange.lower() or order_market["symbol_native"].upper() != symbol.upper():
             raise ValueError("order-book artifact exchange and symbol must match the OHLCV report market")
+        if evaluation_as_of is not None:
+            evaluation_cutoff_ms = _utc_timestamp_ms(evaluation_as_of)
+            if evaluation_cutoff_ms is None:
+                raise ValueError("evaluation_as_of must be ISO-8601 with timezone when validating order-book snapshot timing")
+            order_book_capture_ms = _utc_timestamp_ms(order_book_analysis["captured_at_utc"])
+            if order_book_capture_ms is None:
+                raise ValueError("order-book captured_at_utc must be ISO-8601 with timezone")
+            if order_book_capture_ms > evaluation_cutoff_ms:
+                raise ValueError("order-book snapshot captured after evaluation_as_of cutoff")
 
     source_integrity = {
         "sha256": _sha256(source_bytes),
