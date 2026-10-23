@@ -106,19 +106,19 @@ Esta comprobación documental de páginas públicas no es una revisión legal ni
 - La página oficial de [RSS Feeds](https://www.sec.gov/about/rss-feeds) enumera feeds de comunicados, discursos, actuaciones y materiales EDGAR. La página indica que fue revisada/actualizada el 24 de junio de 2026.
 - El portal oficial de [SEC Data APIs](https://data.sec.gov/) indica que el acceso automatizado debe cumplir la política de privacidad y seguridad de SEC.gov y remite a la documentación API y a las pautas de acceso justo.
 - La FAQ oficial para desarrolladores sobre descargas programáticas de EDGAR menciona un máximo actual de 10 solicitudes por segundo para ese acceso programático. **No se debe trasladar automáticamente ese límite a cada feed RSS** sin confirmar qué política y límites aplican al endpoint concreto.
-- Conclusión de esta revisión: se confirma que SEC publica recursos RSS y pautas de acceso automatizado; no se ha completado una decisión específica sobre análisis interno, almacenamiento persistente, retención y reutilización del contenido del feed configurado. Mantener `TERMS_PENDING`.
+- La página oficial de Website Dissemination (https://www.sec.gov/about/privacy-information) afirma que la información de sec.gov es pública y puede copiarse o distribuirse sin permiso de SEC, con advertencias sobre sellos, logos y marcas. La documentación para desarrolladores (https://www.sec.gov/about/developer-resources) sigue siendo relevante para acceso automatizado. La evidencia favorece la reutilización de información oficial, pero falta documentar el tratamiento de terceros incrustados, retención de cuerpos HTML completos y condiciones específicas del RSS. Mantener TERMS_PENDING hasta que el revisor autorizado cierre esos puntos.
 
 ### CFTC
 
 - La página oficial de [RSS](https://www.cftc.gov/RSS/index.htm), consultada el 23 de octubre de 2026, declara explícitamente: **“As of October 2026, the CFTC has temporarily disabled all RSS feeds”** para los temas enumerados, y que se volverán a habilitar más adelante.
 - La [Web Policy de CFTC](https://www.cftc.gov/WebPolicy/index.htm) indica que la información gubernamental del sitio es de dominio público y puede copiarse/distribuirse con atribución adecuada; advierte que algunos documentos, imágenes u otros recursos pueden ser de terceros y estar protegidos.
-- Conclusión operativa: el feed RSS registrado no debe considerarse disponible mientras la página oficial mantenga ese aviso. Esto es un problema de disponibilidad, independiente de los términos. No activar solicitudes repetidas ni sustituir silenciosamente el endpoint. Mantener `TERMS_PENDING` y volver a comprobar el aviso antes de cualquier prueba autorizada futura.
+- La Web Policy de CFTC indica que la información gubernamental es de dominio público con atribución, pero advierte que algunos recursos pueden ser de terceros. La página RSS confirma que los feeds están temporalmente deshabilitados en octubre de 2026. No activar solicitudes repetidas ni sustituir silenciosamente el endpoint. Mantener TERMS_PENDING y volver a comprobar disponibilidad antes de una prueba autorizada futura.
 
 ### Federal Reserve Board
 
 - La página oficial de [RSS Feeds](https://www.federalreserve.gov/feeds/feeds.htm) enumera feeds de comunicados, discursos, datos y publicaciones; explica el uso mediante lectores/agregadores RSS. La página indica última actualización el 16 de septiembre de 2025.
 - La página enlazada por el registro como política general no resuelve por sí sola, en la evidencia consultada, todos los casos de uso concretos: captura automatizada del feed, almacenamiento persistente de cuerpos completos, duración de retención, extractos y redistribución.
-- Conclusión de esta revisión: se confirma la documentación oficial de feeds, pero el permiso para los casos de uso del proyecto sigue sin quedar demostrado. Mantener `TERMS_PENDING` hasta revisar la política aplicable al Board y cualquier condición específica del contenido.
+- El Disclaimer oficial (https://www.federalreserve.gov/disclaimer.htm) indica que, salvo indicación contraria, la información del Board es de dominio público y puede copiarse/distribuirse con atribución; los materiales identificados como pertenecientes a terceros pueden requerir permiso separado. La evidencia favorece la reutilización de información oficial, pero falta revisar contenido específico del feed, captura automatizada y retención de cuerpos HTML completos. Mantener TERMS_PENDING hasta que el revisor autorizado registre el alcance aprobado.
 
 ### Resultado consolidado
 
@@ -129,3 +129,13 @@ Esta comprobación documental de páginas públicas no es una revisión legal ni
 | Federal Reserve Board | Página oficial de feeds y guía de uso mediante agregadores | Permisos concretos para captura y persistencia del contenido del feed | `TERMS_PENDING` |
 
 **No se cambió el registro de fuentes, no se capturaron feeds y no se habilitó tráfico de red.** La conclusión es documental y preliminar; el revisor humano autorizado debe completar el checklist y registrar la evidencia de términos antes de aprobar cualquier uso.
+
+## 10. Evidencia oficial adicional sobre reutilización de contenido — 2026-10-23
+
+Esta sección complementa la revisión preliminar. No cambia automáticamente los estados del registro.
+
+- **SEC:** https://www.sec.gov/about/privacy-information declara que la información de sec.gov es pública y puede copiarse/distribuirse sin permiso de SEC; la documentación de desarrolladores https://www.sec.gov/about/developer-resources sigue siendo relevante para acceso automatizado. La autorización técnica debe limitarse a contenido oficial pertinente y excluir recursos de terceros cuando no exista permiso demostrado.
+- **CFTC:** https://www.cftc.gov/WebPolicy/index.htm indica que la información gubernamental es de dominio público con atribución y advierte sobre recursos de terceros. https://www.cftc.gov/RSS/index.htm confirma que los feeds están temporalmente deshabilitados en octubre de 2026.
+- **Federal Reserve Board:** https://www.federalreserve.gov/disclaimer.htm declara que, salvo indicación contraria, la información del Board es de dominio público y puede copiarse/distribuirse con atribución; los materiales de terceros quedan sujetos a sus propios derechos.
+
+La evidencia pública reduce la incertidumbre sobre copyright del contenido oficial, pero no es autorización general para almacenar indiscriminadamente todos los bytes HTML de páginas que puedan incluir contenido de terceros. El revisor debe documentar el alcance por fuente, definir si se almacenará HTML completo o contenido textual oficial extraído, revisar las condiciones de acceso automatizado y aprobar por separado los casos de uso. Hasta entonces, no cambiar el estado ni los casos de uso permitidos en el registro.
