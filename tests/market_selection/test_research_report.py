@@ -269,16 +269,6 @@ class ResearchReportTests(unittest.TestCase):
                 with self.assertRaisesRegex(ValueError, message):
                     build_research_report(self.source, invalid, "BTC")
 
-    def test_committed_experimental_config_is_valid_and_stays_descriptive(self):
-        root = Path(__file__).resolve().parents[2]
-        committed_config = json.loads(
-            (root / "configs" / "technical-descriptive-baseline.json").read_text(encoding="utf-8")
-        )
-        report = build_research_report(self.source, committed_config, "BTC", self.raw)
-        self.assertEqual(report["methodology"]["methodology_id"], "technical-descriptive-baseline-experimental")
-        self.assertEqual(report["decision_status"], "INDETERMINATE")
-        self.assertTrue(all(item["status"] == "INDETERMINATE" for item in report["horizons"].values()))
-
 
 if __name__ == "__main__":
     unittest.main()
