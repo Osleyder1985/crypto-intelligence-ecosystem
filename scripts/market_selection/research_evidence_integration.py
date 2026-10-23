@@ -1046,6 +1046,9 @@ def enrich_research_report(
         causal_review_assessment = _assess_event_causal_review(
             event, fact_verification=fact_review_assessment, evaluation_as_of=cutoff
         )
+        if causal_review_assessment["effective_decision"] in {"PLAUSIBLE_HYPOTHESIS", "SUPPORTED_CAUSALITY"}:
+            if temporal_assessment["status"] != "TEMPORALLY_ELIGIBLE" or temporal_assessment["entity_match"] is not True:
+                raise ValueError("causal review requires an exact target-entity match and temporal eligibility")
         if episode_context is not None:
             published_ms = parse_timestamp(event["published_at"], "published_at").timestamp() * 1000
             start_ms = episode_context["start_pivot_open_time_ms"]
