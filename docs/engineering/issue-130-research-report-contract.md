@@ -21,6 +21,14 @@ El orquestador reutiliza los analizadores existentes para generar un único arte
 
 La captura en vivo está sometida al control `provider_license_gate`: `live_technical_test` permite una prueba técnica, pero no habilita el análisis interno. Para generar un informe desde una captura en vivo, `internal_analysis` exige un registro de autorización válido para ese proveedor y uso; la disponibilidad pública de un endpoint no demuestra por sí sola una licencia. No se debe inventar ni reutilizar una autorización sintética como permiso real. La identidad canónica también requiere evidencia única, revisada y vinculada al activo base. Si falta cualquiera de estas condiciones, el flujo debe bloquearse o entregar un informe parcial/indeterminado, nunca eludir el control.
 
+## Resolución de candidatos de mercado — incremento técnico
+
+El módulo `scripts/market_selection/resolve_binance_spot_market_candidates.py` permite filtrar un artefacto completo de `exchangeInfo` por símbolo nativo o ticker base y, opcionalmente, por activo cotizado. Solo considera mercados en estado `TRADING` con `isSpotTradingAllowed=true`. Devuelve todos los candidatos ordenados de forma determinista y distingue `UNIQUE_MARKET`, `AMBIGUOUS_MARKET` y `NO_MARKET`; no elige arbitrariamente un par cuando hay varios.
+
+La captura de `exchangeInfo` solicita ahora la respuesta completa sin parámetro de símbolo y la preserva íntegra en Base64, con tamaño y SHA-256, hasta EOF. El símbolo exacto se selecciona localmente después de validar el cuerpo. No se introduce un límite local de bytes. Los límites y fallos del proveedor o del entorno deben reflejarse como fallos de captura, no como truncamiento silencioso.
+
+**Límite explícito:** esta mejora resuelve candidatos de mercado, no nombres de activos ni identidad canónica entre cadenas. Un ticker como `BTC` puede devolver varios pares y requiere un filtro de cotización o una decisión explícita; el estado de candidato único tampoco sustituye evidencia de identidad revisada ni autorización para el uso previsto de los datos.
+
 ## Reglas conservadoras
 
 1. No se infiere el activo base concatenando/partiendo un símbolo como `BTCUSDT`. La coincidencia entre el ticker solicitado y `market.base_asset` solo puede verificar `market_base_asset_mapping_status`; **no verifica identidad canónica**. Sin evidencia canónica única, revisada y vinculada al símbolo base, `canonical_asset_identity_status=NOT_RESOLVED` y `asset_identity_status=INDETERMINATE`. Si el símbolo de mercado contradice el activo solicitado o la evidencia, la ejecución falla.
@@ -54,7 +62,24 @@ python -m scripts.market_selection.capture_binance_spot_research \
   --report-output artifacts/crypto-asset-research-report.json
 ```
 
-Los dos tiempos son límites UTC en milisegundos Unix; el inicio es inclusivo y el final exclusivo. El símbolo debe ser el símbolo nativo exacto de Binance Spot y `--base-asset-ticker` debe coincidir con el `baseAsset` recibido. El ejemplo no significa que los archivos de autorización o identidad ya existan o estén aprobados: deben contener evidencia real, revisada y aplicable. Sin autorización válida para `internal_analysis`, la ejecución falla antes de solicitar metadatos; una autorización de prueba técnica no basta.
+Los dos tiempos son límites UTC en milisegundos Unix; el inicio es inclusivo y el final exclusivo. Puede usarse `--symbol BTCUSDT` para identificar un par exacto, o `--asset-ticker BTC --quote-asset USDT` para resolver el par a partir del ticker. Si un ticker coincide con varios pares y no se proporciona una cotización que deje un único candidato, la ejecución falla de forma explícita en lugar de elegir arbitrariamente. `--base-asset-ticker` es opcional y, si se proporciona, se valida contra el mercado resuelto.
+
+La captura conserva la respuesta completa de `exchangeInfo` sin filtro por símbolo ni límite local de bytes, con tamaño y SHA-256. El ejemplo no significa que los archivos de autorización o identidad ya existan o estén aprobados: deben contener evidencia real, revisada y aplicable. Sin autorización válida para `internal_analysis`, la ejecución falla antes de solicitar metadatos; una autorización de prueba técnica no basta.
+
+Para resolver por ticker, el selector equivalente es:
+
+```bash
+python -m scripts.market_selection.capture_binance_spot_research \
+  --asset-ticker BTC --quote-asset USDT \
+  --interval 1h \
+  --start-time-ms <START_TIME_MS_INCLUSIVE> \
+  --end-time-ms <END_TIME_MS_EXCLUSIVE> \
+  --config configs/technical-descriptive-baseline.json \
+  --authorization-record artifacts/reviewed-binance-authorization.json \
+  --identity-evidence artifacts/reviewed-canonical-identity.json \
+  --capture-output artifacts/binance-spot-ohlcv-capture.json \
+  --report-output artifacts/crypto-asset-research-report.json
+```
 
 La configuración incluida hace reproducible un experimento descriptivo, no define horizontes temporales aprobados, no genera probabilidades predictivas ni valida rentabilidad. No debe describirse como estrategia de inversión aprobada. Los horizontes se mantienen `INDETERMINATE` mientras falten las metodologías y evidencias requeridas.
 
