@@ -12,7 +12,7 @@ Este estado describe código existente; **no declara cerrado este Issue ni que e
 |---|---|---|
 | Captura de mercado e histórico | `scripts/market_selection/capture_binance_spot_research.py`, `scripts/market_selection/resolve_binance_spot_market_candidates.py`, `scripts/market_selection/capture_binance_spot_ohlcv.py` | Admite símbolo nativo o ticker base con cotización explícita; devuelve error ante cero o múltiples candidatos. No resuelve nombres de activos ni identidad canónica cross-chain, ni cubre todas las fuentes del expediente. |
 | Integridad, cobertura y frescura observada | `tests/market_selection/test_capture_binance_spot_research.py`, `scripts/market_selection/research_report.py` | La captura conserva respuestas completas, hash, contadores y listas explícitas de huecos; el informe mide la edad de la última vela cerrada elegible en el momento de captura. Sin política de frescura aprobada, no la etiqueta automáticamente como fresca/caducada. No se aplica un límite arbitrario de bytes del proyecto. |
-| Composición de informe | `scripts/market_selection/research_report.py` | Produce JSON descriptivo con riesgo OHLCV, eventos de movimiento, soportes/resistencias, cobertura histórica, cotización y procedencia de resolución del par, y tres horizontes. |
+| Composición de informe | `scripts/market_selection/research_report.py` | Produce JSON descriptivo con riesgo OHLCV, eventos de movimiento, soportes/resistencias, cobertura histórica, cotización y procedencia de resolución del par, y tres horizontes. Ahora acepta opcionalmente una instantánea de libro normalizada y autorizada, solo si exchange y símbolo coinciden. |
 | Identidad canónica | `scripts/market_selection/canonical_asset_identity.py` | Valida evidencia proporcionada y revisada; no descubre ni verifica por sí mismo la autoridad real de una fuente externa. |
 | Autorización de fuentes | `scripts/market_selection/provider_license_gate.py` | Falla de forma cerrada. La prueba técnica no autoriza el análisis interno; no hay que fabricar ni inferir permisos. |
 | Noticias, catalizadores y on-chain | Integración de evidencia existente, con registros de fuentes y autorizaciones | Cobertura incompleta; no equivale a una investigación automática completa de noticias, fundamentales y datos on-chain. |
@@ -29,6 +29,16 @@ Este estado describe código existente; **no declara cerrado este Issue ni que e
 6. Ejecutar y conservar una prueba E2E con evidencias reales autorizadas. Los fixtures sintéticos demuestran comportamiento del código, no permisos de proveedores ni cobertura real de mercado.
 
 El siguiente incremento debe cerrar bloqueadores con evidencia verificable; no debe convertir una captura técnica o un informe descriptivo parcial en una señal favorable/desfavorable sin respaldo.
+
+
+### Incremento de libro de órdenes (integración descriptiva)
+
+- **Analizador:** `scripts/market_selection/analyze_order_book_snapshot.py`.
+- **Entrada:** `crypto-spot-order-book-snapshot-v1`, con `capture_status=PASS`, mercado, timestamp, niveles `bids/asks` y evaluación de autorización válida para `internal_analysis`.
+- **Integración:** `research_report.py --order-book-artifact PATH`. El exchange y el símbolo deben coincidir exactamente con el mercado del informe; un artefacto de otro mercado se rechaza.
+- **Salida:** `descriptive_analyses.order_book`; calcula mejor bid/ask, precio medio, spread absoluto y en puntos básicos, cantidades visibles, nocional visible e imbalance descriptivo. Conserva todos los niveles recibidos en el artefacto.
+- **Fail-closed:** si la autorización para análisis interno no está acreditada, la integración falla; la autorización para una prueba técnica en vivo no se considera permiso para análisis interno ni persistencia.
+- **Límites:** el módulo analiza una instantánea ya normalizada; no la obtiene automáticamente desde los capturadores multi-exchange ni sustituye el libro local sincronizado de WebSocket. No clasifica órdenes como «muros» con umbrales inventados, no detecta órdenes ocultas, no promete liquidez ejecutable y no envía órdenes. Si no se suministra la instantánea, el informe marca `NOT_PROVIDED`.
 
 ## 1. Resultado de producto
 
