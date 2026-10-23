@@ -86,6 +86,54 @@ def report():
     }
 
 
+def fundamental_observation(*, terms_status="REVIEW_PENDING", authorization_record=None):
+    source = {
+        "source_id": "defillama-free-api",
+        "provider_id": "defillama_api",
+        "source_type": "aggregator",
+        "url": "https://api.llama.fi/protocol/example",
+        "methodology_url": "https://defillama.com/data-definitions",
+        "terms_status": terms_status,
+    }
+    if authorization_record is not None:
+        source["authorization_record"] = authorization_record
+    return {
+        "schema_version": "crypto-fundamental-observation-v1",
+        "observation_id": "tvl-example-20261020",
+        "asset": {"category": "smart_contract_token", "stable_id": "example-asset"},
+        "metric_id": "protocol.tvl",
+        "status": "OBSERVED",
+        "value": 123456.0,
+        "unit": "usd",
+        "period_start": None,
+        "period_end": "2026-10-20T10:00:00Z",
+        "block_height": None,
+        "published_at": None,
+        "publication_time_status": "UNKNOWN",
+        "observed_at": "2026-10-20T10:00:00Z",
+        "captured_at": "2026-10-20T10:01:00Z",
+        "source": source,
+        "quality_notes": "Synthetic test fixture; not real provider authorization.",
+        "metadata": {"protocol_slug": "example"},
+    }
+
+
+def approved_defillama_authorization_fixture():
+    # Synthetic fixture for exercising policy logic only; it grants no real-world rights.
+    return {
+        "schema_version": AUTH_SCHEMA_VERSION,
+        "provider_id": "defillama_api",
+        "status": "APPROVED",
+        "authorized_use_cases": ["internal_analysis", "persistent_storage"],
+        "terms_url": "https://defillama.com/terms",
+        "terms_sha256": "a" * 64,
+        "reviewed_by": "offline-test-fixture",
+        "reviewed_at": "2026-10-20T00:00:00Z",
+        "written_authorization_url": "https://example.org/synthetic-authorization-fixture",
+        "written_authorization_sha256": "b" * 64,
+    }
+
+
 class FakeResponse:
     def __init__(self, raw, headers):
         self.raw = raw
@@ -168,6 +216,43 @@ class ResearchEvidenceIntegrationTests(unittest.TestCase):
         self.assertEqual(enriched["fundamental_onchain_assessment"]["decision_status"], "INDETERMINATE")
         self.assertFalse(enriched["orders_submitted"])
         self.assertFalse(enriched["network_requests_made"])
+
+
+    def test_fundamental_observation_from_terms_pending_provider_is_blocked(self):
+        with self.assertRaisesRegex(PermissionError, "fundamental source terms are not approved"):
+            enrich_research_report(
+                report(), events=[], observations=[fundamental_observation()],
+                methodology=methodology(),
+                asset={"stable_id": "example-asset", "category": "smart_contract_token"},
+                evaluation_as_of="2026-10-21T00:00:00Z",
+            )
+
+    def test_fundamental_observation_requires_provider_authorization_for_both_uses(self):
+        observation = fundamental_observation(terms_status="APPROVED")
+        with self.assertRaisesRegex(PermissionError, "blocked for internal_analysis"):
+            enrich_research_report(
+                report(), events=[], observations=[observation],
+                methodology=methodology(),
+                asset={"stable_id": "example-asset", "category": "smart_contract_token"},
+                evaluation_as_of="2026-10-21T00:00:00Z",
+            )
+
+    def test_authorized_fundamental_observation_records_both_use_assessments(self):
+        observation = fundamental_observation(
+            terms_status="APPROVED",
+            authorization_record=approved_defillama_authorization_fixture(),
+        )
+        enriched = enrich_research_report(
+            report(), events=[], observations=[observation],
+            methodology=methodology(),
+            asset={"stable_id": "example-asset", "category": "smart_contract_token"},
+            evaluation_as_of="2026-10-21T00:00:00Z",
+        )
+        self.assertEqual(enriched["fundamental_onchain_assessment"]["coverage"]["observed_metric_count"], 1)
+        assessments = enriched["fundamental_source_use_assessments"]
+        self.assertEqual([item["use_case"] for item in assessments], ["internal_analysis", "persistent_storage"])
+        self.assertTrue(all(item["decision"] == "ALLOW" for item in assessments))
+        self.assertEqual(enriched["decision_status"], "INDETERMINATE")
 
     def test_rejects_event_captured_after_historical_cutoff_as_eligible(self):
         ev = event()
