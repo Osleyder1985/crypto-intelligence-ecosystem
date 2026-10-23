@@ -949,6 +949,28 @@ def _verify_promoted_public_archive_event(
         or hashlib.sha256(article_raw).hexdigest() != event_record.get("content_sha256")
     ):
         raise PermissionError("event title, publication time, URL or article hash is not grounded in archive evidence")
+    expected_event_id = f"{candidate['source_id']}:" + hashlib.sha256(candidate["candidate_id"].encode("utf-8")).hexdigest()
+    if event_record.get("event_id") != expected_event_id:
+        raise PermissionError("archive event_id does not match the preserved candidate identity")
+    mapping_b64 = metadata.get("entity_resolution_evidence_record_base64")
+    mapping_hash = metadata.get("entity_resolution_evidence_record_sha256")
+    if not isinstance(mapping_b64, str) or not isinstance(mapping_hash, str) or not _SHA256_RE.fullmatch(mapping_hash):
+        raise PermissionError("reviewed archive entity-mapping evidence is missing")
+    try:
+        mapping_raw = base64.b64decode(mapping_b64, validate=True)
+    except (ValueError, base64.binascii.Error) as exc:
+        raise PermissionError("reviewed archive entity-mapping evidence base64 is invalid") from exc
+    if hashlib.sha256(mapping_raw).hexdigest() != mapping_hash:
+        raise PermissionError("reviewed archive entity-mapping evidence SHA-256 mismatch")
+    reviewer = metadata.get("entity_resolution_reviewed_by")
+    if not isinstance(reviewer, str) or not reviewer.strip():
+        raise PermissionError("reviewed archive entity-mapping reviewer is missing")
+    try:
+        parse_timestamp(metadata.get("entity_resolution_reviewed_at"), "entity_resolution_reviewed_at")
+    except ValueError as exc:
+        raise PermissionError("reviewed archive entity-mapping timestamp is invalid") from exc
+    if metadata.get("causality_status") != "NOT_ASSESSED" or event_record.get("causality_claimed") is not False:
+        raise PermissionError("archive event must not claim causality");
 
 
 
