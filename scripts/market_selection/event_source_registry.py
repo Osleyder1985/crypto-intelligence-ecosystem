@@ -33,6 +33,7 @@ EVENT_SOURCE_REGISTRY = {
             "source_type": "REGULATORY",
             "source_url": "https://www.sec.gov/news/pressreleases.rss",
             "allowed_article_hosts": ["www.sec.gov", "sec.gov"],
+            "allowed_archive_path_prefixes": ["/newsroom/press-releases"],
             "terms_url": "https://www.sec.gov/about/developer-resources",
             "status": "TERMS_PENDING",
             "terms_sha256": None,
@@ -46,7 +47,7 @@ EVENT_SOURCE_REGISTRY = {
             "max_requests_per_invocation": 1,
             "parallel_requests": False,
             "response_body_policy": "READ_TO_EOF_NO_LOCAL_SIZE_CAP",
-            "coverage_scope": "Current RSS feed only; not a complete historical archive",
+            "coverage_scope": "Current RSS feed plus explicitly captured official archive pages; coverage is limited to captured pages and pagination",
             "entity_resolution_policy": "No asset identity is inferred from title, ticker, or description",
             "notes": (
                 "Candidate only. Keep disabled until official access/terms review and the exact intended "
@@ -60,6 +61,7 @@ EVENT_SOURCE_REGISTRY = {
             "source_type": "REGULATORY",
             "source_url": "https://www.cftc.gov/RSS/RSSGP/rssgp.xml",
             "allowed_article_hosts": ["www.cftc.gov", "cftc.gov"],
+            "allowed_archive_path_prefixes": ["/PressRoom/PressReleases", "/PressRoom/IntheNews"],
             "terms_url": "https://www.cftc.gov/sites/default/files/cftc/cftcprivacy.htm",
             "status": "TERMS_PENDING",
             "terms_sha256": None,
@@ -73,7 +75,7 @@ EVENT_SOURCE_REGISTRY = {
             "max_requests_per_invocation": 1,
             "parallel_requests": False,
             "response_body_policy": "READ_TO_EOF_NO_LOCAL_SIZE_CAP",
-            "coverage_scope": "Current general press-release feed only; not a complete historical archive and not limited to crypto.",
+            "coverage_scope": "Current general RSS feed plus explicitly captured official press-release archive pages; each captured page/pagination segment is tracked separately and coverage is not automatically exhaustive.",
             "entity_resolution_policy": "No asset identity is inferred from title, ticker, or description.",
             "notes": "Official feed endpoint verified from the CFTC RSS index. Source terms, automated-access conditions, and persistent-storage scope are not approved; runtime use must remain blocked."
         },
@@ -84,6 +86,7 @@ EVENT_SOURCE_REGISTRY = {
             "source_type": "PRIMARY_OFFICIAL",
             "source_url": "https://www.federalreserve.gov/feeds/press_all.xml",
             "allowed_article_hosts": ["www.federalreserve.gov", "federalreserve.gov"],
+            "allowed_archive_path_prefixes": ["/newsevents/pressreleases"],
             "terms_url": "https://www.federalreserve.gov/policies.htm",
             "status": "TERMS_PENDING",
             "terms_sha256": None,
@@ -97,7 +100,7 @@ EVENT_SOURCE_REGISTRY = {
             "max_requests_per_invocation": 1,
             "parallel_requests": False,
             "response_body_policy": "READ_TO_EOF_NO_LOCAL_SIZE_CAP",
-            "coverage_scope": "Current Board press-release feed; macro/monetary-policy context, not a complete historical archive or crypto-specific event source.",
+            "coverage_scope": "Current Board RSS feed plus explicitly captured official archive pages; macro/monetary-policy context, not crypto-specific, and archive coverage depends on captured year/page segments.",
             "entity_resolution_policy": "No asset identity is inferred from title, ticker, or description.",
             "notes": "Official feed endpoint verified from the Federal Reserve RSS index. Website policies do not by themselves establish permission for the project's intended persistent storage; runtime use must remain blocked pending review."
         }
@@ -152,6 +155,13 @@ def validate_source_entry(entry: dict) -> dict:
         raise ValueError("allowed_article_hosts must be a non-empty list of hostnames")
     if source_id == "sec_press_releases" and not set(hosts).issubset({"www.sec.gov", "sec.gov"}):
         raise ValueError("SEC article host allowlist may contain only sec.gov hosts")
+    archive_prefixes = entry.get("allowed_archive_path_prefixes", [])
+    if (
+        not isinstance(archive_prefixes, list)
+        or any(not isinstance(prefix, str) or not prefix.startswith("/") or "?" in prefix or "#" in prefix for prefix in archive_prefixes)
+        or len(set(archive_prefixes)) != len(archive_prefixes)
+    ):
+        raise ValueError("allowed_archive_path_prefixes must be unique absolute URL paths without query or fragment")
     status = _non_empty(entry.get("status"), "status")
     if status not in SOURCE_STATUSES:
         raise ValueError(f"unsupported source status: {status}")
