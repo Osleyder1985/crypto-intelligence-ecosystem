@@ -327,6 +327,12 @@ class ResearchEvidenceIntegrationTests(unittest.TestCase):
         self.assertEqual(assessment["causality_label"], "TEMPORAL_ASSOCIATION")
         self.assertEqual(assessment["movement_episode"]["episode_id"], "swing-1")
         self.assertEqual(assessment["movement_episode"]["direction"], "BULLISH")
+        self.assertEqual(
+            assessment["availability_cutoff"],
+            __import__("datetime").datetime.fromtimestamp(
+                (end_ms + 1) / 1000, tz=__import__("datetime").timezone.utc
+).isoformat().replace("+00:00", "Z"),
+        )
         self.assertFalse(assessment["causality_claimed"])
 
     def test_explicit_window_with_episode_link_classifies_event_against_actual_swing(self):
