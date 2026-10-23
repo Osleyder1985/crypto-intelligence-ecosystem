@@ -10,7 +10,7 @@ from scripts.market_selection.capture_public_event_feed import capture_public_ev
 from scripts.market_selection.event_source_registry import EVENT_SOURCE_REGISTRY
 from scripts.market_selection.promote_public_feed_candidate import main
 from test_public_event_feed import (
-    FakeResponse, USER_AGENT, approved_source, authorization_record, feed_xml,
+    FakeResponse, USER_AGENT, approved_source, authorization_record, feed_xml, capture_article,
 )
 
 
@@ -28,6 +28,7 @@ class PromotePublicFeedCandidateCliTests(unittest.TestCase):
                 captured_at="2026-10-22T12:30:00Z",
             )
 
+        article = capture_article(entry, capture)
         evidence = b'{"asset":"example-asset","review":"synthetic"}'
         resolution = {
             "status": "APPROVED",
@@ -42,9 +43,11 @@ class PromotePublicFeedCandidateCliTests(unittest.TestCase):
             root = Path(directory)
             capture_path = root / "capture.json"
             resolution_path = root / "resolution.json"
+            article_path = root / "article.json"
             output_path = root / "event.json"
             capture_path.write_text(json.dumps(capture), encoding="utf-8")
             resolution_path.write_text(json.dumps(resolution), encoding="utf-8")
+            article_path.write_text(json.dumps(article), encoding="utf-8")
 
             with patch.dict(EVENT_SOURCE_REGISTRY["sources"], {"cftc_general_press_releases": entry}), patch(
                 "scripts.market_selection.capture_public_event_feed.urlopen",
@@ -55,6 +58,7 @@ class PromotePublicFeedCandidateCliTests(unittest.TestCase):
                     "--event-type", "REGULATORY_ENFORCEMENT",
                     "--claim", "The preserved feed summary reports a regulatory announcement.",
                     "--entity-resolution", str(resolution_path),
+                    "--article-capture", str(article_path),
                     "--output", str(output_path),
                 ])
 
@@ -76,9 +80,11 @@ class PromotePublicFeedCandidateCliTests(unittest.TestCase):
             root = Path(directory)
             capture_path = root / "capture.json"
             resolution_path = root / "resolution.json"
+            article_path = root / "article.json"
             output_path = root / "event.json"
             capture_path.write_text(json.dumps(capture), encoding="utf-8")
             resolution_path.write_text("{}", encoding="utf-8")
+            article_path.write_text("{}", encoding="utf-8")
             with patch.dict(EVENT_SOURCE_REGISTRY["sources"], {
                 "cftc_general_press_releases": dict(
                     EVENT_SOURCE_REGISTRY["sources"]["cftc_general_press_releases"]
@@ -91,6 +97,7 @@ class PromotePublicFeedCandidateCliTests(unittest.TestCase):
                         "--event-type", "REGULATORY_ENFORCEMENT",
                         "--claim", "Synthetic claim.",
                         "--entity-resolution", str(resolution_path),
+                        "--article-capture", str(article_path),
                         "--output", str(output_path),
                     ])
             self.assertFalse(output_path.exists())
