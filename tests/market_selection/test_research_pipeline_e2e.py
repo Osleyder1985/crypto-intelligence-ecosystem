@@ -84,6 +84,9 @@ class CombinedResearchPipelineE2ETests(unittest.TestCase):
         with patch.dict(
             EVENT_SOURCE_REGISTRY["sources"],
             {"sec_press_releases": source_entry},
+        ), patch(
+            "scripts.market_selection.research_evidence_integration.evaluate_artifact_use",
+            return_value={"decision": "ALLOW", "reason_codes": ["SYNTHETIC_TEST_GATE_ONLY"]},
         ):
             enriched = enrich_research_report(
                 report,
