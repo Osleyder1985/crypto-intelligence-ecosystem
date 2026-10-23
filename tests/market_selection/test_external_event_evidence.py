@@ -70,6 +70,29 @@ class ExternalEventEvidenceTests(unittest.TestCase):
         self.assertTrue(result["duplicates"][0]["conflict"])
         self.assertEqual(result["duplicates"][0]["resolution"], "CONFLICT_REQUIRES_REVIEW")
 
+    def test_same_url_with_changed_content_hash_requires_review(self):
+        first = event()
+        revised = event(event_id="event-revised", content_sha256="b" * 64)
+        result = deduplicate_events([first, revised])
+        self.assertEqual(result["unique_count"], 1)
+        self.assertEqual(result["duplicate_count"], 1)
+        self.assertTrue(result["duplicates"][0]["conflict"])
+        self.assertEqual(
+            result["duplicates"][0]["resolution"],
+            "CONFLICT_REQUIRES_REVIEW",
+        )
+
+    def test_same_url_with_changed_publication_time_requires_review(self):
+        first = event()
+        revised = event(event_id="event-revised", published_at="2026-10-22T10:02:00Z")
+        result = deduplicate_events([first, revised])
+        self.assertEqual(result["unique_count"], 1)
+        self.assertTrue(result["duplicates"][0]["conflict"])
+        self.assertEqual(
+            result["duplicates"][0]["resolution"],
+            "CONFLICT_REQUIRES_REVIEW",
+        )
+
     def test_post_cutoff_capture_is_not_eligible_for_backtest(self):
         value = event(
             published_at="2026-10-20T10:00:00Z",

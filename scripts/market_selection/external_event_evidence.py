@@ -175,7 +175,21 @@ def deduplicate_events(events: list[dict]) -> dict:
         original_index = by_key[key]
         original = unique[original_index]
         # Same canonical source identity but conflicting core claims must be surfaced, not silently merged.
-        conflict = original["title"] != normalized["title"] or original["entities"] != normalized["entities"]
+        original_hash = original["content_sha256"]
+        duplicate_hash = normalized["content_sha256"]
+        content_changed = (
+            original_hash is not None
+            and duplicate_hash is not None
+            and original_hash != duplicate_hash
+        )
+        conflict = (
+            original["title"] != normalized["title"]
+            or original["event_type"] != normalized["event_type"]
+            or original["entities"] != normalized["entities"]
+            or original["published_at"] != normalized["published_at"]
+            or original["evidence"] != normalized["evidence"]
+            or content_changed
+        )
         duplicates.append({
             "duplicate_event_id": normalized["event_id"],
             "canonical_event_id": original["event_id"],
