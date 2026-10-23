@@ -168,3 +168,10 @@ Este documento no decide arbitrariamente duración de horizontes, pesos, umbrale
 - [Issue #7 — Selección de mercados Spot](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/issues/7)
 - [Issue #18 — Frescura, comisiones y coste](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/issues/18)
 - [Issue #19 — Validación integral y preparación operativa](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/issues/19)
+
+
+### Enlace de evidencia externa a episodios confirmados
+
+La integración de evidencia acepta ahora, además de una ventana temporal explícita, un `episode_id` que resuelva de forma única a un episodio de `descriptive_analyses.movement_episodes.episodes` del informe. En ese caso, la ventana se deriva de los tiempos de apertura de los pivotes inicial/final y se adjunta la relación `PRECEDES_SWING`, `DURING_SWING` o `FOLLOWS_SWING` según la publicación. Se rechaza el enlace si el episodio no era observable al `evaluation_as_of`, si el identificador es ambiguo o si se suministran a la vez episodio y ventana manual.
+
+Esto no convierte una noticia anterior o simultánea en detonante probado. El contrato conserva la asociación temporal como tal, exige las validaciones y autorizaciones existentes, y no cambia el estado de decisión de inversión. La investigación de detonantes anteriores al giro necesita una ventana previa explícita, justificada y versionada; no se fija un período arbitrario en este incremento.
