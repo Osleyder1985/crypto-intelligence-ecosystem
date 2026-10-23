@@ -44,6 +44,7 @@ class MultiTimeframeSupportResistanceTests(unittest.TestCase):
         self.assertEqual(result["timeframe_count"], 2)
         self.assertEqual([item["interval"] for item in result["timeframes"]], ["1h", "4h"])
         self.assertEqual(result["cross_timeframe_confluence"], "NOT_COMPUTED")
+        self.assertTrue(any("not computed" in item for item in result["limitations"]))
         self.assertTrue(all("zones" in item and "events" in item for item in result["timeframes"]))
 
     def test_rejects_mixed_symbols(self):
@@ -65,6 +66,8 @@ class MultiTimeframeSupportResistanceTests(unittest.TestCase):
             confluence_tolerance_bps=25,
         )
         self.assertEqual(result["cross_timeframe_confluence"], "COMPUTED_BY_EXPLICIT_PRICE_TOLERANCE")
+        self.assertTrue(any("computed only from same-kind zones" in item for item in result["limitations"]))
+        self.assertFalse(any("cross-timeframe confluence is not computed" in item for item in result["limitations"]))
         self.assertEqual(result["confluence_tolerance_bps"], 25)
         self.assertTrue(result["confluence_groups"])
         self.assertTrue(all(group["timeframe_count"] >= 2 for group in result["confluence_groups"]))
