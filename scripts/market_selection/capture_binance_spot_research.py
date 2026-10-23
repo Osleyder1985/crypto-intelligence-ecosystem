@@ -152,6 +152,7 @@ def capture_and_build_report(
     use_case: str = "internal_analysis",
     authorization_record: dict | None = None,
     requested_identifier_type: str = "symbol",
+    requested_asset_identifier: str | None = None,
     requested_chain_id: str | None = None,
     identity_evidence: dict | None = None,
 ) -> tuple[dict, dict]:
@@ -194,8 +195,13 @@ def capture_and_build_report(
     capture_raw = (
         json.dumps(artifact, ensure_ascii=False, indent=2, sort_keys=True, allow_nan=False) + "\n"
     ).encode("utf-8")
+    requested_asset_id = (
+        requested_asset_identifier.strip()
+        if isinstance(requested_asset_identifier, str) and requested_asset_identifier.strip()
+        else base_asset_ticker
+    )
     report = build_research_report(
-        artifact, config, base_asset_ticker, capture_raw,
+        artifact, config, requested_asset_id, capture_raw,
         requested_identifier_type=requested_identifier_type,
         requested_chain_id=requested_chain_id,
         identity_evidence=identity_evidence,
@@ -258,6 +264,7 @@ def main() -> int:
                         help="Intended data use; defaults to internal_analysis and requires explicit authorization")
     parser.add_argument("--authorization-record", type=Path, help="Reviewed provider authorization record JSON")
     parser.add_argument("--asset-id-type", choices=("symbol", "canonical_id", "contract_address", "name"), default="symbol")
+    parser.add_argument("--asset-identifier", help="Identifier checked against reviewed evidence; for example Bitcoin, registry:bitcoin, or a contract address")
     parser.add_argument("--asset-chain-id", help="Required when --asset-id-type=contract_address")
     parser.add_argument("--identity-evidence", type=Path, help="Reviewed canonical identity evidence JSON")
     parser.add_argument("--capture-output", required=True, type=Path)
@@ -266,6 +273,10 @@ def main() -> int:
     config = json.loads(args.config.read_text(encoding="utf-8"))
     authorization_record = json.loads(args.authorization_record.read_text(encoding="utf-8")) if args.authorization_record else None
     identity_evidence = json.loads(args.identity_evidence.read_text(encoding="utf-8")) if args.identity_evidence else None
+    if args.asset_id_type != "symbol" and not args.asset_identifier:
+        parser.error("--asset-identifier is required when --asset-id-type is not symbol")
+    if args.asset_identifier and not args.identity_evidence:
+        parser.error("--asset-identifier requires --identity-evidence for verification")
     if args.asset_ticker and args.base_asset_ticker and args.asset_ticker.casefold() != args.base_asset_ticker.casefold():
         parser.error("--base-asset-ticker must match --asset-ticker when both are supplied")
     captured, report = capture_and_build_report(
@@ -279,6 +290,7 @@ def main() -> int:
         use_case=args.use_case,
         authorization_record=authorization_record,
         requested_identifier_type=args.asset_id_type,
+        requested_asset_identifier=args.asset_identifier,
         requested_chain_id=args.asset_chain_id,
         identity_evidence=identity_evidence,
     )
