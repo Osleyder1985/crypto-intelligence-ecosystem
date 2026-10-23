@@ -18,7 +18,7 @@ import threading
 import time
 from urllib.error import HTTPError, URLError
 from urllib.parse import urlsplit
-from urllib.request import Request, urlopen
+from urllib.request import HTTPRedirectHandler, Request, build_opener, urlopen
 import xml.etree.ElementTree as ET
 from typing import Any
 
@@ -40,6 +40,7 @@ from scripts.market_selection.provider_license_gate import (
 )
 
 FEED_CAPTURE_SCHEMA = "crypto-public-event-feed-capture-v1"
+ARTICLE_CAPTURE_SCHEMA = "crypto-public-event-article-capture-v1"
 _REQUIRED_USE_CASES = ("internal_analysis", "persistent_storage")
 _RATE_LOCK = threading.Lock()
 _LAST_REQUEST_MONOTONIC: dict[str, float] = {}
@@ -433,6 +434,244 @@ def capture_public_event_feed(
         "asset_identity_resolved": False,
         "orders_submitted": False,
         "network_requests_made": True,
+    }
+
+
+
+class _AllowlistedRedirectHandler(HTTPRedirectHandler):
+    """Permit redirects only to HTTPS hosts explicitly allowed for the source."""
+
+    def __init__(self, allowed_hosts: set[str]):
+        super().__init__()
+        self.allowed_hosts = {host.casefold() for host in allowed_hosts}
+
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        parts = urlsplit(newurl)
+        if (
+            parts.scheme != "https"
+            or (parts.hostname or "").casefold() not in self.allowed_hosts
+            or parts.username is not None
+            or parts.password is not None
+            or parts.port not in (None, 443)
+        ):
+            return None
+        return super().redirect_request(req, fp, code, msg, headers, newurl)
+
+
+def _open_allowlisted_url(request: Request, timeout_seconds: float, allowed_hosts: set[str]):
+    opener = build_opener(_AllowlistedRedirectHandler(allowed_hosts))
+    return opener.open(request, timeout=float(timeout_seconds))
+
+
+def _blocked_article_result(
+    source: dict,
+    registry_hash: str,
+    candidate_id: str,
+    captured_at: str,
+    assessments: list[dict],
+    blockers: list[str],
+) -> dict:
+    return {
+        "schema_version": ARTICLE_CAPTURE_SCHEMA,
+        "source_id": source["source_id"],
+        "provider_id": source["provider_id"],
+        "source_registry_status": source["status"],
+        "source_registry_entry_sha256": registry_hash,
+        "candidate_id": candidate_id,
+        "requested_url": None,
+        "final_url": None,
+        "captured_at": captured_at,
+        "capture_status": "BLOCKED",
+        "network_request_made": False,
+        "http_status": None,
+        "response_headers": {},
+        "content_type": None,
+        "raw_response_bytes": 0,
+        "raw_response_sha256": None,
+        "raw_response_base64": None,
+        "capture_truncated": False,
+        "provider_policy_assessments": assessments,
+        "provider_use_assessment": assessments[0],
+        "persistent_storage_assessment": assessments[1],
+        "reason_codes": blockers,
+        "errors": [],
+    }
+
+
+def capture_public_event_article(
+    feed_capture: dict,
+    candidate_id: str,
+    authorization_record: dict | None,
+    user_agent: str | None,
+    timeout_seconds: float = 10.0,
+    captured_at: str | None = None,
+) -> dict:
+    """Capture one allowlisted article only after source/use authorization passes.
+
+    The full response body is preserved to EOF and hashed. Redirects are followed only
+    when the destination remains HTTPS and within the source's explicit host allowlist.
+    This function never resolves an asset or claims that the article caused a market move.
+    """
+    if not isinstance(feed_capture, dict) or feed_capture.get("schema_version") != FEED_CAPTURE_SCHEMA:
+        raise ValueError("feed_capture has an invalid schema")
+    source_id = feed_capture.get("source_id")
+    if not isinstance(source_id, str) or not source_id.strip():
+        raise ValueError("feed_capture.source_id is required")
+    if not isinstance(candidate_id, str) or not candidate_id.strip():
+        raise ValueError("candidate_id is required")
+    captured = _normalize_timestamp(captured_at)
+    source, assessments, blockers, registry_hash = _authorization_state(
+        source_id, authorization_record, user_agent, timeout_seconds
+    )
+    if blockers:
+        return _blocked_article_result(source, registry_hash, candidate_id, captured, assessments, blockers)
+    if (
+        feed_capture.get("capture_status") != "PASS"
+        or feed_capture.get("capture_truncated") is not False
+        or feed_capture.get("network_request_made") is not True
+    ):
+        raise PermissionError("article capture requires a complete successful feed capture")
+    if (
+        feed_capture.get("source_registry_status") != "APPROVED"
+        or feed_capture.get("source_registry_entry_sha256") != registry_hash
+        or feed_capture.get("source_url") != source["source_url"]
+    ):
+        raise PermissionError("feed source registry evidence is missing or stale")
+    for use_case in _REQUIRED_USE_CASES:
+        if evaluate_artifact_use(feed_capture, use_case)["decision"] != "ALLOW":
+            raise PermissionError(f"feed capture does not authorize {use_case}")
+    raw_b64 = feed_capture.get("raw_response_base64")
+    if not isinstance(raw_b64, str):
+        raise PermissionError("feed capture raw response is missing")
+    try:
+        feed_raw = base64.b64decode(raw_b64, validate=True)
+    except (ValueError, base64.binascii.Error) as exc:
+        raise PermissionError("feed capture raw response base64 is invalid") from exc
+    if (
+        hashlib.sha256(feed_raw).hexdigest() != feed_capture.get("raw_response_sha256")
+        or len(feed_raw) != feed_capture.get("raw_response_bytes")
+    ):
+        raise PermissionError("feed capture body integrity check failed")
+    try:
+        parsed_items, _, _ = _parse_feed(feed_raw, source)
+    except (ET.ParseError, ValueError) as exc:
+        raise PermissionError("feed capture is not valid RSS/Atom") from exc
+    candidate = next((item for item in parsed_items if item.get("candidate_id") == candidate_id), None)
+    if candidate is None:
+        raise ValueError("candidate_id was not present in preserved feed bytes")
+    if candidate.get("url_status") != "ALLOWLISTED_SOURCE_HOST":
+        raise PermissionError("candidate URL is outside the source host allowlist")
+    if candidate.get("publication_time_status") != "PARSED" or not candidate.get("published_at"):
+        raise ValueError("candidate has no eligible publication timestamp")
+    feed_captured = parse_timestamp(feed_capture.get("captured_at"), "feed_capture.captured_at")
+    article_captured = parse_timestamp(captured, "captured_at")
+    if article_captured < feed_captured:
+        raise ValueError("article captured_at cannot precede feed captured_at")
+    published = parse_timestamp(candidate["published_at"], "candidate.published_at")
+    if published > feed_captured:
+        raise ValueError("candidate publication timestamp is after the feed capture cutoff")
+    article_url = candidate.get("url")
+    parts = urlsplit(article_url) if isinstance(article_url, str) else None
+    allowed_hosts = {host.casefold() for host in source.get("allowed_article_hosts", [])}
+    if (
+        parts is None
+        or parts.scheme != "https"
+        or (parts.hostname or "").casefold() not in allowed_hosts
+        or parts.port not in (None, 443)
+        or parts.username is not None
+        or parts.password is not None
+    ):
+        raise PermissionError("candidate URL is outside the approved HTTPS host allowlist")
+
+    rate = source.get("max_requests_per_second")
+    if isinstance(rate, bool) or not isinstance(rate, (int, float)) or rate <= 0:
+        return _blocked_article_result(source, registry_hash, candidate_id, captured, assessments, ["INVALID_SOURCE_RATE_LIMIT"])
+    _wait_for_rate_slot(source_id, rate)
+    request = Request(
+        article_url,
+        headers={"User-Agent": user_agent.strip(), "Accept": "text/html, application/xhtml+xml, application/pdf;q=0.8, */*;q=0.5"},
+        method="GET",
+    )
+    status_code: int | None = None
+    headers: dict[str, str] = {}
+    raw = b""
+    read_error: Exception | None = None
+    final_url = article_url
+    try:
+        with _open_allowlisted_url(request, float(timeout_seconds), allowed_hosts) as response:
+            status_code = int(getattr(response, "status", 200))
+            headers = _safe_headers(getattr(response, "headers", None))
+            geturl = getattr(response, "geturl", None)
+            if callable(geturl):
+                final_url = geturl()
+            raw, read_error = _read_to_eof(response)
+    except HTTPError as exc:
+        status_code = int(exc.code)
+        headers = _safe_headers(exc.headers)
+        raw, read_error = _read_to_eof(exc)
+        try:
+            exc.close()
+        except OSError:
+            pass
+    except (URLError, TimeoutError, OSError) as exc:
+        return {
+            **_blocked_article_result(source, registry_hash, candidate_id, captured, assessments, ["ARTICLE_REQUEST_FAILED"]),
+            "capture_status": "NETWORK_ERROR",
+            "network_request_made": True,
+            "requested_url": article_url,
+            "final_url": None,
+            "raw_response_sha256": hashlib.sha256(b"").hexdigest(),
+            "raw_response_base64": "",
+            "errors": [{"type": type(exc).__name__, "message": str(exc)}],
+        }
+
+    reason_codes: list[str] = []
+    errors: list[dict] = []
+    if read_error is not None:
+        status = "PARTIAL"
+        reason_codes.append("RESPONSE_READ_INCOMPLETE")
+        errors.append({"type": type(read_error).__name__, "message": str(read_error)})
+    elif status_code != 200:
+        status = "HTTP_ERROR"
+        reason_codes.append("HTTP_STATUS_UNEXPECTED")
+        errors.append({"type": "HTTP_STATUS", "message": f"unexpected HTTP status {status_code}"})
+    else:
+        final_parts = urlsplit(final_url)
+        if (
+            final_parts.scheme != "https"
+            or (final_parts.hostname or "").casefold() not in allowed_hosts
+            or final_parts.username is not None
+            or final_parts.password is not None
+            or final_parts.port not in (None, 443)
+        ):
+            status = "BLOCKED_REDIRECT_TARGET"
+            reason_codes.append("FINAL_URL_OUTSIDE_ALLOWLIST")
+        else:
+            status = "PASS"
+    return {
+        "schema_version": ARTICLE_CAPTURE_SCHEMA,
+        "source_id": source_id,
+        "provider_id": source["provider_id"],
+        "source_registry_status": source["status"],
+        "source_registry_entry_sha256": registry_hash,
+        "candidate_id": candidate_id,
+        "requested_url": article_url,
+        "final_url": final_url,
+        "captured_at": captured,
+        "capture_status": status,
+        "network_request_made": True,
+        "http_status": status_code,
+        "response_headers": headers,
+        "content_type": headers.get("Content-Type") or headers.get("content-type"),
+        "raw_response_bytes": len(raw),
+        "raw_response_sha256": hashlib.sha256(raw).hexdigest(),
+        "raw_response_base64": base64.b64encode(raw).decode("ascii"),
+        "capture_truncated": read_error is not None,
+        "provider_policy_assessments": assessments,
+        "provider_use_assessment": assessments[0],
+        "persistent_storage_assessment": assessments[1],
+        "reason_codes": reason_codes,
+        "errors": errors,
     }
 
 
