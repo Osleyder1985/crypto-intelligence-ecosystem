@@ -118,17 +118,18 @@ class PublicEventArchiveTests(unittest.TestCase):
         candidate = candidate_from(archive_capture)
         self.assertEqual(candidate["candidate_url"], ARTICLE_URL)
         self.assertEqual(candidate["published_at"], "2026-10-20T10:00:00Z")
-        with self.assertRaisesRegex(PermissionError, "URL/title"):
-            select_public_event_archive_candidate(
-                archive_capture,
-                candidate_url=ARTICLE_URL,
-                title="An unrelated announcement",
-                published_at="2026-10-20T10:00:00Z",
-                publication_time_evidence="10/20/2026",
-                selected_by="offline-archive-reviewer",
-                selected_at="2026-10-22T12:31:00Z",
-                selection_rationale="Negative test.",
-            )
+        with patch.dict(EVENT_SOURCE_REGISTRY["sources"], {"cftc_general_press_releases": entry}):
+            with self.assertRaisesRegex(PermissionError, "URL/title"):
+                select_public_event_archive_candidate(
+                    archive_capture,
+                    candidate_url=ARTICLE_URL,
+                    title="An unrelated announcement",
+                    published_at="2026-10-20T10:00:00Z",
+                    publication_time_evidence="10/20/2026",
+                    selected_by="offline-archive-reviewer",
+                    selected_at="2026-10-22T12:31:00Z",
+                    selection_rationale="Negative test.",
+                )
 
     def test_archive_article_promotion_and_report_integration(self):
         entry = approved_source()
