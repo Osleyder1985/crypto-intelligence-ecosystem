@@ -134,7 +134,7 @@ EVENT_SOURCE_REGISTRY = {
             "source_type": "REGULATORY",
             "source_url": "https://www.cftc.gov/PressRoom/PressReleases",
             "allowed_article_hosts": ["www.cftc.gov", "cftc.gov"],
-            "allowed_archive_path_prefixes": ["/PressRoom/PressReleases", "/PressRoom/IntheNews"],
+            "allowed_archive_path_prefixes": ["/PressRoom/PressReleases"],
             "terms_url": "https://www.cftc.gov/WebPolicy/index.htm",
             "status": "TERMS_PENDING",
             "terms_sha256": None,
