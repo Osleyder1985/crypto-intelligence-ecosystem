@@ -112,6 +112,22 @@ class ExternalEventEvidenceTests(unittest.TestCase):
         self.assertEqual(result["status"], "NOT_AVAILABLE_AS_OF")
         self.assertFalse(result["causality_claimed"])
 
+    def test_late_publication_is_not_eligible_before_its_publication_time(self):
+        value = event(
+            published_at="2026-10-23T10:00:00Z",
+            captured_at="2026-10-23T10:01:00Z",
+        )
+        result = assess_temporal_association(
+            value,
+            movement_start="2026-10-22T09:00:00Z",
+            movement_end="2026-10-22T11:00:00Z",
+            evaluation_as_of="2026-10-22T12:00:00Z",
+            target_entity={"id_type": "coingecko_id", "id": "example-coin"},
+        )
+        self.assertEqual(result["status"], "NOT_AVAILABLE_AS_OF")
+        self.assertEqual(result["causality_label"], "CAUSE_UNIDENTIFIED")
+        self.assertFalse(result["causality_claimed"])
+
     def test_overlap_is_only_temporal_association_not_causality(self):
         result = assess_temporal_association(
             event(),
