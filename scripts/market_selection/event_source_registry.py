@@ -97,7 +97,7 @@ EVENT_SOURCE_REGISTRY = {
             "max_requests_per_invocation": 1,
             "parallel_requests": False,
             "response_body_policy": "READ_TO_EOF_NO_LOCAL_SIZE_CAP",
-            "coverage_scope": "Current Board press-release feed; macro/monetary-policy context, not a complete historical archive or crypto-specific event source."
+            "coverage_scope": "Current Board press-release feed; macro/monetary-policy context, not a complete historical archive or crypto-specific event source.",
             "entity_resolution_policy": "No asset identity is inferred from title, ticker, or description.",
             "notes": "Official feed endpoint verified from the Federal Reserve RSS index. Website policies do not by themselves establish permission for the project's intended persistent storage; runtime use must remain blocked pending review."
 
