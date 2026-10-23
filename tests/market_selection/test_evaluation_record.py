@@ -155,7 +155,7 @@ class EvaluationRecordTests(unittest.TestCase):
                          market_metadata={"base_asset_id": "BTC", "quote_asset_id": "USDT", "market_type": "SPOT"})
         new = build_evaluation_record(
             manifest(self.source, market_id="okx:BTC-USDT:SPOT",
-                     market_metadata={"base_asset_id": "BTC", "quote_asset_id": "USDC", "market_type": "SPOT"}),
+                     market_metadata={"market_type": "SPOT"}),
             self.archive, self.root / "records2")
         result = compare_evaluation_records(old, new)
         self.assertFalse(result["scope_compatible"])
