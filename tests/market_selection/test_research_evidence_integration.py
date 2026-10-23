@@ -11,6 +11,7 @@ from scripts.market_selection.capture_sec_press_releases_rss import (
 
 from scripts.market_selection.research_evidence_integration import enrich_research_report
 from scripts.market_selection.methodology_contract import METHODOLOGY_SCHEMA
+from test_analyze_support_resistance import artifact as support_artifact, candle as support_candle
 
 
 def methodology():
@@ -83,6 +84,33 @@ def report():
         "limitations": [],
         "orders_submitted": False,
         "network_requests_made": False,
+    }
+
+
+def support_resistance_input(*, stable_id="example-asset", category="smart_contract_token", future_candle=False):
+    rows = [
+        support_candle(0, 10, 11, 9, 10),
+        support_candle(1, 10, 11, 8, 9),
+        support_candle(2, 9, 10, 7, 8),
+        support_candle(3, 8, 9, 8, 8.5),
+        support_candle(4, 8.5, 10, 8, 9.5),
+        support_candle(5, 9.5, 11, 9, 10.5),
+    ]
+    base_ms = 1792454400000
+    for index, row in enumerate(rows):
+        row["open_time_ms"] = base_ms + index * 3_600_000
+        row["close_time_ms"] = base_ms + (index + 1) * 3_600_000 - 1
+    return {
+        "schema_version": "research-support-resistance-input-v1",
+        "asset": {"stable_id": stable_id, "category": category},
+        "asset_mapping_evidence_url": "https://example.org/reviewed-token-market-mapping",
+        "artifacts": [support_artifact(rows)],
+        "parameters": {
+            "pivot_left": 1,
+            "pivot_right": 1,
+            "tolerance_bps": 100,
+            "confluence_tolerance_bps": 100,
+        },
     }
 
 
@@ -389,6 +417,43 @@ class ResearchEvidenceIntegrationTests(unittest.TestCase):
         assessment = enriched["external_event_evidence"]["assessments"][0]
         self.assertEqual(assessment["movement_episode"]["event_relation_to_swing"], "FOLLOWS_SWING")
         self.assertFalse(assessment["causality_claimed"])
+
+    def test_integrates_multi_timeframe_support_resistance_without_promoting_decision(self):
+        source = support_resistance_input(future_candle=True)
+        enriched = enrich_research_report(
+            report(), events=[], observations=[], methodology=methodology(),
+            asset={"stable_id": "example-asset", "category": "smart_contract_token"},
+            evaluation_as_of="2026-10-20T04:59:59.999Z",
+            support_resistance_input=source,
+        )
+        technical = enriched["technical_structure_assessment"]
+        self.assertEqual(technical["status"], "ASSESSED")
+        self.assertEqual(technical["asset_mapping"]["status"], "CALLER_SUPPLIED_REQUIRES_REVIEW")
+        self.assertEqual(technical["excluded_after_cutoff_candle_count"], 1)
+        self.assertEqual(technical["analysis"]["timeframe_count"], 1)
+        self.assertEqual(technical["analysis"]["timeframes"][0]["sample"]["input_candle_count"], 5)
+        self.assertEqual(enriched["decision_status"], "INDETERMINATE")
+        self.assertFalse(enriched["orders_submitted"])
+
+    def test_support_resistance_requires_target_asset_mapping(self):
+        source = support_resistance_input(stable_id="different-asset")
+        with self.assertRaisesRegex(ValueError, "must match the target stable_id and category"):
+            enrich_research_report(
+                report(), events=[], observations=[], methodology=methodology(),
+                asset={"stable_id": "example-asset", "category": "smart_contract_token"},
+                evaluation_as_of="2026-10-20T04:59:59.999Z",
+                support_resistance_input=source,
+            )
+
+    def test_report_marks_support_resistance_unavailable_when_not_supplied(self):
+        enriched = enrich_research_report(
+            report(), events=[], observations=[], methodology=methodology(),
+            asset={"stable_id": "example-asset", "category": "smart_contract_token"},
+            evaluation_as_of="2026-10-21T00:00:00Z",
+        )
+        self.assertEqual(enriched["technical_structure_assessment"]["status"], "NOT_AVAILABLE")
+        self.assertEqual(enriched["technical_structure_assessment"]["reason_code"], "NO_SUPPORT_RESISTANCE_INPUT_SUPPLIED")
+        self.assertEqual(enriched["decision_status"], "INDETERMINATE")
 
     def test_integrates_contracts_without_promoting_investment_decision(self):
         with patch.dict(EVENT_SOURCE_REGISTRY["sources"], {"sec_press_releases": approved_event_source()}):
