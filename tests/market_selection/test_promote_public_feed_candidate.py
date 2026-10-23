@@ -56,7 +56,7 @@ class PromotePublicFeedCandidateCliTests(unittest.TestCase):
                     "--capture", str(capture_path),
                     "--candidate-id", capture["feed_items"][0]["candidate_id"],
                     "--event-type", "REGULATORY_ENFORCEMENT",
-                    "--claim", "The preserved feed summary reports a regulatory announcement.",
+                    "--claim", "The preserved article body reports a regulatory announcement.",
                     "--entity-resolution", str(resolution_path),
                     "--article-capture", str(article_path),
                     "--output", str(output_path),
