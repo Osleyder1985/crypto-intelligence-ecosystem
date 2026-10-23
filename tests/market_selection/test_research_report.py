@@ -8,6 +8,7 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
+from scripts.market_selection import research_report
 from scripts.market_selection.research_report import build_research_report
 from scripts.market_selection.capture_binance_spot_research import EXCHANGE_INFO_URL, capture_and_build_report
 from scripts.market_selection.provider_license_gate import ASSESSMENT_SCHEMA_VERSION, POLICY_VERSION, evaluate_provider_use
