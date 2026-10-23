@@ -888,6 +888,7 @@ def enrich_research_report(
             pre_movement_window_minutes=pre_movement_window_minutes,
             post_movement_window_minutes=post_movement_window_minutes,
         )
+        fact_review_assessment = _assess_event_fact_review(event, evaluation_as_of=cutoff)
         if episode_context is not None:
             published_ms = parse_timestamp(event["published_at"], "published_at").timestamp() * 1000
             start_ms = episode_context["start_pivot_open_time_ms"]
@@ -907,6 +908,7 @@ def enrich_research_report(
             }
         event_assessments.append({
             **temporal_assessment,
+            "fact_verification": fact_review_assessment,
             **({"movement_episode": episode_context} if episode_context is not None else {}),
             "source_use_assessment": event_use,
             "source_storage_assessment": event_storage,
