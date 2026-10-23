@@ -263,7 +263,7 @@ class ResearchEvidenceIntegrationTests(unittest.TestCase):
                     }],
                     observations=[], methodology=methodology(),
                     asset={"stable_id": "example-asset", "category": "smart_contract_token"},
-                    evaluation_as_of="2026-10-20T13:00:00Z",
+                    evaluation_as_of="2026-10-20T11:30:00Z",
                 )
 
     def test_event_relation_can_identify_publication_before_swing_without_claiming_cause(self):
