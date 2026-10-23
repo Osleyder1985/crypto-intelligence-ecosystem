@@ -1,12 +1,19 @@
 import unittest
+from decimal import Decimal
 
 from scripts.market_selection.analyze_multi_timeframe_support_resistance import (
-    INPUT_SCHEMA, analyze_multi_timeframe_support_resistance,
+    INPUT_SCHEMA, analyze_multi_timeframe_support_resistance, _within_price_tolerance,
 )
 from test_analyze_support_resistance import artifact, candle
 
 
 class MultiTimeframeSupportResistanceTests(unittest.TestCase):
+    def test_price_tolerance_is_symmetric_around_midpoint(self):
+        tolerance = Decimal("99.5")
+        self.assertFalse(_within_price_tolerance(Decimal("100"), Decimal("101"), tolerance))
+        self.assertFalse(_within_price_tolerance(Decimal("101"), Decimal("100"), tolerance))
+        self.assertTrue(_within_price_tolerance(Decimal("100"), Decimal("101"), Decimal("100")))
+
     def fixture(self, interval="1h", symbol="BTCUSDT", exchange="binance", rows=None):
         value = artifact(rows or [
             candle(0, 10, 11, 9, 10),

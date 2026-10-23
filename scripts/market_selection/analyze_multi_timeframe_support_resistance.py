@@ -21,6 +21,14 @@ INPUT_SCHEMA = "multi-timeframe-support-resistance-input-v1"
 OUTPUT_SCHEMA = "multi-timeframe-support-resistance-events-v1"
 
 
+def _within_price_tolerance(left: Decimal, right: Decimal, tolerance_bps: Decimal) -> bool:
+    """Compare two positive prices using a symmetric midpoint denominator."""
+    midpoint = (left + right) / Decimal(2)
+    if midpoint <= 0:
+        return False
+    return abs(left - right) / midpoint * Decimal(10_000) <= tolerance_bps
+
+
 def analyze_multi_timeframe_support_resistance(
     artifacts: list[dict[str, Any]],
     *,
@@ -91,7 +99,7 @@ def analyze_multi_timeframe_support_resistance(
                 candidates = [
                     item for item in flattened
                     if item["interval"] == interval and item["kind"] == seed["kind"]
-                    and abs(item["center_price"] - seed["center_price"]) / seed["center_price"] * Decimal(10_000) <= tolerance
+                    and _within_price_tolerance(item["center_price"], seed["center_price"], tolerance)
                 ]
                 if candidates:
                     selected.append(min(candidates, key=lambda item: (
@@ -114,7 +122,7 @@ def analyze_multi_timeframe_support_resistance(
                 "center_price_max": str(max(centers)),
                 "observed_lower_bound_min": str(min(lows)),
                 "observed_upper_bound_max": str(max(highs)),
-                "matching_rule": "same zone kind and center-price distance within explicit bps tolerance",
+                "matching_rule": "same zone kind and symmetric midpoint-relative center-price distance within explicit bps tolerance",
             })
         confluence_groups.sort(key=lambda item: (
             item["kind"], Decimal(item["center_price_min"]), item["timeframe_count"]
