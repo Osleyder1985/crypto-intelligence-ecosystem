@@ -46,6 +46,28 @@ def _levels(value: Any, field: str, *, descending: bool) -> list[dict[str, str]]
     return result
 
 
+def _annotate_depth(levels: list[dict[str, str]], midpoint: Decimal) -> list[dict[str, str]]:
+    cumulative_quantity = Decimal(0)
+    cumulative_notional = Decimal(0)
+    annotated = []
+    for row in levels:
+        price = Decimal(row["price"])
+        quantity = Decimal(row["quantity"])
+        notional = Decimal(row["notional"])
+        cumulative_quantity += quantity
+        cumulative_notional += notional
+        distance_bps = abs(price - midpoint) / midpoint * Decimal(10_000)
+        if not distance_bps.is_finite():
+            raise ValueError("depth distance exceeds the supported finite numeric range")
+        annotated.append({
+            **row,
+            "distance_from_mid_bps": str(distance_bps.quantize(Decimal("0.000001"))),
+            "cumulative_base_quantity": str(cumulative_quantity),
+            "cumulative_quote_notional": str(cumulative_notional),
+        })
+    return annotated
+
+
 def analyze_order_book_snapshot(artifact: dict, authorization_registry: dict | None = None) -> dict:
     if not isinstance(artifact, dict) or artifact.get("schema_version") != INPUT_SCHEMA:
         raise ValueError(f"expected schema_version {INPUT_SCHEMA}")
@@ -92,6 +114,8 @@ def analyze_order_book_snapshot(artifact: dict, authorization_registry: dict | N
         raise ValueError("crossed or locked book is invalid for this snapshot")
     midpoint = (best_bid + best_ask) / Decimal(2)
     spread = best_ask - best_bid
+    bids = _annotate_depth(bids, midpoint)
+    asks = _annotate_depth(asks, midpoint)
     bid_notional = sum((Decimal(row["notional"]) for row in bids), Decimal(0))
     ask_notional = sum((Decimal(row["notional"]) for row in asks), Decimal(0))
     total_notional = bid_notional + ask_notional
