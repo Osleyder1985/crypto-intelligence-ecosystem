@@ -81,6 +81,8 @@ python -m scripts.market_selection.capture_binance_spot_research \
   --report-output artifacts/crypto-asset-research-report.json
 ```
 
+El selector de mercado y el identificador de identidad son campos distintos: `--asset-ticker` (y `--quote-asset`) selecciona el par Spot, mientras que `--asset-identifier` es el valor que se compara con la evidencia canónica. Por ejemplo, puede seleccionarse el mercado con `--asset-ticker BTC --quote-asset USDT` y verificar el nombre `--asset-id-type name --asset-identifier Bitcoin` contra `--identity-evidence`. Los tipos distintos de `symbol` requieren tanto el identificador explícito como el archivo de evidencia; la coincidencia de ticker por sí sola no acredita la identidad canónica.
+
 La configuración incluida hace reproducible un experimento descriptivo, no define horizontes temporales aprobados, no genera probabilidades predictivas ni valida rentabilidad. No debe describirse como estrategia de inversión aprobada. Los horizontes se mantienen `INDETERMINATE` mientras falten las metodologías y evidencias requeridas.
 
 
