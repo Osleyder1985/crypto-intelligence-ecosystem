@@ -1110,13 +1110,17 @@ def enrich_research_report(
                 elif not linked:
                     status = "NOT_ASSESSED_NO_EPISODE_LINKED_EVIDENCE"
                 elif any(
-                    item.get("causal_review", {}).get("effective_decision") == "SUPPORTED_CAUSALITY"
+                    item.get("entity_match") is True
+                    and item.get("causality_label") == "TEMPORAL_ASSOCIATION"
+                    and item.get("causal_review", {}).get("effective_decision") == "SUPPORTED_CAUSALITY"
                     and item.get("fact_verification", {}).get("effective_decision") == "VERIFIED_PRIMARY_SOURCE"
                     for item in linked
                 ):
                     status = "SUPPORTED_CAUSALITY_REVIEWED"
                 elif any(
-                    item.get("causal_review", {}).get("effective_decision") == "PLAUSIBLE_HYPOTHESIS"
+                    item.get("entity_match") is True
+                    and item.get("causality_label") == "TEMPORAL_ASSOCIATION"
+                    and item.get("causal_review", {}).get("effective_decision") == "PLAUSIBLE_HYPOTHESIS"
                     for item in linked
                 ):
                     status = "PLAUSIBLE_HYPOTHESIS_REVIEWED"
