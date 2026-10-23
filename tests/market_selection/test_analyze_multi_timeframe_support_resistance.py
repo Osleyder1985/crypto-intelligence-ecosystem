@@ -57,6 +57,7 @@ class MultiTimeframeSupportResistanceTests(unittest.TestCase):
 
     def test_rejects_mixed_quote_assets(self):
         primary = self.fixture("1h")
+        primary["market"]["quote_asset"] = "USDT"
         secondary = self.fixture("4h")
         secondary["market"]["quote_asset"] = "USDC"
         with self.assertRaisesRegex(ValueError, "same quote asset"):
