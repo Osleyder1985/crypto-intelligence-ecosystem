@@ -123,6 +123,61 @@ class FundamentalOnchainContractTests(unittest.TestCase):
                         freshness_policy_seconds=policy,
                     )
 
+    def test_assessment_preserves_source_timestamps_and_quality_evidence(self):
+        value = obs(
+            quality_notes="Synthetic fixture for provenance retention",
+            metadata={"snapshot": "block-21000000"},
+        )
+        result = evaluate_observations(
+            [value],
+            asset={"category": "smart_contract_token", "stable_id": "ethereum:0xabc"},
+            evaluation_as_of="2026-10-21T00:00:00Z",
+        )
+        evidence = result["metrics"]["supply.circulating"]["observation_evidence"][0]
+        self.assertEqual(evidence["observation_id"], "obs-1")
+        self.assertEqual(evidence["source"]["source_id"], "provider-a")
+        self.assertEqual(evidence["source"]["url"], "https://example.org/asset")
+        self.assertEqual(evidence["published_at"], "2026-10-20T10:00:00Z")
+        self.assertEqual(evidence["observed_at"], "2026-10-20T09:59:00Z")
+        self.assertEqual(evidence["captured_at"], "2026-10-20T10:01:00Z")
+        self.assertEqual(evidence["quality_notes"], "Synthetic fixture for provenance retention")
+        self.assertEqual(evidence["metadata"], {"snapshot": "block-21000000"})
+        self.assertEqual(evidence["assessment_status"], "OBSERVED")
+        self.assertEqual(evidence["assessment_value"], 123456.0)
+
+    def test_stale_observation_preserves_raw_value_and_exposes_effective_assessment(self):
+        result = evaluate_observations(
+            [obs()],
+            asset={"category": "smart_contract_token", "stable_id": "ethereum:0xabc"},
+            evaluation_as_of="2026-10-21T00:00:00Z",
+            freshness_policy_seconds={"supply.circulating": 3600},
+        )
+        evidence = result["metrics"]["supply.circulating"]["observation_evidence"][0]
+        self.assertEqual(evidence["status"], "OBSERVED")
+        self.assertEqual(evidence["value"], 123456.0)
+        self.assertEqual(evidence["assessment_status"], "STALE")
+        self.assertIsNone(evidence["assessment_value"])
+
+    def test_future_cutoff_rejection_preserves_observation_evidence(self):
+        future = obs(
+            published_at="2026-10-21T00:59:00Z",
+            observed_at="2026-10-21T01:00:00Z",
+            captured_at="2026-10-21T01:01:00Z",
+        )
+        result = evaluate_observations(
+            [future],
+            asset={"category": "smart_contract_token", "stable_id": "ethereum:0xabc"},
+            evaluation_as_of="2026-10-21T00:00:00Z",
+        )
+        rejected = result["coverage"]["rejected_after_cutoff_observations"]
+        self.assertEqual([item["observation_id"] for item in rejected], ["obs-1"])
+        self.assertEqual(rejected[0]["source"]["source_id"], "provider-a")
+        self.assertEqual(rejected[0]["captured_at"], "2026-10-21T01:01:00Z")
+        self.assertEqual(
+            result["coverage"]["rejected_after_cutoff_observation_ids"],
+            ["obs-1"],
+        )
+
     def test_future_publication_is_rejected_from_asof_assessment(self):
         result = evaluate_observations(
             [obs(published_at="2026-10-22T11:00:00Z", captured_at="2026-10-22T11:01:00Z")],
