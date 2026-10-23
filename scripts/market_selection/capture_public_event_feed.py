@@ -1698,7 +1698,6 @@ def main() -> int:
                 "message": "Shared request-rate coordination is unavailable; no network request was made.",
             }],
         }
-        exit_code = 2
         summary = {
             "output": str(args.output),
             "source_id": args.source_id,
