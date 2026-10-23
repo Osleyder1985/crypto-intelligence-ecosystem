@@ -288,6 +288,51 @@ def validate_prediction_record(record: object, methodology: object) -> dict:
         normalized_output["expected_return"] = _finite_number(output["expected_return"], "output.expected_return")
     if "probability_up" in output:
         normalized_output["probability_up"] = _finite_number(output["probability_up"], "output.probability_up", minimum=0, maximum=1)
+        calibration = output.get("probability_calibration")
+        if not isinstance(calibration, dict):
+            raise ValueError("output.probability_up requires probability_calibration evidence")
+        calibration_status = _text(calibration.get("status"), "output.probability_calibration.status")
+        if calibration_status != "VALIDATED":
+            raise ValueError("probability calibration status must be VALIDATED")
+        calibration_method = _text(calibration.get("method"), "output.probability_calibration.method")
+        metric = _text(calibration.get("metric"), "output.probability_calibration.metric")
+        if metric not in {"BRIER_SCORE", "LOG_LOSS", "ECE"}:
+            raise ValueError("probability calibration metric must be BRIER_SCORE, LOG_LOSS, or ECE")
+        score = _finite_number(calibration.get("score"), "output.probability_calibration.score", minimum=0)
+        if metric in {"BRIER_SCORE", "ECE"} and score > 1:
+            raise ValueError(f"output.probability_calibration.score must be <= 1 for {metric}")
+        evaluation_start = parse_timestamp(calibration.get("evaluation_start"), "output.probability_calibration.evaluation_start")
+        evaluation_end = parse_timestamp(calibration.get("evaluation_end"), "output.probability_calibration.evaluation_end")
+        reviewed_at = parse_timestamp(calibration.get("reviewed_at"), "output.probability_calibration.reviewed_at")
+        if evaluation_start >= evaluation_end:
+            raise ValueError("probability calibration evaluation_start must precede evaluation_end")
+        if evaluation_end > reviewed_at:
+            raise ValueError("probability calibration review cannot precede evaluation_end")
+        if reviewed_at > generated:
+            raise ValueError("probability calibration review must be available by generated_at")
+        sample_count = calibration.get("sample_count")
+        if isinstance(sample_count, bool) or not isinstance(sample_count, int) or sample_count < 1:
+            raise ValueError("output.probability_calibration.sample_count must be a positive integer")
+        evidence_url = _url(calibration.get("evidence_url"), "output.probability_calibration.evidence_url")
+        evidence_sha256 = _text(calibration.get("evidence_sha256"), "output.probability_calibration.evidence_sha256").lower()
+        if len(evidence_sha256) != 64 or any(char not in "0123456789abcdef" for char in evidence_sha256):
+            raise ValueError("output.probability_calibration.evidence_sha256 must be a 64-character hexadecimal SHA-256")
+        reviewer = _text(calibration.get("reviewed_by"), "output.probability_calibration.reviewed_by")
+        normalized_output["probability_calibration"] = {
+            "status": calibration_status,
+            "method": calibration_method,
+            "metric": metric,
+            "score": score,
+            "evaluation_start": evaluation_start.isoformat().replace("+00:00", "Z"),
+            "evaluation_end": evaluation_end.isoformat().replace("+00:00", "Z"),
+            "sample_count": sample_count,
+            "evidence_url": evidence_url,
+            "evidence_sha256": evidence_sha256,
+            "reviewed_by": reviewer,
+            "reviewed_at": reviewed_at.isoformat().replace("+00:00", "Z"),
+        }
+    elif "probability_calibration" in output:
+        raise ValueError("output.probability_calibration requires output.probability_up")
     if not normalized_output:
         raise ValueError("output must contain expected_return and/or probability_up")
     return {
