@@ -397,3 +397,44 @@ El plan se considera implantado —no simplemente escrito— cuando:
 - cualquier afirmación de conformidad o evaluación independiente dispone de evidencia apropiada.
 
 **Estado de salida actual:** propuesta de plan para revisión. La aprobación de este documento no cierra brechas técnicas ni autoriza por sí sola cambios de arquitectura, activación de proveedores, despliegue o ejecución de órdenes.
+
+
+## 17. Reconciliación obligatoria con el catálogo de requisitos existente
+
+La inspección del repositorio `main` encontró un catálogo preexistente en [`docs/engineering/requirements-traceability-catalog.md`](../../docs/engineering/requirements-traceability-catalog.md). Por tanto, **no se debe crear un segundo catálogo paralelo ni reemplazar el existente sin reconciliación**.
+
+### Evidencia documental observada
+
+- El catálogo existente identifica 33 requisitos de producto (`REQ-P-001` a `REQ-P-033`).
+- Identifica 18 atributos no funcionales (`NFR-001` a `NFR-018`), con métricas por concretar.
+- Incluye un mapa de trazabilidad, reglas de abstención, priorización preliminar por fases y una revisión documental de cobertura de Issues.
+- El propio documento se declara borrador y no línea base aprobada.
+- La sección 15 registra brechas para los Issues #3–#11 y #13, además de #16–#22, entre ellas responsables aún no nominados, criterios cuantitativos pendientes, PoC/ADR no demostradas, contratos API por concretar y evidencia operativa pendiente.
+
+La lectura del documento demuestra que ya existe un punto de partida sustancial; **no demuestra que los 33 requisitos estén completos, aprobados, implementados o verificados**. Los roles propuestos tampoco equivalen a responsables humanos nominados.
+
+### Procedimiento de consolidación
+
+1. Conservar los identificadores `REQ-P-*` y `NFR-*` cuando el significado sea equivalente; no reasignar IDs para ocultar duplicados.
+2. Contrastar cada objetivo del Plan Maestro con los requisitos existentes y marcar la relación como cubierto, parcial, ausente, contradictorio o pendiente de evidencia.
+3. Revisar los Issues y documentos maestros relacionados antes de proponer requisitos nuevos. Si ya existe un requisito equivalente, ampliar su criterio de aceptación o trazabilidad en vez de crear otro.
+4. Separar requisitos de producto, calidad, seguridad, datos, operación, gobernanza, restricciones y decisiones pendientes.
+5. Convertir los criterios vagos en escenarios verificables. Los umbrales numéricos se fijan únicamente con justificación, línea base, contexto de uso y aprobación; no se inventan.
+6. Registrar propietario/rol de decisión y verificación. En un proyecto de propietario único asistido por IA, documentar el conflicto de funciones y no presentar la revisión de la misma IA como independiente.
+7. Enlazar cada requisito con objetivo, Issue, riesgo, ADR, componente, prueba, ejecución CI y evidencia de release cuando aplique.
+8. Mantener los estados separados: propuesto, aprobado, implementado, verificado, bloqueado, retirado. No inferir implementación a partir de documentación ni verificación a partir de la existencia de tests.
+9. Documentar toda contradicción y resolverla mediante decisión trazable del propietario antes de fijar la línea base.
+10. Publicar una matriz de brechas revisada en PR y solicitar aprobación explícita; no fusionar ni cerrar Issues por la mera creación del catálogo.
+
+### Orden de trabajo para la siguiente iteración
+
+1. **Primero:** revisar la matriz existente de Issues #3–#22 y sus dependencias para no duplicar trabajo; actualizar su estado solo con evidencia actual.
+2. **Segundo:** contrastar los objetivos funcionales completos —episodios alcistas/bajistas y catalizadores, soportes/resistencias, libro y liquidez, análisis por horizontes, historial, comparación y ranking— con los 33 requisitos.
+3. **Tercero:** revisar cobertura no funcional más allá de las 10 métricas iniciales: el catálogo contiene `NFR-001`–`NFR-018`, por lo que deben inspeccionarse todos sus campos, criterios y trazabilidad, no asumir que solo existen los diez primeros.
+4. **Cuarto:** identificar contradicciones, huecos y criterios de aceptación no verificables, citando ruta, sección o Issue exacto.
+5. **Quinto:** producir una línea base candidata con matriz de cobertura bidireccional y decisiones pendientes claramente separadas.
+6. **Sexto:** someterla a revisión del propietario. Hasta esa aprobación, los requisitos siguen siendo una propuesta.
+
+### Condición de salida
+
+Esta actividad no se considera completada hasta que cada objetivo aprobado tenga uno o más requisitos inequívocos, cada requisito tenga criterio de aceptación verificable y trazabilidad, las brechas estén registradas, no queden duplicados/contradicciones sin resolver y el propietario apruebe expresamente la línea base. Este cierre documental no equivale a implementar o validar el producto.
