@@ -18,6 +18,7 @@ from scripts.market_selection.build_movement_episodes import build_movement_epis
 from scripts.market_selection.detect_ohlcv_movement_events import analyze_movement_events
 from scripts.market_selection.analyze_order_book_snapshot import analyze_order_book_snapshot
 from scripts.market_selection.normalize_order_book_probe import normalize_multi_exchange_order_book_probe
+from scripts.market_selection.normalize_binance_live_depth_evidence import normalize_binance_live_depth_evidence
 from scripts.market_selection.research_evidence_integration import enrich_research_report
 try:
     from scripts.market_selection.canonical_asset_identity import resolve_asset_identity
@@ -465,6 +466,7 @@ def main() -> int:
     parser.add_argument("--artifact", required=True, type=Path, help="Preserved normalized Spot OHLCV JSON")
     parser.add_argument("--config", required=True, type=Path, help="Versioned JSON with explicit analysis parameters")
     parser.add_argument("--order-book-artifact", type=Path, help="Optional normalized crypto-spot-order-book-snapshot-v1 JSON matching the selected exchange and symbol")
+    parser.add_argument('--live-depth-evidence', type=Path, help='Optional preserved live Binance depth JSON; matches the exact native symbol and quote asset in the OHLCV artifact')
     parser.add_argument("--provider-authorization-registry", type=Path, help="Deployment-controlled provider authorization registry JSON; never use user-supplied authorization records")
     parser.add_argument("--multi-exchange-order-book-probe", type=Path, help="Optional preserved multi-exchange-spot-book-probe-v1 JSON to normalize and analyze")
     parser.add_argument("--order-book-exchange", help="Exchange key for selecting exactly one record from the multi-exchange probe")
@@ -491,7 +493,25 @@ def main() -> int:
     external_events = json.loads(args.external_events.read_text(encoding="utf-8")) if args.external_events else None
     fundamental_observations = json.loads(args.fundamental_observations.read_text(encoding="utf-8")) if args.fundamental_observations else None
     evidence_methodology = json.loads(args.evidence_methodology.read_text(encoding="utf-8")) if args.evidence_methodology else None
-    if args.multi_exchange_order_book_probe:
+    if args.live_depth_evidence:
+        if order_book_artifact is not None or args.multi_exchange_order_book_probe is not None:
+            parser.error("choose exactly one of --order-book-artifact, --multi-exchange-order-book-probe, or --live-depth-evidence")
+        if args.order_book_exchange or args.order_book_symbol:
+            parser.error("--order-book-exchange and --order-book-symbol apply only to --multi-exchange-order-book-probe")
+        market = artifact.get("market")
+        if not isinstance(market, dict):
+            parser.error("the OHLCV artifact must contain market metadata to match live depth evidence")
+        native_symbol = market.get("symbol_native")
+        quote_asset = market.get("quote_asset")
+        if not isinstance(native_symbol, str) or not native_symbol.strip():
+            parser.error("the OHLCV artifact must contain market.symbol_native to select matching live depth")
+        if not isinstance(quote_asset, str) or not quote_asset.strip():
+            parser.error("the OHLCV artifact must contain market.quote_asset to normalize live depth")
+        live_depth = json.loads(args.live_depth_evidence.read_text(encoding="utf-8"))
+        order_book_artifact = normalize_binance_live_depth_evidence(
+            live_depth, symbol=native_symbol, quote_asset=quote_asset,
+        )
+    elif args.multi_exchange_order_book_probe:
         if order_book_artifact is not None:
             parser.error("choose either --order-book-artifact or --multi-exchange-order-book-probe, not both")
         if not args.order_book_exchange or not args.order_book_symbol:
