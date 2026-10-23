@@ -139,3 +139,50 @@ Esta sección complementa la revisión preliminar. No cambia automáticamente lo
 - **Federal Reserve Board:** https://www.federalreserve.gov/disclaimer.htm declara que, salvo indicación contraria, la información del Board es de dominio público y puede copiarse/distribuirse con atribución; los materiales de terceros quedan sujetos a sus propios derechos.
 
 La evidencia pública reduce la incertidumbre sobre copyright del contenido oficial, pero no es autorización general para almacenar indiscriminadamente todos los bytes HTML de páginas que puedan incluir contenido de terceros. El revisor debe documentar el alcance por fuente, definir si se almacenará HTML completo o contenido textual oficial extraído, revisar las condiciones de acceso automatizado y aprobar por separado los casos de uso. Hasta entonces, no cambiar el estado ni los casos de uso permitidos en el registro.
+
+
+## 11. Propuesta de alcance mínimo para la primera prueba autorizada — 2026-10-23
+
+Esta propuesta reduce el riesgo y el número de decisiones simultáneas. **No es una aprobación del propietario ni cambia el estado de ninguna fuente.** El registro de ejecución debe continuar en `TERMS_PENDING` hasta que una persona autorizada apruebe explícitamente el alcance y el paquete de evidencia cumpla el contrato del validador.
+
+### Orden recomendado de evaluación
+
+| Prioridad | Fuente | Evidencia oficial actual | Propuesta técnica | Bloqueo que permanece |
+| --- | --- | --- | --- | --- |
+| 1 | SEC — comunicados oficiales | La SEC declara que la información de sec.gov es pública y puede copiarse o redistribuirse, pide atribución y limita el uso de sellos/logos; también controla la frecuencia de acceso y no permite bots no clasificados. [Política de privacidad y difusión](https://www.sec.gov/about/privacy-information). | Evaluar primero una prueba de una sola página/comunicado oficial, con User-Agent identificable, una solicitud por invocación, contenido oficial pertinente, atribución y captura íntegra solo si se aprueba expresamente esa persistencia. | El operador debe aprobar endpoint, método de captura, tratamiento de contenido de terceros, persistencia/retención y caso de uso. No activar por defecto. |
+| 2 | Federal Reserve Board — comunicados oficiales | Su disclaimer permite copiar/distribuir la información del Board salvo indicación contraria, con atribución; el contenido de terceros puede requerir permiso separado. [Disclaimer](https://www.federalreserve.gov/disclaimer.htm). | Evaluar después de SEC, para eventos macroeconómicos con fecha/hora publicada, conservando por separado publicación y captura y sin convertir la coincidencia temporal en causalidad. | Falta decisión humana específica sobre feed/archivo, contenido guardado, retención y condiciones operativas del acceso automatizado. |
+| 3 | CFTC — comunicados oficiales | La Web Policy declara que la información gubernamental es de dominio público con atribución y advierte de contenido de terceros. [Web Policy](https://www.cftc.gov/WebPolicy/index.htm). El índice RSS fue reportado como temporalmente deshabilitado en octubre de 2026 en la revisión del repositorio. | No usar el RSS como primera ruta. Revalidar el estado oficial en el momento de la futura prueba; si continúa no disponible, no reintentar en bucle ni cambiar silenciosamente de endpoint. | Disponibilidad del feed/archivo y alcance autorizado por el operador. |
+
+### Alcance mínimo propuesto para una prueba piloto
+
+La decisión de aprobación debería declarar cada punto de forma explícita; no se deben inferir permisos no seleccionados:
+
+- **Fuente inicial:** solo `sec_press_releases` o, si el operador prefiere otra, identificarla por su `source_id` exacto.
+- **Finalidad:** `internal_analysis` para investigación de eventos de mercado; no redistribución pública ni republicación de artículos.
+- **Material persistido:** declarar si se permite guardar respuesta completa, texto oficial extraído, metadatos y hashes. No tratar un hash como sustituto del contenido cuando la prueba E2E necesite verificar el artículo.
+- **Retención y eliminación:** definir el periodo o regla de retención aprobada, qué se elimina y qué metadatos no textuales pueden conservarse.
+- **Atribución y enlaces:** guardar fuente, URL canónica y metadatos de publicación; mostrar atribución requerida en el informe.
+- **Acceso automatizado:** endpoint exacto, User-Agent revisado, frecuencia/cuota, timeout, política de redirecciones y respuesta ante errores.
+- **Prueba E2E:** ejecutar solo tras aprobar la fuente; capturar índice o feed, seleccionar un candidato, obtener el artículo autorizado, verificar entidad con identificador estable, evaluar el corte temporal y producir salida factual/correlacional/causal conservadora.
+- **Cobertura:** generar manifiesto de páginas/segmentos esperados, capturados, ausentes, fallidos y fuera de alcance. Nunca declarar cobertura global completa a partir de una muestra.
+
+### Decisión pendiente del propietario
+
+Para pasar de documentación a captura real se requiere una decisión humana explícita con esta información mínima:
+
+1. `source_id` que se autoriza.
+2. Casos de uso aprobados (`internal_analysis`, `persistent_storage` y cualquier otro que el esquema admita).
+3. Tipos de contenido que pueden persistirse y su regla de retención/eliminación.
+4. Confirmación de atribución, restricciones de terceros y política de acceso automatizado.
+5. Identidad del revisor autorizado y fecha de decisión.
+
+Si algún punto queda indeterminado, mantener `TERMS_PENDING` para el uso afectado. No rellenar campos de aprobación con identidades, fechas, hashes ni decisiones inventadas. La propuesta prioriza una prueba pequeña y reversible; no autoriza por sí misma la ejecución.
+
+### Fuentes oficiales revisadas
+
+- SEC, [Privacy and Security Policy / Website Dissemination](https://www.sec.gov/about/privacy-information): difusión pública, atribución, control de frecuencia y bots no clasificados.
+- Federal Reserve Board, [Disclaimer](https://www.federalreserve.gov/disclaimer.htm): información pública del Board y excepción de materiales de terceros.
+- CFTC, [Web Policy](https://www.cftc.gov/WebPolicy/index.htm): información gubernamental de dominio público con atribución y excepciones de terceros.
+- CFTC, [RSS](https://www.cftc.gov/RSS/index.htm): página oficial para comprobar disponibilidad actual de feeds antes de cualquier ejecución.
+
+La consulta de páginas oficiales sirve como evidencia documental, no como dictamen jurídico ni aprobación automática del alcance de captura y almacenamiento.
