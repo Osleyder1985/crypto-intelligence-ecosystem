@@ -83,6 +83,34 @@ class BinanceSpotResearchCaptureTests(unittest.TestCase):
         self.assertEqual(json.loads(base64.b64decode(evidence["response_base64"]))["symbols"], payload["symbols"])
         self.assertNotIn("symbol=", network.call_args.args[0].full_url)
 
+    def test_ticker_resolves_only_when_quote_market_is_unique(self):
+        payload = exchange_info_payload()
+        payload["symbols"].append({
+            "symbol": "BTCUSDC", "baseAsset": "BTC", "quoteAsset": "USDC",
+            "status": "TRADING", "isSpotTradingAllowed": True,
+            "baseAssetPrecision": 8, "quoteAssetPrecision": 8, "filters": [],
+        })
+        raw = json.dumps(payload).encode("utf-8")
+        with patch("scripts.market_selection.capture_binance_spot_research.urlopen", return_value=FakeResponse(raw)):
+            selected = capture_exchange_info(
+                None, base_asset_ticker="BTC", quote_asset="USDT", use_case="live_technical_test"
+            )
+        self.assertEqual(selected["symbol_native"], "BTCUSDT")
+        self.assertEqual(selected["base_asset"], "BTC")
+        self.assertEqual(selected["market_resolution"]["resolution_status"], "UNIQUE_MARKET")
+
+    def test_ticker_without_quote_fails_closed_when_multiple_pairs_match(self):
+        payload = exchange_info_payload()
+        payload["symbols"].append({
+            "symbol": "BTCUSDC", "baseAsset": "BTC", "quoteAsset": "USDC",
+            "status": "TRADING", "isSpotTradingAllowed": True,
+            "baseAssetPrecision": 8, "quoteAssetPrecision": 8, "filters": [],
+        })
+        raw = json.dumps(payload).encode("utf-8")
+        with patch("scripts.market_selection.capture_binance_spot_research.urlopen", return_value=FakeResponse(raw)):
+            with self.assertRaisesRegex(ValueError, "AMBIGUOUS_MARKET"):
+                capture_exchange_info(None, base_asset_ticker="BTC", use_case="live_technical_test")
+
     def test_fails_closed_when_symbol_not_found(self):
         raw = json.dumps({"symbols": []}).encode()
         with patch("scripts.market_selection.capture_binance_spot_research.urlopen", return_value=FakeResponse(raw)):
@@ -167,7 +195,7 @@ class BinanceSpotResearchCaptureTests(unittest.TestCase):
         with patch("scripts.market_selection.capture_binance_spot_research.urlopen", return_value=FakeResponse(metadata_raw)), patch(
             "scripts.market_selection.capture_binance_spot_research.capture_history", return_value=artifact
         ):
-            with self.assertRaisesRegex(ValueError, "canonical asset identity evidence conflicts"):
+            with self.assertRaisesRegex(ValueError, "base_asset_ticker does not match")
                 capture_and_build_report(symbol="BTCUSDT", interval="1h", start_time_ms=0, end_time_ms_exclusive=3_600_000, config=config, base_asset_ticker="ETH", use_case="live_technical_test")
 
 
