@@ -12,7 +12,6 @@ import json
 from datetime import datetime, timezone
 from pathlib import Path
 from urllib.error import HTTPError, URLError
-from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 
 from scripts.market_selection.capture_binance_spot_ohlcv import (
@@ -43,11 +42,11 @@ def read_complete(response) -> bytes:
 
 
 def capture_exchange_info(symbol: str, *, use_case: str = "internal_analysis", authorization_record: dict | None = None) -> dict:
-    """Capture and preserve the full official response for one exact native symbol."""
+    """Capture the complete exchangeInfo response, then select one native symbol locally."""
     assessment = evaluate_provider_use("binance_spot_market_data", use_case, authorization_record)
     if assessment["decision"] != "ALLOW":
         raise PermissionError("Binance provider use blocked before exchangeInfo request: " + ";".join(assessment["reason_codes"]))
-    url = EXCHANGE_INFO_URL + "?" + urlencode({"symbol": symbol})
+    # Preserve the full exchangeInfo universe. No local response-size ceiling or server-side symbol filter.\n    url = EXCHANGE_INFO_URL
     started = utc_now()
     request = Request(
         url,
