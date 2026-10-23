@@ -46,3 +46,9 @@ Esta implementación no entrena modelos, no determina qué factores predicen ren
 ## 5. Pruebas
 
 Los tests cubren versiones/horizontes, orden temporal, costes desconocidos, aprobación explícita, splits de validación, identidad de features, transformación versionada, corte de disponibilidad, ventanas objetivo y probabilidades inválidas. El workflow dedicado debe ejecutarse sobre el head actual antes de declarar el cambio validado.
+
+## 6.1 Control adicional para probabilidades
+
+Una predicción que incluya `output.probability_up` debe adjuntar `output.probability_calibration`: estado `VALIDATED`, método, métrica (Brier score, log loss o ECE), puntuación, intervalo de evaluación, número de muestras, URL y SHA-256 de la evidencia, revisor y fecha de revisión. La revisión y el intervalo de evaluación deben ser anteriores o iguales a la emisión de la predicción; un hash mal formado o una calibración futura se rechazan.
+
+Este gate mejora la trazabilidad y evita que una probabilidad desnuda pase el contrato. **No verifica de forma independiente la veracidad del expediente ni demuestra que el modelo esté bien calibrado**: esa validación exige revisar la evidencia y reproducir la evaluación out-of-sample. El resultado del contrato continúa siendo `INDETERMINATE`, sin recomendación ni órdenes.

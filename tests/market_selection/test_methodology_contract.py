@@ -88,7 +88,23 @@ def prediction(**overrides):
             "observed_at": "2026-10-20T09:58:00Z",
             "captured_at": "2026-10-20T09:59:00Z",
         }],
-        "output": {"probability_up": 0.62, "expected_return": 0.01},
+        "output": {
+            "probability_up": 0.62,
+            "expected_return": 0.01,
+            "probability_calibration": {
+                "status": "VALIDATED",
+                "method": "isotonic regression",
+                "metric": "BRIER_SCORE",
+                "score": 0.18,
+                "evaluation_start": "2026-10-01T00:00:00Z",
+                "evaluation_end": "2026-10-15T00:00:00Z",
+                "sample_count": 200,
+                "evidence_url": "https://example.org/calibration-evidence",
+                "evidence_sha256": "a" * 64,
+                "reviewed_by": "test-reviewer",
+                "reviewed_at": "2026-10-16T00:00:00Z",
+            },
+        },
     }
     value.update(overrides)
     return value
@@ -185,6 +201,24 @@ class MethodologyContractTests(unittest.TestCase):
         value = prediction()
         value["target_window_start"] = "2026-10-20T09:59:59Z"
         with self.assertRaisesRegex(ValueError, "must be after generated_at"):
+            validate_prediction_record(value, approved_methodology())
+
+    def test_probability_requires_explicit_calibration_evidence(self):
+        value = prediction()
+        value["output"].pop("probability_calibration")
+        with self.assertRaisesRegex(ValueError, "requires probability_calibration evidence"):
+            validate_prediction_record(value, approved_methodology())
+
+    def test_probability_calibration_requires_a_valid_digest(self):
+        value = prediction()
+        value["output"]["probability_calibration"]["evidence_sha256"] = "not-a-digest"
+        with self.assertRaisesRegex(ValueError, "64-character hexadecimal SHA-256"):
+            validate_prediction_record(value, approved_methodology())
+
+    def test_probability_calibration_must_be_available_before_prediction(self):
+        value = prediction()
+        value["output"]["probability_calibration"]["reviewed_at"] = "2026-10-20T10:00:01Z"
+        with self.assertRaisesRegex(ValueError, "review must be available by generated_at"):
             validate_prediction_record(value, approved_methodology())
 
     def test_probability_must_be_between_zero_and_one(self):
