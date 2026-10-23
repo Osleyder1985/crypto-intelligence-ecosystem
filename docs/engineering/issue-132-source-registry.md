@@ -74,7 +74,7 @@ Estas páginas aportan evidencia de reutilización del contenido oficial, pero n
 El registro define entradas independientes para índices HTML históricos: sec_press_release_archive, cftc_press_release_archive y federal_reserve_press_release_archive. Los prefijos de ruta están en esas entradas separadas para no cambiar los hashes de las fuentes RSS existentes. No cambia el estado de aprobación de ninguna fuente:
 
 - SEC: https://www.sec.gov/newsroom/press-releases — prefijo /newsroom/press-releases.
-- CFTC: https://www.cftc.gov/PressRoom/PressReleases y https://www.cftc.gov/PressRoom/IntheNews/index.htm — prefijo /PressRoom/PressReleases.
+- CFTC: https://www.cftc.gov/PressRoom/PressReleases — prefijo /PressRoom/PressReleases; la sección de cobertura mediática no se incluye en este adaptador porque puede contener contenido de terceros.
 - Federal Reserve Board: https://www.federalreserve.gov/newsevents/pressreleases.htm — prefijo /newsevents/pressreleases.
 
 Estos índices muestran que existe una vía de investigación histórica independiente del RSS. La captura del archivo es por página/segmento; no equivale a descargar todo el archivo ni demuestra cobertura exhaustiva. Cada URL, página y artículo requiere captura y hashes propios. Las tres fuentes siguen en TERMS_PENDING, por lo que el flujo debe bloquear solicitudes hasta que el registro y los usos requeridos sean aprobados.
