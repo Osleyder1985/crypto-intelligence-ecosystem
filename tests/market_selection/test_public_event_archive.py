@@ -21,7 +21,7 @@ from test_research_evidence_integration import methodology, report
 ARCHIVE_URL = "https://www.cftc.gov/PressRoom/PressReleases?page=0"
 ARTICLE_URL = "https://www.cftc.gov/PressRoom/PressReleases/2026/press-1"
 ARCHIVE_HTML = (
-    b"<html><body><div class='release'><time>10/20/2026</time>"
+    b"<html><body><div class='release'><time>10/22/2026</time>"
     b"<a href='/PressRoom/PressReleases/2026/press-1'>"
     b"CFTC Announces Crypto-Related Enforcement Action</a></div></body></html>"
 )
@@ -53,8 +53,8 @@ def candidate_from(archive_capture):
             archive_capture,
             candidate_url=ARTICLE_URL,
             title="CFTC Announces Crypto-Related Enforcement Action",
-            published_at="2026-10-20T10:00:00Z",
-            publication_time_evidence="10/20/2026",
+            published_at="2026-10-22T12:00:00Z",
+            publication_time_evidence="10/22/2026",
             selected_by="offline-archive-reviewer",
             selected_at="2026-10-22T12:31:00Z",
             selection_rationale="Synthetic test fixture: URL, title and date are present in the preserved archive page.",
@@ -151,15 +151,15 @@ class PublicEventArchiveTests(unittest.TestCase):
         archive_capture = capture_archive(entry)
         candidate = candidate_from(archive_capture)
         self.assertEqual(candidate["candidate_url"], ARTICLE_URL)
-        self.assertEqual(candidate["published_at"], "2026-10-20T10:00:00Z")
+        self.assertEqual(candidate["published_at"], "2026-10-22T12:00:00Z")
         with patch.dict(EVENT_SOURCE_REGISTRY["sources"], {"cftc_press_release_archive": entry}):
             with self.assertRaisesRegex(PermissionError, "URL/title"):
                 select_public_event_archive_candidate(
                     archive_capture,
                     candidate_url=ARTICLE_URL,
                     title="An unrelated announcement",
-                    published_at="2026-10-20T10:00:00Z",
-                    publication_time_evidence="10/20/2026",
+                    published_at="2026-10-22T12:00:00Z",
+                    publication_time_evidence="10/22/2026",
                     selected_by="offline-archive-reviewer",
                     selected_at="2026-10-22T12:31:00Z",
                     selection_rationale="Negative test.",
@@ -208,7 +208,7 @@ class PublicEventArchiveTests(unittest.TestCase):
                 events=[{
                     "event": event_record,
                     "target_entity": {"id_type": "coingecko_id", "id": "example-asset"},
-                    "movement_window": {"start": "2026-10-20T09:00:00Z", "end": "2026-10-20T11:00:00Z"},
+                    "movement_window": {"start": "2026-10-22T11:00:00Z", "end": "2026-10-22T13:00:00Z"},
                 }],
                 observations=[],
                 methodology=methodology(),
