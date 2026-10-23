@@ -391,6 +391,15 @@ def enrich_research_report(
             if not isinstance(episode_id, str) or not episode_id.strip():
                 raise ValueError(f"events[{index}].movement_episode_id must be a non-empty string")
             window, episode_context = _movement_episode_window(report, episode_id.strip())
+            observable_at = episode_context.get("episode_observable_only_at_ms")
+            if (
+                isinstance(observable_at, bool)
+                or not isinstance(observable_at, int)
+                or observable_at < 0
+            ):
+                raise ValueError(f"movement episode {episode_id} has invalid observable timestamp")
+            if parse_timestamp(cutoff, "evaluation_as_of").timestamp() * 1000 < observable_at:
+                raise ValueError(f"movement episode {episode_id} was not observable at evaluation_as_of")
         else:
             window = _object(item.get("movement_window"), f"events[{index}].movement_window")
             episode_context = None
@@ -401,6 +410,23 @@ def enrich_research_report(
             evaluation_as_of=cutoff,
             target_entity=item.get("target_entity") or {},
         )
+        if episode_context is not None:
+            published_ms = parse_timestamp(event["published_at"], "published_at").timestamp() * 1000
+            start_ms = parse_timestamp(window["start"], "movement_window.start").timestamp() * 1000
+            end_ms = parse_timestamp(window["end"], "movement_window.end").timestamp() * 1000
+            if published_ms < start_ms:
+                event_relation = "PRECEDES_SWING"
+            elif published_ms > end_ms:
+                event_relation = "FOLLOWS_SWING"
+            else:
+                event_relation = "DURING_SWING"
+            episode_context = {
+                **episode_context,
+                "event_relation_to_swing": event_relation,
+                "temporal_interpretation": (
+                    "Publication before, during, or after a technical swing is temporal context only; it does not establish causality."
+                ),
+            }
         event_assessments.append({
             **temporal_assessment,
             **({"movement_episode": episode_context} if episode_context is not None else {}),
