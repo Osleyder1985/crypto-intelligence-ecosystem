@@ -14,6 +14,7 @@ from typing import Any
 
 from scripts.market_selection.analyze_ohlcv_risk_profile import analyze_artifact
 from scripts.market_selection.analyze_support_resistance import analyze_support_resistance
+from scripts.market_selection.build_movement_episodes import build_movement_episodes
 from scripts.market_selection.detect_ohlcv_movement_events import analyze_movement_events
 from scripts.market_selection.analyze_order_book_snapshot import analyze_order_book_snapshot
 from scripts.market_selection.normalize_order_book_probe import normalize_multi_exchange_order_book_probe
@@ -244,6 +245,7 @@ def build_research_report(
         config["support_resistance"]["pivot_right"],
         config["support_resistance"]["tolerance_bps"],
     )
+    movement_episodes = build_movement_episodes(support_resistance)
     order_book_analysis = None
     if order_book_artifact is not None:
         order_book_analysis = analyze_order_book_snapshot(order_book_artifact, order_book_authorization_registry)
@@ -386,6 +388,7 @@ def build_research_report(
             "risk_profile": risk,
             "movement_events": movement,
             "support_resistance": support_resistance,
+            "movement_episodes": movement_episodes,
             "order_book": order_book_analysis if order_book_analysis is not None else {
                 "status": "NOT_PROVIDED",
                 "reason": "No authorized normalized order-book snapshot was supplied.",
@@ -400,6 +403,7 @@ def build_research_report(
         "limitations": [
             "This report combines descriptive module outputs; it is not a validated investment recommendation.",
             "The three horizons remain INDETERMINATE until horizon-specific methods and evidence coverage are approved.",
+            "Movement episodes are reconstructed from confirmed pivots; their turning-point timestamps are retrospective estimates and no news/event causality is inferred.",
             "No news, regulatory-event, project-announcement, fundamental or on-chain connector is called.",
             "Order-book analysis is included only when a matching authorized snapshot is supplied; snapshots are not full or persistent market depth.",
             "No ranking, forecast probability, expected return or guarantee of profitability is produced.",
