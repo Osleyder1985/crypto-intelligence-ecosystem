@@ -187,7 +187,8 @@ def analyze_support_resistance(artifact: dict, pivot_left: int, pivot_right: int
                 event_time = candidate["confirmation_close_time_ms"]
                 available_from = event_time + 1
                 events.append({
-                    "event_type": "pivot_confirmed", "zone_id": None, "kind": kind,\n                    "segment_index": segment_index,
+                    "event_type": "pivot_confirmed", "zone_id": None, "kind": kind,
+                    "segment_index": segment_index,
                     "pivot_open_time_ms": candidate["pivot_open_time_ms"],
                     "event_time_ms": event_time, "available_from_ms": available_from,
                     "pivot_price": str(price),
