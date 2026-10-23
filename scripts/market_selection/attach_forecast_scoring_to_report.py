@@ -33,10 +33,22 @@ def attach_forecast_scoring(report: object, records: object, *, report_bytes: by
         report_bytes = json.dumps(report, sort_keys=True, separators=(",", ":"), ensure_ascii=False, allow_nan=False).encode("utf-8")
     elif not isinstance(report_bytes, bytes):
         raise ValueError("report_bytes must be bytes")
+    else:
+        try:
+            if json.loads(report_bytes.decode("utf-8")) != report:
+                raise ValueError("report_bytes do not match the supplied report object")
+        except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+            raise ValueError("report_bytes must contain the same UTF-8 JSON report") from exc
     if records_bytes is None:
         records_bytes = json.dumps(records, sort_keys=True, separators=(",", ":"), ensure_ascii=False, allow_nan=False).encode("utf-8")
     elif not isinstance(records_bytes, bytes):
         raise ValueError("records_bytes must be bytes")
+    else:
+        try:
+            if json.loads(records_bytes.decode("utf-8")) != records:
+                raise ValueError("records_bytes do not match the supplied records")
+        except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+            raise ValueError("records_bytes must contain the same UTF-8 JSON records") from exc
 
     scored = score_forecast_records(records)
     cohort_asset_id = scored["cohort"]["asset_id"]
