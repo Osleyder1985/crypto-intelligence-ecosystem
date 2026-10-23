@@ -8,10 +8,12 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
+from scripts.market_selection import research_report
 from scripts.market_selection.research_report import build_research_report
 from scripts.market_selection.capture_binance_spot_research import EXCHANGE_INFO_URL, capture_and_build_report
 from scripts.market_selection.provider_license_gate import ASSESSMENT_SCHEMA_VERSION, POLICY_VERSION, evaluate_provider_use
 from scripts.market_selection.canonical_asset_identity import SCHEMA_VERSION as IDENTITY_SCHEMA_VERSION
+from test_attach_horizon_assessment_to_report import assessment as horizon_assessment_fixture
 from test_normalize_binance_live_depth_evidence import artifact as synthetic_live_depth_artifact
 from test_research_evidence_integration import methodology
 
@@ -822,6 +824,61 @@ class ResearchReportTests(unittest.TestCase):
                 order_book_authorization_registry={"binance_spot_market_data": {"trusted": True}},
             )
         self.assertEqual(report["descriptive_analyses"]["order_book"]["status"], "DESCRIPTIVE_SNAPSHOT")
+
+
+
+    def test_cli_attaches_validated_horizon_assessment_without_changing_baseline_decision(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            artifact_path = root / "ohlcv.json"
+            config_path = root / "config.json"
+            assessment_path = root / "horizon-assessment.json"
+            output_path = root / "report.json"
+            artifact_path.write_bytes(self.raw)
+            config_path.write_text(json.dumps(config()), encoding="utf-8")
+            assessment = horizon_assessment_fixture()
+            assessment["asset_id"] = "BTC"
+            assessment_path.write_text(json.dumps(assessment), encoding="utf-8")
+
+            argv = [
+                "research_report",
+                "--asset-id", "BTC",
+                "--artifact", str(artifact_path),
+                "--config", str(config_path),
+                "--horizon-assessment", str(assessment_path),
+                "--output", str(output_path),
+            ]
+            allow = {"decision": "ALLOW", "reason_codes": ["SYNTHETIC_TEST_GATE_ONLY"]}
+            with patch.object(sys, "argv", argv), patch(
+                "scripts.market_selection.research_report.evaluate_artifact_use",
+                return_value=allow,
+            ), patch(
+                "scripts.market_selection.analyze_ohlcv_risk_profile.evaluate_artifact_use",
+                return_value=allow,
+            ), patch(
+                "scripts.market_selection.analyze_support_resistance.evaluate_artifact_use",
+                return_value=allow,
+            ), patch(
+                "scripts.market_selection.detect_ohlcv_movement_events.evaluate_artifact_use",
+                return_value=allow,
+            ):
+                self.assertEqual(research_report.main(), 0)
+
+            result = json.loads(output_path.read_text(encoding="utf-8"))
+            attached = result["horizon_assessment"]["assessment"]
+            self.assertEqual(result["horizon_assessment"]["status"], "VALIDATED_ASSESSMENT_ATTACHED")
+            self.assertEqual(attached["horizons"]["short"]["conclusion"], "FAVORABLE")
+            self.assertEqual(attached["horizons"]["medium"]["conclusion"], "BASE")
+            self.assertEqual(attached["horizons"]["long"]["conclusion"], "ADVERSE")
+            self.assertEqual(attached["aggregation"], "NONE")
+            self.assertTrue(all(item["conclusion"] == "INDETERMINATE" for item in result["horizons"].values()))
+            self.assertEqual(result["decision_status"], "INDETERMINATE")
+            self.assertFalse(result["orders_submitted"])
+            self.assertEqual(
+                result["horizon_assessment"]["source_assessment_sha256"],
+                hashlib.sha256(assessment_path.read_bytes()).hexdigest(),
+            )
+
 
 
 if __name__ == "__main__":
