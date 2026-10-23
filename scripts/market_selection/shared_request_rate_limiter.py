@@ -5,6 +5,7 @@ host. Coordination failures are fail-closed: callers must not make the request.
 """
 from __future__ import annotations
 
+import math
 import os
 from pathlib import Path
 import sqlite3
@@ -42,8 +43,12 @@ def wait_for_rate_slot(
         raise RateLimitCoordinationError("source_id must be a non-empty string")
     if isinstance(requests_per_second, bool) or not isinstance(requests_per_second, (int, float)):
         raise RateLimitCoordinationError("requests_per_second must be a positive number")
-    if requests_per_second <= 0:
-        raise RateLimitCoordinationError("requests_per_second must be a positive number")
+    try:
+        rate = float(requests_per_second)
+    except (OverflowError, TypeError, ValueError) as exc:
+        raise RateLimitCoordinationError("requests_per_second must be a finite positive number") from exc
+    if not math.isfinite(rate) or rate <= 0:
+        raise RateLimitCoordinationError("requests_per_second must be a finite positive number")
 
     path = Path(database_path).expanduser() if database_path is not None else _default_database_path()
     try:
@@ -61,7 +66,7 @@ def wait_for_rate_slot(
                 (source_id,),
             ).fetchone()
             reserved_at = max(now, float(row[0]) if row else now)
-            next_allowed = reserved_at + (1.0 / float(requests_per_second))
+            next_allowed = reserved_at + (1.0 / rate)
             connection.execute(
                 "INSERT INTO request_slots(source_id, next_allowed_epoch) VALUES (?, ?) "
                 "ON CONFLICT(source_id) DO UPDATE SET next_allowed_epoch = excluded.next_allowed_epoch",
