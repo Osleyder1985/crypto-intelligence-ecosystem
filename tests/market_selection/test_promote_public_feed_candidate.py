@@ -47,7 +47,7 @@ class PromotePublicFeedCandidateCliTests(unittest.TestCase):
             resolution_path.write_text(json.dumps(resolution), encoding="utf-8")
 
             with patch.dict(EVENT_SOURCE_REGISTRY["sources"], {"cftc_general_press_releases": entry}), patch(
-                "scripts.market_selection.promote_public_feed_candidate.urlopen",
+                "scripts.market_selection.capture_public_event_feed.urlopen",
             ) as network:
                 status = main([
                     "--capture", str(capture_path),
@@ -68,7 +68,10 @@ class PromotePublicFeedCandidateCliTests(unittest.TestCase):
             self.assertFalse(event["orders_submitted"])
 
     def test_cli_rejects_capture_when_source_terms_are_pending(self):
-        capture = {"schema_version": "crypto-public-event-feed-capture-v1"}
+        capture = {
+            "schema_version": "crypto-public-event-feed-capture-v1",
+            "source_id": "cftc_general_press_releases",
+        }
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             capture_path = root / "capture.json"
