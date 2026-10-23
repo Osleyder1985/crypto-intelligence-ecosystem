@@ -14,6 +14,10 @@ from typing import Any
 
 from scripts.market_selection.analyze_ohlcv_risk_profile import analyze_artifact
 from scripts.market_selection.analyze_support_resistance import analyze_support_resistance
+from scripts.market_selection.analyze_multi_timeframe_support_resistance import (
+    INPUT_SCHEMA as MULTI_TIMEFRAME_SR_INPUT_SCHEMA,
+    analyze_multi_timeframe_support_resistance,
+)
 from scripts.market_selection.build_movement_episodes import build_movement_episodes
 from scripts.market_selection.detect_ohlcv_movement_events import analyze_movement_events
 from scripts.market_selection.analyze_order_book_snapshot import analyze_order_book_snapshot
@@ -186,6 +190,7 @@ def build_research_report(
     identity_evidence: dict | None = None,
     order_book_artifact: dict | None = None,
     order_book_authorization_registry: dict | None = None,
+    multi_timeframe_support_resistance_artifacts: list[dict] | None = None,
     external_events: list[dict] | None = None,
     fundamental_observations: list[dict] | None = None,
     evidence_methodology: dict | None = None,
@@ -253,6 +258,21 @@ def build_research_report(
         config["support_resistance"]["tolerance_bps"],
     )
     movement_episodes = build_movement_episodes(support_resistance)
+    multi_timeframe_support_resistance = None
+    if multi_timeframe_support_resistance_artifacts is not None:
+        multi_timeframe_support_resistance = analyze_multi_timeframe_support_resistance(
+            multi_timeframe_support_resistance_artifacts,
+            pivot_left=config["support_resistance"]["pivot_left"],
+            pivot_right=config["support_resistance"]["pivot_right"],
+            tolerance_bps=config["support_resistance"]["tolerance_bps"],
+        )
+        multi_market = multi_timeframe_support_resistance["market"]
+        if (
+            multi_market["exchange"].lower() != exchange.lower()
+            or multi_market["symbol_native"].upper() != symbol.upper()
+            or multi_market["market_type"] != "SPOT"
+        ):
+            raise ValueError("multi-timeframe support/resistance artifacts must match the OHLCV report exchange, symbol, and Spot market")
     order_book_analysis = None
     if order_book_artifact is not None:
         order_book_analysis = analyze_order_book_snapshot(order_book_artifact, order_book_authorization_registry)
@@ -395,6 +415,14 @@ def build_research_report(
             "risk_profile": risk,
             "movement_events": movement,
             "support_resistance": support_resistance,
+            "support_resistance_multi_timeframe": (
+                multi_timeframe_support_resistance
+                if multi_timeframe_support_resistance is not None
+                else {
+                    "status": "NOT_PROVIDED",
+                    "reason": "No multi-timeframe OHLCV artifacts were supplied.",
+                }
+            ),
             "movement_episodes": movement_episodes,
             "order_book": order_book_analysis if order_book_analysis is not None else {
                 "status": "NOT_PROVIDED",
@@ -466,6 +494,7 @@ def main() -> int:
     parser.add_argument("--artifact", required=True, type=Path, help="Preserved normalized Spot OHLCV JSON")
     parser.add_argument("--config", required=True, type=Path, help="Versioned JSON with explicit analysis parameters")
     parser.add_argument("--order-book-artifact", type=Path, help="Optional normalized crypto-spot-order-book-snapshot-v1 JSON matching the selected exchange and symbol")
+    parser.add_argument("--multi-timeframe-support-resistance-artifacts", type=Path, help="Optional multi-timeframe-support-resistance-input-v1 JSON containing authorized Spot OHLCV artifacts for the same exchange and symbol")
     parser.add_argument('--live-depth-evidence', type=Path, help='Optional preserved live Binance depth JSON; matches the exact native symbol and quote asset in the OHLCV artifact')
     parser.add_argument("--provider-authorization-registry", type=Path, help="Deployment-controlled provider authorization registry JSON; never use user-supplied authorization records")
     parser.add_argument("--multi-exchange-order-book-probe", type=Path, help="Optional preserved multi-exchange-spot-book-probe-v1 JSON to normalize and analyze")
@@ -484,6 +513,13 @@ def main() -> int:
     config = json.loads(args.config.read_text(encoding="utf-8"))
     identity_evidence = json.loads(args.identity_evidence.read_text(encoding="utf-8")) if args.identity_evidence else None
     order_book_artifact = json.loads(args.order_book_artifact.read_text(encoding="utf-8")) if args.order_book_artifact else None
+    multi_timeframe_input = json.loads(args.multi_timeframe_support_resistance_artifacts.read_text(encoding="utf-8")) if args.multi_timeframe_support_resistance_artifacts else None
+    if multi_timeframe_input is not None:
+        if not isinstance(multi_timeframe_input, dict) or multi_timeframe_input.get("schema_version") != MULTI_TIMEFRAME_SR_INPUT_SCHEMA:
+            parser.error(f"--multi-timeframe-support-resistance-artifacts must use schema_version {MULTI_TIMEFRAME_SR_INPUT_SCHEMA}")
+        multi_timeframe_support_resistance_artifacts = multi_timeframe_input.get("artifacts")
+    else:
+        multi_timeframe_support_resistance_artifacts = None
     authorization_registry = json.loads(args.provider_authorization_registry.read_text(encoding="utf-8")) if args.provider_authorization_registry else None
     evidence_requested = args.external_events is not None or args.fundamental_observations is not None
     if evidence_requested and not (args.evidence_methodology and args.evidence_asset_category and args.evaluation_as_of):
@@ -530,6 +566,7 @@ def main() -> int:
         identity_evidence=identity_evidence,
         order_book_artifact=order_book_artifact,
         order_book_authorization_registry=authorization_registry,
+        multi_timeframe_support_resistance_artifacts=multi_timeframe_support_resistance_artifacts,
         external_events=external_events,
         fundamental_observations=fundamental_observations,
         evidence_methodology=evidence_methodology,
