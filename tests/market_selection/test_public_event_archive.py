@@ -46,16 +46,18 @@ def capture_archive(entry):
 
 
 def candidate_from(archive_capture):
-    return select_public_event_archive_candidate(
-        archive_capture,
-        candidate_url=ARTICLE_URL,
-        title="CFTC Announces Crypto-Related Enforcement Action",
-        published_at="2026-10-20T10:00:00Z",
-        publication_time_evidence="10/20/2026",
-        selected_by="offline-archive-reviewer",
-        selected_at="2026-10-22T12:31:00Z",
-        selection_rationale="Synthetic test fixture: URL, title and date are present in the preserved archive page.",
-    )
+    entry = approved_source()
+    with patch.dict(EVENT_SOURCE_REGISTRY["sources"], {"cftc_general_press_releases": entry}):
+        return select_public_event_archive_candidate(
+            archive_capture,
+            candidate_url=ARTICLE_URL,
+            title="CFTC Announces Crypto-Related Enforcement Action",
+            published_at="2026-10-20T10:00:00Z",
+            publication_time_evidence="10/20/2026",
+            selected_by="offline-archive-reviewer",
+            selected_at="2026-10-22T12:31:00Z",
+            selection_rationale="Synthetic test fixture: URL, title and date are present in the preserved archive page.",
+        )
 
 
 class PublicEventArchiveTests(unittest.TestCase):
