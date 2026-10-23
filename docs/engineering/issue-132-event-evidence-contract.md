@@ -122,3 +122,13 @@ python -m scripts.market_selection.capture_public_event_feed --source-id <source
 \`\`\`
 
 Ambos comandos deben devolver un bloqueo sin tráfico de red mientras la fuente o los usos requeridos estén pendientes. Los ejemplos son plantillas; no se ejecutaron solicitudes reales al añadir esta funcionalidad.
+
+## 10. Ventanas temporales antes y después del movimiento
+
+La integración acepta en cada elemento de \`events\` los parámetros opcionales \`pre_movement_window_minutes\` y \`post_movement_window_minutes\`. Ambos deben ser enteros no negativos (los booleanos no son enteros válidos para este contrato) y tienen valor predeterminado \`0\` para conservar el comportamiento anterior.
+
+- La ventana previa permite investigar eventos publicados antes del inicio del tramo técnico.
+- La ventana posterior permite incluir eventos publicados después del extremo técnico observado, cuando la disponibilidad temporal y el corte de evaluación lo permiten.
+- La evaluación registra la ventana de asociación efectiva y los dos parámetros utilizados.
+- Una publicación dentro de la ventana ampliada solo se clasifica como \`TEMPORAL_ASSOCIATION\`; nunca como prueba de causalidad.
+- Los valores deben fijarse en una metodología versionada antes de evaluar los resultados y someterse a análisis de sensibilidad. No deben ajustarse retrospectivamente para hacer coincidir una noticia con un movimiento.
