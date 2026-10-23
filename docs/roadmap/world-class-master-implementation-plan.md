@@ -432,7 +432,7 @@ La lectura del documento demuestra que ya existe un punto de partida sustancial;
 2. **Segundo:** contrastar los objetivos funcionales completos —episodios alcistas/bajistas y catalizadores, soportes/resistencias, libro y liquidez, análisis por horizontes, historial, comparación y ranking— con los 33 requisitos.
 3. **Tercero:** revisar cobertura no funcional más allá de las 10 métricas iniciales: el catálogo contiene `NFR-001`–`NFR-018`, por lo que deben inspeccionarse todos sus campos, criterios y trazabilidad, no asumir que solo existen los diez primeros.
 4. **Cuarto:** identificar contradicciones, huecos y criterios de aceptación no verificables, citando ruta, sección o Issue exacto.
-5. **Quinto:** producir una línea base candidata con matriz de cobertura bidireccional y decisiones pendientes claramente separadas.
+5. **Quinto:** mantener la [evaluación preliminar de cobertura de requisitos](../engineering/requirements-coverage-assessment.md) como matriz de primera pasada; completar después la cobertura bidireccional requisito–Issue–ADR–componente–prueba–CI–release y separar las decisiones pendientes.
 6. **Sexto:** someterla a revisión del propietario. Hasta esa aprobación, los requisitos siguen siendo una propuesta.
 
 ### Condición de salida
