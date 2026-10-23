@@ -225,3 +225,35 @@ Cada fase tiene que producir criterios verificables y trazabilidad; no se debe d
 - Ninguna asociación temporal basta para afirmar que una noticia causó un movimiento. El sistema debe registrar evidencia a favor, evidencia contraria, alternativas y nivel de incertidumbre.
 
 **Conclusión:** el piloto valida una primera ruta; no redefine el objetivo del Issue #132. El criterio de éxito final es una cobertura multifuente ampliable, reproducible y auditable, dentro de las autorizaciones aplicables y con conclusiones proporcionales a la evidencia.
+
+
+## 13. Política de conservación basada en normas y documentación oficial — 2026-10-23
+
+### Regla de decisión
+
+No se fija un número arbitrario de días para conservar el contenido. La página oficial de ISO para **ISO 15489-1:2016** describe un marco de gestión de documentos basado, entre otros elementos, en requisitos documentales identificados a partir del contexto de negocio, políticas, responsabilidades, controles y procesos de gestión. La ficha pública de ISO no establece un plazo universal de conservación aplicable a cualquier noticia o feed. Por tanto, no atribuir a ISO un plazo que no aparece en su documentación pública.
+
+Referencias oficiales:
+- ISO, [ISO 15489-1:2016 — Records management: Concepts and principles](https://www.iso.org/standard/62542.html). La ficha oficial indica que esta edición sigue vigente tras su revisión/confirmación en 2021.
+- ISO/TC 46/SC 11, [Disposition of records](https://committee.iso.org/sites/tc46sc11/home/projects/published/disposition.html), que identifica ISO/TS 7538:2024 como guía sobre disposición de documentos, incluidos periodos de conservación, autoridades y destrucción.
+- SEC, [Privacy and Security Policy / Website Dissemination](https://www.sec.gov/about/privacy-information), que permite copiar y redistribuir información presentada en sec.gov con las salvedades indicadas y advierte que el acceso automatizado se somete a control de frecuencia y que no se permiten bots no clasificados.
+- SEC, [Developer Resources](https://www.sec.gov/about/developer-resources), que requiere acceso eficiente y descargar solo lo necesario. Estas páginas no fijan un plazo general de conservación de artículos completos para este proyecto.
+
+### Política operativa mientras falte una regla específica aprobada
+
+1. **No persistir contenido íntegro de una fuente externa** hasta documentar una base aplicable para esa fuente y ese tipo de contenido, las restricciones de terceros y la finalidad de conservación.
+2. **No ejecutar tampoco una captura externa transitoria** mientras la fuente siga en estado TERMS_PENDING; la ausencia de persistencia no equivale a permiso para solicitar el contenido.
+3. Antes de aprobar persistencia, identificar requisitos legales y contractuales aplicables, necesidad funcional, contenido mínimo necesario, propietario del dato, evento que inicia el plazo, regla de revisión, método de eliminación y excepciones de conservación justificadas.
+4. Separar las reglas para contenido íntegro, texto oficial extraído, metadatos operativos, hashes y resultados derivados. No asumir que un hash permite conservar el texto ni que queda automáticamente exento de todas las obligaciones.
+5. No usar “indefinido” como valor por defecto. La conservación de metadatos o hashes también debe tener una finalidad documentada y una regla de revisión/disposición.
+6. Cuando la revisión oficial no determine una duración, registrar “plazo no especificado por la fuente; pendiente de análisis de requisitos aplicables”. Resolverlo mediante el análisis documentado de requisitos y la política de registros del proyecto, no inventando una cifra ni atribuyéndosela a ISO.
+7. Registrar evidencia, versión/fecha de la política consultada, decisión y responsable autorizado. Revalidar la decisión si cambian los términos, la finalidad, el contenido capturado o el modo de acceso.
+
+### Aplicación al Issue #132
+
+- SEC, CFTC, Federal Reserve y sus entradas de archivo permanecen en estado TERMS_PENDING hasta completar la revisión por fuente.
+- Para SEC, la política pública respalda la reutilización de información de sec.gov con las salvedades publicadas, pero no especifica por sí sola un plazo de conservación para este caso de uso ni autoriza automáticamente cada tipo de contenido enlazado o de terceros.
+- La primera prueba E2E y el backfill real solo podrán ejecutarse cuando estén aprobados el acceso externo y los usos necesarios. No se crea una excepción para pruebas.
+- La meta de producto sigue siendo multifuente. Esta regla controla la autorización y el ciclo de vida de los datos; no reduce la cobertura funcional deseada.
+
+**Decisión resultante:** no imponer un plazo ficticio. Aplicar las condiciones oficiales de cada fuente y el proceso de gestión de registros de ISO como marco de análisis; mientras falte una decisión respaldada para una fuente/caso de uso, mantener bloqueada su captura y persistencia.
