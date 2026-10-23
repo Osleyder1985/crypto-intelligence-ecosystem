@@ -57,6 +57,47 @@ def _require_text(manifest: dict, key: str) -> str:
     return value.strip()
 
 
+def _validate_market_metadata(manifest: dict, asset_id: str, market_id: str):
+    metadata = manifest.get("market_metadata")
+    if metadata is None:
+        return None
+    if not isinstance(metadata, dict) or not metadata:
+        raise ValueError("market_metadata must be a non-empty JSON object when provided")
+    allowed = {"base_asset_id", "quote_asset_id", "market_type"}
+    unknown = sorted(set(metadata) - allowed)
+    if unknown:
+        raise ValueError(f"market_metadata contains unsupported fields: {', '.join(unknown)}")
+    normalized = {}
+    for key in allowed:
+        value = metadata.get(key)
+        if value is not None:
+            if not isinstance(value, str) or not value.strip():
+                raise ValueError(f"market_metadata.{key} must be a non-empty string")
+            normalized[key] = value.strip()
+    if not normalized:
+        raise ValueError("market_metadata must declare at least one supported field")
+    base_asset = normalized.get("base_asset_id")
+    if base_asset is not None and base_asset != asset_id:
+        raise ValueError("market_metadata.base_asset_id must match asset_id")
+    parts = market_id.split(":")
+    if len(parts) == 3:
+        pair, market_type = parts[1], parts[2]
+        if normalized.get("market_type") is not None and normalized["market_type"] != market_type:
+            raise ValueError("market_metadata.market_type must match market_id")
+        # Only validate pair components when the market ID uses an explicit separator.
+        separators = ("-", "/", "_")
+        separator = next((item for item in separators if item in pair), None)
+        if separator is not None:
+            pair_parts = pair.split(separator)
+            if len(pair_parts) == 2 and all(pair_parts):
+                if base_asset is not None and pair_parts[0] != base_asset:
+                    raise ValueError("market_metadata.base_asset_id must match the delimited market pair")
+                quote_asset = normalized.get("quote_asset_id")
+                if quote_asset is not None and pair_parts[1] != quote_asset:
+                    raise ValueError("market_metadata.quote_asset_id must match the delimited market pair")
+    return normalized
+
+
 def _validate_timestamp(value: str) -> str:
     if not isinstance(value, str) or not value.strip():
         raise ValueError("generated_at_utc must be an ISO-8601 timestamp with timezone")
@@ -78,6 +119,7 @@ def build_evaluation_record(manifest: dict, archive_dir: str | Path, output_dir:
     _validate_json(manifest, "manifest")
     required = ("asset_id", "market_id", "horizon", "methodology_id", "methodology_version", "code_version")
     values = {key: _require_text(manifest, key) for key in required}
+    market_metadata = _validate_market_metadata(manifest, values["asset_id"], values["market_id"])
     parameters = manifest.get("parameters")
     results = manifest.get("results")
     quality = manifest.get("quality")
@@ -122,6 +164,7 @@ def build_evaluation_record(manifest: dict, archive_dir: str | Path, output_dir:
         "generated_at_utc": generated,
         "asset_id": values["asset_id"],
         "market_id": values["market_id"],
+        **({"market_metadata": market_metadata} if market_metadata is not None else {}),
         "horizon": values["horizon"],
         "methodology": {
             "id": values["methodology_id"],
@@ -206,7 +249,7 @@ def _flatten_numeric(value, prefix=""):
 def compare_evaluation_records(old: dict, new: dict) -> dict:
     if old.get("schema_version") != SCHEMA_VERSION or new.get("schema_version") != SCHEMA_VERSION:
         raise ValueError("both inputs must use the supported evaluation record schema")
-    scope_fields = ("asset_id", "market_id", "horizon")
+    scope_fields = ("asset_id", "market_id", "market_metadata", "horizon")
     scope_compatible = all(old.get(key) == new.get(key) for key in scope_fields)
     methodology_changed = old.get("methodology") != new.get("methodology")
     implementation_changed = old.get("implementation") != new.get("implementation")
