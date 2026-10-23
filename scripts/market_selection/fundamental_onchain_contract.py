@@ -250,6 +250,28 @@ def validate_observation(item: object) -> dict:
         raise ValueError("captured_at cannot precede observed_at")
     if published_at is not None and published_at > captured_at:
         raise ValueError("published_at cannot be after captured_at")
+
+    raw_period_start = item.get("period_start")
+    raw_period_end = item.get("period_end")
+    period_start = (
+        parse_timestamp(raw_period_start, "period_start") if raw_period_start is not None else None
+    )
+    period_end = parse_timestamp(raw_period_end, "period_end") if raw_period_end is not None else None
+    if period_start is not None and period_end is not None and period_start > period_end:
+        raise ValueError("period_start cannot be after period_end")
+
+    block_height = item.get("block_height")
+    if block_height is not None and (
+        isinstance(block_height, bool) or not isinstance(block_height, int) or block_height < 0
+    ):
+        raise ValueError("block_height must be a non-negative integer or null")
+    quality_notes = item.get("quality_notes", "")
+    if not isinstance(quality_notes, str):
+        raise ValueError("quality_notes must be a string")
+    metadata = item.get("metadata", {})
+    if not isinstance(metadata, dict):
+        raise ValueError("metadata must be an object")
+
     return {
         "schema_version": OBSERVATION_SCHEMA,
         "observation_id": _string(item.get("observation_id"), "observation_id"),
@@ -258,9 +280,9 @@ def validate_observation(item: object) -> dict:
         "status": status,
         "value": value,
         "unit": unit,
-        "period_start": item.get("period_start"),
-        "period_end": item.get("period_end"),
-        "block_height": item.get("block_height"),
+        "period_start": period_start.isoformat().replace("+00:00", "Z") if period_start else None,
+        "period_end": period_end.isoformat().replace("+00:00", "Z") if period_end else None,
+        "block_height": block_height,
         "published_at": published_at.isoformat().replace("+00:00", "Z") if published_at else None,
         "publication_time_status": publication_time_status,
         "observed_at": observed_at.isoformat().replace("+00:00", "Z"),
@@ -272,9 +294,9 @@ def validate_observation(item: object) -> dict:
             "methodology_url": methodology_url,
             "terms_status": _string(source.get("terms_status", "UNKNOWN"), "source.terms_status"),
         },
-        "quality_notes": item.get("quality_notes", ""),
+        "quality_notes": quality_notes,
         "applicability_override_reason": item.get("applicability_override_reason"),
-        "metadata": item.get("metadata", {}) if isinstance(item.get("metadata", {}), dict) else {},
+        "metadata": metadata,
     }
 
 
