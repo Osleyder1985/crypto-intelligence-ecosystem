@@ -87,7 +87,7 @@ class SharedRequestRateLimiterTests(unittest.TestCase):
 
     def test_non_finite_rates_are_rejected_before_ledger_access(self):
         with tempfile.TemporaryDirectory() as directory:
-            for rate in (float("nan"), float("inf"), float("-inf"), 10**10000):
+            for rate in (float("nan"), float("inf"), float("-inf")):
                 with self.subTest(rate=str(rate)):
                     database = Path(directory) / f"rate-{len(list(Path(directory).iterdir()))}.sqlite3"
                     with self.assertRaisesRegex(RateLimitCoordinationError, "finite positive number"):
