@@ -239,6 +239,36 @@ class ResearchReportTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "return_threshold_pct is required"):
             build_research_report(self.source, invalid, "BTC")
 
+    def test_methodology_config_rejects_invalid_integer_parameters(self):
+        cases = [
+            (("movement", "lookback_bars"), 0, "lookback_bars must be a positive integer"),
+            (("movement", "lookback_bars"), True, "lookback_bars must be a positive integer"),
+            (("support_resistance", "pivot_left"), 1.5, "pivot_left must be a positive integer"),
+            (("support_resistance", "pivot_right"), False, "pivot_right must be a positive integer"),
+        ]
+        for (section, key), value, message in cases:
+            with self.subTest(section=section, key=key, value=value):
+                invalid = config()
+                invalid[section][key] = value
+                with self.assertRaisesRegex(ValueError, message):
+                    build_research_report(self.source, invalid, "BTC")
+
+    def test_methodology_config_rejects_nonpositive_or_nonfinite_thresholds(self):
+        cases = [
+            (("movement", "return_threshold_pct"), 0, "return_threshold_pct must be a finite number greater than zero"),
+            (("movement", "return_threshold_pct"), float("inf"), "return_threshold_pct must be a finite number greater than zero"),
+            (("movement", "volume_ratio_threshold"), float("nan"), "volume_ratio_threshold must be a finite number greater than zero"),
+            (("movement", "volume_ratio_threshold"), True, "volume_ratio_threshold must be a finite number greater than zero"),
+            (("support_resistance", "tolerance_bps"), -1, "tolerance_bps must be a finite number from 0 to 10000"),
+            (("support_resistance", "tolerance_bps"), 10001, "tolerance_bps must be a finite number from 0 to 10000"),
+        ]
+        for (section, key), value, message in cases:
+            with self.subTest(section=section, key=key, value=value):
+                invalid = config()
+                invalid[section][key] = value
+                with self.assertRaisesRegex(ValueError, message):
+                    build_research_report(self.source, invalid, "BTC")
+
 
 if __name__ == "__main__":
     unittest.main()
