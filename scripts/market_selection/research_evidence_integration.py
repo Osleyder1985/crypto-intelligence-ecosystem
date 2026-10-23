@@ -305,7 +305,8 @@ def _verify_promoted_public_feed_event(event_record: dict, source_entry: dict, r
         registry_hash=registry_hash,
         expected_requested_url=event_url,
     )
-    if article_capture.get("candidate_id") != event_record.get("metadata", {}).get("feed_candidate_id"):
+    metadata = _object(event_record.get("metadata"), "event.metadata")
+    if article_capture.get("candidate_id") != metadata.get("feed_candidate_id"):
         raise PermissionError("article capture candidate ID does not match event metadata")
     content_type = next(
         (value.split(";", 1)[0].strip().lower() for key, value in article_capture.get("response_headers", {}).items()
@@ -328,7 +329,6 @@ def _verify_promoted_public_feed_event(event_record: dict, source_entry: dict, r
         or final_parts.password is not None
     ):
         raise PermissionError("article final URL is outside the source allowlist")
-    metadata = _object(event_record.get("metadata"), "event.metadata")
     if metadata.get("feed_raw_response_sha256") != feed_capture.get("raw_response_sha256"):
         raise PermissionError("event feed response hash does not match preserved capture")
     if (
