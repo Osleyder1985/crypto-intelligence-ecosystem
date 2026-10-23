@@ -1647,6 +1647,7 @@ def main() -> int:
         parser.error("--feed-capture and --article-candidate-id must be supplied together")
     registry = json.loads(args.provider_authorization_registry.read_text(encoding="utf-8"))
     record = registry.get(args.source_id) if isinstance(registry, dict) else None
+    failure_exit_code = 0
     try:
         if args.feed_capture is not None:
             feed_capture = json.loads(args.feed_capture.read_text(encoding="utf-8"))
@@ -1687,6 +1688,7 @@ def main() -> int:
                 "reason_codes": result["reason_codes"],
             }
     except RateLimitCoordinationError:
+        failure_exit_code = 2
         result = {
             "schema_version": "crypto-public-event-capture-error-v1",
             "source_id": args.source_id,
@@ -1708,7 +1710,7 @@ def main() -> int:
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(result, ensure_ascii=False, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     print(json.dumps(summary, ensure_ascii=False, indent=2))
-    return 0
+    return failure_exit_code
 
 
 if __name__ == "__main__":
