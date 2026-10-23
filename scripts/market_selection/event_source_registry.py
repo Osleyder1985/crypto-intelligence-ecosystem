@@ -46,7 +46,7 @@ EVENT_SOURCE_REGISTRY = {
             "max_requests_per_invocation": 1,
             "parallel_requests": False,
             "response_body_policy": "READ_TO_EOF_NO_LOCAL_SIZE_CAP",
-            "coverage_scope": "Current RSS feed only; not a complete historical archive"
+            "coverage_scope": "Current RSS feed only; not a complete historical archive",
             "entity_resolution_policy": "No asset identity is inferred from title, ticker, or description",
             "notes": (
                 "Candidate only. Keep disabled until official access/terms review and the exact intended "
@@ -73,7 +73,7 @@ EVENT_SOURCE_REGISTRY = {
             "max_requests_per_invocation": 1,
             "parallel_requests": False,
             "response_body_policy": "READ_TO_EOF_NO_LOCAL_SIZE_CAP",
-            "coverage_scope": "Current general press-release feed only; not a complete historical archive and not limited to crypto."
+            "coverage_scope": "Current general press-release feed only; not a complete historical archive and not limited to crypto.",
             "entity_resolution_policy": "No asset identity is inferred from title, ticker, or description.",
             "notes": "Official feed endpoint verified from the CFTC RSS index. Source terms, automated-access conditions, and persistent-storage scope are not approved; runtime use must remain blocked."
         },
