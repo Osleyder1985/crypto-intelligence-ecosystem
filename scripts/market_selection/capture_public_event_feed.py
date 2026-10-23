@@ -1,8 +1,8 @@
-"""Capture one authorized public RSS/Atom feed as immutable candidate evidence.
+"""Capture authorized public RSS/Atom feeds, linked articles, and historical archive evidence.
 
-This adapter never bypasses source/provider approval, never fetches linked articles,
-and never promotes feed headlines into verified asset events. Terms-pending sources
-are blocked before network access.
+Every network request is gated by source/provider approval. Feed, archive-index, article,
+entity-resolution, fact-review and causal-review evidence remain separate artifacts.
+Terms-pending sources are blocked before network access.
 """
 from __future__ import annotations
 
