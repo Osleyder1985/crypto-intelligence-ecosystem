@@ -988,5 +988,74 @@ class ResearchEvidenceIntegrationTests(unittest.TestCase):
 
 
 
+    def test_source_coverage_distinguishes_blocked_from_no_items(self):
+        blocked = {
+            "source_id": "cftc_general_press_releases",
+            "capture_status": "BLOCKED",
+            "captured_at": "2026-10-20T10:05:00Z",
+            "network_request_made": False,
+            "capture_truncated": False,
+            "feed_item_count": 0,
+            "coverage_scope": "Current feed only",
+            "errors": [],
+        }
+        enriched = enrich_research_report(
+            report(), events=[], observations=[], methodology=methodology(),
+            asset={"stable_id": "example-asset", "category": "smart_contract_token"},
+            evaluation_as_of="2026-10-21T00:00:00Z",
+            event_source_coverage=[blocked],
+        )
+        coverage = enriched["external_event_evidence"]["source_coverage"]
+        self.assertEqual(coverage["sources"][0]["coverage_status"], "BLOCKED_BY_SOURCE_POLICY")
+        self.assertIn("does not establish absence", coverage["sources"][0]["interpretation"])
+
+        approved = approved_event_source()
+        empty_capture = {
+            "source_id": "sec_press_releases",
+            "capture_status": "PASS",
+            "captured_at": "2026-10-20T10:05:00Z",
+            "network_request_made": True,
+            "capture_truncated": False,
+            "feed_item_count": 0,
+            "coverage_scope": "Current feed only; not a historical archive",
+            "errors": [],
+        }
+        with patch.dict(EVENT_SOURCE_REGISTRY["sources"], {"sec_press_releases": approved}):
+            enriched = enrich_research_report(
+                report(), events=[], observations=[], methodology=methodology(),
+                asset={"stable_id": "example-asset", "category": "smart_contract_token"},
+                evaluation_as_of="2026-10-21T00:00:00Z",
+                event_source_coverage=[empty_capture],
+            )
+        coverage = enriched["external_event_evidence"]["source_coverage"]
+        self.assertEqual(coverage["sources"][0]["coverage_status"], "CAPTURED_NO_ITEMS_IN_RETURNED_FEED")
+        self.assertIn("does not establish absence", coverage["sources"][0]["interpretation"])
+
+    def test_source_coverage_captured_after_cutoff_is_not_available_as_of(self):
+        approved = approved_event_source()
+        capture = {
+            "source_id": "sec_press_releases",
+            "capture_status": "PASS",
+            "captured_at": "2026-10-22T10:05:00Z",
+            "network_request_made": True,
+            "capture_truncated": False,
+            "feed_item_count": 2,
+            "coverage_scope": "Current feed only",
+            "errors": [],
+        }
+        with patch.dict(EVENT_SOURCE_REGISTRY["sources"], {"sec_press_releases": approved}):
+            enriched = enrich_research_report(
+                report(), events=[], observations=[], methodology=methodology(),
+                asset={"stable_id": "example-asset", "category": "smart_contract_token"},
+                evaluation_as_of="2026-10-21T00:00:00Z",
+                event_source_coverage=[capture],
+            )
+        self.assertEqual(
+            enriched["external_event_evidence"]["source_coverage"]["sources"][0]["coverage_status"],
+            "NOT_AVAILABLE_AS_OF",
+        )
+
+
+
 if __name__ == "__main__":
     unittest.main()
