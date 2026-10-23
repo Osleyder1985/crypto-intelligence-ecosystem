@@ -140,6 +140,22 @@ class ExternalEventEvidenceTests(unittest.TestCase):
         self.assertFalse(result["causality_claimed"])
         self.assertTrue(result["evidence_urls"])
 
+    def test_publication_and_capture_at_inclusive_cutoff_remain_eligible(self):
+        value = event(
+            published_at="2026-10-22T10:00:00Z",
+            captured_at="2026-10-22T10:01:00Z",
+        )
+        result = assess_temporal_association(
+            value,
+            movement_start="2026-10-22T10:00:00Z",
+            movement_end="2026-10-22T10:01:00Z",
+            evaluation_as_of="2026-10-22T10:01:00Z",
+            target_entity={"id_type": "coingecko_id", "id": "example-coin"},
+        )
+        self.assertEqual(result["status"], "TEMPORALLY_ELIGIBLE")
+        self.assertEqual(result["causality_label"], "TEMPORAL_ASSOCIATION")
+        self.assertFalse(result["causality_claimed"])
+
     def test_outside_window_does_not_invent_cause(self):
         result = assess_temporal_association(
             event(),
