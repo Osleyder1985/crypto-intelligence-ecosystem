@@ -26,7 +26,11 @@ from test_public_event_feed import (
     feed_xml as generic_feed_xml,
 )
 from test_research_report import artifact, candle, config, identity_evidence
-from test_research_evidence_integration import methodology
+from test_research_evidence_integration import (
+    approved_defillama_authorization_fixture,
+    fundamental_observation,
+    methodology,
+)
 
 
 class CombinedResearchPipelineE2ETests(unittest.TestCase):
@@ -156,10 +160,13 @@ class CombinedResearchPipelineE2ETests(unittest.TestCase):
                     },
                     "movement_episode_id": episode["episode_id"],
                 }],
-                observations=[],
+                observations=[fundamental_observation(terms_status="APPROVED")],
                 methodology=methodology(),
-                asset={"stable_id": "example-asset", "category": "native_l1"},
+                asset={"stable_id": "example-asset", "category": "smart_contract_token"},
                 evaluation_as_of="2026-10-21T00:00:00Z",
+                provider_authorization_registry={
+                    "defillama_api": approved_defillama_authorization_fixture(),
+                },
             )
 
         assessment = enriched["external_event_evidence"]["assessments"][0]
@@ -178,6 +185,23 @@ class CombinedResearchPipelineE2ETests(unittest.TestCase):
         )
         self.assertFalse(enriched["external_event_evidence"]["causality_claimed"])
         self.assertFalse(enriched["event_causal_assessment"]["causality_claimed"])
+        fundamental = enriched["fundamental_onchain_assessment"]
+        tvl = fundamental["metrics"]["protocol.tvl"]
+        self.assertEqual(tvl["status"], "OBSERVED")
+        self.assertEqual(tvl["value"], 123456.0)
+        self.assertEqual(tvl["observation_ids"], ["tvl-example-20261020"])
+        self.assertEqual(
+            fundamental["metrics"]["stablecoin.reserve_attestation"]["status"],
+            "NOT_APPLICABLE",
+        )
+        self.assertEqual(
+            enriched["fundamental_source_use_assessments"][0]["decision"],
+            "ALLOW",
+        )
+        self.assertEqual(
+            enriched["fundamental_source_use_assessments"][1]["decision"],
+            "ALLOW",
+        )
         self.assertEqual(enriched["decision_status"], "INDETERMINATE")
         self.assertFalse(enriched["orders_submitted"])
 
