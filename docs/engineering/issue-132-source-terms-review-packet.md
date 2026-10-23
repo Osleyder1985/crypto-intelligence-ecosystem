@@ -334,3 +334,40 @@ Esta revisión consultó páginas públicas oficiales mediante navegación para 
 ### Límite de esta revisión
 
 No se cambió `event_source_registry.py`, no se habilitó ninguna fuente, no se ejecutó el adaptador de captura, no se persistieron artículos y no se generó un backfill. Las páginas consultadas son evidencia de descubrimiento y alcance visible; antes de aprobar un origen se deben preservar los bytes reales de las políticas pertinentes, calcular el hash sobre esos bytes, completar la decisión individual y verificar el endpoint bajo el control de acceso aprobado.
+
+## 15. Comprobación actual de índices oficiales y disponibilidad visible — 2026-10-23
+
+Esta comprobación se limita a páginas HTML públicas de índices y páginas de información. No se solicitaron los endpoints RSS/XML, no se descargaron comunicados y no se ejecutó el adaptador del proyecto. La disponibilidad visible de un índice HTML no equivale a aprobación de acceso automatizado ni de persistencia.
+
+### SEC — índice de comunicados y RSS anunciado
+
+- El índice oficial https://www.sec.gov/newsroom/press-releases mostró comunicados recientes, identificadores de publicación y paginación (1 a 25 de 6.897 elementos en la vista consultada). Esto acredita que el índice HTML está publicado y ofrece un alcance visible; no demuestra que todo el archivo histórico esté capturado ni valida el endpoint RSS.
+- La página oficial https://www.sec.gov/about/rss-feeds enumera “Press Releases” entre los feeds de materiales recientes, pero esa página informativa por sí sola no valida el MIME, la respuesta actual, las redirecciones ni los límites aplicables al endpoint exacto.
+- Decisión por separado: `sec_press_releases` requiere validar el feed oficial exacto; `sec_press_release_archive` requiere definir y registrar segmentos/páginas históricas. Ambos siguen `TERMS_PENDING`.
+
+### CFTC — feed temporalmente deshabilitado; índice HTML distinto
+
+- La página oficial RSS https://www.cftc.gov/RSS/index.htm dice expresamente: “As of October 2026, the CFTC has temporarily disabled all RSS feeds”. No intentar los feeds ni sortear la indisponibilidad mientras el aviso permanezca publicado.
+- La página oficial de comunicados está enlazada desde el sitio CFTC, pero no se usa la página RSS como prueba de que el archivo HTML esté autorizado o tenga una estructura estable para captura. El archivo HTML necesita evaluación propia de endpoint, robots/política aplicable, paginación, contenido, acceso automatizado y persistencia.
+- Decisión por separado: `cftc_general_press_releases` queda bloqueado por la indisponibilidad declarada del RSS; `cftc_press_release_archive` requiere revisión específica del índice HTML. Ambos siguen `TERMS_PENDING`.
+
+### Federal Reserve Board — índice actual y segmentos históricos
+
+- El índice oficial https://www.federalreserve.gov/newsevents/pressreleases.htm mostró comunicados de 2026 y enlaces de archivo por año desde 2006, además de un enlace “Archive”. La página indica que los comunicados anteriores a 2006 están disponibles en el archivo.
+- La página oficial https://www.federalreserve.gov/feeds/feeds.htm enumera feeds de comunicados y describe RSS como enlaces, titulares y resúmenes. Esta documentación no sustituye la verificación autorizada de la respuesta XML del endpoint exacto.
+- Decisión por separado: `federal_reserve_press_releases` requiere validar el feed específico; `federal_reserve_press_release_archive` debe modelar cada año/segmento y el archivo anterior a 2006 como cobertura separada. Ambos siguen `TERMS_PENDING`.
+
+### Decisiones operativas derivadas
+
+| `source_id` | Evidencia visible actual | Bloqueo/acción pendiente | Estado |
+|---|---|---|---|
+| `sec_press_releases` | Índice oficial con comunicados recientes; página oficial anuncia RSS | Verificar endpoint RSS exacto, condiciones de acceso, agente, límite agregado y alcance persistible | `TERMS_PENDING` |
+| `sec_press_release_archive` | Índice HTML con paginación y años/filtros | Delimitar segmentos y generar manifiesto esperado antes de backfill autorizado | `TERMS_PENDING` |
+| `cftc_general_press_releases` | Aviso oficial de feeds RSS deshabilitados temporalmente | No solicitar feed; revalidar aviso en una revisión futura antes de cualquier activación | `TERMS_PENDING` |
+| `cftc_press_release_archive` | Índice HTML distinto del RSS | Revisar la página de archivo y sus condiciones de acceso como fuente independiente | `TERMS_PENDING` |
+| `federal_reserve_press_releases` | Índice actual y catálogo oficial de feeds | Validar el endpoint XML exacto solo tras aprobación de alcance | `TERMS_PENDING` |
+| `federal_reserve_press_release_archive` | Índice con segmentos por año y archivo anterior a 2006 | Especificar cobertura por año/segmento y verificar páginas ausentes sin afirmar exhaustividad global | `TERMS_PENDING` |
+
+### Límite y conclusión
+
+La consulta web de páginas públicas no constituye captura de datos de las fuentes ni reemplaza la preservación de evidencia de política exigida por la matriz. No se calcularon hashes de páginas de políticas porque no se preservaron sus bytes como artefactos; no inventar hashes a partir de resultados de búsqueda o texto extraído. No se cambió el registro operativo, no se ejecutó E2E ni backfill y no se cambió ningún estado `TERMS_PENDING`.
