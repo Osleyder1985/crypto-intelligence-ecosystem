@@ -245,8 +245,11 @@ def capture_and_build_report(
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--symbol", required=True, help="Exact native Binance Spot symbol, e.g. BTCUSDT; no ticker guessing")
-    parser.add_argument("--base-asset-ticker", required=True, help="Must equal exchangeInfo baseAsset ticker; not a global token identifier")
+    market_input = parser.add_mutually_exclusive_group(required=True)
+    market_input.add_argument("--symbol", help="Exact native Binance Spot symbol, e.g. BTCUSDT")
+    market_input.add_argument("--asset-ticker", help="Binance baseAsset ticker; requires --quote-asset if multiple pairs match")
+    parser.add_argument("--quote-asset", help="Quote ticker to disambiguate --asset-ticker candidates, e.g. USDT")
+    parser.add_argument("--base-asset-ticker", help="Optional assertion that the resolved market base ticker matches this value")
     parser.add_argument("--interval", required=True)
     parser.add_argument("--start-time-ms", required=True, type=int, help="Inclusive UTC candle boundary, Unix milliseconds")
     parser.add_argument("--end-time-ms", required=True, type=int, help="Exclusive UTC candle boundary, Unix milliseconds")
@@ -263,13 +266,16 @@ def main() -> int:
     config = json.loads(args.config.read_text(encoding="utf-8"))
     authorization_record = json.loads(args.authorization_record.read_text(encoding="utf-8")) if args.authorization_record else None
     identity_evidence = json.loads(args.identity_evidence.read_text(encoding="utf-8")) if args.identity_evidence else None
+    if args.asset_ticker and args.base_asset_ticker and args.asset_ticker.casefold() != args.base_asset_ticker.casefold():
+        parser.error("--base-asset-ticker must match --asset-ticker when both are supplied")
     captured, report = capture_and_build_report(
         symbol=args.symbol,
         interval=args.interval,
         start_time_ms=args.start_time_ms,
         end_time_ms_exclusive=args.end_time_ms,
         config=config,
-        base_asset_ticker=args.base_asset_ticker,
+        base_asset_ticker=args.base_asset_ticker or args.asset_ticker,
+        quote_asset=args.quote_asset,
         use_case=args.use_case,
         authorization_record=authorization_record,
         requested_identifier_type=args.asset_id_type,
