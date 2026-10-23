@@ -466,6 +466,28 @@ class ResearchEvidenceIntegrationTests(unittest.TestCase):
         self.assertEqual(enriched["decision_status"], "INDETERMINATE")
 
 
+    def test_integrated_report_applies_explicit_fundamental_freshness_policy(self):
+        observation = fundamental_observation(terms_status="APPROVED")
+        enriched = enrich_research_report(
+            report(), events=[], observations=[observation],
+            methodology=methodology(),
+            asset={"stable_id": "example-asset", "category": "smart_contract_token"},
+            evaluation_as_of="2026-10-21T00:00:00Z",
+            provider_authorization_registry={
+                "defillama_api": approved_defillama_authorization_fixture()
+            },
+            fundamental_freshness_policy_seconds={"protocol.tvl": 3600},
+        )
+        metric = enriched["fundamental_onchain_assessment"]["metrics"]["protocol.tvl"]
+        self.assertEqual(metric["status"], "STALE")
+        self.assertIsNone(metric["value"])
+        self.assertEqual(metric["stale_observation_ids"], ["tvl-example-20261020"])
+        self.assertEqual(
+            enriched["fundamental_onchain_assessment"]["coverage"]["freshness_policy_seconds"],
+            {"protocol.tvl": 3600},
+        )
+        self.assertEqual(enriched["decision_status"], "INDETERMINATE")
+
     def test_fundamental_source_cannot_claim_a_different_provider(self):
         observation = fundamental_observation(
             terms_status="APPROVED",
