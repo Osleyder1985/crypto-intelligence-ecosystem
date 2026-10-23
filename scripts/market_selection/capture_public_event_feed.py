@@ -256,6 +256,9 @@ def _blocked_result(
         "captured_at": captured_at,
         "capture_status": "BLOCKED",
         "network_request_made": False,
+        "orders_submitted": False,
+        "events_promoted": False,
+        "asset_identity_resolved": False,
         "http_status": None,
         "response_headers": {},
         "raw_response_bytes": 0,
@@ -339,6 +342,9 @@ def capture_public_event_feed(
             "captured_at": captured,
             "capture_status": "NETWORK_ERROR",
             "network_request_made": True,
+            "orders_submitted": False,
+            "events_promoted": False,
+            "asset_identity_resolved": False,
             "http_status": None,
             "response_headers": {},
             "raw_response_bytes": 0,
@@ -408,6 +414,7 @@ def capture_public_event_feed(
         "errors": errors,
         "events_promoted": False,
         "asset_identity_resolved": False,
+        "orders_submitted": False,
         "network_requests_made": True,
     }
 
