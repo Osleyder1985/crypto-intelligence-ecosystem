@@ -49,6 +49,7 @@ def analyze_multi_timeframe_support_resistance(
 
     analyses = []
     identity = None
+    quote_asset_identity = None
     intervals = set()
     for index, artifact in enumerate(artifacts):
         result = analyze_support_resistance(
@@ -61,6 +62,14 @@ def analyze_multi_timeframe_support_resistance(
             identity = current_identity
         elif current_identity != identity:
             raise ValueError("all artifacts must refer to the same exchange, market type, and native symbol")
+        input_market = artifact.get("market") if isinstance(artifact, dict) else None
+        current_quote_asset = input_market.get("quote_asset") if isinstance(input_market, dict) else None
+        if isinstance(current_quote_asset, str) and current_quote_asset.strip():
+            current_quote_asset = current_quote_asset.strip().upper()
+            if quote_asset_identity is None:
+                quote_asset_identity = current_quote_asset
+            elif current_quote_asset != quote_asset_identity:
+                raise ValueError("all artifacts must declare the same quote asset when quote_asset metadata is present")
         interval = market["interval"]
         if interval in intervals:
             raise ValueError(f"duplicate timeframe interval: {interval}")
