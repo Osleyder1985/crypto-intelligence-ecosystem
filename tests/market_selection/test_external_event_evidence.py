@@ -301,5 +301,45 @@ class ExternalEventEvidenceTests(unittest.TestCase):
         self.assertEqual(result["duplicate_count"], 0)
 
 
+    def test_post_movement_window_can_associate_event_after_swing_end(self):
+        result = assess_temporal_association(
+            event(),
+            movement_start="2026-10-22T09:00:00Z",
+            movement_end="2026-10-22T09:59:00Z",
+            evaluation_as_of="2026-10-22T11:00:00Z",
+            target_entity={"id_type": "coingecko_id", "id": "example-coin"},
+            post_movement_window_minutes=1,
+        )
+        self.assertEqual(result["status"], "TEMPORALLY_ELIGIBLE")
+        self.assertEqual(result["causality_label"], "TEMPORAL_ASSOCIATION")
+        self.assertEqual(result["association_window"]["end"], "2026-10-22T10:00:00Z")
+        self.assertEqual(result["post_movement_window_minutes"], 1)
+        self.assertIn("follows movement end", result["reason"].lower())
+        self.assertFalse(result["causality_claimed"])
+
+    def test_post_movement_window_defaults_to_zero_and_invalid_values_are_rejected(self):
+        default = assess_temporal_association(
+            event(),
+            movement_start="2026-10-22T09:00:00Z",
+            movement_end="2026-10-22T09:59:00Z",
+            evaluation_as_of="2026-10-22T11:00:00Z",
+            target_entity={"id_type": "coingecko_id", "id": "example-coin"},
+        )
+        self.assertEqual(default["status"], "OUTSIDE_MOVEMENT_WINDOW")
+        self.assertEqual(default["post_movement_window_minutes"], 0)
+        for invalid in (-1, True, 1.5):
+            with self.subTest(invalid=invalid):
+                with self.assertRaisesRegex(ValueError, "post_movement_window_minutes must be a non-negative integer"):
+                    assess_temporal_association(
+                        event(),
+                        movement_start="2026-10-22T09:00:00Z",
+                        movement_end="2026-10-22T09:59:00Z",
+                        evaluation_as_of="2026-10-22T11:00:00Z",
+                        target_entity={"id_type": "coingecko_id", "id": "example-coin"},
+                        post_movement_window_minutes=invalid,
+                    )
+
+
+
 if __name__ == "__main__":
     unittest.main()

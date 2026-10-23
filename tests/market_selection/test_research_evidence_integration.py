@@ -1057,5 +1057,45 @@ class ResearchEvidenceIntegrationTests(unittest.TestCase):
 
 
 
+    def test_explicit_post_movement_window_is_applied_and_reported(self):
+        with patch.dict(EVENT_SOURCE_REGISTRY["sources"], {"sec_press_releases": approved_event_source()}):
+            enriched = enrich_research_report(
+                report(),
+                events=[{
+                    "event": event(),
+                    "target_entity": {"id_type": "coingecko_id", "id": "example-asset"},
+                    "movement_window": {"start": "2026-10-20T09:00:00Z", "end": "2026-10-20T09:59:00Z"},
+                    "post_movement_window_minutes": 1,
+                }],
+                observations=[], methodology=methodology(),
+                asset={"stable_id": "example-asset", "category": "smart_contract_token"},
+                evaluation_as_of="2026-10-21T00:00:00Z",
+            )
+        assessment = enriched["external_event_evidence"]["assessments"][0]
+        self.assertEqual(assessment["status"], "TEMPORALLY_ELIGIBLE")
+        self.assertEqual(assessment["causality_label"], "TEMPORAL_ASSOCIATION")
+        self.assertEqual(assessment["post_movement_window_minutes"], 1)
+        self.assertEqual(assessment["association_window"]["end"], "2026-10-20T10:00:00Z")
+        self.assertIn("follows movement end", assessment["reason"].lower())
+        self.assertFalse(assessment["causality_claimed"])
+
+    def test_invalid_post_movement_window_is_rejected_in_report_integration(self):
+        with patch.dict(EVENT_SOURCE_REGISTRY["sources"], {"sec_press_releases": approved_event_source()}):
+            with self.assertRaisesRegex(ValueError, "post_movement_window_minutes must be a non-negative integer"):
+                enrich_research_report(
+                    report(),
+                    events=[{
+                        "event": event(),
+                        "target_entity": {"id_type": "coingecko_id", "id": "example-asset"},
+                        "movement_window": {"start": "2026-10-20T09:00:00Z", "end": "2026-10-20T09:59:00Z"},
+                        "post_movement_window_minutes": True,
+                    }],
+                    observations=[], methodology=methodology(),
+                    asset={"stable_id": "example-asset", "category": "smart_contract_token"},
+                    evaluation_as_of="2026-10-21T00:00:00Z",
+                )
+
+
+
 if __name__ == "__main__":
     unittest.main()
