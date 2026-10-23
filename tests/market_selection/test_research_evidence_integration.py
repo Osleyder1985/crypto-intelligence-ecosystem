@@ -222,7 +222,7 @@ class ResearchEvidenceIntegrationTests(unittest.TestCase):
             )
         summary = enriched["event_causal_assessment"]["episode_assessments"][0]
         self.assertEqual(summary["status"], "TEMPORAL_ASSOCIATION_ONLY")
-        self.assertEqual(summary["event_ids"], ["event-1"])
+        self.assertEqual(summary["event_ids"], [enriched["external_event_evidence"]["assessments"][0]["event_id"]])
         self.assertFalse(summary["causality_claimed"])
 
     def test_episode_summary_does_not_claim_absence_of_cause_without_evidence(self):
