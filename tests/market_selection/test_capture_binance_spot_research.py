@@ -195,7 +195,7 @@ class BinanceSpotResearchCaptureTests(unittest.TestCase):
         with patch("scripts.market_selection.capture_binance_spot_research.urlopen", return_value=FakeResponse(metadata_raw)), patch(
             "scripts.market_selection.capture_binance_spot_research.capture_history", return_value=artifact
         ):
-            with self.assertRaisesRegex(ValueError, "base_asset_ticker does not match")
+            with self.assertRaisesRegex(ValueError, "base_asset_ticker does not match"):
                 capture_and_build_report(symbol="BTCUSDT", interval="1h", start_time_ms=0, end_time_ms_exclusive=3_600_000, config=config, base_asset_ticker="ETH", use_case="live_technical_test")
 
 
