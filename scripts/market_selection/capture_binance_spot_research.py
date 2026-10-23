@@ -179,6 +179,7 @@ def capture_and_build_report(
         "quote_asset": metadata["quote_asset"],
         "symbol_status_at_capture": metadata["symbol_status"],
         "is_spot_trading_allowed_at_capture": metadata["is_spot_trading_allowed"],
+        "market_resolution": metadata["market_resolution"],
     })
     artifact["market_identity_evidence"] = metadata["captured_exchange_info"]
     if identity_evidence is not None:

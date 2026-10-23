@@ -53,6 +53,28 @@ def artifact(rows, *, base_asset="BTC", overall_status="PASS"):
             "market_type": "SPOT",
             "symbol_native": "BTCUSDT",
             "base_asset": base_asset,
+            "quote_asset": "USDT",
+            "symbol_status_at_capture": "TRADING",
+            "is_spot_trading_allowed_at_capture": True,
+            "market_resolution": {
+                "schema_version": "binance-spot-market-candidate-resolution-v1",
+                "resolution_status": "UNIQUE_MARKET",
+                "candidate_count": 1,
+                "selected_market": {
+                    "symbol_native": "BTCUSDT",
+                    "base_asset": "BTC",
+                    "quote_asset": "USDT",
+                    "status": "TRADING",
+                    "is_spot_trading_allowed": True,
+                },
+                "candidates": [{
+                    "symbol_native": "BTCUSDT",
+                    "base_asset": "BTC",
+                    "quote_asset": "USDT",
+                    "status": "TRADING",
+                    "is_spot_trading_allowed": True,
+                }],
+            },
             "interval": "1h",
         },
         "window": {
@@ -233,6 +255,10 @@ class ResearchReportTests(unittest.TestCase):
         self.assertEqual(report["asset_identity_status"], "INDETERMINATE")
         self.assertEqual(report["canonical_asset_identity_status"], "NOT_RESOLVED")
         self.assertEqual(report["market_base_asset_mapping_status"], "VERIFIED")
+        self.assertEqual(report["market"]["symbol_native"], "BTCUSDT")
+        self.assertEqual(report["market"]["base_asset"], "BTC")
+        self.assertEqual(report["market"]["quote_asset"], "USDT")
+        self.assertEqual(report["market"]["market_resolution"]["resolution_status"], "UNIQUE_MARKET")
         self.assertEqual(report["source_artifact"]["hash_basis"], "RAW_SOURCE_FILE_BYTES")
         self.assertEqual(report["source_artifact"]["sha256"], hashlib.sha256(self.raw).hexdigest())
         self.assertIn("risk_profile", report["descriptive_analyses"])

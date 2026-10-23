@@ -97,6 +97,10 @@ python -m scripts.market_selection.research_report \
 
 El archivo de configuración debe contener `methodology_id`, `methodology_version`, `movement.lookback_bars`, `movement.return_threshold_pct`, `movement.volume_ratio_threshold`, `support_resistance.pivot_left`, `support_resistance.pivot_right` y `support_resistance.tolerance_bps`. Los valores son parámetros del experimento, no umbrales de inversión aprobados.
 
+## Procedencia explícita del mercado en el informe
+
+El informe debe conservar la cotización del par (por ejemplo, `BTC/USDT`) además del símbolo nativo y del activo base. Cuando la captura integrada resuelve el mercado, el artefacto preserva también el estado de negociación, el indicador de disponibilidad Spot y el resultado de resolución (`UNIQUE_MARKET`, candidato seleccionado y candidatos considerados). Esta procedencia describe la selección del par de mercado; no demuestra identidad canónica global del activo ni sustituye la evidencia de identidad revisada.
+
 ## Limitaciones pendientes
 
 - El generador offline no captura ni selecciona por sí mismo las fuentes históricas; el capturador integrado actual cubre solamente metadatos de mercado y OHLCV de Binance Spot.
