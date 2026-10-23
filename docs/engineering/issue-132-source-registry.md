@@ -71,7 +71,7 @@ Estas páginas aportan evidencia de reutilización del contenido oficial, pero n
 
 ## Índices oficiales de archivo habilitados como rutas de diseño (2026-10-23)
 
-El registro incluye prefijos de ruta para captura separada de índices HTML históricos, sin cambiar el estado de aprobación de ninguna fuente:
+El registro define entradas independientes para índices HTML históricos: sec_press_release_archive, cftc_press_release_archive y federal_reserve_press_release_archive. Los prefijos de ruta están en esas entradas separadas para no cambiar los hashes de las fuentes RSS existentes. No cambia el estado de aprobación de ninguna fuente:
 
 - SEC: https://www.sec.gov/newsroom/press-releases — prefijo /newsroom/press-releases.
 - CFTC: https://www.cftc.gov/PressRoom/PressReleases y https://www.cftc.gov/PressRoom/IntheNews/index.htm — prefijos /PressRoom/PressReleases y /PressRoom/IntheNews.
