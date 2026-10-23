@@ -421,6 +421,50 @@ def enrich_research_report(
     horizons = report.get("horizons")
     if not isinstance(horizons, dict) or set(horizons) != {"short", "medium", "long"}:
         raise ValueError("report.horizons must define exactly short, medium, and long")
+    episode_assessments = []
+    analyses = report.get("descriptive_analyses")
+    if analyses is not None:
+        analyses = _object(analyses, "report.descriptive_analyses")
+        episodes_artifact = analyses.get("movement_episodes")
+        if episodes_artifact is not None:
+            episodes_artifact = _object(episodes_artifact, "report.descriptive_analyses.movement_episodes")
+            episodes = episodes_artifact.get("episodes")
+            if not isinstance(episodes, list):
+                raise ValueError("report.descriptive_analyses.movement_episodes.episodes must be a list")
+            for index, episode in enumerate(episodes):
+                episode = _object(episode, f"movement_episodes.episodes[{index}]")
+                episode_id = episode.get("episode_id")
+                if not isinstance(episode_id, str) or not episode_id.strip():
+                    raise ValueError(f"movement_episodes.episodes[{index}].episode_id must be non-empty")
+                linked = [
+                    assessment for assessment in event_assessments
+                    if (assessment.get("movement_episode") or {}).get("episode_id") == episode_id
+                ]
+                if not events:
+                    status = "NOT_ASSESSED_NO_EVENT_EVIDENCE_SUPPLIED"
+                elif not linked:
+                    status = "NOT_ASSESSED_NO_EPISODE_LINKED_EVIDENCE"
+                elif any(
+                    item.get("entity_match") is True and item.get("causality_label") == "TEMPORAL_ASSOCIATION"
+                    for item in linked
+                ):
+                    status = "TEMPORAL_ASSOCIATION_ONLY"
+                else:
+                    status = "NO_SUPPORTING_EVENT_IN_SUPPLIED_EVIDENCE"
+                episode_assessments.append({
+                    "episode_id": episode_id,
+                    "direction": episode.get("direction"),
+                    "status": status,
+                    "supplied_event_count": len(linked),
+                    "event_ids": [item["event_id"] for item in linked],
+                    "causality_claimed": False,
+                    "interpretation": (
+                        "A temporal association is not proof of causality."
+                        if status == "TEMPORAL_ASSOCIATION_ONLY"
+                        else "This status describes only the supplied evidence; it does not prove that no catalyst existed."
+                    ),
+                })
+
     output = dict(report)
     output["external_event_evidence"] = {
         "schema_version": "crypto-event-evidence-assessment-v1",
@@ -429,6 +473,14 @@ def enrich_research_report(
         "assessments": event_assessments,
         "causality_claimed": False,
         "interpretation": "Temporal association is not proof of causality; event absence does not prove no catalyst existed.",
+        "episode_assessments": episode_assessments,
+    }
+    output["event_causal_assessment"] = {
+        "status": "ASSESSED" if event_assessments else "NOT_ASSESSED",
+        "episode_count": len(episode_assessments),
+        "episode_assessments": episode_assessments,
+        "causality_claimed": False,
+        "reason": "Episode-level summaries classify supplied evidence only; no causal attribution is inferred.",
     }
     output["fundamental_onchain_assessment"] = fundamental
     output["fundamental_source_use_assessments"] = fundamental_source_use_assessments
