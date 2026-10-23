@@ -476,12 +476,19 @@ def enrich_research_report(
         else:
             window = _object(item.get("movement_window"), f"events[{index}].movement_window")
             episode_context = None
+        availability_cutoff = cutoff
+        if episode_context is not None:
+            availability_cutoff = datetime.fromtimestamp(
+                episode_context["episode_observable_only_at_ms"] / 1000,
+                tz=timezone.utc,
+            ).isoformat(timespec="milliseconds").replace("+00:00", "Z")
         temporal_assessment = assess_temporal_association(
             event,
             movement_start=_timestamp(window.get("start"), f"events[{index}].movement_window.start"),
             movement_end=_timestamp(window.get("end"), f"events[{index}].movement_window.end"),
             evaluation_as_of=cutoff,
             target_entity=item.get("target_entity") or {},
+            availability_cutoff=availability_cutoff,
         )
         if episode_context is not None:
             published_ms = parse_timestamp(event["published_at"], "published_at").timestamp() * 1000
