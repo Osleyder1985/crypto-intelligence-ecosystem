@@ -237,16 +237,30 @@ class ResearchEvidenceIntegrationTests(unittest.TestCase):
                 evaluation_as_of="2026-10-21T00:00:00Z",
             )
 
-    def test_authorized_fundamental_observation_records_both_use_assessments(self):
+
+    def test_observation_cannot_self_authorize_with_embedded_record(self):
         observation = fundamental_observation(
             terms_status="APPROVED",
             authorization_record=approved_defillama_authorization_fixture(),
         )
+        with self.assertRaisesRegex(PermissionError, "blocked for internal_analysis"):
+            enrich_research_report(
+                report(), events=[], observations=[observation],
+                methodology=methodology(),
+                asset={"stable_id": "example-asset", "category": "smart_contract_token"},
+                evaluation_as_of="2026-10-21T00:00:00Z",
+            )
+
+    def test_authorized_fundamental_observation_records_both_use_assessments(self):
+        observation = fundamental_observation(terms_status="APPROVED")
         enriched = enrich_research_report(
             report(), events=[], observations=[observation],
             methodology=methodology(),
             asset={"stable_id": "example-asset", "category": "smart_contract_token"},
             evaluation_as_of="2026-10-21T00:00:00Z",
+            provider_authorization_registry={
+                "defillama_api": approved_defillama_authorization_fixture()
+            },
         )
         self.assertEqual(enriched["fundamental_onchain_assessment"]["coverage"]["observed_metric_count"], 1)
         assessments = enriched["fundamental_source_use_assessments"]
