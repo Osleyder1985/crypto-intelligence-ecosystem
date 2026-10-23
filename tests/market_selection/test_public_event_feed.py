@@ -62,6 +62,33 @@ def approved_source(source_id="cftc_general_press_releases"):
         "reviewed_by": "offline-test-fixture",
         "reviewed_at": "2026-10-22T12:00:00Z",
         "allowed_use_cases": ["internal_analysis", "persistent_storage"],
+        "approval_scope": {
+            "allowed_content": {
+                "metadata": True,
+                "official_text": True,
+                "full_html": True,
+                "attachments": False,
+            },
+            "third_party_content": {"handling": "EXCLUDED"},
+            "retention": {
+                "stored_fields": ["source URL", "original response bytes", "SHA-256"],
+                "duration": "Synthetic fixture only; not a production retention policy",
+                "deletion_or_recheck_rule": "Re-review before any non-test use",
+            },
+            "attribution": {
+                "required": True,
+                "format": "Synthetic test fixture; source URL",
+            },
+            "automated_access": {
+                "approved_endpoint": entry["source_url"],
+                "user_agent": USER_AGENT,
+                "max_aggregate_requests_per_second": entry["max_requests_per_second"],
+                "timeout_seconds": 5,
+                "redirect_policy": "HTTPS only; each redirect must remain inside the source allowlist",
+            },
+            "limitations": ["Synthetic approval fixture; grants no real-world permission"],
+            "decision_rationale": "Fixture solely for offline contract tests.",
+        },
     })
     return entry
 
@@ -386,6 +413,26 @@ class PublicEventFeedCaptureTests(unittest.TestCase):
                 self.assertEqual(result["capture_status"], "BLOCKED")
                 self.assertFalse(result["network_request_made"])
                 self.assertIn("SOURCE_TERMS_PENDING", result["reason_codes"])
+
+    def test_approved_source_requires_explicit_decision_scope(self):
+        entry = approved_source()
+        entry.pop("approval_scope")
+        with self.assertRaisesRegex(ValueError, "approval_scope"):
+            source_entry_sha256(entry)
+
+    def test_approved_source_rejects_excessive_aggregate_access_scope(self):
+        entry = approved_source()
+        entry["approval_scope"]["automated_access"]["max_aggregate_requests_per_second"] = (
+            entry["max_requests_per_second"] + 1
+        )
+        with self.assertRaisesRegex(ValueError, "exceeds the source registry ceiling"):
+            source_entry_sha256(entry)
+
+    def test_approved_source_rejects_unapproved_endpoint_host(self):
+        entry = approved_source()
+        entry["approval_scope"]["automated_access"]["approved_endpoint"] = "https://unapproved.example/feed"
+        with self.assertRaisesRegex(ValueError, "outside allowed_article_hosts"):
+            source_entry_sha256(entry)
 
 
 if __name__ == "__main__":

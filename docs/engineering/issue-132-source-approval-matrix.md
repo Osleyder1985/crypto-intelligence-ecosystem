@@ -83,6 +83,19 @@ decision_rationale: null
 
 Los campos `null`, las listas vacías y los valores de ejemplo no son autorizaciones. No copiar el registro a producción ni cambiar el estado a `APPROVED` hasta que las decisiones estén completas y la evidencia de política esté preservada y validada.
 
+## Validación obligatoria del alcance aprobado
+
+El estado APPROVED del registro técnico exige un objeto approval_scope completo, además del hash y los bytes de la política revisada. Debe declarar explícitamente:
+
+- decisiones booleanas separadas para metadatos, texto oficial, HTML completo y adjuntos;
+- tratamiento del contenido de terceros y evidencia cuando se autorice;
+- campos persistidos, duración de retención y regla de eliminación/revisión;
+- atribución requerida y formato;
+- endpoint HTTPS cuyo host pertenezca a la lista permitida, agente de usuario, límite agregado por segundo no superior al límite del registro, timeout positivo y política de redirecciones;
+- limitaciones conocidas y justificación de la decisión.
+
+Las pruebas usan únicamente una decisión sintética marcada como fixture. No modifica ni autoriza ninguna de las fuentes reales pendientes. Esta validación comprueba que la decisión está estructuralmente completa; no sustituye una revisión de términos ni garantiza que la decisión sea jurídicamente correcta.
+
 ## Condiciones técnicas antes de activar una fuente
 
 1. La entrada del registro, el registro de autorización del proveedor y la evidencia de política deben coincidir en `source_id`, finalidad y alcance.
