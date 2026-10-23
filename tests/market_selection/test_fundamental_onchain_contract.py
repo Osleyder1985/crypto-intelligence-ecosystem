@@ -223,6 +223,39 @@ class FundamentalOnchainContractTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "not defined as applicable"):
             validate_observation(obs(metric_id="stablecoin.reserve_attestation", unit="categorical_or_usd", value="ATTESTED"))
 
+    def test_period_timestamps_are_normalized_and_ordered(self):
+        value = obs(
+            period_start="2026-10-19T00:00:00+00:00",
+            period_end="2026-10-20T10:00:00+00:00",
+        )
+        result = validate_observation(value)
+        self.assertEqual(result["period_start"], "2026-10-19T00:00:00Z")
+        self.assertEqual(result["period_end"], "2026-10-20T10:00:00Z")
+
+    def test_invalid_or_reversed_period_timestamps_are_rejected(self):
+        with self.assertRaisesRegex(ValueError, "period_start must be a valid ISO-8601 timestamp"):
+            validate_observation(obs(period_start="yesterday"))
+        with self.assertRaisesRegex(ValueError, "period_start cannot be after period_end"):
+            validate_observation(
+                obs(
+                    period_start="2026-10-21T00:00:00Z",
+                    period_end="2026-10-20T00:00:00Z",
+                )
+            )
+
+    def test_block_height_must_be_a_non_negative_integer_or_null(self):
+        for block_height in (-1, True, 1.5, "21000000"):
+            with self.subTest(block_height=block_height):
+                with self.assertRaisesRegex(ValueError, "block_height must be a non-negative integer"):
+                    validate_observation(obs(block_height=block_height))
+        self.assertIsNone(validate_observation(obs(block_height=None))["block_height"])
+
+    def test_invalid_metadata_and_quality_notes_are_rejected_not_silently_dropped(self):
+        with self.assertRaisesRegex(ValueError, "metadata must be an object"):
+            validate_observation(obs(metadata=["unexpected"]))
+        with self.assertRaisesRegex(ValueError, "quality_notes must be a string"):
+            validate_observation(obs(quality_notes={"note": "unexpected"}))
+
     def test_capture_before_observation_is_rejected(self):
         with self.assertRaisesRegex(ValueError, "cannot precede observed_at"):
             validate_observation(obs(captured_at="2026-10-20T09:00:00Z"))
