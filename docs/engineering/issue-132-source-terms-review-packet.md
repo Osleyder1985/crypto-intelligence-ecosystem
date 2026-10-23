@@ -186,3 +186,42 @@ Si algún punto queda indeterminado, mantener `TERMS_PENDING` para el uso afecta
 - CFTC, [RSS](https://www.cftc.gov/RSS/index.htm): página oficial para comprobar disponibilidad actual de feeds antes de cualquier ejecución.
 
 La consulta de páginas oficiales sirve como evidencia documental, no como dictamen jurídico ni aprobación automática del alcance de captura y almacenamiento.
+
+## 12. Aclaración de alcance: el piloto es una fase de validación, no el alcance final — 2026-10-23
+
+La recomendación de comenzar por una fuente oficial **no reduce el alcance funcional del Issue #132 ni limita el producto final a SEC**. El objetivo funcional se mantiene: identificar acontecimientos potencialmente relacionados con el inicio y el fin de movimientos alcistas y bajistas de los activos investigados, contrastar evidencias de distintas clases de fuentes y preservar la distinción entre hechos, coincidencia temporal, hipótesis y causalidad respaldada.
+
+### Alcance objetivo del ecosistema
+
+La cobertura debe crecer por categorías pertinentes y fuentes autorizadas, según la relevancia para el activo y el periodo investigado:
+
+- **Regulación y medidas públicas:** comunicados, resoluciones y actuaciones oficiales de organismos pertinentes.
+- **Macroeconomía y política monetaria:** decisiones de bancos centrales, inflación, empleo, liquidez y publicaciones económicas con marcas temporales verificables.
+- **Mercados y derivados:** datos oficiales o autorizados sobre negociación, liquidaciones, financiación, interés abierto y estructura de mercado.
+- **Protocolos y redes:** anuncios de equipos oficiales, actualizaciones, incidentes, interrupciones, cambios de tokenómica, gobernanza y actividad on-chain verificable.
+- **Seguridad y operación:** exploits, vulnerabilidades, interrupciones, incidentes de puentes y respuestas oficiales de los proyectos.
+- **Adopción y actividad empresarial:** anuncios verificables de emisores, custodios, proveedores, integraciones y productos financieros.
+- **Prensa y fuentes secundarias:** medios identificables que aporten pistas o contexto, sujetos a sus propios términos, atribución y restricciones de almacenamiento; una noticia secundaria no sustituye la verificación de la fuente primaria cuando esta exista.
+
+Esta lista define categorías de investigación, no concede permisos de captura ni afirma que todas las fuentes ya estén integradas. Cada adaptador deberá registrar origen, hora de publicación, hora de captura, identificador estable, integridad, cobertura, condiciones aplicables y calidad de evidencia.
+
+### Secuencia de incorporación sin convertirla en límite permanente
+
+1. **Validación técnica inicial:** una sola fuente aprobada, para demostrar el recorrido de captura autorizado, integridad, persistencia permitida, manifiesto, deduplicación e integración con los episodios de mercado.
+2. **Ampliación de fuentes oficiales:** incorporar otras fuentes pertinentes tras revisar sus condiciones, disponibilidad, límites operativos y usos autorizados.
+3. **Ampliación por activo y clase de evento:** añadir fuentes primarias de proyectos, redes, mercados y seguridad según el universo de activos soportado.
+4. **Cobertura secundaria y contraste cruzado:** integrar fuentes adicionales autorizadas y exigir evidencia independiente cuando la afirmación lo requiera.
+5. **Evaluación continua de cobertura y calidad:** informar qué fuentes y periodos se revisaron, qué faltó, qué falló y qué conclusiones siguen siendo inciertas. No presentar una muestra como cobertura exhaustiva.
+
+Cada fase tiene que producir criterios verificables y trazabilidad; no se debe declarar completada por calendario ni por tener CI verde únicamente.
+
+### Separación obligatoria entre amplitud funcional y autorización
+
+- El objetivo de producto es amplio y multifuente.
+- El piloto inicial es deliberadamente pequeño para validar el recorrido técnico y operativo.
+- La aprobación de una fuente no autoriza automáticamente otras fuentes ni otros usos.
+- No se activa tráfico externo ni se cambia `TERMS_PENDING` sin la decisión explícita exigida por el registro.
+- No se aplican límites arbitrarios de tamaño de respuesta: la captura debe preservar la respuesta completa cuando esté permitida, o declarar y documentar claramente cualquier restricción técnica u operativa real; nunca truncar silenciosamente.
+- Ninguna asociación temporal basta para afirmar que una noticia causó un movimiento. El sistema debe registrar evidencia a favor, evidencia contraria, alternativas y nivel de incertidumbre.
+
+**Conclusión:** el piloto valida una primera ruta; no redefine el objetivo del Issue #132. El criterio de éxito final es una cobertura multifuente ampliable, reproducible y auditable, dentro de las autorizaciones aplicables y con conclusiones proporcionales a la evidencia.
