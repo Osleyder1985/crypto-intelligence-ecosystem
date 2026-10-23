@@ -475,6 +475,54 @@ class ResearchReportTests(unittest.TestCase):
                     build_research_report(self.source, invalid, "BTC")
 
 
+    def test_integrates_multi_timeframe_support_resistance_into_report(self):
+        rows = [
+            candle(0, 10, 11, 9, 10),
+            candle(1, 10, 11, 8, 9),
+            candle(2, 9, 10, 7, 8),
+            candle(3, 8, 9, 8, 8.5),
+            candle(4, 8.5, 10, 8, 9.5),
+        ]
+        one_hour = artifact(rows)
+        four_hour = artifact(rows)
+        four_hour["market"]["interval"] = "4h"
+        for index, row in enumerate(four_hour["candles"]):
+            row["open_time_ms"] = index * 14_400_000
+            row["close_time_ms"] = (index + 1) * 14_400_000 - 1
+        with patch("scripts.market_selection.research_report.evaluate_artifact_use", side_effect=[
+            {"decision": "ALLOW", "reason_codes": ["SYNTHETIC_TEST_GATE_ONLY"]},
+        ]), patch("scripts.market_selection.analyze_support_resistance.evaluate_artifact_use", return_value={
+            "decision": "ALLOW", "reason_codes": ["SYNTHETIC_TEST_GATE_ONLY"],
+        }):
+            report = build_research_report(
+                one_hour, config(), "BTC", multi_timeframe_support_resistance_artifacts=[one_hour, four_hour],
+            )
+        multi = report["descriptive_analyses"]["support_resistance_multi_timeframe"]
+        self.assertEqual(multi["timeframe_count"], 2)
+        self.assertEqual(multi["cross_timeframe_confluence"], "NOT_COMPUTED")
+        self.assertEqual(multi["market"]["symbol_native"], "BTCUSDT")
+
+    def test_rejects_multi_timeframe_support_resistance_for_different_market(self):
+        rows = [
+            candle(0, 10, 11, 9, 10),
+            candle(1, 10, 11, 8, 9),
+            candle(2, 9, 10, 7, 8),
+            candle(3, 8, 9, 8, 8.5),
+            candle(4, 8.5, 10, 8, 9.5),
+        ]
+        mismatched = artifact(rows)
+        mismatched["market"]["symbol_native"] = "ETHUSDT"
+        with patch("scripts.market_selection.research_report.evaluate_artifact_use", return_value={
+            "decision": "ALLOW", "reason_codes": ["SYNTHETIC_TEST_GATE_ONLY"],
+        }), patch("scripts.market_selection.analyze_support_resistance.evaluate_artifact_use", return_value={
+            "decision": "ALLOW", "reason_codes": ["SYNTHETIC_TEST_GATE_ONLY"],
+        }):
+            with self.assertRaisesRegex(ValueError, "must match the OHLCV report exchange, symbol, and Spot market"):
+                build_research_report(
+                    artifact(rows), config(), "BTC",
+                    multi_timeframe_support_resistance_artifacts=[mismatched],
+                )
+
     def test_integrates_matching_order_book_snapshot_into_report(self):
         order_book = {
             "schema_version": "crypto-spot-order-book-snapshot-v1",
