@@ -262,6 +262,7 @@ def validate_source_entry(entry: dict) -> dict:
             raise ValueError("terms_sha256 does not match preserved terms_content_base64")
         _non_empty(reviewed_by, "reviewed_by")
         _timestamp(reviewed_at, "reviewed_at")
+        _validate_approval_scope(entry)
     elif allowed:
         raise ValueError("non-approved source must not allow use cases")
 
@@ -278,6 +279,69 @@ def validate_source_entry(entry: dict) -> dict:
     if entry.get("response_body_policy") != "READ_TO_EOF_NO_LOCAL_SIZE_CAP":
         raise ValueError("response_body_policy must preserve the complete body")
     return deepcopy(entry)
+
+
+def _validate_approval_scope(entry: dict) -> None:
+    """Require an explicit, source-specific decision scope before runtime approval."""
+    scope = entry.get("approval_scope")
+    if not isinstance(scope, dict):
+        raise ValueError("approved source must include approval_scope")
+
+    content = scope.get("allowed_content")
+    content_fields = {"metadata", "official_text", "full_html", "attachments"}
+    if not isinstance(content, dict) or set(content) != content_fields or any(
+        not isinstance(content[field], bool) for field in content_fields
+    ):
+        raise ValueError("approval_scope.allowed_content must explicitly decide metadata, official_text, full_html, and attachments")
+
+    third_party = scope.get("third_party_content")
+    if not isinstance(third_party, dict):
+        raise ValueError("approval_scope.third_party_content must be an object")
+    handling = third_party.get("handling")
+    if handling not in {"EXCLUDED", "NON_PERSISTENT", "AUTHORIZED_WITH_EVIDENCE"}:
+        raise ValueError("approval_scope.third_party_content.handling is unsupported")
+    if handling == "AUTHORIZED_WITH_EVIDENCE":
+        _non_empty(third_party.get("evidence"), "approval_scope.third_party_content.evidence")
+
+    retention = scope.get("retention")
+    if not isinstance(retention, dict):
+        raise ValueError("approval_scope.retention must be an object")
+    stored_fields = retention.get("stored_fields")
+    if not isinstance(stored_fields, list) or not stored_fields or any(
+        not isinstance(item, str) or not item.strip() for item in stored_fields
+    ):
+        raise ValueError("approval_scope.retention.stored_fields must be a non-empty list of strings")
+    _non_empty(retention.get("duration"), "approval_scope.retention.duration")
+    _non_empty(retention.get("deletion_or_recheck_rule"), "approval_scope.retention.deletion_or_recheck_rule")
+
+    attribution = scope.get("attribution")
+    if not isinstance(attribution, dict) or not isinstance(attribution.get("required"), bool):
+        raise ValueError("approval_scope.attribution.required must be boolean")
+    _non_empty(attribution.get("format"), "approval_scope.attribution.format")
+
+    access = scope.get("automated_access")
+    if not isinstance(access, dict):
+        raise ValueError("approval_scope.automated_access must be an object")
+    endpoint = _https_url(access.get("approved_endpoint"), "approval_scope.automated_access.approved_endpoint")
+    endpoint_parts = urlsplit(endpoint)
+    allowed_hosts = set(entry.get("allowed_article_hosts") or [])
+    if endpoint_parts.hostname not in allowed_hosts:
+        raise ValueError("approval_scope.automated_access.approved_endpoint host is outside allowed_article_hosts")
+    _non_empty(access.get("user_agent"), "approval_scope.automated_access.user_agent")
+    max_rate = access.get("max_aggregate_requests_per_second")
+    if isinstance(max_rate, bool) or not isinstance(max_rate, (int, float)) or max_rate <= 0:
+        raise ValueError("approval_scope.automated_access.max_aggregate_requests_per_second must be positive")
+    if max_rate > entry.get("max_requests_per_second", 0):
+        raise ValueError("approval_scope aggregate request rate exceeds the source registry ceiling")
+    timeout = access.get("timeout_seconds")
+    if isinstance(timeout, bool) or not isinstance(timeout, (int, float)) or timeout <= 0:
+        raise ValueError("approval_scope.automated_access.timeout_seconds must be positive")
+    _non_empty(access.get("redirect_policy"), "approval_scope.automated_access.redirect_policy")
+
+    limitations = scope.get("limitations")
+    if not isinstance(limitations, list) or any(not isinstance(item, str) or not item.strip() for item in limitations):
+        raise ValueError("approval_scope.limitations must be a list of non-empty strings")
+    _non_empty(scope.get("decision_rationale"), "approval_scope.decision_rationale")
 
 
 def get_source(source_id: str) -> dict:
