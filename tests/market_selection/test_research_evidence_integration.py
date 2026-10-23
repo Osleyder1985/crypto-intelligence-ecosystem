@@ -254,6 +254,35 @@ class ResearchEvidenceIntegrationTests(unittest.TestCase):
         self.assertTrue(all(item["decision"] == "ALLOW" for item in assessments))
         self.assertEqual(enriched["decision_status"], "INDETERMINATE")
 
+
+    def test_fundamental_source_cannot_claim_a_different_provider(self):
+        observation = fundamental_observation(
+            terms_status="APPROVED",
+            authorization_record=approved_defillama_authorization_fixture(),
+        )
+        observation["source"]["provider_id"] = "coingecko_api"
+        with self.assertRaisesRegex(PermissionError, "provider id does not match source registry"):
+            enrich_research_report(
+                report(), events=[], observations=[observation],
+                methodology=methodology(),
+                asset={"stable_id": "example-asset", "category": "smart_contract_token"},
+                evaluation_as_of="2026-10-21T00:00:00Z",
+            )
+
+    def test_fundamental_source_url_must_match_registered_provider_host(self):
+        observation = fundamental_observation(
+            terms_status="APPROVED",
+            authorization_record=approved_defillama_authorization_fixture(),
+        )
+        observation["source"]["url"] = "https://attacker.example/protocol/example"
+        with self.assertRaisesRegex(PermissionError, "URL is outside registry allowlist"):
+            enrich_research_report(
+                report(), events=[], observations=[observation],
+                methodology=methodology(),
+                asset={"stable_id": "example-asset", "category": "smart_contract_token"},
+                evaluation_as_of="2026-10-21T00:00:00Z",
+            )
+
     def test_rejects_event_captured_after_historical_cutoff_as_eligible(self):
         ev = event()
         ev["captured_at"] = "2026-10-22T10:01:00Z"
