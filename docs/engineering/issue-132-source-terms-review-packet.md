@@ -17,13 +17,16 @@ El acceso público a una página o feed **no demuestra por sí solo** que todos 
 
 ## Fuentes registradas y estado
 
-| ID de fuente | Endpoint de feed | Página de condiciones/políticas registrada | Estado |
+| ID de fuente | Endpoint registrado | Página de condiciones/políticas registrada | Estado |
 | --- | --- | --- | --- |
 | `sec_press_releases` | https://www.sec.gov/news/pressreleases.rss | https://www.sec.gov/about/developer-resources | `TERMS_PENDING` |
-| `cftc_general_press_releases` | https://www.cftc.gov/RSS/RSSGP/rssgp.xml | https://www.cftc.gov/sites/default/files/cftc/cftcprivacy.htm | `TERMS_PENDING` |
-| `federal_reserve_press_releases` | https://www.federalreserve.gov/feeds/press_all.xml | https://www.federalreserve.gov/policies.htm | `TERMS_PENDING` |
+| `sec_press_release_archive` | https://www.sec.gov/newsroom/press-releases | https://www.sec.gov/about/developer-resources | `TERMS_PENDING` |
+| `cftc_general_press_releases` | https://www.cftc.gov/RSS/RSSGP/rssgp.xml | https://www.cftc.gov/WebPolicy/index.htm | `TERMS_PENDING` |
+| `cftc_press_release_archive` | https://www.cftc.gov/PressRoom/PressReleases | https://www.cftc.gov/WebPolicy/index.htm | `TERMS_PENDING` |
+| `federal_reserve_press_releases` | https://www.federalreserve.gov/feeds/press_all.xml | https://www.federalreserve.gov/disclaimer.htm | `TERMS_PENDING` |
+| `federal_reserve_press_release_archive` | https://www.federalreserve.gov/newsevents/pressreleases.htm | https://www.federalreserve.gov/disclaimer.htm | `TERMS_PENDING` |
 
-Los enlaces son los actualmente declarados en `scripts/market_selection/event_source_registry.py`. Si la autoridad publica una política específica para RSS, APIs o reutilización de contenido, inclúyase como evidencia adicional; no se debe asumir que la página genérica registrada resuelve todas las cuestiones.
+Los endpoints y políticas anteriores corresponden a los seis `source_id` actualmente declarados en `scripts/market_selection/event_source_registry.py`. Si la autoridad publica una política específica para RSS, APIs o reutilización de contenido, inclúyase como evidencia adicional; no se debe asumir que una página genérica resuelve todas las cuestiones.
 
 ## Paquete de evidencia requerido por fuente
 
