@@ -168,3 +168,10 @@ Este documento no decide arbitrariamente duración de horizontes, pesos, umbrale
 - [Issue #7 — Selección de mercados Spot](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/issues/7)
 - [Issue #18 — Frescura, comisiones y coste](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/issues/18)
 - [Issue #19 — Validación integral y preparación operativa](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/issues/19)
+
+
+## Estado de reconstrucción de movimientos (incremento de octubre de 2026)
+
+El informe técnico puede reconstruir episodios de oscilación alcista y bajista a partir de pivotes locales confirmados del análisis de soportes/resistencias. Los pivotes ahora incluyen `segment_index`; el nuevo módulo `build_movement_episodes.py` conecta únicamente pivotes alternos dentro del mismo segmento continuo y consolida pivotes consecutivos del mismo tipo hacia el extremo más marcado.
+
+Cada episodio conserva precio inicial/final, variación porcentual descriptiva, tiempo estimado del pivote y tiempo posterior en que el pivote quedó confirmado. La fecha del pivote estima retrospectivamente el giro; la fecha de confirmación determina cuándo podía conocerse sin look-ahead. Los segmentos separados por huecos nunca se conectan. El informe etiqueta la causalidad como `NOT_ASSESSED`: esta etapa no busca ni prueba noticias causales, y esa investigación sigue pendiente de integrar evidencia externa autorizada e identidad canónica verificada.
