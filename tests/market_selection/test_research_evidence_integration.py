@@ -222,6 +222,40 @@ def event():
 
 
 class ResearchEvidenceIntegrationTests(unittest.TestCase):
+    def test_event_for_different_stable_entity_does_not_support_movement_episode(self):
+        enriched_report = report()
+        enriched_report["descriptive_analyses"] = {
+            "movement_episodes": {"episodes": [{
+                "episode_id": "swing-entity-mismatch",
+                "direction": "BULLISH",
+                "start": {"pivot_open_time_ms": 1792486800000},  # 09:00Z
+                "end": {"pivot_open_time_ms": 1792494000000},    # 11:00Z
+                "episode_observable_only_at_ms": 1792494000001,
+            }]},
+        }
+        with patch.dict(EVENT_SOURCE_REGISTRY["sources"], {"sec_press_releases": approved_event_source()}):
+            enriched = enrich_research_report(
+                enriched_report,
+                events=[{
+                    "event": event(),  # Explicitly identifies example-asset.
+                    "target_entity": {"id_type": "coingecko_id", "id": "different-asset"},
+                    "movement_episode_id": "swing-entity-mismatch",
+                }],
+                observations=[],
+                methodology=methodology(),
+                asset={"stable_id": "example-asset", "category": "smart_contract_token"},
+                evaluation_as_of="2026-10-21T00:00:00Z",
+            )
+
+        assessment = enriched["external_event_evidence"]["assessments"][0]
+        summary = enriched["event_causal_assessment"]["episode_assessments"][0]
+        self.assertFalse(assessment["entity_match"])
+        self.assertEqual(assessment["status"], "ENTITY_NOT_MATCHED")
+        self.assertEqual(assessment["causality_label"], "CAUSE_UNIDENTIFIED")
+        self.assertEqual(summary["status"], "NO_SUPPORTING_EVENT_IN_SUPPLIED_EVIDENCE")
+        self.assertFalse(assessment["causality_claimed"])
+        self.assertFalse(summary["causality_claimed"])
+
     def test_terms_pending_event_source_blocks_network_capture(self):
         authorization = event_authorization(approved_event_source())
 
