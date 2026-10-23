@@ -1,25 +1,57 @@
-name: Research evidence integration tests
+name: Research report and evidence integration tests
 
 on:
   pull_request:
     paths:
+      - "scripts/market_selection/research_report.py"
       - "scripts/market_selection/research_evidence_integration.py"
       - "scripts/market_selection/external_event_evidence.py"
       - "scripts/market_selection/fundamental_onchain_contract.py"
-      - "tests/market_selection/test_fundamental_onchain_contract.py"
       - "scripts/market_selection/methodology_contract.py"
+      - "scripts/market_selection/capture_public_event_feed.py"
+      - "scripts/market_selection/build_movement_episodes.py"
+      - "scripts/market_selection/analyze_support_resistance.py"
+      - "scripts/market_selection/analyze_order_book_snapshot.py"
+      - "scripts/market_selection/provider_license_gate.py"
+      - "scripts/market_selection/event_source_registry.py"
+      - "tests/market_selection/test_research_report.py"
       - "tests/market_selection/test_research_evidence_integration.py"
+      - "tests/market_selection/test_external_event_evidence.py"
+      - "tests/market_selection/test_fundamental_onchain_contract.py"
+      - "tests/market_selection/test_methodology_contract.py"
+      - "tests/market_selection/test_public_event_feed.py"
+      - "tests/market_selection/test_build_movement_episodes.py"
+      - "tests/market_selection/test_analyze_support_resistance.py"
+      - "tests/market_selection/test_analyze_order_book_snapshot.py"
+      - "tests/market_selection/test_provider_license_gate.py"
+      - "tests/market_selection/test_provider_license_enforcement.py"
       - ".github/workflows/research-evidence-integration-tests.yml"
   push:
     branches:
       - main
     paths:
+      - "scripts/market_selection/research_report.py"
       - "scripts/market_selection/research_evidence_integration.py"
       - "scripts/market_selection/external_event_evidence.py"
       - "scripts/market_selection/fundamental_onchain_contract.py"
-      - "tests/market_selection/test_fundamental_onchain_contract.py"
       - "scripts/market_selection/methodology_contract.py"
+      - "scripts/market_selection/capture_public_event_feed.py"
+      - "scripts/market_selection/build_movement_episodes.py"
+      - "scripts/market_selection/analyze_support_resistance.py"
+      - "scripts/market_selection/analyze_order_book_snapshot.py"
+      - "scripts/market_selection/provider_license_gate.py"
+      - "scripts/market_selection/event_source_registry.py"
+      - "tests/market_selection/test_research_report.py"
       - "tests/market_selection/test_research_evidence_integration.py"
+      - "tests/market_selection/test_external_event_evidence.py"
+      - "tests/market_selection/test_fundamental_onchain_contract.py"
+      - "tests/market_selection/test_methodology_contract.py"
+      - "tests/market_selection/test_public_event_feed.py"
+      - "tests/market_selection/test_build_movement_episodes.py"
+      - "tests/market_selection/test_analyze_support_resistance.py"
+      - "tests/market_selection/test_analyze_order_book_snapshot.py"
+      - "tests/market_selection/test_provider_license_gate.py"
+      - "tests/market_selection/test_provider_license_enforcement.py"
       - ".github/workflows/research-evidence-integration-tests.yml"
   workflow_dispatch:
 
@@ -27,7 +59,7 @@ permissions:
   contents: read
 
 jobs:
-  test:
+  research-report-and-evidence:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -36,7 +68,25 @@ jobs:
         uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97d
         with:
           python-version: "3.12"
-      - name: Run evidence integration tests
+      - name: Test primary report E2E contract
+        run: python -m unittest discover -s tests/market_selection -p "test_research_report.py" -v
+      - name: Test external event and fundamental evidence integration
         run: python -m unittest discover -s tests/market_selection -p "test_research_evidence_integration.py" -v
-      - name: Run fundamental/on-chain contract tests
+      - name: Test generic public RSS/Atom capture and promotion
+        run: python -m unittest discover -s tests/market_selection -p "test_public_event_feed.py" -v
+      - name: Test event temporal evidence contract
+        run: python -m unittest discover -s tests/market_selection -p "test_external_event_evidence.py" -v
+      - name: Test movement episode reconstruction
+        run: python -m unittest discover -s tests/market_selection -p "test_build_movement_episodes.py" -v
+      - name: Test support and resistance analysis
+        run: python -m unittest discover -s tests/market_selection -p "test_analyze_support_resistance.py" -v
+      - name: Test order-book snapshot analysis
+        run: python -m unittest discover -s tests/market_selection -p "test_analyze_order_book_snapshot.py" -v
+      - name: Test fundamental/on-chain contract
         run: python -m unittest discover -s tests/market_selection -p "test_fundamental_onchain_contract.py" -v
+      - name: Test horizon methodology contract
+        run: python -m unittest discover -s tests/market_selection -p "test_methodology_contract.py" -v
+      - name: Test provider authorization gates
+        run: python -m unittest discover -s tests/market_selection -p "test_provider_license_gate.py" -v
+      - name: Test provider authorization enforcement
+        run: python -m unittest discover -s tests/market_selection -p "test_provider_license_enforcement.py" -v
