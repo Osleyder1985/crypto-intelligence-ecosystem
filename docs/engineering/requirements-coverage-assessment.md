@@ -135,3 +135,33 @@ La evaluación podrá elevarse a candidata para aprobación cuando:
 - el propietario apruebe expresamente la línea base candidata.
 
 **Estado actual:** evaluación documental preliminar guardada para revisión en el PR #271. No es una aprobación del catálogo, no cierra Issues y no afirma que el producto esté completo.
+
+## 8. Revisión de trazabilidad con Issues funcionales vigentes
+
+Esta sección amplía la primera pasada documental con Issues de producto y auditoría que aparecieron después del mapa inicial del catálogo. Los enlaces indican relación de alcance, **no** prueban que un requisito esté implementado ni que todos los criterios del Issue estén satisfechos. Los estados se consultaron en GitHub durante esta revisión; volver a verificarlos antes de declarar una fase completada.
+
+| Issue | Relación con requisitos existentes | Estado observado y conclusión documental | Evidencia pendiente / límite |
+|---|---|---|---|
+| [#128 — Flujo integral de investigación por activo](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/issues/128) | REQ-P-001, REQ-P-004, REQ-P-005, REQ-P-008, REQ-P-012, REQ-P-020, REQ-P-021, REQ-P-023–REQ-P-027, REQ-P-032; NFR-003, NFR-011, NFR-012, NFR-014, NFR-016 | Abierto; Issue rector del flujo E2E. | Demostrar el flujo de entrada a informe e historial en una ejecución reproducible; los componentes analíticos parciales no prueban integración E2E completa. |
+| [#130 — Integrar analizadores en informe E2E](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/issues/130) | REQ-P-004, REQ-P-005, REQ-P-020, REQ-P-026; NFR-003, NFR-011, NFR-014, NFR-016 | Cerrado según el estado consultado. | El cierre de este incremento no demuestra por sí solo que estén integradas noticias, fundamentales/on-chain, metodologías aprobadas de horizonte o todo el flujo exigido por #128. Revisar su evidencia/PR si se usa como criterio de fase. |
+| [#132 — Noticias y eventos como posibles detonantes](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/issues/132) | REQ-P-023, REQ-P-024; NFR-011, NFR-014, NFR-016 | Abierto; contrato y pruebas descritos en el Issue, con alcance de fuentes sujeto a autorización. | Verificar cobertura real de eventos y fuentes habilitadas. La relación temporal no equivale a causalidad; no declarar que existe captura de noticias en vivo sin evidencia de fuente autorizada y ejecución real. |
+| [#133 — Metodologías por horizonte](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/issues/133) | REQ-P-009, REQ-P-012, REQ-P-013, REQ-P-014, REQ-P-016, REQ-P-022; NFR-001, NFR-012, NFR-013, NFR-017 | Abierto; decisiones metodológicas y criterios de aceptación siguen pendientes. | No inventar duraciones, pesos ni umbrales. Mantener conclusiones por horizonte como INDETERMINATE hasta que la metodología y la evidencia permitan una evaluación válida. |
+| [#134 — Fuentes y métricas fundamentales/on-chain](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/issues/134) | REQ-P-011, REQ-P-015, REQ-P-020; NFR-003, NFR-011, NFR-016 | Abierto según el Issue consultado; existe PR #217 cerrado con validaciones del contrato de observaciones. | La validación del esquema no demuestra captura de datos ni cobertura de métricas. Verificar fuente, periodo, unidades, cobertura, condiciones de uso y distinción entre no aplicable/no disponible/no accesible. |
+| [#266 — Fallos estructurados del limitador](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/issues/266) | REQ-P-008, REQ-P-018, REQ-P-020; NFR-002, NFR-009, NFR-011 | Abierto; brecha operacional concreta. | Verificar que los comandos afectados emiten artefacto JSON de bloqueo, código estable y `network_request_made: false`, y que las pruebas cubren fallo de SQLite/cuota inválida sin fallback inseguro. |
+| [#270 — Auditoría integral](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/issues/270) | REQ-P-020, REQ-P-028, REQ-P-033; NFR-004, NFR-007, NFR-009, NFR-011 | Abierto; alcance de auditoría todavía no equivale a una auditoría terminada. | Faltan línea base integral, inventario completo, evidencia de ejecución y sincronización bidireccional. La revisión asistida por IA no es independiente y no permite afirmar certificación ISO. |
+
+### 8.1 Relaciones técnicas ya existentes que deben conservar sus límites
+
+- [PR #177](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/pull/177) reconstruye episodios de movimiento a partir de pivotes y reglas de precio; no demuestra por sí solo el detonante causal.
+- [PR #179](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/pull/179) enlaza evidencia de eventos suministrada con ventanas de episodios; no habilita automáticamente la captura de noticias.
+- [PR #181](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/pull/181) resume evidencia de detonantes por episodio y declara estados de ausencia de evidencia; no permite inferir que no existió un evento.
+- [PR #217](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/pull/217) valida periodos y metadatos de observaciones fundamentales/on-chain; la validación de contrato no prueba la disponibilidad ni la calidad de fuentes en vivo.
+
+Estos PR se citan como entregas relacionadas, no como prueba suficiente de cierre de todos los requisitos asociados. Antes de elevar un requisito a `implementado` o `verificado`, registrar el PR/commit exacto, pruebas relevantes, resultado de CI y limitaciones residuales.
+
+### 8.2 Próxima acción de trazabilidad
+
+1. Mantener el catálogo de requisitos como fuente única de identificadores; actualizar sus matrices maestras en una iteración controlada si la revisión confirma que faltan filas para Issues nuevos.
+2. Para cada relación de la tabla, inspeccionar el Issue, PR/commit y pruebas reales antes de asignar estados de implementación o verificación.
+3. Mantener separadas la cobertura documental, la evidencia de código, la ejecución de pruebas y la aprobación del propietario.
+4. No cerrar Issues ni declarar la auditoría integral terminada por esta ampliación documental.
