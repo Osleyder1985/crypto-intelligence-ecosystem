@@ -444,6 +444,119 @@ def _assess_support_resistance_input(
     }
 
 
+EVENT_SOURCE_COVERAGE_SCHEMA = "crypto-event-source-coverage-v1"
+_EVENT_CAPTURE_STATUSES = {"BLOCKED", "NETWORK_ERROR", "PARTIAL", "HTTP_ERROR", "PARSE_ERROR", "PASS"}
+
+
+def _assess_event_source_coverage(
+    raw_coverage: list[dict] | None,
+    *,
+    evaluation_as_of: str,
+) -> dict:
+    """Describe what each event-source capture did and did not establish.
+
+    A successful empty feed means only that the returned feed contained no items;
+    it is not evidence that no catalyst existed in the source's full history.
+    """
+    if raw_coverage is None:
+        return {
+            "schema_version": EVENT_SOURCE_COVERAGE_SCHEMA,
+            "status": "NOT_PROVIDED",
+            "source_count": 0,
+            "sources": [],
+            "interpretation": "No source-capture coverage records were supplied; this is not a negative event search.",
+        }
+    if not isinstance(raw_coverage, list):
+        raise ValueError("event_source_coverage must be a list")
+    cutoff = parse_timestamp(evaluation_as_of, "evaluation_as_of")
+    sources = []
+    seen_source_capture_pairs = set()
+    for index, raw in enumerate(raw_coverage):
+        record = _object(raw, f"event_source_coverage[{index}]")
+        source_id = record.get("source_id")
+        if not isinstance(source_id, str) or not source_id.strip():
+            raise ValueError(f"event_source_coverage[{index}].source_id must be non-empty")
+        try:
+            source = get_source(source_id)
+        except (KeyError, ValueError) as exc:
+            raise ValueError(f"event_source_coverage[{index}].source_id is not registered") from exc
+        capture_status = record.get("capture_status")
+        if capture_status not in _EVENT_CAPTURE_STATUSES:
+            raise ValueError(f"event_source_coverage[{index}].capture_status is unsupported")
+        captured_at = parse_timestamp(record.get("captured_at"), f"event_source_coverage[{index}].captured_at")
+        network_made = record.get("network_request_made")
+        truncated = record.get("capture_truncated")
+        if not isinstance(network_made, bool) or not isinstance(truncated, bool):
+            raise ValueError(f"event_source_coverage[{index}] must declare boolean network_request_made and capture_truncated")
+        count = record.get("feed_item_count")
+        if isinstance(count, bool) or not isinstance(count, int) or count < 0:
+            raise ValueError(f"event_source_coverage[{index}].feed_item_count must be a non-negative integer")
+        scope = record.get("coverage_scope", source.get("coverage_scope"))
+        if not isinstance(scope, str) or not scope.strip():
+            raise ValueError(f"event_source_coverage[{index}].coverage_scope must be non-empty")
+        errors = record.get("errors", [])
+        if not isinstance(errors, list):
+            raise ValueError(f"event_source_coverage[{index}].errors must be a list")
+        source_hash = record.get("source_registry_entry_sha256")
+        expected_hash = source_entry_sha256(source)
+        if source_hash is not None and (
+            not isinstance(source_hash, str) or not _SHA256_RE.fullmatch(source_hash)
+        ):
+            raise ValueError(f"event_source_coverage[{index}].source_registry_entry_sha256 must be SHA-256")
+        key = (source_id, captured_at.isoformat())
+        if key in seen_source_capture_pairs:
+            raise ValueError("event_source_coverage contains duplicate source/capture records")
+        seen_source_capture_pairs.add(key)
+
+        if source_hash is not None and source_hash != expected_hash:
+            coverage_status = "STALE_SOURCE_REGISTRY"
+        elif captured_at > cutoff:
+            coverage_status = "NOT_AVAILABLE_AS_OF"
+        elif capture_status == "BLOCKED":
+            coverage_status = "BLOCKED_BY_SOURCE_POLICY" if not network_made else "INCONSISTENT_CAPTURE_POLICY"
+        elif capture_status == "NETWORK_ERROR":
+            coverage_status = "UNAVAILABLE"
+        elif capture_status in {"PARTIAL", "HTTP_ERROR", "PARSE_ERROR"} or truncated:
+            coverage_status = "PARTIAL_OR_FAILED"
+        elif capture_status == "PASS":
+            if source.get("status") != "APPROVED" or not network_made:
+                coverage_status = "INCONSISTENT_CAPTURE_POLICY"
+            elif count == 0:
+                coverage_status = "CAPTURED_NO_ITEMS_IN_RETURNED_FEED"
+            else:
+                coverage_status = "CAPTURED_WITH_ITEMS"
+        else:
+            coverage_status = "UNCLASSIFIED"
+        sources.append({
+            "source_id": source_id,
+            "source_registry_status": source.get("status"),
+            "source_registry_entry_sha256": source_hash,
+            "capture_status": capture_status,
+            "coverage_status": coverage_status,
+            "captured_at": captured_at.isoformat().replace("+00:00", "Z"),
+            "coverage_scope": scope.strip(),
+            "feed_item_count": count,
+            "network_request_made": network_made,
+            "capture_truncated": truncated,
+            "errors": errors,
+            "raw_response_sha256": record.get("raw_response_sha256"),
+            "interpretation": (
+                "Zero items were present in the returned feed only; this does not establish absence of a catalyst."
+                if coverage_status == "CAPTURED_NO_ITEMS_IN_RETURNED_FEED"
+                else "Coverage is limited to this source capture and its declared scope; it does not establish absence of a catalyst."
+            ),
+        })
+    statuses = sorted({item["coverage_status"] for item in sources})
+    return {
+        "schema_version": EVENT_SOURCE_COVERAGE_SCHEMA,
+        "status": "ASSESSED",
+        "source_count": len(sources),
+        "coverage_statuses": statuses,
+        "sources": sources,
+        "interpretation": "Capture outcomes describe source availability and returned-feed coverage, not proof that no catalyst existed.",
+    }
+
+
 def enrich_research_report(
     report: dict,
     *,
@@ -455,6 +568,7 @@ def enrich_research_report(
     provider_authorization_registry: dict | None = None,
     fundamental_freshness_policy_seconds: dict[str, int] | None = None,
     support_resistance_input: dict | None = None,
+    event_source_coverage: list[dict] | None = None,
 ) -> dict:
     """Validate and attach supplied evidence while retaining fail-closed decision states.
 
@@ -484,6 +598,9 @@ def enrich_research_report(
     if not isinstance(category, str) or not category.strip():
         raise ValueError("asset.category must be non-empty")
     cutoff = _timestamp(evaluation_as_of, "evaluation_as_of")
+    event_coverage_assessment = _assess_event_source_coverage(
+        event_source_coverage, evaluation_as_of=cutoff
+    )
 
     validated_methodology = validate_methodology(methodology)
     event_assessments = []
@@ -686,8 +803,9 @@ def enrich_research_report(
 
     output = dict(report)
     output["external_event_evidence"] = {
+        "source_coverage": event_coverage_assessment,
         "schema_version": "crypto-event-evidence-assessment-v1",
-        "status": "ASSESSED" if event_assessments else "NOT_AVAILABLE",
+        "status": "ASSESSED" if event_assessments or event_coverage_assessment["status"] == "ASSESSED" else "NOT_AVAILABLE",
         "event_count": len(event_assessments),
         "assessments": event_assessments,
         "causality_claimed": False,
@@ -728,6 +846,7 @@ def enrich_research_report(
         "asset": {"stable_id": stable_id.strip(), "category": category.strip()},
         "evaluation_as_of": cutoff,
         "events_supplied": len(events),
+        "event_source_coverage_supplied": event_coverage_assessment["source_count"],
         "fundamental_observations_supplied": len(observations),
     }
     output["decision_status"] = "INDETERMINATE"
@@ -776,6 +895,10 @@ def main() -> int:
         "--support-resistance-input", type=Path,
         help="Optional research-support-resistance-input-v1 JSON with authorized OHLCV artifacts and parameters",
     )
+    parser.add_argument(
+        "--event-source-coverage", type=Path,
+        help="Optional JSON array of event-feed capture results for explicit source coverage reporting",
+    )
     parser.add_argument("--output", required=True, type=Path)
     args = parser.parse_args()
     report = json.loads(args.report.read_text(encoding="utf-8"))
@@ -790,6 +913,10 @@ def main() -> int:
         json.loads(args.support_resistance_input.read_text(encoding="utf-8"))
         if args.support_resistance_input is not None else None
     )
+    event_source_coverage = (
+        json.loads(args.event_source_coverage.read_text(encoding="utf-8"))
+        if args.event_source_coverage is not None else None
+    )
     enriched = enrich_research_report(
         report,
         events=events,
@@ -799,6 +926,7 @@ def main() -> int:
         evaluation_as_of=args.evaluation_as_of,
         fundamental_freshness_policy_seconds=freshness_policy,
         support_resistance_input=support_resistance_input,
+        event_source_coverage=event_source_coverage,
     )
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(enriched, ensure_ascii=False, indent=2, sort_keys=True, allow_nan=False) + "\n", encoding="utf-8")
