@@ -5,7 +5,9 @@ future price reactions, or executable liquidity.
 """
 from __future__ import annotations
 
+from datetime import datetime
 from decimal import Decimal, InvalidOperation
+import math
 from typing import Any
 
 from scripts.market_selection.provider_license_gate import evaluate_provider_use
@@ -75,6 +77,12 @@ def analyze_order_book_snapshot(artifact: dict, authorization_registry: dict | N
     captured_at = artifact.get("captured_at_utc")
     if not isinstance(captured_at, str) or not captured_at.strip():
         raise ValueError("captured_at_utc is required")
+    try:
+        parsed_capture_time = datetime.fromisoformat(captured_at.strip().replace("Z", "+00:00"))
+    except ValueError as exc:
+        raise ValueError("captured_at_utc must be ISO-8601 with timezone") from exc
+    if parsed_capture_time.tzinfo is None or parsed_capture_time.utcoffset() is None:
+        raise ValueError("captured_at_utc must include a timezone")
 
     bids = _levels(artifact.get("bids"), "bids", descending=True)
     asks = _levels(artifact.get("asks"), "asks", descending=False)
@@ -88,6 +96,9 @@ def analyze_order_book_snapshot(artifact: dict, authorization_registry: dict | N
     ask_notional = sum((Decimal(row["notional"]) for row in asks), Decimal(0))
     total_notional = bid_notional + ask_notional
     imbalance = ((bid_notional - ask_notional) / total_notional) if total_notional else None
+    spread_bps = float(spread / midpoint * Decimal(10000))
+    if not math.isfinite(spread_bps):
+        raise ValueError("spread_bps exceeds the supported finite numeric range")
 
     return {
         "schema_version": OUTPUT_SCHEMA,
@@ -100,7 +111,7 @@ def analyze_order_book_snapshot(artifact: dict, authorization_registry: dict | N
             "bids_count": len(bids), "asks_count": len(asks),
             "best_bid": str(best_bid), "best_ask": str(best_ask),
             "mid_price": str(midpoint), "spread_absolute": str(spread),
-            "spread_bps": float(spread / midpoint * Decimal(10000)),
+            "spread_bps": spread_bps,
             "visible_bid_base_quantity": str(sum((Decimal(row["quantity"]) for row in bids), Decimal(0))),
             "visible_ask_base_quantity": str(sum((Decimal(row["quantity"]) for row in asks), Decimal(0))),
             "visible_bid_quote_notional": str(bid_notional),
