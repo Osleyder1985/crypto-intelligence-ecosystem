@@ -67,6 +67,34 @@ class EvaluationRecordTests(unittest.TestCase):
         with self.assertRaises(FileExistsError):
             self.build()
 
+    def test_identical_manifest_and_source_bytes_reproduce_record_hashes(self):
+        first = build_evaluation_record(
+            manifest(self.source), self.archive, self.records
+        )
+        second = build_evaluation_record(
+            manifest(self.source), self.archive, self.root / "records-second-run"
+        )
+
+        self.assertEqual(first["evaluation_id"], second["evaluation_id"])
+        self.assertEqual(first["record_sha256"], second["record_sha256"])
+        self.assertEqual(first, second)
+        self.assertEqual(first["source_artifacts"][0]["sha256"], hashlib.sha256(
+            self.source.read_bytes()
+        ).hexdigest())
+        self.assertEqual(
+            verify_evaluation_record(
+                self.records / f'{first["evaluation_id"]}.json', self.archive
+            )["valid"],
+            True,
+        )
+        self.assertEqual(
+            verify_evaluation_record(
+                self.root / "records-second-run" / f'{second["evaluation_id"]}.json',
+                self.archive,
+            )["valid"],
+            True,
+        )
+
     def test_tampered_archived_input_fails_verification(self):
         record = self.build()
         path = self.archive / record["source_artifacts"][0]["archive_relative_path"]
