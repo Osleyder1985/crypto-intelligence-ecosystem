@@ -889,28 +889,55 @@ def main() -> int:
     parser.add_argument("--user-agent", required=True, help="Identifiable operator-reviewed User-Agent")
     parser.add_argument("--timeout-seconds", type=float, default=10.0)
     parser.add_argument("--captured-at", help="Optional explicit ISO-8601 capture timestamp")
+    parser.add_argument("--feed-capture", type=Path, help="Existing complete feed-capture JSON; enables article capture mode")
+    parser.add_argument("--article-candidate-id", help="Candidate ID from --feed-capture; required in article capture mode")
     parser.add_argument("--output", required=True, type=Path)
     args = parser.parse_args()
+    if bool(args.feed_capture) != bool(args.article_candidate_id):
+        parser.error("--feed-capture and --article-candidate-id must be supplied together")
     registry = json.loads(args.provider_authorization_registry.read_text(encoding="utf-8"))
     record = registry.get(args.source_id) if isinstance(registry, dict) else None
-    result = capture_public_event_feed(
-        args.source_id,
-        authorization_record=record,
-        user_agent=args.user_agent,
-        timeout_seconds=args.timeout_seconds,
-        captured_at=args.captured_at,
-    )
+    if args.feed_capture is not None:
+        feed_capture = json.loads(args.feed_capture.read_text(encoding="utf-8"))
+        if not isinstance(feed_capture, dict) or feed_capture.get("source_id") != args.source_id:
+            parser.error("--feed-capture source_id must match --source-id")
+        result = capture_public_event_article(
+            feed_capture,
+            args.article_candidate_id,
+            authorization_record=record,
+            user_agent=args.user_agent,
+            timeout_seconds=args.timeout_seconds,
+            captured_at=args.captured_at,
+        )
+        summary = {
+            "output": str(args.output),
+            "source_id": result["source_id"],
+            "candidate_id": result["candidate_id"],
+            "capture_status": result["capture_status"],
+            "network_request_made": result["network_request_made"],
+            "raw_response_bytes": result["raw_response_bytes"],
+            "reason_codes": result["reason_codes"],
+        }
+    else:
+        result = capture_public_event_feed(
+            args.source_id,
+            authorization_record=record,
+            user_agent=args.user_agent,
+            timeout_seconds=args.timeout_seconds,
+            captured_at=args.captured_at,
+        )
+        summary = {
+            "output": str(args.output),
+            "source_id": result["source_id"],
+            "capture_status": result["capture_status"],
+            "network_request_made": result["network_request_made"],
+            "feed_item_count": result["feed_item_count"],
+            "duplicate_item_count": result["duplicate_item_count"],
+            "reason_codes": result["reason_codes"],
+        }
     args.output.parent.mkdir(parents=True, exist_ok=True)
-    args.output.write_text(json.dumps(result, ensure_ascii=False, indent=2, sort_keys=True, allow_nan=False) + "\n", encoding="utf-8")
-    print(json.dumps({
-        "output": str(args.output),
-        "source_id": result["source_id"],
-        "capture_status": result["capture_status"],
-        "network_request_made": result["network_request_made"],
-        "feed_item_count": result["feed_item_count"],
-        "duplicate_item_count": result["duplicate_item_count"],
-        "reason_codes": result["reason_codes"],
-    }, ensure_ascii=False, indent=2))
+    args.output.write_text(json.dumps(result, ensure_ascii=False, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    print(json.dumps(summary, ensure_ascii=False, indent=2))
     return 0
 
 
