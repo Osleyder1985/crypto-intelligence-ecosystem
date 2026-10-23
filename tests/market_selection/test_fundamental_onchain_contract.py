@@ -131,6 +131,16 @@ class FundamentalOnchainContractTests(unittest.TestCase):
         self.assertEqual(metric["status"], "OBSERVED")
         self.assertEqual(metric["source_ids"], ["provider-a", "provider-b"])
 
+    def test_duplicate_observation_ids_are_rejected(self):
+        first = obs(observation_id="duplicate-id", value=123.0)
+        second = obs(observation_id="duplicate-id", value=456.0)
+        with self.assertRaisesRegex(ValueError, "observation_id values must be unique"):
+            evaluate_observations(
+                [first, second],
+                asset={"category": "smart_contract_token", "stable_id": "ethereum:0xabc"},
+                evaluation_as_of="2026-10-21T00:00:00Z",
+            )
+
     def test_asset_identity_mismatch_fails_closed(self):
         with self.assertRaisesRegex(ValueError, "exact target stable_id"):
             evaluate_observations(

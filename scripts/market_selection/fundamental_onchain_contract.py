@@ -288,6 +288,9 @@ def evaluate_observations(observations: list[dict], *, asset: dict, evaluation_a
     target_id = _string(asset.get("stable_id"), "asset.stable_id")
     cutoff = parse_timestamp(evaluation_as_of, "evaluation_as_of")
     validated = [validate_observation(o) for o in observations]
+    observation_ids = [item["observation_id"] for item in validated]
+    if len(observation_ids) != len(set(observation_ids)):
+        raise ValueError("observation_id values must be unique within an assessment")
     groups: dict[str, list[dict]] = {}
     rejected_future = []
     for obs in validated:
