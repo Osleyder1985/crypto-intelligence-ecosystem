@@ -446,7 +446,6 @@ class ResearchReportTests(unittest.TestCase):
             report = build_research_report(
                 self.source, config(), "BTC", self.raw, order_book_artifact=order_book,
                 order_book_authorization_registry={"binance_spot_market_data": {"trusted": True}},
-                order_book_authorization_registry={"binance_spot_market_data": {"trusted": True}},
             )
         book = report["descriptive_analyses"]["order_book"]
         self.assertEqual(book["status"], "DESCRIPTIVE_SNAPSHOT")
