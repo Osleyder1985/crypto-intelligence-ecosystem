@@ -259,9 +259,9 @@ def assess_temporal_association(
 
     ``evaluation_as_of`` bounds the assessment dataset. ``availability_cutoff`` optionally
     bounds what was actually observable at a decision time (for example, episode confirmation).
-    ``pre_movement_window_minutes`` explicitly permits events published shortly before the
-    movement starts to be considered as temporal candidates. It defaults to zero for backwards
-    compatibility; this setting establishes no causal claim.
+    ``pre_movement_window_minutes`` and ``post_movement_window_minutes`` explicitly permit
+    events shortly before/after the observed swing to be considered as temporal candidates.
+    Both default to zero for backwards compatibility; neither setting establishes causality.
     """
     normalized = validate_event(event)
     if not isinstance(target_entity, dict):
