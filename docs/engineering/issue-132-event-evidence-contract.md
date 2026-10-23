@@ -156,3 +156,17 @@ Controles aplicados:
 - La salida incluye fact_verification de forma separada de causality_label. Incluso VERIFIED_PRIMARY_SOURCE no implica que el evento causara el movimiento; la etiqueta temporal continúa siendo TEMPORAL_ASSOCIATION cuando corresponde.
 
 Este contrato valida estructura, trazabilidad e integridad de la revisión, no la competencia del revisor ni la verdad material de su conclusión. Las hipótesis plausibles y la causalidad respaldada requieren evaluación adicional, evidencia de reacción de mercado, alternativas y revisión explícita; no se deducen automáticamente de la proximidad temporal.
+
+## 12. Revisión causal explícita y clasificación de hipótesis
+
+La integración admite event.metadata.causal_review con esquema crypto-event-causal-review-v1. Si no se suministra, el resultado es NOT_ASSESSED. La salida causal se mantiene separada de la etiqueta temporal y de la revisión factual.
+
+Decisiones admitidas:
+
+- PLAUSIBLE_HYPOTHESIS: hipótesis revisada con evidencia de fuente primaria o secundaria, evidencia de reacción de mercado y alternativas documentadas.
+- SUPPORTED_CAUSALITY: conclusión causal revisada que exige además una revisión factual efectiva VERIFIED_PRIMARY_SOURCE, evidencia de fuente primaria, evidencia de mercado, al menos dos URL y dos editores/proveedores identificados, y alternativas documentadas.
+- CAUSE_UNIDENTIFIED: revisión explícita que concluye que la causa no puede identificarse con la evidencia disponible.
+
+El registro requiere event_id, decision, reviewed_by, reviewed_at, rationale, methodology_id, evidence_refs, alternative_explanations, evidence_record_base64 y evidence_record_sha256. El JSON preservado debe coincidir con los campos declarados y su hash. Las revisiones posteriores al corte de evaluación se marcan NOT_AVAILABLE_AS_OF.
+
+Estos controles son requisitos estructurales y de trazabilidad, no una prueba matemática de causalidad ni una garantía de que el revisor acertó. Una etiqueta SUPPORTED_CAUSALITY solo expresa una conclusión explícitamente revisada bajo la metodología declarada; no debe generarse por coincidencia temporal ni por una sola noticia. Si faltan fuentes, reacción de mercado o explicaciones alternativas, la hipótesis o causalidad respaldada debe rechazarse y mantenerse la conclusión conservadora.
