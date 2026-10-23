@@ -16,6 +16,7 @@ from scripts.market_selection.analyze_ohlcv_risk_profile import analyze_artifact
 from scripts.market_selection.analyze_support_resistance import analyze_support_resistance
 from scripts.market_selection.detect_ohlcv_movement_events import analyze_movement_events
 from scripts.market_selection.analyze_order_book_snapshot import analyze_order_book_snapshot
+from scripts.market_selection.normalize_order_book_probe import normalize_multi_exchange_order_book_probe
 try:
     from scripts.market_selection.canonical_asset_identity import resolve_asset_identity
 except ModuleNotFoundError:
@@ -420,6 +421,9 @@ def main() -> int:
     parser.add_argument("--config", required=True, type=Path, help="Versioned JSON with explicit analysis parameters")
     parser.add_argument("--order-book-artifact", type=Path, help="Optional normalized crypto-spot-order-book-snapshot-v1 JSON matching the selected exchange and symbol")
     parser.add_argument("--provider-authorization-registry", type=Path, help="Deployment-controlled provider authorization registry JSON; never use user-supplied authorization records")
+    parser.add_argument("--multi-exchange-order-book-probe", type=Path, help="Optional preserved multi-exchange-spot-book-probe-v1 JSON to normalize and analyze")
+    parser.add_argument("--order-book-exchange", help="Exchange key for selecting exactly one record from the multi-exchange probe")
+    parser.add_argument("--order-book-symbol", help="Native symbol for selecting exactly one record from the multi-exchange probe")
     parser.add_argument("--output", required=True, type=Path, help="Path to the research report JSON")
     args = parser.parse_args()
 
@@ -429,6 +433,18 @@ def main() -> int:
     identity_evidence = json.loads(args.identity_evidence.read_text(encoding="utf-8")) if args.identity_evidence else None
     order_book_artifact = json.loads(args.order_book_artifact.read_text(encoding="utf-8")) if args.order_book_artifact else None
     authorization_registry = json.loads(args.provider_authorization_registry.read_text(encoding="utf-8")) if args.provider_authorization_registry else None
+    if args.multi_exchange_order_book_probe:
+        if order_book_artifact is not None:
+            parser.error("choose either --order-book-artifact or --multi-exchange-order-book-probe, not both")
+        if not args.order_book_exchange or not args.order_book_symbol:
+            parser.error("--multi-exchange-order-book-probe requires --order-book-exchange and --order-book-symbol")
+        probe = json.loads(args.multi_exchange_order_book_probe.read_text(encoding="utf-8"))
+        order_book_artifact = normalize_multi_exchange_order_book_probe(
+            probe, exchange=args.order_book_exchange, symbol=args.order_book_symbol,
+            authorization_registry=authorization_registry,
+        )
+    elif args.order_book_exchange or args.order_book_symbol:
+        parser.error("--order-book-exchange and --order-book-symbol require --multi-exchange-order-book-probe")
     report = build_research_report(
         artifact, config, args.asset_id, raw,
         requested_identifier_type=args.asset_id_type,
