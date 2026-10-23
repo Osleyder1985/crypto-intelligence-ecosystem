@@ -82,3 +82,21 @@ La mera precedencia temporal, una nota de prensa o la correlación de precios nu
 Los once tests cubren normalización de tiempo, rechazo de entidades identificadas solo por ticker, timestamps sin zona horaria, captura anterior a publicación, duplicados con conflicto, captura posterior al corte histórico, coincidencia temporal sin afirmación causal, evento fuera de ventana, ausencia de evidencia, activo no coincidente y preservación de registros de fuentes independientes.
 
 **Estado de validación:** el contrato offline ya está en `main`; esta rama añade un adaptador SEC y gates de fuente/uso probados con respuestas sintéticas. No se ha hecho captura real porque el registro mantiene `TERMS_PENDING`. La integración con `crypto-asset-research-report-v2` acepta únicamente eventos promovidos explícitamente y vuelve a verificar autorización y registry. No se infiere entidad ni causalidad automáticamente. Issue #132 permanece abierto hasta completar revisión de fuente y validar una captura autorizada real.
+
+## 8. Cobertura de captura por fuente en el informe
+
+La integración admite un artefacto opcional \`event_source_coverage\` con esquema \`crypto-event-source-coverage-v1\`. Se pasa a \`enrich_research_report(..., event_source_coverage=...)\` o mediante \`--event-source-coverage <archivo.json>\`. Cada registro corresponde a una captura de una fuente registrada y conserva \`source_id\`, \`capture_status\`, \`captured_at\`, \`network_request_made\`, \`capture_truncated\`, \`feed_item_count\`, \`coverage_scope\` y \`errors\`; cuando esté disponible, también incluye \`source_registry_entry_sha256\` y \`raw_response_sha256\`.
+
+La integración deriva estados explícitos:
+
+- \`NOT_PROVIDED\`: no se entregó ningún registro de cobertura; no significa que la búsqueda no encontrara noticias.
+- \`BLOCKED_BY_SOURCE_POLICY\`: la fuente bloqueó la captura antes de hacer red.
+- \`UNAVAILABLE\`: la solicitud falló por red.
+- \`PARTIAL_OR_FAILED\`: respuesta parcial, HTTP no satisfactorio, error de parseo o truncamiento.
+- \`CAPTURED_NO_ITEMS_IN_RETURNED_FEED\`: captura correcta con cero entradas en el feed devuelto. Esto **no** significa ausencia de catalizadores en el archivo histórico o en otras fuentes.
+- \`CAPTURED_WITH_ITEMS\`: captura correcta con entradas; cada candidato aún necesita resolver entidad y verificar el hecho.
+- \`NOT_AVAILABLE_AS_OF\`: la captura ocurrió después del corte de evaluación.
+- \`STALE_SOURCE_REGISTRY\`: el hash del registro usado en la captura no coincide con el registro actual.
+- \`INCONSISTENT_CAPTURE_POLICY\`: los metadatos afirman éxito incompatible con la autorización/solicitud registrada.
+
+La cobertura se limita al alcance declarado por cada proveedor; un RSS actual no es un archivo histórico completo. Los estados de cobertura no elevan un titular a evento verificado ni demuestran causalidad. Si no se suministra el artefacto de cobertura, el informe declara explícitamente \`NOT_PROVIDED\` en vez de inferir una búsqueda negativa.
