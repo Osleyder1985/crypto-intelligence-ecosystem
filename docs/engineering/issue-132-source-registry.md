@@ -68,3 +68,13 @@ Estas referencias acreditan puntos de acceso públicos, no aprobación de reutil
 - **Federal Reserve Board:** el [Disclaimer](https://www.federalreserve.gov/disclaimer.htm) declara que, salvo indicación contraria, la información del Board es de dominio público y puede copiarse/distribuirse con atribución; los materiales de terceros requieren revisión separada.
 
 Estas páginas aportan evidencia de reutilización del contenido oficial, pero no autorizan automáticamente la captura y persistencia indiscriminada de HTML completo, ni eliminan restricciones sobre terceros o condiciones de acceso automatizado. Por eso el registro permanece en TERMS_PENDING hasta que se aprueben por separado el alcance de captura, la política de retención y los casos de uso. No se ha realizado tráfico de red.
+
+## Índices oficiales de archivo habilitados como rutas de diseño (2026-10-23)
+
+El registro define entradas independientes para índices HTML históricos: sec_press_release_archive, cftc_press_release_archive y federal_reserve_press_release_archive. Los prefijos de ruta están en esas entradas separadas para no cambiar los hashes de las fuentes RSS existentes. No cambia el estado de aprobación de ninguna fuente:
+
+- SEC: https://www.sec.gov/newsroom/press-releases — prefijo /newsroom/press-releases.
+- CFTC: https://www.cftc.gov/PressRoom/PressReleases — prefijo /PressRoom/PressReleases; la sección de cobertura mediática no se incluye en este adaptador porque puede contener contenido de terceros.
+- Federal Reserve Board: https://www.federalreserve.gov/newsevents/pressreleases.htm — prefijo /newsevents/pressreleases.
+
+Estos índices muestran que existe una vía de investigación histórica independiente del RSS. La captura del archivo es por página/segmento; no equivale a descargar todo el archivo ni demuestra cobertura exhaustiva. Cada URL, página y artículo requiere captura y hashes propios. Las tres fuentes siguen en TERMS_PENDING, por lo que el flujo debe bloquear solicitudes hasta que el registro y los usos requeridos sean aprobados.

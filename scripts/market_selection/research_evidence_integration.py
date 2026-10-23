@@ -23,7 +23,10 @@ from scripts.market_selection.methodology_contract import validate_methodology
 from scripts.market_selection.provider_license_gate import evaluate_artifact_use, evaluate_provider_use
 from scripts.market_selection.event_source_registry import get_source, source_entry_sha256, source_is_approved
 from scripts.market_selection.capture_sec_press_releases_rss import parse_sec_press_releases_rss
-from scripts.market_selection.capture_public_event_feed import _parse_feed as _parse_public_feed
+from scripts.market_selection.capture_public_event_feed import (
+    _parse_feed as _parse_public_feed,
+    validate_public_event_archive_candidate,
+)
 
 REPORT_SCHEMA = "crypto-asset-research-report-v2"
 BUNDLE_SCHEMA = "crypto-research-evidence-bundle-v1"
@@ -872,6 +875,105 @@ def _assess_event_source_coverage(
     }
 
 
+
+def _verify_promoted_public_archive_event(
+    event_record: dict,
+    source_entry: dict,
+    registry_hash: str,
+) -> None:
+    metadata = _object(event_record.get("metadata"), "event.metadata")
+    captures = _object(event_record.get("source_capture_assessments"), "event.source_capture_assessments")
+    archive_capture = _object(captures.get("archive"), "event.source_capture_assessments.archive")
+    article_capture = _object(captures.get("article"), "event.source_capture_assessments.article")
+    archive_url = metadata.get("archive_url")
+    if not isinstance(archive_url, str) or archive_capture.get("requested_url") != archive_url:
+        raise PermissionError("event archive URL does not match preserved archive capture")
+    archive_raw = _verify_source_capture(
+        archive_capture,
+        field="event.archive_capture",
+        source_entry=source_entry,
+        registry_hash=registry_hash,
+        expected_requested_url=archive_url,
+    )
+    candidate_record = _object(metadata.get("archive_candidate_record"), "event.metadata.archive_candidate_record")
+    candidate = validate_public_event_archive_candidate(archive_capture, candidate_record)
+    if (
+        metadata.get("archive_candidate_id") != candidate["candidate_id"]
+        or metadata.get("archive_raw_response_sha256") != archive_capture.get("raw_response_sha256")
+        or metadata.get("archive_publication_time_evidence") != candidate["publication_time_evidence"]
+    ):
+        raise PermissionError("event archive candidate metadata does not match the preserved archive")
+    event_source = _object(event_record.get("source"), "event.source")
+    event_url = event_source.get("url")
+    article_raw = _verify_source_capture(
+        article_capture,
+        field="event.archive_article_capture",
+        source_entry=source_entry,
+        registry_hash=registry_hash,
+        expected_requested_url=event_url,
+    )
+    if (
+        article_capture.get("candidate_id") != candidate["candidate_id"]
+        or article_capture.get("http_status") != 200
+        or article_capture.get("captured_at") != event_record.get("captured_at")
+        or article_capture.get("requested_url") != candidate["candidate_url"]
+    ):
+        raise PermissionError("archive article capture does not match the selected candidate")
+    if parse_timestamp(article_capture.get("captured_at"), "article_capture.captured_at") < parse_timestamp(
+        archive_capture.get("captured_at"), "archive_capture.captured_at"
+    ):
+        raise PermissionError("archive article capture precedes archive index capture")
+    content_type = next(
+        (value.split(";", 1)[0].strip().lower() for key, value in article_capture.get("response_headers", {}).items()
+         if key.lower() == "content-type"),
+        "",
+    )
+    if content_type not in {"text/html", "application/xhtml+xml"}:
+        raise PermissionError("archive article capture has an unexpected Content-Type")
+    final_url = article_capture.get("final_url")
+    final_parts = urlsplit(final_url) if isinstance(final_url, str) else None
+    allowed_hosts = {host.casefold() for host in source_entry.get("allowed_article_hosts", [])}
+    if (
+        final_parts is None or final_parts.scheme != "https"
+        or (final_parts.hostname or "").casefold() not in allowed_hosts
+        or final_parts.port not in (None, 443)
+        or final_parts.username is not None or final_parts.password is not None
+    ):
+        raise PermissionError("archive article final URL is outside the source allowlist")
+    if (
+        event_record.get("title") != candidate["title"]
+        or event_record.get("published_at") != candidate["published_at"]
+        or event_url != candidate["candidate_url"]
+        or metadata.get("article_raw_response_sha256") != article_capture.get("raw_response_sha256")
+        or event_record.get("content_sha256") != article_capture.get("raw_response_sha256")
+        or hashlib.sha256(article_raw).hexdigest() != event_record.get("content_sha256")
+    ):
+        raise PermissionError("event title, publication time, URL or article hash is not grounded in archive evidence")
+    expected_event_id = f"{candidate['source_id']}:" + hashlib.sha256(candidate["candidate_id"].encode("utf-8")).hexdigest()
+    if event_record.get("event_id") != expected_event_id:
+        raise PermissionError("archive event_id does not match the preserved candidate identity")
+    mapping_b64 = metadata.get("entity_resolution_evidence_record_base64")
+    mapping_hash = metadata.get("entity_resolution_evidence_record_sha256")
+    if not isinstance(mapping_b64, str) or not isinstance(mapping_hash, str) or not _SHA256_RE.fullmatch(mapping_hash):
+        raise PermissionError("reviewed archive entity-mapping evidence is missing")
+    try:
+        mapping_raw = base64.b64decode(mapping_b64, validate=True)
+    except (ValueError, base64.binascii.Error) as exc:
+        raise PermissionError("reviewed archive entity-mapping evidence base64 is invalid") from exc
+    if hashlib.sha256(mapping_raw).hexdigest() != mapping_hash:
+        raise PermissionError("reviewed archive entity-mapping evidence SHA-256 mismatch")
+    reviewer = metadata.get("entity_resolution_reviewed_by")
+    if not isinstance(reviewer, str) or not reviewer.strip():
+        raise PermissionError("reviewed archive entity-mapping reviewer is missing")
+    try:
+        parse_timestamp(metadata.get("entity_resolution_reviewed_at"), "entity_resolution_reviewed_at")
+    except ValueError as exc:
+        raise PermissionError("reviewed archive entity-mapping timestamp is invalid") from exc
+    if metadata.get("causality_status") != "NOT_ASSESSED" or event_record.get("causality_claimed") is not False:
+        raise PermissionError("archive event must not claim causality");
+
+
+
 def enrich_research_report(
     report: dict,
     *,
@@ -959,8 +1061,10 @@ def enrich_research_report(
             _verify_promoted_sec_event(event_record, source_entry, registry_hash)
         elif event_record.get("capture_method") == "public_event_feed_rss_atom_v1":
             _verify_promoted_public_feed_event(event_record, source_entry, registry_hash)
+        elif event_record.get("capture_method") == "public_event_archive_html_v1":
+            _verify_promoted_public_archive_event(event_record, source_entry, registry_hash)
         else:
-            raise PermissionError(f"generic event source requires verified feed-capture evidence at events[{index}]")
+            raise PermissionError(f"generic event source requires verified feed/archive-capture evidence at events[{index}]")
         event_source = _object(event_record.get("source"), f"events[{index}].event.source")
         source_url = event_source.get("url")
         parsed_source_url = urlsplit(source_url) if isinstance(source_url, str) else None

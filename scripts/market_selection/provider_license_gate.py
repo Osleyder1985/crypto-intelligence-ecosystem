@@ -37,6 +37,10 @@ BASELINE_POLICY = {
     # Official regulatory feeds remain blocked until their source registry and use authorization are approved.
     "cftc_general_press_releases": {u: "REQUIRES_APPROVAL" for u in SUPPORTED_USE_CASES},
     "federal_reserve_press_releases": {u: "REQUIRES_APPROVAL" for u in SUPPORTED_USE_CASES},
+    # Historical archive pages are distinct source scopes; do not inherit approval from RSS automatically.
+    "sec_press_release_archive": {u: "REQUIRES_APPROVAL" for u in SUPPORTED_USE_CASES},
+    "cftc_press_release_archive": {u: "REQUIRES_APPROVAL" for u in SUPPORTED_USE_CASES},
+    "federal_reserve_press_release_archive": {u: "REQUIRES_APPROVAL" for u in SUPPORTED_USE_CASES},
 }
 
 def _text(value: object, field: str) -> str:

@@ -100,6 +100,82 @@ EVENT_SOURCE_REGISTRY = {
             "coverage_scope": "Current Board press-release feed; macro/monetary-policy context, not a complete historical archive or crypto-specific event source.",
             "entity_resolution_policy": "No asset identity is inferred from title, ticker, or description.",
             "notes": "Official feed endpoint verified from the Federal Reserve RSS index. Website policies do not by themselves establish permission for the project's intended persistent storage; runtime use must remain blocked pending review."
+
+        },
+        "sec_press_release_archive": {
+            "source_id": "sec_press_release_archive",
+            "provider_id": "sec_press_release_archive",
+            "display_name": "U.S. Securities and Exchange Commission press release archive",
+            "source_type": "REGULATORY",
+            "source_url": "https://www.sec.gov/newsroom/press-releases",
+            "allowed_article_hosts": ["www.sec.gov", "sec.gov"],
+            "allowed_archive_path_prefixes": ["/newsroom/press-releases"],
+            "terms_url": "https://www.sec.gov/about/developer-resources",
+            "status": "TERMS_PENDING",
+            "terms_sha256": None,
+            "terms_content_base64": None,
+            "reviewed_by": None,
+            "reviewed_at": None,
+            "allowed_use_cases": [],
+            "user_agent_required": True,
+            "user_agent_policy": "Caller must supply an operator-reviewed User-Agent; archive capture remains blocked pending source approval.",
+            "max_requests_per_second": 1,
+            "max_requests_per_invocation": 1,
+            "parallel_requests": False,
+            "response_body_policy": "READ_TO_EOF_NO_LOCAL_SIZE_CAP",
+            "coverage_scope": "One explicitly captured official archive page/query segment per invocation; not exhaustive unless all relevant pagination/year segments are recorded.",
+            "entity_resolution_policy": "No asset identity is inferred from title, ticker, or description.",
+            "notes": "Separate archive source ID so adding archive paths does not invalidate existing RSS source hashes. Runtime use remains blocked pending terms and persistent-storage review."
+        },
+        "cftc_press_release_archive": {
+            "source_id": "cftc_press_release_archive",
+            "provider_id": "cftc_press_release_archive",
+            "display_name": "U.S. Commodity Futures Trading Commission press release archive",
+            "source_type": "REGULATORY",
+            "source_url": "https://www.cftc.gov/PressRoom/PressReleases",
+            "allowed_article_hosts": ["www.cftc.gov", "cftc.gov"],
+            "allowed_archive_path_prefixes": ["/PressRoom/PressReleases"],
+            "terms_url": "https://www.cftc.gov/WebPolicy/index.htm",
+            "status": "TERMS_PENDING",
+            "terms_sha256": None,
+            "terms_content_base64": None,
+            "reviewed_by": None,
+            "reviewed_at": None,
+            "allowed_use_cases": [],
+            "user_agent_required": True,
+            "user_agent_policy": "Use an identifiable operator-reviewed User-Agent; archive capture remains blocked pending source approval.",
+            "max_requests_per_second": 1,
+            "max_requests_per_invocation": 1,
+            "parallel_requests": False,
+            "response_body_policy": "READ_TO_EOF_NO_LOCAL_SIZE_CAP",
+            "coverage_scope": "One explicitly captured official archive page/query segment per invocation; not exhaustive unless all relevant pagination/year segments are recorded.",
+            "entity_resolution_policy": "No asset identity is inferred from title, ticker, or description.",
+            "notes": "HTML archive is a separate source from the RSS endpoint, which may be disabled. Runtime use remains blocked pending terms and persistent-storage review."
+        },
+        "federal_reserve_press_release_archive": {
+            "source_id": "federal_reserve_press_release_archive",
+            "provider_id": "federal_reserve_press_release_archive",
+            "display_name": "Federal Reserve Board press release archive",
+            "source_type": "PRIMARY_OFFICIAL",
+            "source_url": "https://www.federalreserve.gov/newsevents/pressreleases.htm",
+            "allowed_article_hosts": ["www.federalreserve.gov", "federalreserve.gov"],
+            "allowed_archive_path_prefixes": ["/newsevents/pressreleases", "/newsevents/pressreleases.htm"],
+            "terms_url": "https://www.federalreserve.gov/disclaimer.htm",
+            "status": "TERMS_PENDING",
+            "terms_sha256": None,
+            "terms_content_base64": None,
+            "reviewed_by": None,
+            "reviewed_at": None,
+            "allowed_use_cases": [],
+            "user_agent_required": True,
+            "user_agent_policy": "Use an identifiable operator-reviewed User-Agent; archive capture remains blocked pending source approval.",
+            "max_requests_per_second": 1,
+            "max_requests_per_invocation": 1,
+            "parallel_requests": False,
+            "response_body_policy": "READ_TO_EOF_NO_LOCAL_SIZE_CAP",
+            "coverage_scope": "One explicitly captured official archive page/year segment per invocation; not exhaustive unless all relevant year segments are recorded.",
+            "entity_resolution_policy": "No asset identity is inferred from title, ticker, or description.",
+            "notes": "Separate archive source ID preserves the existing RSS source hash. Runtime use remains blocked pending terms and persistent-storage review."
         }
     },
 }
@@ -152,6 +228,13 @@ def validate_source_entry(entry: dict) -> dict:
         raise ValueError("allowed_article_hosts must be a non-empty list of hostnames")
     if source_id == "sec_press_releases" and not set(hosts).issubset({"www.sec.gov", "sec.gov"}):
         raise ValueError("SEC article host allowlist may contain only sec.gov hosts")
+    archive_prefixes = entry.get("allowed_archive_path_prefixes", [])
+    if (
+        not isinstance(archive_prefixes, list)
+        or any(not isinstance(prefix, str) or not prefix.startswith("/") or "?" in prefix or "#" in prefix for prefix in archive_prefixes)
+        or len(set(archive_prefixes)) != len(archive_prefixes)
+    ):
+        raise ValueError("allowed_archive_path_prefixes must be unique absolute URL paths without query or fragment")
     status = _non_empty(entry.get("status"), "status")
     if status not in SOURCE_STATUSES:
         raise ValueError(f"unsupported source status: {status}")

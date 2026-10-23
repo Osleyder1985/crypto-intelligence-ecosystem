@@ -53,8 +53,8 @@ class FakeResponse:
         return data
 
 
-def approved_source():
-    entry = copy.deepcopy(EVENT_SOURCE_REGISTRY["sources"]["cftc_general_press_releases"])
+def approved_source(source_id="cftc_general_press_releases"):
+    entry = copy.deepcopy(EVENT_SOURCE_REGISTRY["sources"][source_id])
     entry.update({
         "status": "APPROVED",
         "terms_sha256": hashlib.sha256(TERMS).hexdigest(),

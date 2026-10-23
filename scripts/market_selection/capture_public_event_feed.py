@@ -1,8 +1,8 @@
-"""Capture one authorized public RSS/Atom feed as immutable candidate evidence.
+"""Capture authorized public RSS/Atom feeds, linked articles, and historical archive evidence.
 
-This adapter never bypasses source/provider approval, never fetches linked articles,
-and never promotes feed headlines into verified asset events. Terms-pending sources
-are blocked before network access.
+Every network request is gated by source/provider approval. Feed, archive-index, article,
+entity-resolution, fact-review and causal-review evidence remain separate artifacts.
+Terms-pending sources are blocked before network access.
 """
 from __future__ import annotations
 
@@ -12,12 +12,13 @@ from datetime import datetime, timezone
 from email.utils import parsedate_to_datetime
 import hashlib
 import json
+from html.parser import HTMLParser
 import re
 from pathlib import Path
 import threading
 import time
 from urllib.error import HTTPError, URLError
-from urllib.parse import urlsplit
+from urllib.parse import urljoin, urlsplit
 from urllib.request import HTTPRedirectHandler, Request, build_opener, urlopen
 import xml.etree.ElementTree as ET
 from typing import Any
@@ -41,6 +42,8 @@ from scripts.market_selection.provider_license_gate import (
 
 FEED_CAPTURE_SCHEMA = "crypto-public-event-feed-capture-v1"
 ARTICLE_CAPTURE_SCHEMA = "crypto-public-event-article-capture-v1"
+ARCHIVE_CAPTURE_SCHEMA = "crypto-public-event-archive-capture-v1"
+ARCHIVE_CANDIDATE_SCHEMA = "crypto-public-event-archive-candidate-v1"
 _REQUIRED_USE_CASES = ("internal_analysis", "persistent_storage")
 _RATE_LOCK = threading.Lock()
 _LAST_REQUEST_MONOTONIC: dict[str, float] = {}
@@ -441,9 +444,10 @@ def capture_public_event_feed(
 class _AllowlistedRedirectHandler(HTTPRedirectHandler):
     """Permit redirects only to HTTPS hosts explicitly allowed for the source."""
 
-    def __init__(self, allowed_hosts: set[str]):
+    def __init__(self, allowed_hosts: set[str], allowed_path_prefixes: list[str] | None = None):
         super().__init__()
         self.allowed_hosts = {host.casefold() for host in allowed_hosts}
+        self.allowed_path_prefixes = list(allowed_path_prefixes or [])
 
     def redirect_request(self, req, fp, code, msg, headers, newurl):
         parts = urlsplit(newurl)
@@ -453,14 +457,324 @@ class _AllowlistedRedirectHandler(HTTPRedirectHandler):
             or parts.username is not None
             or parts.password is not None
             or parts.port not in (None, 443)
+            or (
+                self.allowed_path_prefixes
+                and not any(_path_has_prefix(parts.path, prefix) for prefix in self.allowed_path_prefixes)
+            )
         ):
             return None
         return super().redirect_request(req, fp, code, msg, headers, newurl)
 
 
-def _open_allowlisted_url(request: Request, timeout_seconds: float, allowed_hosts: set[str]):
-    opener = build_opener(_AllowlistedRedirectHandler(allowed_hosts))
+def _open_allowlisted_url(
+    request: Request,
+    timeout_seconds: float,
+    allowed_hosts: set[str],
+    allowed_path_prefixes: list[str] | None = None,
+):
+    opener = build_opener(_AllowlistedRedirectHandler(allowed_hosts, allowed_path_prefixes))
     return opener.open(request, timeout=float(timeout_seconds))
+
+
+
+class _ArchiveHTMLParser(HTMLParser):
+    def __init__(self):
+        super().__init__(convert_charrefs=True)
+        self.anchors = []
+        self.page_text = []
+        self._anchor = None
+
+    def handle_starttag(self, tag, attrs):
+        if tag.casefold() == "a":
+            attrs_map = dict(attrs)
+            self._anchor = {"href": attrs_map.get("href"), "text": []}
+
+    def handle_data(self, data):
+        text = re.sub(r"\s+", " ", data).strip()
+        if text:
+            self.page_text.append(text)
+            if self._anchor is not None:
+                self._anchor["text"].append(text)
+
+    def handle_endtag(self, tag):
+        if tag.casefold() == "a" and self._anchor is not None:
+            self._anchor["text"] = re.sub(r"\s+", " ", " ".join(self._anchor["text"])).strip()
+            self.anchors.append(self._anchor)
+            self._anchor = None
+
+
+def _path_has_prefix(path: str, prefix: str) -> bool:
+    normalized = prefix.rstrip("/")
+    return path == normalized or path.startswith(normalized + "/")
+
+
+def _archive_url_allowed(source: dict, value: object) -> bool:
+    parts = urlsplit(value) if isinstance(value, str) else None
+    prefixes = source.get("allowed_archive_path_prefixes", [])
+    hosts = {host.casefold() for host in source.get("allowed_article_hosts", [])}
+    return bool(
+        parts is not None
+        and parts.scheme == "https"
+        and (parts.hostname or "").casefold() in hosts
+        and parts.port in (None, 443)
+        and parts.username is None
+        and parts.password is None
+        and any(_path_has_prefix(parts.path, prefix) for prefix in prefixes)
+    )
+
+
+def capture_public_event_archive_index(
+    source_id: str,
+    archive_url: str,
+    authorization_record: dict | None,
+    user_agent: str | None,
+    timeout_seconds: float = 10.0,
+    captured_at: str | None = None,
+) -> dict:
+    """Capture one explicitly allowlisted official archive page, preserving all bytes."""
+    captured = _normalize_timestamp(captured_at)
+    source, assessments, blockers, registry_hash = _authorization_state(
+        source_id, authorization_record, user_agent, timeout_seconds
+    )
+    result = {
+        "schema_version": ARCHIVE_CAPTURE_SCHEMA,
+        "source_id": source_id,
+        "provider_id": source["provider_id"],
+        "source_registry_status": source["status"],
+        "source_registry_entry_sha256": registry_hash,
+        "source_url": source["source_url"],
+        "requested_url": archive_url,
+        "final_url": None,
+        "captured_at": captured,
+        "capture_status": "BLOCKED",
+        "network_request_made": False,
+        "http_status": None,
+        "response_headers": {},
+        "content_type": None,
+        "raw_response_bytes": 0,
+        "raw_response_sha256": None,
+        "raw_response_base64": None,
+        "capture_truncated": False,
+        "provider_policy_assessments": assessments,
+        "provider_use_assessment": assessments[0],
+        "persistent_storage_assessment": assessments[1],
+        "reason_codes": list(blockers),
+        "errors": [],
+        "coverage_scope": source.get("coverage_scope"),
+    }
+    if blockers:
+        return result
+    if not _archive_url_allowed(source, archive_url):
+        result["reason_codes"].append("ARCHIVE_URL_OUTSIDE_ALLOWLIST")
+        return result
+    rate = source.get("max_requests_per_second")
+    if isinstance(rate, bool) or not isinstance(rate, (int, float)) or rate <= 0:
+        result["reason_codes"].append("INVALID_SOURCE_RATE_LIMIT")
+        return result
+    _wait_for_rate_slot(source_id, rate)
+    request = Request(
+        archive_url,
+        headers={"User-Agent": user_agent.strip(), "Accept": "text/html, application/xhtml+xml"},
+        method="GET",
+    )
+    status_code = None
+    headers = {}
+    raw = b""
+    read_error = None
+    final_url = archive_url
+    try:
+        with _open_allowlisted_url(
+            request, float(timeout_seconds), set(source["allowed_article_hosts"]),
+            source.get("allowed_archive_path_prefixes", []),
+        ) as response:
+            status_code = int(getattr(response, "status", 200))
+            headers = _safe_headers(getattr(response, "headers", None))
+            geturl = getattr(response, "geturl", None)
+            if callable(geturl):
+                final_url = geturl()
+            raw, read_error = _read_to_eof(response)
+    except HTTPError as exc:
+        status_code = int(exc.code)
+        headers = _safe_headers(exc.headers)
+        raw, read_error = _read_to_eof(exc)
+        try:
+            exc.close()
+        except OSError:
+            pass
+    except (URLError, TimeoutError, OSError) as exc:
+        result.update({
+            "capture_status": "NETWORK_ERROR",
+            "network_request_made": True,
+            "reason_codes": ["ARCHIVE_REQUEST_FAILED"],
+            "errors": [{"type": type(exc).__name__, "message": str(exc)}],
+        })
+        return result
+    result.update({
+        "network_request_made": True,
+        "http_status": status_code,
+        "response_headers": headers,
+        "content_type": headers.get("Content-Type") or headers.get("content-type"),
+        "final_url": final_url,
+        "raw_response_bytes": len(raw),
+        "raw_response_sha256": hashlib.sha256(raw).hexdigest(),
+        "raw_response_base64": base64.b64encode(raw).decode("ascii"),
+        "capture_truncated": read_error is not None,
+    })
+    final_ok = _archive_url_allowed(source, final_url)
+    if read_error is not None:
+        result["capture_status"] = "PARTIAL"
+        result["reason_codes"] = ["RESPONSE_READ_INCOMPLETE"]
+        result["errors"] = [{"type": type(read_error).__name__, "message": str(read_error)}]
+    elif status_code != 200:
+        result["capture_status"] = "HTTP_ERROR"
+        result["reason_codes"] = ["HTTP_STATUS_UNEXPECTED"]
+        result["errors"] = [{"type": "HTTP_STATUS", "message": f"unexpected HTTP status {status_code}"}]
+    elif not final_ok:
+        result["capture_status"] = "BLOCKED_REDIRECT_TARGET"
+        result["reason_codes"] = ["FINAL_URL_OUTSIDE_ALLOWLIST"]
+    elif not isinstance(result["content_type"], str) or result["content_type"].split(";", 1)[0].strip().lower() not in {"text/html", "application/xhtml+xml"}:
+        result["capture_status"] = "UNSUPPORTED_CONTENT_TYPE"
+        result["reason_codes"] = ["ARCHIVE_CONTENT_TYPE_UNSUPPORTED"]
+    else:
+        result["capture_status"] = "PASS"
+        result["reason_codes"] = []
+    return result
+
+
+def validate_public_event_archive_candidate(archive_capture: dict, candidate_record: dict) -> dict:
+    """Revalidate a manually selected archive candidate against the preserved index bytes."""
+    if not isinstance(archive_capture, dict) or archive_capture.get("schema_version") != ARCHIVE_CAPTURE_SCHEMA:
+        raise ValueError("archive_capture has an invalid schema")
+    source_id = archive_capture.get("source_id")
+    source = get_source(source_id)
+    current_hash = source_entry_sha256(source)
+    if (
+        archive_capture.get("capture_status") != "PASS"
+        or archive_capture.get("capture_truncated") is not False
+        or archive_capture.get("network_request_made") is not True
+        or archive_capture.get("http_status") != 200
+        or archive_capture.get("source_registry_status") != "APPROVED"
+        or archive_capture.get("source_registry_entry_sha256") != current_hash
+        or not source_is_approved(source)
+        or not _archive_url_allowed(source, archive_capture.get("requested_url"))
+        or not _archive_url_allowed(source, archive_capture.get("final_url"))
+    ):
+        raise PermissionError("archive capture is incomplete, stale, or outside the approved archive path")
+    raw_b64 = archive_capture.get("raw_response_base64")
+    if not isinstance(raw_b64, str):
+        raise PermissionError("archive capture body is missing")
+    try:
+        raw = base64.b64decode(raw_b64, validate=True)
+    except (ValueError, base64.binascii.Error) as exc:
+        raise PermissionError("archive capture body base64 is invalid") from exc
+    if hashlib.sha256(raw).hexdigest() != archive_capture.get("raw_response_sha256") or len(raw) != archive_capture.get("raw_response_bytes"):
+        raise PermissionError("archive capture body integrity check failed")
+    if not isinstance(candidate_record, dict) or candidate_record.get("schema_version") != ARCHIVE_CANDIDATE_SCHEMA:
+        raise ValueError("candidate_record has an invalid schema")
+    if (
+        candidate_record.get("source_id") != source_id
+        or candidate_record.get("archive_url") != archive_capture.get("requested_url")
+        or candidate_record.get("archive_capture_sha256") != archive_capture.get("raw_response_sha256")
+    ):
+        raise PermissionError("archive candidate does not match the preserved archive capture")
+    candidate_url = candidate_record.get("candidate_url")
+    parts = urlsplit(candidate_url) if isinstance(candidate_url, str) else None
+    allowed_hosts = {host.casefold() for host in source.get("allowed_article_hosts", [])}
+    if (
+        parts is None or parts.scheme != "https" or (parts.hostname or "").casefold() not in allowed_hosts
+        or parts.port not in (None, 443) or parts.username is not None or parts.password is not None
+    ):
+        raise PermissionError("archive candidate URL is outside the source host allowlist")
+    title = candidate_record.get("title")
+    date_evidence = candidate_record.get("publication_time_evidence")
+    if not isinstance(title, str) or not title.strip() or not isinstance(date_evidence, str) or not date_evidence.strip():
+        raise ValueError("archive candidate title and publication_time_evidence are required")
+    published = parse_timestamp(candidate_record.get("published_at"), "archive_candidate.published_at")
+    selected_by = candidate_record.get("selected_by")
+    selected_at = parse_timestamp(candidate_record.get("selected_at"), "archive_candidate.selected_at")
+    rationale = candidate_record.get("selection_rationale")
+    if not isinstance(selected_by, str) or not selected_by.strip() or not isinstance(rationale, str) or not rationale.strip():
+        raise ValueError("archive candidate requires selected_by and selection_rationale")
+    if selected_at < parse_timestamp(archive_capture["captured_at"], "archive_capture.captured_at"):
+        raise ValueError("archive candidate selection cannot precede archive capture")
+    if published > parse_timestamp(archive_capture["captured_at"], "archive_capture.captured_at"):
+        raise ValueError("archive candidate publication timestamp is after archive capture")
+    parser = _ArchiveHTMLParser()
+    try:
+        parser.feed(raw.decode("utf-8", errors="replace"))
+        parser.close()
+    except Exception as exc:
+        raise ValueError("archive index HTML could not be parsed") from exc
+    archive_url = archive_capture["requested_url"]
+    archive_base_url = archive_capture.get("final_url") or archive_url
+    candidate_url_canonical = candidate_url.split("#", 1)[0]
+    matching_anchors = []
+    for anchor in parser.anchors:
+        href = anchor.get("href")
+        if not isinstance(href, str) or not href.strip():
+            continue
+        absolute = urljoin(archive_base_url, href.strip()).split("#", 1)[0]
+        if absolute == candidate_url_canonical:
+            matching_anchors.append(anchor)
+    normalize_text = lambda value: re.sub(r"\s+", " ", value).strip().casefold()
+    title_norm = normalize_text(title)
+    if not matching_anchors or not any(title_norm in normalize_text(anchor.get("text", "")) for anchor in matching_anchors):
+        raise PermissionError("candidate URL/title is not present as an anchor in the preserved archive page")
+    page_text = normalize_text(" ".join(parser.page_text))
+    if normalize_text(date_evidence) not in page_text:
+        raise PermissionError("publication_time_evidence is not present in the preserved archive page")
+    identity = {
+        "schema_version": ARCHIVE_CANDIDATE_SCHEMA,
+        "source_id": source_id,
+        "archive_url": archive_capture["requested_url"],
+        "archive_capture_sha256": archive_capture["raw_response_sha256"],
+        "candidate_url": candidate_url_canonical,
+        "title": title.strip(),
+        "published_at": published.isoformat().replace("+00:00", "Z"),
+        "publication_time_evidence": date_evidence.strip(),
+        "selected_by": selected_by.strip(),
+        "selected_at": selected_at.isoformat().replace("+00:00", "Z"),
+        "selection_rationale": rationale.strip(),
+    }
+    expected_id = hashlib.sha256(json.dumps(identity, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode("utf-8")).hexdigest()
+    if candidate_record.get("candidate_id") != expected_id:
+        raise PermissionError("archive candidate ID does not match its evidence and selection review fields")
+    return {**identity, "candidate_id": expected_id}
+
+
+def select_public_event_archive_candidate(
+    archive_capture: dict,
+    *,
+    candidate_url: str,
+    title: str,
+    published_at: str,
+    publication_time_evidence: str,
+    selected_by: str,
+    selected_at: str,
+    selection_rationale: str,
+) -> dict:
+    """Create a reviewed archive candidate only when URL/title/date evidence is in the preserved page."""
+    source = get_source(archive_capture.get("source_id"))
+    raw_hash = archive_capture.get("raw_response_sha256")
+    published = parse_timestamp(published_at, "published_at")
+    selected_at_normalized = parse_timestamp(selected_at, "selected_at").isoformat().replace("+00:00", "Z")
+    identity = {
+        "schema_version": ARCHIVE_CANDIDATE_SCHEMA,
+        "source_id": archive_capture.get("source_id"),
+        "archive_url": archive_capture.get("requested_url"),
+        "archive_capture_sha256": raw_hash,
+        "candidate_url": candidate_url.split("#", 1)[0] if isinstance(candidate_url, str) else candidate_url,
+        "title": title.strip() if isinstance(title, str) else title,
+        "published_at": published.isoformat().replace("+00:00", "Z"),
+        "publication_time_evidence": publication_time_evidence.strip() if isinstance(publication_time_evidence, str) else publication_time_evidence,
+        "selected_by": selected_by.strip() if isinstance(selected_by, str) else selected_by,
+        "selected_at": selected_at_normalized,
+        "selection_rationale": selection_rationale.strip() if isinstance(selection_rationale, str) else selection_rationale,
+    }
+    candidate_id = hashlib.sha256(json.dumps(identity, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode("utf-8")).hexdigest()
+    candidate = {**identity, "candidate_id": candidate_id}
+    return validate_public_event_archive_candidate(archive_capture, candidate)
+
 
 
 def _blocked_article_result(
@@ -675,6 +989,301 @@ def capture_public_event_article(
         "reason_codes": reason_codes,
         "errors": errors,
     }
+
+
+
+def capture_public_event_archive_article(
+    archive_capture: dict,
+    candidate_record: dict,
+    authorization_record: dict | None,
+    user_agent: str | None,
+    timeout_seconds: float = 10.0,
+    captured_at: str | None = None,
+) -> dict:
+    """Capture the article linked by a validated official archive candidate."""
+    if not isinstance(archive_capture, dict) or archive_capture.get("schema_version") != ARCHIVE_CAPTURE_SCHEMA:
+        raise ValueError("archive_capture has an invalid schema")
+    source_id = archive_capture.get("source_id")
+    if not isinstance(source_id, str) or not source_id.strip():
+        raise ValueError("archive_capture.source_id is required")
+    captured = _normalize_timestamp(captured_at)
+    source, assessments, blockers, registry_hash = _authorization_state(
+        source_id, authorization_record, user_agent, timeout_seconds
+    )
+    candidate_id = candidate_record.get("candidate_id", "unvalidated-candidate") if isinstance(candidate_record, dict) else "unvalidated-candidate"
+    if blockers:
+        return _blocked_article_result(source, registry_hash, candidate_id, captured, assessments, blockers)
+    candidate = validate_public_event_archive_candidate(archive_capture, candidate_record)
+    if candidate["source_id"] != source_id:
+        raise PermissionError("archive candidate source ID does not match archive capture")
+    if archive_capture.get("source_registry_entry_sha256") != registry_hash:
+        raise PermissionError("archive capture source registry evidence is stale")
+    for use_case in _REQUIRED_USE_CASES:
+        if evaluate_artifact_use(archive_capture, use_case)["decision"] != "ALLOW":
+            raise PermissionError(f"archive capture does not authorize {use_case}")
+    archive_captured = parse_timestamp(archive_capture.get("captured_at"), "archive_capture.captured_at")
+    article_captured = parse_timestamp(captured, "captured_at")
+    published = parse_timestamp(candidate["published_at"], "candidate.published_at")
+    if article_captured < archive_captured or article_captured < published:
+        raise ValueError("article capture time precedes archive capture or publication time")
+    article_url = candidate["candidate_url"]
+    allowed_hosts = {host.casefold() for host in source.get("allowed_article_hosts", [])}
+    if not _archive_url_allowed(source, archive_capture.get("requested_url")):
+        raise PermissionError("archive index URL is outside the approved archive path")
+    parts = urlsplit(article_url)
+    if (
+        parts.scheme != "https" or (parts.hostname or "").casefold() not in allowed_hosts
+        or parts.port not in (None, 443) or parts.username is not None or parts.password is not None
+    ):
+        raise PermissionError("archive article URL is outside the approved HTTPS host allowlist")
+    rate = source.get("max_requests_per_second")
+    if isinstance(rate, bool) or not isinstance(rate, (int, float)) or rate <= 0:
+        return _blocked_article_result(source, registry_hash, candidate["candidate_id"], captured, assessments, ["INVALID_SOURCE_RATE_LIMIT"])
+    _wait_for_rate_slot(source_id, rate)
+    request = Request(
+        article_url,
+        headers={"User-Agent": user_agent.strip(), "Accept": "text/html, application/xhtml+xml"},
+        method="GET",
+    )
+    status_code = None
+    headers = {}
+    raw = b""
+    read_error = None
+    final_url = article_url
+    try:
+        with _open_allowlisted_url(request, float(timeout_seconds), allowed_hosts) as response:
+            status_code = int(getattr(response, "status", 200))
+            headers = _safe_headers(getattr(response, "headers", None))
+            geturl = getattr(response, "geturl", None)
+            if callable(geturl):
+                final_url = geturl()
+            raw, read_error = _read_to_eof(response)
+    except HTTPError as exc:
+        status_code = int(exc.code)
+        headers = _safe_headers(exc.headers)
+        raw, read_error = _read_to_eof(exc)
+        try:
+            exc.close()
+        except OSError:
+            pass
+    except (URLError, TimeoutError, OSError) as exc:
+        return {
+            **_blocked_article_result(source, registry_hash, candidate["candidate_id"], captured, assessments, ["ARTICLE_REQUEST_FAILED"]),
+            "capture_status": "NETWORK_ERROR",
+            "network_request_made": True,
+            "requested_url": article_url,
+            "final_url": None,
+            "raw_response_sha256": hashlib.sha256(b"").hexdigest(),
+            "raw_response_base64": "",
+            "errors": [{"type": type(exc).__name__, "message": str(exc)}],
+        }
+    reason_codes = []
+    errors = []
+    final_parts = urlsplit(final_url)
+    final_ok = (
+        final_parts.scheme == "https"
+        and (final_parts.hostname or "").casefold() in allowed_hosts
+        and final_parts.port in (None, 443)
+        and final_parts.username is None
+        and final_parts.password is None
+    )
+    if read_error is not None:
+        status = "PARTIAL"
+        reason_codes.append("RESPONSE_READ_INCOMPLETE")
+        errors.append({"type": type(read_error).__name__, "message": str(read_error)})
+    elif status_code != 200:
+        status = "HTTP_ERROR"
+        reason_codes.append("HTTP_STATUS_UNEXPECTED")
+        errors.append({"type": "HTTP_STATUS", "message": f"unexpected HTTP status {status_code}"})
+    elif not final_ok:
+        status = "BLOCKED_REDIRECT_TARGET"
+        reason_codes.append("FINAL_URL_OUTSIDE_ALLOWLIST")
+    else:
+        status = "PASS"
+    return {
+        "schema_version": ARTICLE_CAPTURE_SCHEMA,
+        "source_id": source_id,
+        "provider_id": source["provider_id"],
+        "source_registry_status": source["status"],
+        "source_registry_entry_sha256": registry_hash,
+        "source_url": source["source_url"],
+        "candidate_id": candidate["candidate_id"],
+        "requested_url": article_url,
+        "final_url": final_url,
+        "captured_at": captured,
+        "capture_status": status,
+        "network_request_made": True,
+        "http_status": status_code,
+        "response_headers": headers,
+        "content_type": headers.get("Content-Type") or headers.get("content-type"),
+        "raw_response_bytes": len(raw),
+        "raw_response_sha256": hashlib.sha256(raw).hexdigest(),
+        "raw_response_base64": base64.b64encode(raw).decode("ascii"),
+        "capture_truncated": read_error is not None,
+        "provider_policy_assessments": assessments,
+        "provider_use_assessment": assessments[0],
+        "persistent_storage_assessment": assessments[1],
+        "reason_codes": reason_codes,
+        "errors": errors,
+    }
+
+
+def promote_public_archive_candidate_to_event(
+    archive_capture: dict,
+    candidate_record: dict,
+    article_capture: dict,
+    event_type: str,
+    claim: str,
+    entity_resolution: dict,
+) -> dict:
+    """Promote a historical archive candidate only with a reviewed stable-entity mapping."""
+    candidate = validate_public_event_archive_candidate(archive_capture, candidate_record)
+    source_id = candidate["source_id"]
+    source = get_source(source_id)
+    current_hash = source_entry_sha256(source)
+    if not source_is_approved(source):
+        raise PermissionError("source registry status must be APPROVED before archive promotion")
+    if archive_capture.get("source_registry_entry_sha256") != current_hash:
+        raise PermissionError("archive source registry evidence is missing or stale")
+    if (
+        archive_capture.get("capture_status") != "PASS"
+        or archive_capture.get("capture_truncated") is not False
+        or archive_capture.get("network_request_made") is not True
+    ):
+        raise PermissionError("archive capture is incomplete")
+    for use_case in _REQUIRED_USE_CASES:
+        if evaluate_artifact_use(archive_capture, use_case)["decision"] != "ALLOW":
+            raise PermissionError(f"archive capture does not authorize {use_case}")
+    if not isinstance(article_capture, dict) or article_capture.get("schema_version") != ARTICLE_CAPTURE_SCHEMA:
+        raise ValueError("a valid preserved article_capture is required for archive promotion")
+    if (
+        article_capture.get("source_id") != source_id
+        or article_capture.get("candidate_id") != candidate["candidate_id"]
+        or article_capture.get("capture_status") != "PASS"
+        or article_capture.get("http_status") != 200
+        or article_capture.get("network_request_made") is not True
+        or article_capture.get("capture_truncated") is not False
+        or article_capture.get("source_registry_status") != "APPROVED"
+        or article_capture.get("source_registry_entry_sha256") != current_hash
+        or article_capture.get("requested_url") != candidate["candidate_url"]
+    ):
+        raise PermissionError("article capture is incomplete, stale, or does not match the archive candidate")
+    archive_captured = parse_timestamp(archive_capture.get("captured_at"), "archive_capture.captured_at")
+    article_captured = parse_timestamp(article_capture.get("captured_at"), "article_capture.captured_at")
+    published = parse_timestamp(candidate["published_at"], "candidate.published_at")
+    if article_captured < archive_captured or article_captured < published:
+        raise ValueError("article capture time precedes archive capture or publication time")
+    allowed_hosts = {host.casefold() for host in source.get("allowed_article_hosts", [])}
+    final_parts = urlsplit(article_capture.get("final_url", ""))
+    if (
+        final_parts.scheme != "https" or (final_parts.hostname or "").casefold() not in allowed_hosts
+        or final_parts.port not in (None, 443) or final_parts.username is not None or final_parts.password is not None
+    ):
+        raise PermissionError("article final URL is outside the approved HTTPS host allowlist")
+    article_b64 = article_capture.get("raw_response_base64")
+    article_hash = article_capture.get("raw_response_sha256")
+    article_size = article_capture.get("raw_response_bytes")
+    if (
+        not isinstance(article_b64, str) or not isinstance(article_hash, str)
+        or not re.fullmatch(r"[0-9a-f]{64}", article_hash)
+        or isinstance(article_size, bool) or not isinstance(article_size, int) or article_size < 0
+    ):
+        raise PermissionError("article body, byte count, or SHA-256 is missing or invalid")
+    try:
+        article_raw = base64.b64decode(article_b64, validate=True)
+    except (ValueError, base64.binascii.Error) as exc:
+        raise PermissionError("article body base64 is invalid") from exc
+    if hashlib.sha256(article_raw).hexdigest() != article_hash or len(article_raw) != article_size:
+        raise PermissionError("article body integrity check failed")
+    content_type = article_capture.get("content_type")
+    if not isinstance(content_type, str) or content_type.split(";", 1)[0].strip().lower() not in {"text/html", "application/xhtml+xml"}:
+        raise PermissionError("article content type must be HTML or XHTML")
+    for use_case in _REQUIRED_USE_CASES:
+        assessment_key = "provider_use_assessment" if use_case == "internal_analysis" else "persistent_storage_assessment"
+        assessment = article_capture.get(assessment_key)
+        if not isinstance(assessment, dict) or assessment.get("decision") != "ALLOW" or assessment.get("provider_id") != source["provider_id"]:
+            raise PermissionError(f"article capture does not authorize {use_case}")
+    if not isinstance(entity_resolution, dict) or entity_resolution.get("status") != "APPROVED":
+        raise ValueError("entity_resolution.status APPROVED is required")
+    reviewer = entity_resolution.get("reviewed_by")
+    if not isinstance(reviewer, str) or not reviewer.strip():
+        raise ValueError("entity_resolution.reviewed_by is required")
+    reviewed_at = parse_timestamp(entity_resolution.get("reviewed_at"), "entity_resolution.reviewed_at")
+    entities = entity_resolution.get("entities")
+    if not isinstance(entities, list) or not entities:
+        raise ValueError("entity_resolution.entities must contain stable identifiers")
+    evidence_b64 = entity_resolution.get("evidence_record_base64")
+    evidence_hash = entity_resolution.get("evidence_record_sha256")
+    if not isinstance(evidence_b64, str) or not evidence_b64:
+        raise ValueError("entity_resolution.evidence_record_base64 is required")
+    if not isinstance(evidence_hash, str) or not re.fullmatch(r"[0-9a-fA-F]{64}", evidence_hash):
+        raise ValueError("entity_resolution.evidence_record_sha256 must be a SHA-256")
+    try:
+        evidence_bytes = base64.b64decode(evidence_b64, validate=True)
+    except (ValueError, base64.binascii.Error) as exc:
+        raise ValueError("entity_resolution.evidence_record_base64 is invalid") from exc
+    if hashlib.sha256(evidence_bytes).hexdigest() != evidence_hash.lower():
+        raise ValueError("entity-resolution evidence SHA-256 mismatch")
+    event_type_text = event_type.strip() if isinstance(event_type, str) else ""
+    claim_text = claim.strip() if isinstance(claim, str) else ""
+    if not event_type_text or not claim_text:
+        raise ValueError("event_type and claim must be explicit; the connector does not infer causality")
+    event_id = f"{source_id}:" + hashlib.sha256(candidate["candidate_id"].encode("utf-8")).hexdigest()
+    event = {
+        "schema_version": EVENT_SCHEMA,
+        "event_id": event_id,
+        "title": candidate["title"],
+        "event_type": event_type_text,
+        "source": {
+            "source_type": source["source_type"],
+            "url": candidate["candidate_url"],
+            "publisher": source["display_name"],
+        },
+        "published_at": candidate["published_at"],
+        "captured_at": article_capture["captured_at"],
+        "entities": entities,
+        "evidence": [{"url": candidate["candidate_url"], "claim": claim_text}],
+        "capture_method": "public_event_archive_html_v1",
+        "content_sha256": article_hash,
+        "license_notes": (
+            "Official archive index and article captured under the source-specific authorization gate; "
+            f"registry_entry_sha256={current_hash}. Archive listing date evidence and article body are preserved; "
+            "the fact and causal claims remain separately reviewable."
+        ),
+        "metadata": {
+            "source_id": source_id,
+            "archive_url": candidate["archive_url"],
+            "archive_candidate_id": candidate["candidate_id"],
+            "archive_candidate_record": candidate,
+            "archive_raw_response_sha256": archive_capture["raw_response_sha256"],
+            "archive_publication_time_evidence": candidate["publication_time_evidence"],
+            "entity_resolution_reviewed_by": reviewer.strip(),
+            "entity_resolution_reviewed_at": reviewed_at.isoformat().replace("+00:00", "Z"),
+            "entity_resolution_evidence_record_sha256": evidence_hash.lower(),
+            "entity_resolution_evidence_record_base64": evidence_b64,
+            "causality_status": "NOT_ASSESSED",
+            "article_raw_response_sha256": article_hash,
+            "article_content_type": content_type,
+        },
+    }
+    normalized = validate_event(event)
+    normalized.update({
+        "source_id": source_id,
+        "provider_id": source["provider_id"],
+        "source_registry_status": "APPROVED",
+        "source_registry_entry_sha256": current_hash,
+        "provider_use_assessment": archive_capture["provider_use_assessment"],
+        "persistent_storage_assessment": archive_capture["persistent_storage_assessment"],
+        "provider_policy_assessments": archive_capture["provider_policy_assessments"],
+        "source_capture_assessments": {
+            "archive": archive_capture,
+            "article": article_capture,
+        },
+        "orders_submitted": False,
+        "causality_claimed": False,
+    })
+    return normalized
+
 
 
 def promote_public_feed_candidate_to_event(
