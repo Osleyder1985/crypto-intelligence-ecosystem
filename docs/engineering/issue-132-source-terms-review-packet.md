@@ -257,3 +257,35 @@ Referencias oficiales:
 - La meta de producto sigue siendo multifuente. Esta regla controla la autorización y el ciclo de vida de los datos; no reduce la cobertura funcional deseada.
 
 **Decisión resultante:** no imponer un plazo ficticio. Aplicar las condiciones oficiales de cada fuente y el proceso de gestión de registros de ISO como marco de análisis; mientras falte una decisión respaldada para una fuente/caso de uso, mantener bloqueada su captura y persistencia.
+
+
+## 14. Verificación de páginas oficiales después de la autorización del propietario — 2026-10-23
+
+Esta actualización registra únicamente lo que muestran las páginas oficiales consultadas. La autorización del propietario del proyecto permite avanzar con la revisión; no sustituye condiciones del proveedor ni permite convertir una inferencia en permiso. No se realizaron solicitudes a feeds de datos ni capturas de artículos.
+
+### SEC — reutilización y acceso automatizado
+
+- La FAQ oficial de SEC Webmaster declara que el contenido creado por el Gobierno en sec.gov y el contenido público de presentaciones EDGAR pueden reutilizarse; advierte que algunos elementos, como imágenes de archivo, pueden no estar libres de restricciones. Fuente: https://www.sec.gov/files/about/webmaster-faq.htm
+- La misma FAQ describe un máximo de 10 solicitudes por segundo para acceso programático a EDGAR. No se extrapola ese máximo como regla específica de todos los feeds RSS: el endpoint concreto y las instrucciones aplicables deben confirmarse antes de activarlo.
+- La página oficial de privacidad/diseminación de SEC debe leerse junto con los recursos para desarrolladores y las restricciones sobre contenido de terceros. Fuentes: https://www.sec.gov/about/privacy-information y https://www.sec.gov/about/developer-resources
+- Resultado: existe evidencia oficial favorable a reutilizar contenido gubernamental SEC, pero todavía deben documentarse el alcance exacto por endpoint, el agente de usuario, el control agregado de solicitudes y el tratamiento de contenido de terceros y persistencia.
+
+### CFTC — feeds temporalmente deshabilitados
+
+- La página oficial RSS indica explícitamente que, a octubre de 2026, la CFTC ha deshabilitado temporalmente los feeds RSS enumerados y que se volverán a habilitar más adelante. Fuente: https://www.cftc.gov/RSS/index.htm
+- La Web Policy oficial indica que la información gubernamental del sitio es de dominio público y puede copiarse/distribuirse con reconocimiento adecuado a la CFTC; también advierte que documentos, ilustraciones, fotografías y otros recursos aportados o licenciados por terceros pueden estar protegidos. Fuente: https://www.cftc.gov/WebPolicy/index.htm
+- Resultado: no intentar el RSS deshabilitado ni hacer reintentos para sortear su indisponibilidad. El archivo HTML oficial es un origen distinto y necesita su propia validación de endpoint, alcance, acceso automatizado y persistencia. La política de copyright por sí sola no resuelve esos controles operativos.
+
+### Federal Reserve Board — contenido propio y terceros
+
+- El disclaimer oficial indica que, salvo indicación contraria, la información del sitio del Board es de dominio público y puede copiarse/distribuirse sin permiso, citando al Board. También establece que fotografías, gráficos u otros materiales identificados como pertenecientes a fuentes no-Board pueden requerir permiso del titular original. Fuente: https://www.federalreserve.gov/disclaimer.htm
+- El índice RSS oficial describe los feeds como un mecanismo para que lectores o agregadores muestren enlaces, titulares y breves resúmenes. Fuente: https://www.federalreserve.gov/feeds/feeds.htm
+- Resultado: la reutilización del contenido oficial del Board tiene soporte documental general, pero el registro debe distinguir el texto oficial de recursos de terceros, conservar la atribución y documentar endpoint, agente, límite operativo y la necesidad de persistencia antes de activar cada fuente.
+
+### Decisiones comunes a las seis entradas
+
+1. La evidencia de dominio público/reutilización no significa que cada elemento incrustado sea contenido gubernamental ni resuelve automáticamente la captura automatizada, la retención o la persistencia de HTML completo.
+2. No se encontró en estas páginas una duración universal de retención aplicable a este proyecto. No se fija un plazo inventado: el plazo o regla debe basarse en requisitos aplicables identificados y documentados. Mientras no pueda determinarse una regla para un tipo de contenido, no se persiste ese contenido.
+3. La revisión del propietario autoriza preparar y verificar el flujo de trabajo; no representa una aprobación del proveedor, una licencia de terceros ni una opinión legal.
+4. Los seis source_id permanecen TERMS_PENDING; no se ha modificado el registro operativo ni se ha ejecutado captura externa o backfill.
+5. Antes de un E2E real se debe preservar evidencia verificable de las páginas de política consultadas, calcular sus hashes sobre los bytes realmente preservados, completar las decisiones de uso/contenido/retención/atribución/acceso por source_id y verificar la disponibilidad actual del endpoint. No declarar exhaustividad histórica sin manifiesto de segmentos y cobertura.
