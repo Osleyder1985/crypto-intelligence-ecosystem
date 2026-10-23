@@ -608,6 +608,157 @@ def _assess_event_fact_review(event_record: dict, *, evaluation_as_of: str) -> d
     }
 
 
+EVENT_CAUSAL_REVIEW_SCHEMA = "crypto-event-causal-review-v1"
+_EVENT_CAUSAL_REVIEW_DECISIONS = {
+    "PLAUSIBLE_HYPOTHESIS",
+    "SUPPORTED_CAUSALITY",
+    "CAUSE_UNIDENTIFIED",
+}
+
+
+def _assess_event_causal_review(
+    event_record: dict,
+    *,
+    fact_verification: dict,
+    evaluation_as_of: str,
+) -> dict:
+    """Validate an explicit causal review without deriving causality from temporal overlap."""
+    metadata = _object(event_record.get("metadata", {}), "event.metadata")
+    review = metadata.get("causal_review")
+    if review is None:
+        return {
+            "schema_version": EVENT_CAUSAL_REVIEW_SCHEMA,
+            "status": "NOT_ASSESSED",
+            "decision": "NOT_ASSESSED",
+            "effective_decision": "NOT_ASSESSED",
+            "available_as_of": False,
+            "reason": "No explicit causal review was supplied; temporal association alone is not causal evidence.",
+        }
+    review = _object(review, "event.metadata.causal_review")
+    if review.get("schema_version") != EVENT_CAUSAL_REVIEW_SCHEMA:
+        raise ValueError(f"event.metadata.causal_review.schema_version must be {EVENT_CAUSAL_REVIEW_SCHEMA}")
+    event_id = event_record.get("event_id")
+    if review.get("event_id") != event_id:
+        raise PermissionError("causal review event_id does not match the event")
+    decision = review.get("decision")
+    if not isinstance(decision, str) or decision not in _EVENT_CAUSAL_REVIEW_DECISIONS:
+        raise ValueError("causal review decision is unsupported")
+    reviewer = review.get("reviewed_by")
+    if not isinstance(reviewer, str) or not reviewer.strip():
+        raise ValueError("causal review reviewed_by is required")
+    reviewed_at = parse_timestamp(review.get("reviewed_at"), "causal_review.reviewed_at")
+    rationale = review.get("rationale")
+    if not isinstance(rationale, str) or not rationale.strip():
+        raise ValueError("causal review rationale is required")
+    methodology_id = review.get("methodology_id")
+    if not isinstance(methodology_id, str) or not methodology_id.strip():
+        raise ValueError("causal review methodology_id is required")
+    alternatives = review.get("alternative_explanations")
+    if not isinstance(alternatives, list) or any(not isinstance(item, str) or not item.strip() for item in alternatives):
+        raise ValueError("causal review alternative_explanations must be a list of non-empty strings")
+    refs = review.get("evidence_refs")
+    if not isinstance(refs, list):
+        raise ValueError("causal review evidence_refs must be a list")
+    normalized_refs = []
+    for index, raw_ref in enumerate(refs):
+        ref = _object(raw_ref, f"causal_review.evidence_refs[{index}]")
+        url = ref.get("url")
+        role = ref.get("role")
+        parts = urlsplit(url) if isinstance(url, str) else None
+        if (
+            parts is None or parts.scheme != "https" or not parts.netloc
+            or parts.username is not None or parts.password is not None
+        ):
+            raise ValueError(f"causal_review.evidence_refs[{index}].url must be an absolute HTTPS URL")
+        if role not in _FACT_REVIEW_EVIDENCE_ROLES:
+            raise ValueError(f"causal_review.evidence_refs[{index}].role is unsupported")
+        normalized_ref = {"url": url, "role": role}
+        if "publisher" in ref:
+            publisher = ref.get("publisher")
+            if not isinstance(publisher, str):
+                raise ValueError(f"causal_review.evidence_refs[{index}].publisher must be text")
+            normalized_ref["publisher"] = publisher.strip()
+        normalized_refs.append(normalized_ref)
+
+    if decision == "PLAUSIBLE_HYPOTHESIS":
+        if not any(ref["role"] in {"PRIMARY_SOURCE", "SECONDARY_SOURCE"} for ref in normalized_refs):
+            raise ValueError("plausible hypothesis requires primary or secondary source evidence")
+        if not any(ref["role"] == "MARKET_DATA" for ref in normalized_refs):
+            raise ValueError("plausible hypothesis requires market-reaction evidence")
+        if not alternatives:
+            raise ValueError("plausible hypothesis must record alternative explanations")
+        if fact_verification.get("effective_decision") in {"REJECTED", "CONFLICTING_SOURCES", "INSUFFICIENT_EVIDENCE"}:
+            raise ValueError("causal hypothesis cannot rely on a rejected, conflicting, or insufficiently supported fact")
+    elif decision == "SUPPORTED_CAUSALITY":
+        if fact_verification.get("effective_decision") != "VERIFIED_PRIMARY_SOURCE":
+            raise ValueError("supported causality requires fact verification available by the evaluation cutoff")
+        if not any(ref["role"] == "PRIMARY_SOURCE" for ref in normalized_refs):
+            raise ValueError("supported causality requires primary-source evidence")
+        if not any(ref["role"] == "MARKET_DATA" for ref in normalized_refs):
+            raise ValueError("supported causality requires market-reaction evidence")
+        if len({ref["url"] for ref in normalized_refs}) < 2:
+            raise ValueError("supported causality requires at least two distinct evidence URLs")
+        publishers = {ref.get("publisher", "").casefold() for ref in normalized_refs if ref.get("publisher")}
+        if len(publishers) < 2:
+            raise ValueError("supported causality requires at least two identified evidence publishers")
+        if not alternatives:
+            raise ValueError("supported causality must document alternative explanations")
+
+    record_b64 = review.get("evidence_record_base64")
+    record_hash = review.get("evidence_record_sha256")
+    if not isinstance(record_b64, str) or not record_b64:
+        raise ValueError("causal review evidence_record_base64 is required")
+    if not isinstance(record_hash, str) or not _SHA256_RE.fullmatch(record_hash):
+        raise ValueError("causal review evidence_record_sha256 must be a SHA-256")
+    try:
+        record_bytes = base64.b64decode(record_b64, validate=True)
+    except (ValueError, base64.binascii.Error) as exc:
+        raise ValueError("causal review evidence_record_base64 is invalid") from exc
+    if hashlib.sha256(record_bytes).hexdigest() != record_hash:
+        raise PermissionError("causal review evidence record SHA-256 mismatch")
+    try:
+        record = json.loads(record_bytes.decode("utf-8"))
+    except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+        raise ValueError("causal review evidence record must be UTF-8 JSON") from exc
+    record = _object(record, "causal review evidence record")
+    expected = {
+        "schema_version": EVENT_CAUSAL_REVIEW_SCHEMA,
+        "event_id": event_id,
+        "decision": decision,
+        "reviewed_by": reviewer.strip(),
+        "reviewed_at": reviewed_at.isoformat().replace("+00:00", "Z"),
+        "rationale": rationale.strip(),
+        "methodology_id": methodology_id.strip(),
+        "evidence_refs": normalized_refs,
+        "alternative_explanations": [item.strip() for item in alternatives],
+    }
+    if record != expected:
+        raise PermissionError("causal review evidence record does not match its declared review fields")
+
+    cutoff = parse_timestamp(evaluation_as_of, "evaluation_as_of")
+    available = reviewed_at <= cutoff
+    effective = decision if available else "NOT_AVAILABLE_AS_OF"
+    return {
+        "schema_version": EVENT_CAUSAL_REVIEW_SCHEMA,
+        "status": "REVIEWED" if available else "NOT_AVAILABLE_AS_OF",
+        "decision": decision,
+        "effective_decision": effective,
+        "available_as_of": available,
+        "reviewed_by": reviewer.strip(),
+        "reviewed_at": reviewed_at.isoformat().replace("+00:00", "Z"),
+        "rationale": rationale.strip(),
+        "methodology_id": methodology_id.strip(),
+        "evidence_refs": normalized_refs,
+        "alternative_explanations": [item.strip() for item in alternatives],
+        "evidence_record_sha256": record_hash.lower(),
+        "reason": (
+            "Causal classification is an explicit reviewed assessment, not an automatic consequence of timing."
+            if available else
+            "Causal review occurred after the evaluation cutoff and cannot be used as information available at that time."
+        ),
+    }
+
+
 EVENT_SOURCE_COVERAGE_SCHEMA = "crypto-event-source-coverage-v1"
 _EVENT_CAPTURE_STATUSES = {"BLOCKED", "NETWORK_ERROR", "PARTIAL", "HTTP_ERROR", "PARSE_ERROR", "PASS"}
 
