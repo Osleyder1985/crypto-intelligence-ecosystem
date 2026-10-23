@@ -6,6 +6,7 @@ approve methodology, infer causality, or issue investment recommendations.
 from __future__ import annotations
 
 import argparse
+from datetime import datetime, timezone
 import base64
 import hashlib
 import json
@@ -44,6 +45,43 @@ def _timestamp(value: Any, field: str) -> str:
     if not isinstance(value, str) or not value.strip():
         raise ValueError(f"{field} must be a non-empty ISO-8601 timestamp with offset")
     return value.strip()
+
+
+def _movement_episode_window(report: dict, episode_id: str) -> tuple[dict, dict]:
+    """Resolve an evidence window from a report's confirmed-pivot episode."""
+    analyses = _object(report.get("descriptive_analyses"), "report.descriptive_analyses")
+    episodes_artifact = _object(analyses.get("movement_episodes"), "report.descriptive_analyses.movement_episodes")
+    episodes = episodes_artifact.get("episodes")
+    if not isinstance(episodes, list):
+        raise ValueError("report movement_episodes.episodes must be a list")
+    matches = [
+        episode for episode in episodes
+        if isinstance(episode, dict) and episode.get("episode_id") == episode_id
+    ]
+    if len(matches) != 1:
+        raise ValueError(f"movement_episode_id must identify exactly one report episode: {episode_id}")
+    episode = matches[0]
+    start = _object(episode.get("start"), f"movement episode {episode_id}.start")
+    end = _object(episode.get("end"), f"movement episode {episode_id}.end")
+    start_ms = start.get("pivot_open_time_ms")
+    end_ms = end.get("pivot_open_time_ms")
+    for value, field in ((start_ms, "start.pivot_open_time_ms"), (end_ms, "end.pivot_open_time_ms")):
+        if isinstance(value, bool) or not isinstance(value, int) or value < 0:
+            raise ValueError(f"movement episode {episode_id}.{field} must be a non-negative integer")
+    if end_ms < start_ms:
+        raise ValueError(f"movement episode {episode_id} end precedes start")
+    def iso_utc(timestamp_ms: int) -> str:
+        return datetime.fromtimestamp(timestamp_ms / 1000, tz=timezone.utc).isoformat(timespec="milliseconds").replace("+00:00", "Z")
+    return (
+        {"start": iso_utc(start_ms), "end": iso_utc(end_ms)},
+        {
+            "episode_id": episode_id,
+            "direction": episode.get("direction"),
+            "classification": episode.get("classification"),
+            "segment_index": episode.get("segment_index"),
+            "episode_observable_only_at_ms": episode.get("episode_observable_only_at_ms"),
+        },
+    )
 
 
 
@@ -346,7 +384,16 @@ def enrich_research_report(
         if event_id in seen_event_ids:
             raise ValueError(f"duplicate event_id in evidence bundle: {event_id}")
         seen_event_ids.add(event_id)
-        window = _object(item.get("movement_window"), f"events[{index}].movement_window")
+        episode_id = item.get("movement_episode_id")
+        if episode_id is not None:
+            if "movement_window" in item:
+                raise ValueError(f"events[{index}] must provide movement_episode_id or movement_window, not both")
+            if not isinstance(episode_id, str) or not episode_id.strip():
+                raise ValueError(f"events[{index}].movement_episode_id must be a non-empty string")
+            window, episode_context = _movement_episode_window(report, episode_id.strip())
+        else:
+            window = _object(item.get("movement_window"), f"events[{index}].movement_window")
+            episode_context = None
         temporal_assessment = assess_temporal_association(
             event,
             movement_start=_timestamp(window.get("start"), f"events[{index}].movement_window.start"),
@@ -356,6 +403,7 @@ def enrich_research_report(
         )
         event_assessments.append({
             **temporal_assessment,
+            **({"movement_episode": episode_context} if episode_context is not None else {}),
             "source_use_assessment": event_use,
             "source_storage_assessment": event_storage,
             "source_registry_entry_sha256": registry_hash,
@@ -433,7 +481,7 @@ def enrich_research_report(
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--report", required=True, type=Path, help="Existing crypto-asset-research-report-v2 JSON")
-    parser.add_argument("--events", required=True, type=Path, help="JSON array of event records with movement windows")
+    parser.add_argument("--events", required=True, type=Path, help="JSON array of validated event records linked to movement_window or movement_episode_id")
     parser.add_argument("--observations", required=True, type=Path, help="JSON array of fundamental/on-chain observations")
     parser.add_argument("--methodology", required=True, type=Path, help="Versioned crypto-investment-methodology-v1 JSON")
     parser.add_argument("--asset-stable-id", required=True)
