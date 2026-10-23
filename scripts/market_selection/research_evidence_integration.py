@@ -12,6 +12,7 @@ import json
 import re
 import xml.etree.ElementTree as ET
 from pathlib import Path
+from datetime import datetime, timezone
 from typing import Any
 from urllib.parse import urlsplit
 
@@ -44,6 +45,12 @@ def _timestamp(value: Any, field: str) -> str:
     if not isinstance(value, str) or not value.strip():
         raise ValueError(f"{field} must be a non-empty ISO-8601 timestamp with offset")
     return value.strip()
+
+
+def _epoch_ms_iso(value: Any, field: str) -> str:
+    if isinstance(value, bool) or not isinstance(value, int) or value < 0:
+        raise ValueError(f"{field} must be a non-negative integer epoch timestamp in milliseconds")
+    return datetime.fromtimestamp(value / 1000, tz=timezone.utc).isoformat().replace("+00:00", "Z")
 
 
 
@@ -346,20 +353,71 @@ def enrich_research_report(
         if event_id in seen_event_ids:
             raise ValueError(f"duplicate event_id in evidence bundle: {event_id}")
         seen_event_ids.add(event_id)
-        window = _object(item.get("movement_window"), f"events[{index}].movement_window")
+        episode_id = item.get("episode_id")
+        linked_episode = None
+        if episode_id is not None:
+            if not isinstance(episode_id, str) or not episode_id.strip():
+                raise ValueError(f"events[{index}].episode_id must be a non-empty string")
+            if item.get("movement_window") is not None:
+                raise ValueError(f"events[{index}] must provide episode_id or movement_window, not both")
+            descriptive = report.get("descriptive_analyses")
+            descriptive = descriptive if isinstance(descriptive, dict) else {}
+            episode_output = descriptive.get("movement_episodes")
+            episode_output = episode_output if isinstance(episode_output, dict) else {}
+            episode_list = episode_output.get("episodes")
+            if not isinstance(episode_list, list):
+                raise ValueError("report has no movement_episodes.episodes list to link")
+            matches = [candidate for candidate in episode_list
+                       if isinstance(candidate, dict) and candidate.get("episode_id") == episode_id]
+            if len(matches) != 1:
+                raise ValueError(f"events[{index}].episode_id does not resolve to exactly one report episode")
+            linked_episode = matches[0]
+            start_pivot = _object(linked_episode.get("start"), f"episode {episode_id}.start")
+            end_pivot = _object(linked_episode.get("end"), f"episode {episode_id}.end")
+            window = {
+                "start": _epoch_ms_iso(start_pivot.get("pivot_open_time_ms"), f"episode {episode_id}.start.pivot_open_time_ms"),
+                "end": _epoch_ms_iso(end_pivot.get("pivot_open_time_ms"), f"episode {episode_id}.end.pivot_open_time_ms"),
+            }
+            observable_at = linked_episode.get("episode_observable_only_at_ms")
+            if isinstance(observable_at, bool) or not isinstance(observable_at, int) or observable_at < 0:
+                raise ValueError(f"episode {episode_id} has invalid observable timestamp")
+            if parse_timestamp(cutoff, "evaluation_as_of").timestamp() * 1000 < observable_at:
+                raise ValueError(f"episode {episode_id} was not observable at evaluation_as_of")
+        else:
+            window = _object(item.get("movement_window"), f"events[{index}].movement_window")
+            window = {
+                "start": _timestamp(window.get("start"), f"events[{index}].movement_window.start"),
+                "end": _timestamp(window.get("end"), f"events[{index}].movement_window.end"),
+            }
         temporal_assessment = assess_temporal_association(
             event,
-            movement_start=_timestamp(window.get("start"), f"events[{index}].movement_window.start"),
-            movement_end=_timestamp(window.get("end"), f"events[{index}].movement_window.end"),
+            movement_start=window["start"],
+            movement_end=window["end"],
             evaluation_as_of=cutoff,
             target_entity=item.get("target_entity") or {},
         )
-        event_assessments.append({
+        assessment = {
             **temporal_assessment,
             "source_use_assessment": event_use,
             "source_storage_assessment": event_storage,
             "source_registry_entry_sha256": registry_hash,
-        })
+        }
+        if linked_episode is not None:
+            published_ms = parse_timestamp(event["published_at"], "published_at").timestamp() * 1000
+            if published_ms < start_pivot["pivot_open_time_ms"]:
+                relation = "PRECEDES_SWING"
+            elif published_ms > end_pivot["pivot_open_time_ms"]:
+                relation = "FOLLOWS_SWING"
+            else:
+                relation = "DURING_SWING"
+            assessment["episode_link"] = {
+                "episode_id": episode_id,
+                "direction": linked_episode.get("direction"),
+                "event_relation_to_swing": relation,
+                "episode_observable_only_at_ms": observable_at,
+                "temporal_interpretation": "Association only; publication before/during/after a technical swing does not establish causality.",
+            }
+        event_assessments.append(assessment)
 
     fundamental_source_use_assessments = _verify_fundamental_observation_sources(
         observations, authorization_registry=provider_authorization_registry
