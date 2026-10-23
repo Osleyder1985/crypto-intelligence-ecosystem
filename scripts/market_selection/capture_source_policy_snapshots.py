@@ -86,7 +86,7 @@ def main() -> int:
     parser.add_argument("--timeout-seconds", type=float, default=20.0)
     parser.add_argument("--attempts", type=int, default=3)
     args = parser.parse_args()
-    if not args.user_agent.strip() or "\\r" in args.user_agent or "\\n" in args.user_agent:
+    if not args.user_agent.strip() or "\r" in args.user_agent or "\n" in args.user_agent:
         parser.error("--user-agent must be a non-empty single-line identifier")
     if args.timeout_seconds <= 0 or args.attempts < 1:
         parser.error("--timeout-seconds must be positive and --attempts at least 1")
@@ -110,7 +110,7 @@ def main() -> int:
         manifest["sources"].append(record)
         print(f"{source_id}: {record['capture_status']} bytes={record['body_bytes']} attempts={record['attempts_used']}")
     manifest_path = args.output_dir / "manifest.json"
-    manifest_path.write_text(json.dumps(manifest, ensure_ascii=False, indent=2, sort_keys=True) + "\\n", encoding="utf-8")
+    manifest_path.write_text(json.dumps(manifest, ensure_ascii=False, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     return 0 if all(x["capture_status"] == "PASS" for x in manifest["sources"]) else 1
 
 
