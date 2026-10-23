@@ -43,7 +43,7 @@ No se acepta la resolución de entidad basada solo en un ticker: los símbolos s
 
 La deduplicación prioriza el ID de artículo del proveedor, cuando existe; de lo contrario, usa URL canónica (fragmento eliminado, host normalizado y barra final eliminada). No fusiona por similitud semántica de titulares. Si una misma identidad canónica tiene titulares o entidades discrepantes, el conflicto queda explícito como `CONFLICT_REQUIRES_REVIEW`, en vez de resolverlo silenciosamente.
 
-Limitación: las URL sindicadas o redirigidas diferentes pueden representar la misma noticia y no se deduplican semánticamente en esta fase. La deduplicación entre fuentes requiere conservar ambos registros y una capa de agrupación con evidencia.
+Limitación: las URL sindicadas o redirigidas diferentes pueden representar la misma noticia y no se deduplican semánticamente en esta fase. La deduplicación entre fuentes requiere conservar ambos registros y una capa de agrupación con evidencia. Una URL canónica repetida también se marca `CONFLICT_REQUIRES_REVIEW` si cambian los campos de afirmación (`title`, `event_type`, entidades, `published_at`, referencias de evidencia) o si ambos registros incluyen hashes de contenido y estos difieren. Si uno de los hashes falta, el sistema no infiere que el contenido sea idéntico; esa ausencia queda como limitación de evidencia.
 
 ## 5. Niveles de evidencia y causalidad
 
