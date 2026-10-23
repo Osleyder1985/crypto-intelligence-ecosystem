@@ -454,6 +454,36 @@ class ResearchReportTests(unittest.TestCase):
         self.assertEqual(book["book"]["best_ask"], "9.6")
         self.assertFalse(book["orders_submitted"])
 
+    def test_external_evidence_integration_requires_reviewed_canonical_identity(self):
+        with self.assertRaisesRegex(ValueError, "reviewed canonical asset identity"):
+            build_research_report(
+                self.source, config(), "BTC", self.raw,
+                external_events=[],
+                evidence_methodology={},
+                evidence_asset_category="native_l1",
+                evaluation_as_of="2026-10-22T00:00:00Z",
+            )
+
+    def test_external_evidence_is_wired_to_verified_asset_identity(self):
+        enriched_marker = {"external_event_evidence": {"status": "ASSESSED", "event_count": 1}}
+        def fake_enrich(report, **kwargs):
+            report.update(enriched_marker)
+            return report
+        with patch("scripts.market_selection.research_report.enrich_research_report", side_effect=fake_enrich) as enrich:
+            report = build_research_report(
+                self.source, config(), "BTC", self.raw,
+                identity_evidence=identity_evidence(),
+                external_events=[{"event_id": "synthetic-event"}],
+                evidence_methodology={"schema_version": "synthetic-test-only"},
+                evidence_asset_category="native_l1",
+                evaluation_as_of="2026-10-22T00:00:00Z",
+            )
+        self.assertEqual(enrich.call_args.kwargs["asset"]["stable_id"], "registry:bitcoin")
+        self.assertEqual(enrich.call_args.kwargs["events"], [{"event_id": "synthetic-event"}])
+        self.assertEqual(report["external_event_evidence"]["status"], "ASSESSED")
+        self.assertNotIn("EXTERNAL_EVENT_SOURCES_NOT_INTEGRATED", report["horizons"]["short"]["reason_codes"])
+        self.assertEqual(report["decision_status"], "INDETERMINATE")
+
     def test_rejects_order_book_for_different_market(self):
         order_book = {
             "schema_version": "crypto-spot-order-book-snapshot-v1",
