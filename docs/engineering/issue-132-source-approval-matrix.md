@@ -108,3 +108,32 @@ Las pruebas usan únicamente una decisión sintética marcada como fixture. No m
 ## Criterio de cierre de esta preparación
 
 La matriz documental puede considerarse preparada cuando está versionada. **Issue #132 no se considera terminado** hasta que exista una decisión de uso por cada fuente que se vaya a activar, una prueba E2E con evidencia real autorizada y un manifiesto de backfill reproducible. Las fuentes que no tengan autorización permanecen deshabilitadas; no es necesario activarlas todas para cerrar el trabajo funcional si se delimita y verifica un alcance autorizado suficiente.
+
+
+## Autorización de alcance del propietario del proyecto — 2026-10-23
+
+El propietario confirmó explícitamente en la conversación de trabajo que acepta el siguiente alcance propuesto para preparar la validación multifuente:
+
+- **Fuentes solicitadas para evaluación individual:** `sec_press_releases`, `sec_press_release_archive`, `cftc_general_press_releases`, `cftc_press_release_archive`, `federal_reserve_press_releases` y `federal_reserve_press_release_archive`.
+- **Finalidad del proyecto:** análisis interno de noticias/eventos como evidencia candidata para investigar movimientos de criptomonedas.
+- **Contenido incluido en el alcance solicitado:** metadatos mínimos y texto oficial, únicamente cuando la revisión específica de la fuente confirme que el acceso y la persistencia previstos son admisibles.
+- **HTML completo y adjuntos:** no quedan autorizados por esta confirmación general; deben evaluarse por separado y solo usarse si existe evidencia suficiente para el caso concreto.
+- **Retención:** aplicar requisitos identificados y documentados por fuente y tipo de dato; no inventar plazos ni conservar indefinidamente por defecto. Si no puede determinarse una regla aplicable, no persistir el contenido afectado hasta resolverla.
+- **Contenido de terceros y redistribución:** excluidos del alcance autorizado por defecto. No republicar ni redistribuir contenido fuente sin autorización específica documentada.
+- **Acceso automatizado:** solo después de verificar endpoint, disponibilidad, términos, agente identificable, límites aplicables y control agregado de solicitudes.
+- **Identidad/fecha de aprobación:** la confirmación queda registrada en el comentario del Issue #132 y en el historial de esta conversación. No se atribuye una identidad legal, firma digital ni aprobación del proveedor que no haya sido verificada.
+
+### Qué autoriza y qué no autoriza esta confirmación
+
+Esta es una **autorización del propietario para proceder con la revisión y preparación técnica dentro del alcance descrito**. No equivale a permiso concedido por SEC, CFTC o Federal Reserve, no constituye dictamen jurídico y no demuestra que la retención de texto oficial esté permitida para cada endpoint. Por ello, **no cambia el estado operativo** de ningún origen: los seis permanecen `TERMS_PENDING` hasta completar la revisión/evidencia específica y los campos exigidos por el registro.
+
+| Fuente | Autorización de alcance del propietario | Estado operativo |
+|---|---|---|
+| `sec_press_releases` | Preparar revisión de metadatos y texto oficial para análisis interno | `TERMS_PENDING` |
+| `sec_press_release_archive` | Preparar revisión de metadatos y texto oficial para análisis interno | `TERMS_PENDING` |
+| `cftc_general_press_releases` | Preparar revisión de metadatos y texto oficial para análisis interno; verificar disponibilidad antes de cualquier prueba | `TERMS_PENDING` |
+| `cftc_press_release_archive` | Preparar revisión de metadatos y texto oficial para análisis interno | `TERMS_PENDING` |
+| `federal_reserve_press_releases` | Preparar revisión de metadatos y texto oficial para análisis interno | `TERMS_PENDING` |
+| `federal_reserve_press_release_archive` | Preparar revisión de metadatos y texto oficial para análisis interno | `TERMS_PENDING` |
+
+**Próximo paso permitido:** completar la revisión documental y los controles técnicos offline por fuente. La captura real y el backfill permanecen bloqueados hasta que el uso, persistencia, retención y acceso automatizado aplicables estén respaldados por evidencia suficiente.
