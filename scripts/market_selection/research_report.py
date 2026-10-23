@@ -7,6 +7,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import math
 from pathlib import Path
 from typing import Any
 
@@ -58,6 +59,28 @@ def _validate_config(config: dict) -> dict:
     for key in required_sr:
         if key not in support_resistance:
             raise ValueError(f"config.support_resistance.{key} is required")
+
+    # Fail closed on malformed methodology values before any analyzer consumes them.
+    # bool is deliberately rejected even though Python treats it as an int.
+    for key in ("lookback_bars",):
+        value = movement[key]
+        if isinstance(value, bool) or not isinstance(value, int) or value < 1:
+            raise ValueError(f"config.movement.{key} must be a positive integer")
+
+    for key in ("pivot_left", "pivot_right"):
+        value = support_resistance[key]
+        if isinstance(value, bool) or not isinstance(value, int) or value < 1:
+            raise ValueError(f"config.support_resistance.{key} must be a positive integer")
+
+    for key in ("return_threshold_pct", "volume_ratio_threshold"):
+        value = movement[key]
+        if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value) or value <= 0:
+            raise ValueError(f"config.movement.{key} must be a finite number greater than zero")
+
+    tolerance_bps = support_resistance["tolerance_bps"]
+    if (isinstance(tolerance_bps, bool) or not isinstance(tolerance_bps, (int, float))
+            or not math.isfinite(tolerance_bps) or not 0 <= tolerance_bps <= 10_000):
+        raise ValueError("config.support_resistance.tolerance_bps must be a finite number from 0 to 10000")
 
     return {
         "methodology_id": methodology_id,
