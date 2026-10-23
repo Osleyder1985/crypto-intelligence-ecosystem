@@ -168,3 +168,8 @@ Este documento no decide arbitrariamente duración de horizontes, pesos, umbrale
 - [Issue #7 — Selección de mercados Spot](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/issues/7)
 - [Issue #18 — Frescura, comisiones y coste](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/issues/18)
 - [Issue #19 — Validación integral y preparación operativa](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/issues/19)
+
+
+### Salvaguardas temporales de evidencia por episodio
+
+Al asociar un evento mediante `movement_episode_id`, la integración verifica que el episodio exista una sola vez y que `evaluation_as_of` no sea anterior a `episode_observable_only_at_ms`. El resultado distingue si la publicación precede, cae dentro o sigue al intervalo técnico, sin convertir esa relación temporal en causalidad. Se permite una `movement_window` explícita junto al ID del episodio para evaluar un intervalo previo/posterior más amplio; la relación con el movimiento se sigue clasificando respecto a los pivotes reales. La ventana ampliada debe justificarse y versionarse; no existe una duración universal aprobada para buscar detonantes.

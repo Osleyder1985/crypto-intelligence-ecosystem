@@ -79,6 +79,8 @@ def _movement_episode_window(report: dict, episode_id: str) -> tuple[dict, dict]
             "direction": episode.get("direction"),
             "classification": episode.get("classification"),
             "segment_index": episode.get("segment_index"),
+            "start_pivot_open_time_ms": start_ms,
+            "end_pivot_open_time_ms": end_ms,
             "episode_observable_only_at_ms": episode.get("episode_observable_only_at_ms"),
         },
     )
@@ -386,8 +388,6 @@ def enrich_research_report(
         seen_event_ids.add(event_id)
         episode_id = item.get("movement_episode_id")
         if episode_id is not None:
-            if "movement_window" in item:
-                raise ValueError(f"events[{index}] must provide movement_episode_id or movement_window, not both")
             if not isinstance(episode_id, str) or not episode_id.strip():
                 raise ValueError(f"events[{index}].movement_episode_id must be a non-empty string")
             window, episode_context = _movement_episode_window(report, episode_id.strip())
@@ -400,6 +400,14 @@ def enrich_research_report(
                 raise ValueError(f"movement episode {episode_id} has invalid observable timestamp")
             if parse_timestamp(cutoff, "evaluation_as_of").timestamp() * 1000 < observable_at:
                 raise ValueError(f"movement episode {episode_id} was not observable at evaluation_as_of")
+            # A justified, versioned wider window may be supplied for pre/post catalyst research.
+            # The relation to the swing itself is always classified against the actual pivots.
+            if item.get("movement_window") is not None:
+                explicit_window = _object(item.get("movement_window"), f"events[{index}].movement_window")
+                window = {
+                    "start": _timestamp(explicit_window.get("start"), f"events[{index}].movement_window.start"),
+                    "end": _timestamp(explicit_window.get("end"), f"events[{index}].movement_window.end"),
+                }
         else:
             window = _object(item.get("movement_window"), f"events[{index}].movement_window")
             episode_context = None
@@ -412,8 +420,8 @@ def enrich_research_report(
         )
         if episode_context is not None:
             published_ms = parse_timestamp(event["published_at"], "published_at").timestamp() * 1000
-            start_ms = parse_timestamp(window["start"], "movement_window.start").timestamp() * 1000
-            end_ms = parse_timestamp(window["end"], "movement_window.end").timestamp() * 1000
+            start_ms = episode_context["start_pivot_open_time_ms"]
+            end_ms = episode_context["end_pivot_open_time_ms"]
             if published_ms < start_ms:
                 event_relation = "PRECEDES_SWING"
             elif published_ms > end_ms:
