@@ -426,6 +426,7 @@ class ResearchReportTests(unittest.TestCase):
                     "--config", str(config_path), "--identity-evidence", str(identity_path),
                     "--live-depth-evidence", str(live_depth_path),
                     "--provider-authorization-registry", str(authorization_path),
+                    "--evaluation-as-of", "2026-10-23T02:00:00.700Z",
                     "--output", str(output_path),
                 ],
                 cwd=Path(__file__).resolve().parents[2],
@@ -437,6 +438,24 @@ class ResearchReportTests(unittest.TestCase):
             self.assertEqual(report["descriptive_analyses"]["order_book"]["market"]["symbol_native"], "BTCUSDT")
             self.assertEqual(report["decision_status"], "INDETERMINATE")
             self.assertFalse(report["orders_submitted"])
+
+            late_cutoff_output = root / "late-cutoff-report.json"
+            late_cutoff = subprocess.run(
+                [
+                    sys.executable, "-m", "scripts.market_selection.research_report",
+                    "--asset-id", "BTC", "--artifact", str(artifact_path),
+                    "--config", str(config_path), "--identity-evidence", str(identity_path),
+                    "--live-depth-evidence", str(live_depth_path),
+                    "--provider-authorization-registry", str(authorization_path),
+                    "--evaluation-as-of", "2026-10-23T02:00:00.699Z",
+                    "--output", str(late_cutoff_output),
+                ],
+                cwd=Path(__file__).resolve().parents[2],
+                capture_output=True, text=True, check=False,
+            )
+            self.assertNotEqual(late_cutoff.returncode, 0)
+            self.assertIn("captured after evaluation_as_of cutoff", late_cutoff.stderr)
+            self.assertFalse(late_cutoff_output.exists())
 
     def test_missing_explicit_method_parameter_is_rejected(self):
         invalid = config()
