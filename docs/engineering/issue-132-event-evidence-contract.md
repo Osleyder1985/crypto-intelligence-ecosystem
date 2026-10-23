@@ -132,3 +132,27 @@ La integración acepta en cada elemento de \`events\` los parámetros opcionales
 - La evaluación registra la ventana de asociación efectiva y los dos parámetros utilizados.
 - Una publicación dentro de la ventana ampliada solo se clasifica como \`TEMPORAL_ASSOCIATION\`; nunca como prueba de causalidad.
 - Los valores deben fijarse en una metodología versionada antes de evaluar los resultados y someterse a análisis de sensibilidad. No deben ajustarse retrospectivamente para hacer coincidir una noticia con un movimiento.
+
+## 11. Revisión factual explícita, separada de la asociación temporal
+
+La integración incorpora el campo opcional event.metadata.fact_review con esquema crypto-event-fact-review-v1. Si no se suministra, el informe devuelve NOT_REVIEWED. Capturar un artículo, tener un ID de activo revisado o encontrar proximidad temporal no convierte una afirmación en hecho verificado.
+
+Campos requeridos del registro de revisión:
+
+- schema_version: crypto-event-fact-review-v1.
+- event_id: ID exacto del evento que se revisa.
+- decision: VERIFIED_PRIMARY_SOURCE, CONFLICTING_SOURCES, REJECTED o INSUFFICIENT_EVIDENCE.
+- reviewed_by, reviewed_at y rationale.
+- evidence_refs: lista de URL HTTPS y roles PRIMARY_SOURCE, SECONDARY_SOURCE, MARKET_DATA o COUNTER_EVIDENCE; cada referencia conserva publisher cuando esté disponible.
+- evidence_record_base64 y evidence_record_sha256: bytes UTF-8 JSON del mismo registro sin estos dos campos, preservados y verificados por hash.
+
+Controles aplicados:
+
+- El JSON preservado debe coincidir exactamente con los campos declarados; no basta con declarar un hash.
+- VERIFIED_PRIMARY_SOURCE exige que la URL del evento aparezca como referencia PRIMARY_SOURCE.
+- CONFLICTING_SOURCES exige al menos dos URL distintas.
+- REJECTED y VERIFIED_PRIMARY_SOURCE requieren referencias de evidencia.
+- Una revisión con reviewed_at posterior a evaluation_as_of se conserva como anotación, pero su effective_decision será NOT_AVAILABLE_AS_OF y no puede filtrarse hacia una evaluación histórica anterior.
+- La salida incluye fact_verification de forma separada de causality_label. Incluso VERIFIED_PRIMARY_SOURCE no implica que el evento causara el movimiento; la etiqueta temporal continúa siendo TEMPORAL_ASSOCIATION cuando corresponde.
+
+Este contrato valida estructura, trazabilidad e integridad de la revisión, no la competencia del revisor ni la verdad material de su conclusión. Las hipótesis plausibles y la causalidad respaldada requieren evaluación adicional, evidencia de reacción de mercado, alternativas y revisión explícita; no se deducen automáticamente de la proximidad temporal.
