@@ -173,3 +173,8 @@ Este documento no decide arbitrariamente duración de horizontes, pesos, umbrale
 ### Salvaguardas temporales de evidencia por episodio
 
 Al asociar un evento mediante `movement_episode_id`, la integración verifica que el episodio exista una sola vez y que `evaluation_as_of` no sea anterior a `episode_observable_only_at_ms`. El resultado distingue si la publicación precede, cae dentro o sigue al intervalo técnico, sin convertir esa relación temporal en causalidad. Se permite una `movement_window` explícita junto al ID del episodio para evaluar un intervalo previo/posterior más amplio; la relación con el movimiento se sigue clasificando respecto a los pivotes reales. La ventana ampliada debe justificarse y versionarse; no existe una duración universal aprobada para buscar detonantes.
+
+
+### Integración del informe principal con evidencia externa suministrada
+
+El CLI de `research_report.py` admite opcionalmente `--external-events` y `--fundamental-observations`, con metodología versionada, categoría explícita y `--evaluation-as-of`. La integración es offline: valida y adjunta registros preservados; no busca noticias ni realiza capturas por sí misma. Requiere identidad canónica revisada y pasa el registro de autorización de despliegue al evaluador de evidencia. Las fuentes cuyo estado permanezca `TERMS_PENDING` siguen bloqueadas; no se infiere autorización por disponer de una URL pública. Aunque la evidencia se integre, los tres horizontes permanecen `INDETERMINATE` hasta aprobar la metodología y validar el desempeño predictivo.

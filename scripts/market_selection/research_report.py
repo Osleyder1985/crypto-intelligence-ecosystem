@@ -18,6 +18,7 @@ from scripts.market_selection.build_movement_episodes import build_movement_epis
 from scripts.market_selection.detect_ohlcv_movement_events import analyze_movement_events
 from scripts.market_selection.analyze_order_book_snapshot import analyze_order_book_snapshot
 from scripts.market_selection.normalize_order_book_probe import normalize_multi_exchange_order_book_probe
+from scripts.market_selection.research_evidence_integration import enrich_research_report
 try:
     from scripts.market_selection.canonical_asset_identity import resolve_asset_identity
 except ModuleNotFoundError:
@@ -184,6 +185,11 @@ def build_research_report(
     identity_evidence: dict | None = None,
     order_book_artifact: dict | None = None,
     order_book_authorization_registry: dict | None = None,
+    external_events: list[dict] | None = None,
+    fundamental_observations: list[dict] | None = None,
+    evidence_methodology: dict | None = None,
+    evidence_asset_category: str | None = None,
+    evaluation_as_of: str | None = None,
 ) -> dict:
     """Build a deterministic report from one preserved normalized Spot OHLCV artifact.
 
@@ -344,7 +350,7 @@ def build_research_report(
         for horizon in HORIZONS
     }
 
-    return {
+    report = {
         "schema_version": REPORT_SCHEMA,
         "report_status": "TECHNICAL_BASELINE_ASSEMBLED" if quality_complete else "PARTIAL",
         "decision_status": "INDETERMINATE",
@@ -413,6 +419,42 @@ def build_research_report(
         "network_requests_made": False,
     }
 
+    if external_events is not None or fundamental_observations is not None:
+        if evidence_methodology is None:
+            raise ValueError("evidence_methodology is required when external events or fundamental observations are supplied")
+        if not isinstance(evidence_asset_category, str) or not evidence_asset_category.strip():
+            raise ValueError("evidence_asset_category is required when external evidence is supplied")
+        if not isinstance(evaluation_as_of, str) or not evaluation_as_of.strip():
+            raise ValueError("evaluation_as_of is required when external evidence is supplied")
+        identity = report["canonical_asset_identity"]
+        if report["canonical_asset_identity_status"] != "VERIFIED" or not identity.get("stable_id"):
+            raise ValueError("external evidence integration requires reviewed canonical asset identity; ticker-only matching is insufficient")
+        supplied_events = [] if external_events is None else external_events
+        supplied_observations = [] if fundamental_observations is None else fundamental_observations
+        report = enrich_research_report(
+            report,
+            events=supplied_events,
+            observations=supplied_observations,
+            methodology=evidence_methodology,
+            asset={"stable_id": identity["stable_id"], "category": evidence_asset_category.strip()},
+            evaluation_as_of=evaluation_as_of.strip(),
+            provider_authorization_registry=order_book_authorization_registry,
+        )
+        for horizon_report in report["horizons"].values():
+            reasons = list(horizon_report.get("reason_codes", []))
+            if supplied_events:
+                reasons = [code for code in reasons if code != "EXTERNAL_EVENT_SOURCES_NOT_INTEGRATED"]
+            if supplied_observations:
+                reasons = [code for code in reasons if code != "FUNDAMENTAL_AND_ONCHAIN_COVERAGE_NOT_INTEGRATED"]
+            horizon_report["reason_codes"] = reasons
+            if supplied_events or supplied_observations:
+                horizon_report["reason"] = (
+                    "Supplied event/fundamental evidence was validated and attached. The horizon remains INDETERMINATE "
+                    "until its methodology is approved and predictive performance is validated."
+                )
+
+    return report
+
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
@@ -427,6 +469,11 @@ def main() -> int:
     parser.add_argument("--multi-exchange-order-book-probe", type=Path, help="Optional preserved multi-exchange-spot-book-probe-v1 JSON to normalize and analyze")
     parser.add_argument("--order-book-exchange", help="Exchange key for selecting exactly one record from the multi-exchange probe")
     parser.add_argument("--order-book-symbol", help="Native symbol for selecting exactly one record from the multi-exchange probe")
+    parser.add_argument("--external-events", type=Path, help="Optional JSON array of preserved event records; this option does not fetch news")
+    parser.add_argument("--fundamental-observations", type=Path, help="Optional JSON array of validated fundamental/on-chain observations")
+    parser.add_argument("--evidence-methodology", type=Path, help="Versioned crypto-investment-methodology-v1 JSON required with external evidence")
+    parser.add_argument("--evidence-asset-category", help="Explicit category for evidence evaluation, e.g. native_l1 or smart_contract_token")
+    parser.add_argument("--evaluation-as-of", help="Explicit ISO-8601 cutoff for evidence eligibility; required with external evidence")
     parser.add_argument("--output", required=True, type=Path, help="Path to the research report JSON")
     args = parser.parse_args()
 
@@ -436,6 +483,14 @@ def main() -> int:
     identity_evidence = json.loads(args.identity_evidence.read_text(encoding="utf-8")) if args.identity_evidence else None
     order_book_artifact = json.loads(args.order_book_artifact.read_text(encoding="utf-8")) if args.order_book_artifact else None
     authorization_registry = json.loads(args.provider_authorization_registry.read_text(encoding="utf-8")) if args.provider_authorization_registry else None
+    evidence_requested = args.external_events is not None or args.fundamental_observations is not None
+    if evidence_requested and not (args.evidence_methodology and args.evidence_asset_category and args.evaluation_as_of):
+        parser.error("--external-events/--fundamental-observations require --evidence-methodology, --evidence-asset-category and --evaluation-as-of")
+    if not evidence_requested and any((args.evidence_methodology, args.evidence_asset_category, args.evaluation_as_of)):
+        parser.error("evidence methodology/category/as-of require --external-events or --fundamental-observations")
+    external_events = json.loads(args.external_events.read_text(encoding="utf-8")) if args.external_events else None
+    fundamental_observations = json.loads(args.fundamental_observations.read_text(encoding="utf-8")) if args.fundamental_observations else None
+    evidence_methodology = json.loads(args.evidence_methodology.read_text(encoding="utf-8")) if args.evidence_methodology else None
     if args.multi_exchange_order_book_probe:
         if order_book_artifact is not None:
             parser.error("choose either --order-book-artifact or --multi-exchange-order-book-probe, not both")
@@ -455,6 +510,11 @@ def main() -> int:
         identity_evidence=identity_evidence,
         order_book_artifact=order_book_artifact,
         order_book_authorization_registry=authorization_registry,
+        external_events=external_events,
+        fundamental_observations=fundamental_observations,
+        evidence_methodology=evidence_methodology,
+        evidence_asset_category=args.evidence_asset_category,
+        evaluation_as_of=args.evaluation_as_of,
     )
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(
