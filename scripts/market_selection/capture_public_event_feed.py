@@ -753,6 +753,7 @@ def promote_public_feed_candidate_to_event(
         article_capture.get("source_id") != source_id
         or article_capture.get("candidate_id") != candidate_id
         or article_capture.get("capture_status") != "PASS"
+        or article_capture.get("http_status") != 200
         or article_capture.get("network_request_made") is not True
         or article_capture.get("capture_truncated") is not False
         or article_capture.get("source_registry_status") != "APPROVED"
@@ -775,8 +776,15 @@ def promote_public_feed_candidate_to_event(
     article_b64 = article_capture.get("raw_response_base64")
     article_hash = article_capture.get("raw_response_sha256")
     article_size = article_capture.get("raw_response_bytes")
-    if not isinstance(article_b64, str) or not isinstance(article_hash, str) or not re.fullmatch(r"[0-9a-f]{64}", article_hash):
-        raise PermissionError("article body or SHA-256 is missing")
+    if (
+        not isinstance(article_b64, str)
+        or not isinstance(article_hash, str)
+        or not re.fullmatch(r"[0-9a-f]{64}", article_hash)
+        or isinstance(article_size, bool)
+        or not isinstance(article_size, int)
+        or article_size < 0
+    ):
+        raise PermissionError("article body, byte count, or SHA-256 is missing or invalid")
     try:
         article_raw = base64.b64decode(article_b64, validate=True)
     except (ValueError, base64.binascii.Error) as exc:
