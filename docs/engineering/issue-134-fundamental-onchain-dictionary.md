@@ -1,6 +1,6 @@
 # Diccionario y registro de fuentes fundamentales/on-chain — Issue #134
 
-- **Estado:** contrato de datos y diccionario inicial en rama de trabajo; adaptadores reales pendientes.
+- **Estado actualizado:** contrato/diccionario y enforcement runtime del informe integrados en `main`; fuente fundamental registrada limitada a DefiLlama offline; fuentes reales autorizadas y captura en vivo pendientes.
 - **Issue:** [#134](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/issues/134)
 - **Dependencia:** [#128](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/issues/128) y [#130](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/issues/130)
 - **Código:** `scripts/market_selection/fundamental_onchain_contract.py` (incluye normalizador offline de TVL histórico de DefiLlama)
@@ -87,6 +87,10 @@ Cada observación usa `crypto-fundamental-observation-v1` y contiene:
 
 ## 6. Limitaciones pendientes
 
-Esta entrega crea catálogo/contrato, validación offline y 23 tests sintéticos. **No implementa todavía clientes de red que consulten proveedores ni verifica licencias por sí misma. El adaptador de DefiLlama normaliza una respuesta previamente capturada, exige un vínculo token-protocolo aportado por el llamador y deja su estado como pendiente de revisión; no equivale a una integración en vivo ni crea historial de capturas reales. Tampoco se integra aún con el informe de #130.** Las métricas de concentración, unlocks, auditoría, reservas y seguridad requieren fuentes específicas y resolución de entidad por activo.
+La base inicial implementa el catálogo versionado, validación offline y pruebas sintéticas. Los PR [#161](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/pull/161), [#162](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/pull/162) y [#163](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/pull/163) ya reforzaron el flujo integrado: los conflictos explícitos prevalecen sobre observaciones válidas aisladas; cada observación fundamental pasa por la puerta de autorización para `internal_analysis` y `persistent_storage`; y `source_id` debe vincularse al `provider_id` y al host/ruta HTTPS registrados. Las evaluaciones de uso quedan incluidas en el informe E2E.
 
-Para cerrar #134 faltan adaptadores aprobados, fixtures reales reproducibles, manejo de reorgs y datos contradictorios de proveedores, controles de cobertura y calidad, integración en el informe E2E y pruebas anti-look-ahead con capturas históricas verificables.
+**Esto no equivale a una fuente real autorizada ni a una integración en vivo.** El único binding fundamental del runtime es `defillama-free-api` → `defillama_api` → `api.llama.fi/protocol/...`; DefiLlama sigue bloqueada hasta registrar autorización escrita auténtica y aplicable. Las autorizaciones de los tests son fixtures sintéticas y no prueban derechos. El adaptador normaliza respuestas capturadas offline y requiere un vínculo token-protocolo aportado por el llamador; aún no obtiene por sí mismo evidencia independiente de ese vínculo ni crea capturas históricas reales.
+
+Las métricas de concentración, desbloqueos, reservas/atestaciones, seguridad y auditorías todavía necesitan fuentes específicas y resolución de entidad por activo. El trabajo restante incluye fuentes reales autorizadas, captura reproducible, fixtures reales permitidas, cobertura/calidad por categoría, datos contradictorios, manejo de reorgs cuando aplique y verificación anti-look-ahead con timestamps de publicación/captura. La integración de observaciones en el informe E2E existe, pero la integración completa de #134 en el producto no se considera terminada mientras falten esas fuentes y validaciones.
+
+Para cerrar #134 faltan adaptadores de fuentes autorizadas, capturas históricas reales reproducibles, manejo de reorgs y datos contradictorios de proveedores, controles de cobertura/calidad por categoría, validación de los vínculos activo-protocolo y pruebas anti-look-ahead con evidencia temporal verificable.
