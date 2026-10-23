@@ -96,3 +96,36 @@ Estas pruebas son offline y no aprueban términos ni demuestran disponibilidad e
 **Estado actual: pendiente de revisión humana de términos.** El flujo técnico offline de candidatos de eventos e integración en el informe ya existe, pero eso no equivale a ingestión real autorizada de SEC/CFTC/Federal Reserve. No se deben ejecutar capturas de esos feeds ni cambiar sus estados hasta que exista el expediente de revisión y una decisión autorizada.
 
 Issue #132 puede cerrarse únicamente cuando se completen sus criterios funcionales con evidencia verificable, se documenten los límites de cobertura y se demuestre que el informe conserva la distinción entre hecho verificado, relación temporal, hipótesis y causalidad respaldada.
+
+## 9. Comprobación preliminar de páginas oficiales — 2026-10-23
+
+Esta comprobación documental de páginas públicas no es una revisión legal ni autoriza captura, almacenamiento o redistribución. Se registran solo hechos observables en las páginas enlazadas y las incertidumbres que quedan pendientes.
+
+### SEC
+
+- La página oficial de [RSS Feeds](https://www.sec.gov/about/rss-feeds) enumera feeds de comunicados, discursos, actuaciones y materiales EDGAR. La página indica que fue revisada/actualizada el 24 de junio de 2026.
+- El portal oficial de [SEC Data APIs](https://data.sec.gov/) indica que el acceso automatizado debe cumplir la política de privacidad y seguridad de SEC.gov y remite a la documentación API y a las pautas de acceso justo.
+- La FAQ oficial para desarrolladores sobre descargas programáticas de EDGAR menciona un máximo actual de 10 solicitudes por segundo para ese acceso programático. **No se debe trasladar automáticamente ese límite a cada feed RSS** sin confirmar qué política y límites aplican al endpoint concreto.
+- Conclusión de esta revisión: se confirma que SEC publica recursos RSS y pautas de acceso automatizado; no se ha completado una decisión específica sobre análisis interno, almacenamiento persistente, retención y reutilización del contenido del feed configurado. Mantener `TERMS_PENDING`.
+
+### CFTC
+
+- La página oficial de [RSS](https://www.cftc.gov/RSS/index.htm), consultada el 23 de octubre de 2026, declara explícitamente: **“As of October 2026, the CFTC has temporarily disabled all RSS feeds”** para los temas enumerados, y que se volverán a habilitar más adelante.
+- La [Web Policy de CFTC](https://www.cftc.gov/WebPolicy/index.htm) indica que la información gubernamental del sitio es de dominio público y puede copiarse/distribuirse con atribución adecuada; advierte que algunos documentos, imágenes u otros recursos pueden ser de terceros y estar protegidos.
+- Conclusión operativa: el feed RSS registrado no debe considerarse disponible mientras la página oficial mantenga ese aviso. Esto es un problema de disponibilidad, independiente de los términos. No activar solicitudes repetidas ni sustituir silenciosamente el endpoint. Mantener `TERMS_PENDING` y volver a comprobar el aviso antes de cualquier prueba autorizada futura.
+
+### Federal Reserve Board
+
+- La página oficial de [RSS Feeds](https://www.federalreserve.gov/feeds/feeds.htm) enumera feeds de comunicados, discursos, datos y publicaciones; explica el uso mediante lectores/agregadores RSS. La página indica última actualización el 16 de septiembre de 2025.
+- La página enlazada por el registro como política general no resuelve por sí sola, en la evidencia consultada, todos los casos de uso concretos: captura automatizada del feed, almacenamiento persistente de cuerpos completos, duración de retención, extractos y redistribución.
+- Conclusión de esta revisión: se confirma la documentación oficial de feeds, pero el permiso para los casos de uso del proyecto sigue sin quedar demostrado. Mantener `TERMS_PENDING` hasta revisar la política aplicable al Board y cualquier condición específica del contenido.
+
+### Resultado consolidado
+
+| Fuente | Hecho confirmado | Pendiente | Estado del registro |
+| --- | --- | --- | --- |
+| SEC | Página oficial de RSS y pautas de acceso automatizado disponibles | Alcance concreto de almacenamiento, retención y reutilización del feed registrado | `TERMS_PENDING` |
+| CFTC | La página oficial indica que los feeds RSS están temporalmente deshabilitados en octubre de 2026 | Disponibilidad futura y revisión de usos permitidos | `TERMS_PENDING` |
+| Federal Reserve Board | Página oficial de feeds y guía de uso mediante agregadores | Permisos concretos para captura y persistencia del contenido del feed | `TERMS_PENDING` |
+
+**No se cambió el registro de fuentes, no se capturaron feeds y no se habilitó tráfico de red.** La conclusión es documental y preliminar; el revisor humano autorizado debe completar el checklist y registrar la evidencia de términos antes de aprobar cualquier uso.
