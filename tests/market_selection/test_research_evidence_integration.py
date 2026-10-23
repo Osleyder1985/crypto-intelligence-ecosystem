@@ -222,6 +222,25 @@ def event():
 
 
 class ResearchEvidenceIntegrationTests(unittest.TestCase):
+    def test_terms_pending_event_source_blocks_network_capture(self):
+        authorization = event_authorization(approved_event_source())
+
+        def forbidden_opener(*args, **kwargs):
+            raise AssertionError("network opener must not be called for a terms-pending source")
+
+        result = capture_sec_press_releases_rss(
+            authorization,
+            "CryptoIntelligenceTest/1.0 (contact: offline-test-fixture)",
+            5,
+            captured_at="2026-10-20T10:01:00Z",
+            opener=forbidden_opener,
+        )
+
+        self.assertEqual(result["capture_status"], "BLOCKED")
+        self.assertFalse(result["network_request_made"])
+        self.assertIn("SOURCE_TERMS_PENDING", result["reason_codes"])
+        self.assertIn("SOURCE_USE_CASES_NOT_APPROVED", result["reason_codes"])
+
     def test_episode_summary_reports_temporal_association_without_causal_claim(self):
         enriched_report = report()
         start_ms = 1792486800000
