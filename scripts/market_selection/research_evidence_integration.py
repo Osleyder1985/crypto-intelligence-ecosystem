@@ -18,7 +18,7 @@ from urllib.parse import urlsplit
 from scripts.market_selection.external_event_evidence import assess_temporal_association, parse_timestamp, validate_event
 from scripts.market_selection.fundamental_onchain_contract import evaluate_observations
 from scripts.market_selection.methodology_contract import validate_methodology
-from scripts.market_selection.provider_license_gate import evaluate_artifact_use
+from scripts.market_selection.provider_license_gate import evaluate_artifact_use, evaluate_provider_use
 from scripts.market_selection.event_source_registry import get_source, source_entry_sha256, source_is_approved
 from scripts.market_selection.capture_sec_press_releases_rss import parse_sec_press_releases_rss
 
@@ -37,6 +37,50 @@ def _timestamp(value: Any, field: str) -> str:
     if not isinstance(value, str) or not value.strip():
         raise ValueError(f"{field} must be a non-empty ISO-8601 timestamp with offset")
     return value.strip()
+
+
+
+def _verify_fundamental_observation_sources(observations: list[dict]) -> list[dict]:
+    """Require explicit provider authorization for every fundamental observation consumed.
+
+    The report-level market-data gate does not cover the separate observations argument.
+    Each source must independently be approved for both analysis and persistent storage.
+    """
+    assessments = []
+    for index, raw_observation in enumerate(observations):
+        observation = _object(raw_observation, f"observations[{index}]")
+        source = _object(observation.get("source"), f"observations[{index}].source")
+        source_id = source.get("source_id")
+        provider_id = source.get("provider_id")
+        if not isinstance(source_id, str) or not source_id.strip():
+            raise PermissionError(f"fundamental source id missing at observations[{index}]")
+        if not isinstance(provider_id, str) or not provider_id.strip():
+            raise PermissionError(f"fundamental provider id missing at observations[{index}]")
+        if source.get("terms_status") != "APPROVED":
+            raise PermissionError(
+                f"fundamental source terms are not approved at observations[{index}]"
+            )
+        authorization_record = source.get("authorization_record")
+        for use_case in ("internal_analysis", "persistent_storage"):
+            try:
+                assessment = evaluate_provider_use(provider_id, use_case, authorization_record)
+            except ValueError as exc:
+                raise PermissionError(
+                    f"fundamental provider authorization is invalid at observations[{index}]"
+                ) from exc
+            if assessment.get("decision") != "ALLOW":
+                reasons = ",".join(assessment.get("reason_codes") or ["PROVIDER_USE_BLOCKED"])
+                raise PermissionError(
+                    f"fundamental provider {provider_id} blocked for {use_case} "
+                    f"at observations[{index}]: {reasons}"
+                )
+            assessments.append({
+                "observation_id": observation.get("observation_id"),
+                "source_id": source_id,
+                "provider_id": provider_id,
+                **assessment,
+            })
+    return assessments
 
 
 def _verify_source_capture(
@@ -282,6 +326,7 @@ def enrich_research_report(
             "source_registry_entry_sha256": registry_hash,
         })
 
+    fundamental_source_use_assessments = _verify_fundamental_observation_sources(observations)
     fundamental = evaluate_observations(
         observations,
         asset={"stable_id": stable_id.strip(), "category": category.strip()},
@@ -301,6 +346,7 @@ def enrich_research_report(
         "interpretation": "Temporal association is not proof of causality; event absence does not prove no catalyst existed.",
     }
     output["fundamental_onchain_assessment"] = fundamental
+    output["fundamental_source_use_assessments"] = fundamental_source_use_assessments
     output["downstream_use_assessment"] = provider_use
     output["downstream_storage_assessment"] = provider_storage
     output["methodology_assessment"] = {
