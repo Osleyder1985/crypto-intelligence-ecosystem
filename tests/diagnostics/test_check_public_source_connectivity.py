@@ -1,3 +1,4 @@
+import io
 import socket
 import unittest
 from unittest.mock import patch
@@ -45,7 +46,7 @@ class ConnectivityDiagnosticTests(unittest.TestCase):
 
     def test_http_error_still_confirms_transport_reachability(self):
         from urllib.error import HTTPError
-        error = HTTPError("https://example.com", 405, "Method Not Allowed", {}, None)
+        error = HTTPError("https://example.com", 405, "Method Not Allowed", {}, io.BytesIO(b""))
         with patch("scripts.diagnostics.check_public_source_connectivity.socket.getaddrinfo", return_value=[]), patch(
             "scripts.diagnostics.check_public_source_connectivity.build_opener"
         ) as build_opener:
