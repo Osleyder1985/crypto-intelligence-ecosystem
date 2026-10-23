@@ -63,9 +63,15 @@ class BinanceSpotResearchCaptureTests(unittest.TestCase):
         network.assert_not_called()
         candles.assert_not_called()
 
-    def test_preserves_full_exchange_info_body_hash_and_size(self):
-        raw = json.dumps(exchange_info_payload()).encode("utf-8")
-        with patch("scripts.market_selection.capture_binance_spot_research.urlopen", return_value=FakeResponse(raw)):
+    def test_preserves_complete_exchange_info_universe_without_local_size_cap(self):
+        payload = exchange_info_payload()
+        payload["symbols"].append({
+            "symbol": "ETHBTC", "baseAsset": "ETH", "quoteAsset": "BTC",
+            "status": "TRADING", "isSpotTradingAllowed": True,
+            "baseAssetPrecision": 8, "quoteAssetPrecision": 8, "filters": [],
+        })
+        raw = json.dumps(payload).encode("utf-8")
+        with patch("scripts.market_selection.capture_binance_spot_research.urlopen", return_value=FakeResponse(raw)) as network:
             out = capture_exchange_info("BTCUSDT", use_case="live_technical_test")
         evidence = out["captured_exchange_info"]
         self.assertEqual(out["base_asset"], "BTC")
@@ -73,7 +79,9 @@ class BinanceSpotResearchCaptureTests(unittest.TestCase):
         self.assertEqual(evidence["response_bytes"], len(raw))
         self.assertEqual(evidence["response_sha256"], hashlib.sha256(raw).hexdigest())
         self.assertEqual(base64.b64decode(evidence["response_base64"]), raw)
-        self.assertTrue(evidence["url"].startswith(EXCHANGE_INFO_URL))
+        self.assertEqual(evidence["url"], EXCHANGE_INFO_URL)
+        self.assertEqual(json.loads(base64.b64decode(evidence["response_base64"]))["symbols"], payload["symbols"])
+        self.assertNotIn("symbol=", network.call_args.args[0].full_url)
 
     def test_fails_closed_when_symbol_not_found(self):
         raw = json.dumps({"symbols": []}).encode()
