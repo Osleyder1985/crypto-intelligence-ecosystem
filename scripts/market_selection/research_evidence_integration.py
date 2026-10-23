@@ -47,12 +47,20 @@ def _timestamp(value: Any, field: str) -> str:
 
 
 
-def _verify_fundamental_observation_sources(observations: list[dict]) -> list[dict]:
+def _verify_fundamental_observation_sources(
+    observations: list[dict],
+    authorization_registry: dict | None = None,
+) -> list[dict]:
     """Require explicit provider authorization for every fundamental observation consumed.
 
     The report-level market-data gate does not cover the separate observations argument.
-    Each source must independently be approved for both analysis and persistent storage.
+    Authorization records are resolved only from trusted runtime configuration, never from
+    caller-supplied observation metadata. Each source must be approved for both use cases.
     """
+    if authorization_registry is None:
+        authorization_registry = {}
+    if not isinstance(authorization_registry, dict):
+        raise PermissionError("trusted provider authorization registry must be an object")
     assessments = []
     for index, raw_observation in enumerate(observations):
         observation = _object(raw_observation, f"observations[{index}]")
@@ -84,7 +92,9 @@ def _verify_fundamental_observation_sources(observations: list[dict]) -> list[di
             raise PermissionError(
                 f"fundamental source terms are not approved at observations[{index}]"
             )
-        authorization_record = source.get("authorization_record")
+        # Do not accept source.authorization_record: observations are input evidence,
+        # not a trust anchor. Only deployment-controlled configuration can authorize a provider.
+        authorization_record = authorization_registry.get(provider_id)
         for use_case in ("internal_analysis", "persistent_storage"):
             try:
                 assessment = evaluate_provider_use(provider_id, use_case, authorization_record)
@@ -239,6 +249,7 @@ def enrich_research_report(
     methodology: dict,
     asset: dict,
     evaluation_as_of: str,
+    provider_authorization_registry: dict | None = None,
 ) -> dict:
     """Validate and attach supplied evidence while retaining fail-closed decision states.
 
@@ -350,7 +361,9 @@ def enrich_research_report(
             "source_registry_entry_sha256": registry_hash,
         })
 
-    fundamental_source_use_assessments = _verify_fundamental_observation_sources(observations)
+    fundamental_source_use_assessments = _verify_fundamental_observation_sources(
+        observations, authorization_registry=provider_authorization_registry
+    )
     fundamental = evaluate_observations(
         observations,
         asset={"stable_id": stable_id.strip(), "category": category.strip()},
