@@ -517,6 +517,107 @@ def adapt_defillama_protocol_tvl(
     return output
 
 
+def adapt_defillama_protocol_fee_metric(
+    payload: object,
+    *,
+    metric_id: str,
+    protocol_slug: str,
+    asset_category: str,
+    asset_stable_id: str,
+    captured_at: str,
+    mapping_evidence_url: str,
+    terms_status: str = "REVIEW_PENDING",
+) -> list[dict]:
+    """Normalize a captured DefiLlama fees/revenue timeseries without network access.
+
+    The caller explicitly selects fees or revenue to prevent substituting gross user
+    fees for protocol-retained revenue. This adapter does not cover holders' revenue.
+    """
+    import re
+
+    slug = _string(protocol_slug, "protocol_slug")
+    if not re.fullmatch(r"[a-z0-9][a-z0-9-]*", slug):
+        raise ValueError("protocol_slug must be a normalized lowercase slug")
+    if metric_id not in {"protocol.fees", "protocol.revenue"}:
+        raise ValueError("metric_id must be protocol.fees or protocol.revenue")
+    category = _string(asset_category, "asset_category")
+    if category not in METRIC_CATALOG[metric_id]["categories"]:
+        raise ValueError(f"{metric_id} cannot be attributed to this asset category")
+    stable_id = _string(asset_stable_id, "asset_stable_id")
+    captured = parse_timestamp(captured_at, "captured_at")
+    mapping_url = _http_url(mapping_evidence_url, "mapping_evidence_url")
+    if not isinstance(payload, dict) or not isinstance(payload.get("totalDataChart"), list):
+        raise ValueError("DefiLlama fees/revenue payload must contain a totalDataChart list")
+
+    points = {}
+    for index, point in enumerate(payload["totalDataChart"]):
+        if not isinstance(point, (list, tuple)) or len(point) != 2:
+            raise ValueError(f"totalDataChart[{index}] must be a [Unix timestamp, value] pair")
+        timestamp, value = point
+        if isinstance(timestamp, bool) or not isinstance(timestamp, (int, float)) or not math.isfinite(timestamp):
+            raise ValueError(f"totalDataChart[{index}][0] must be a finite Unix timestamp in seconds")
+        if int(timestamp) != timestamp or timestamp < 0:
+            raise ValueError(f"totalDataChart[{index}][0] must be a non-negative whole Unix timestamp")
+        if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value) or value < 0:
+            raise ValueError(f"totalDataChart[{index}][1] must be a finite non-negative number")
+        observed = datetime.fromtimestamp(int(timestamp), tz=timezone.utc)
+        if observed > captured:
+            raise ValueError("DefiLlama fees/revenue sample timestamp cannot be after capture time")
+        timestamp = int(timestamp)
+        if timestamp in points and points[timestamp] != value:
+            raise ValueError("conflicting DefiLlama fees/revenue values for the same timestamp")
+        points[timestamp] = float(value)
+
+    data_type = "dailyFees" if metric_id == "protocol.fees" else "dailyRevenue"
+    source_url = f"https://api.llama.fi/summary/fees/{slug}?dataType={data_type}"
+    methodology_url = payload.get("methodologyURL", "https://defillama.com/data-definitions")
+    if methodology_url is not None:
+        methodology_url = _http_url(methodology_url, "methodologyURL")
+
+    output = []
+    for timestamp, value in sorted(points.items()):
+        observed = datetime.fromtimestamp(timestamp, tz=timezone.utc).isoformat().replace("+00:00", "Z")
+        output.append({
+            "schema_version": OBSERVATION_SCHEMA,
+            "observation_id": f"defillama:{slug}:{metric_id}:{timestamp}",
+            "asset": {"category": category, "stable_id": stable_id},
+            "metric_id": metric_id,
+            "status": "OBSERVED",
+            "value": value,
+            "unit": "usd",
+            "period_start": None,
+            "period_end": observed,
+            "block_height": None,
+            "published_at": None,
+            "publication_time_status": "UNKNOWN",
+            "observed_at": observed,
+            "captured_at": captured.isoformat().replace("+00:00", "Z"),
+            "source": {
+                "source_id": "defillama-free-api",
+                "provider_id": "defillama_api",
+                "source_type": "aggregator",
+                "url": source_url,
+                "methodology_url": methodology_url,
+                "terms_status": terms_status,
+            },
+            "quality_notes": (
+                "Historical daily protocol metric from a previously captured response; source publication time is unknown. "
+                + ("Gross user fees are not protocol revenue or token-holder revenue."
+                   if metric_id == "protocol.fees"
+                   else "Protocol revenue is not interchangeable with gross fees or token-holder revenue.")
+            ),
+            "metadata": {
+                "protocol_slug": slug,
+                "mapping_evidence_url": mapping_url,
+                "mapping_status": "CALLER_SUPPLIED_REQUIRES_REVIEW",
+                "api_response_schema": "DefiLlama /summary/fees/{protocol}; totalDataChart",
+                "data_type": data_type,
+                "metric_semantics": "provider-defined; methodology must be reviewed before interpretation",
+            },
+        })
+    return output
+
+
 def canonical_sha256(value: object) -> str:
     """Hash canonical JSON, not original provider bytes."""
     data = json.dumps(value, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode("utf-8")

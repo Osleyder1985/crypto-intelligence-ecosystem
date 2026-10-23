@@ -35,6 +35,17 @@
 
 El catálogo del código es un punto de partida versionado, no una afirmación de que todas las métricas aplican a todo proyecto. Las categorías `privacy` y `other` están reservadas para expansión; sus métricas necesitan revisión explícita.
 
+## 2.1 Adaptadores disponibles y límites de atribución
+
+- `adapt_defillama_protocol_tvl` normaliza muestras históricas de TVL de una respuesta capturada del endpoint de protocolo.
+- `adapt_defillama_protocol_fee_metric` normaliza `totalDataChart` de una respuesta capturada de `/summary/fees/{protocol}`, seleccionando explícitamente `protocol.fees` (`dailyFees`) o `protocol.revenue` (`dailyRevenue`).
+- Ambos adaptadores son **offline**: no realizan solicitudes de red. Conservan la hora de captura, la hora observada, la URL de metodología y el enlace de evidencia de relación entre protocolo y activo.
+- La relación activo-token/protocolo es proporcionada por el llamador y queda marcada `CALLER_SUPPLIED_REQUIRES_REVIEW`; el adaptador no la verifica de forma independiente.
+- Los adaptadores no convierten `REVIEW_PENDING` en autorización. La captura/uso requiere la puerta de autorización de proveedor y la revisión de términos aplicable.
+- Fees brutas, revenue del protocolo y revenue de titulares son métricas distintas; el endpoint y el campo elegidos deben corresponder exactamente con la definición de la métrica.
+
+La documentación del endpoint y de los campos está en la [API oficial de DefiLlama](https://api-docs.defillama.com/). Este soporte de esquema no implica aprobación de términos, validez de atribución ni utilidad predictiva.
+
 ## 3. Diccionario inicial de métricas
 
 | ID | Unidad | Aplicabilidad | Definición / control clave |
