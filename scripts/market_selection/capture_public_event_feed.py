@@ -726,13 +726,14 @@ def validate_public_event_archive_candidate(archive_capture: dict, candidate_rec
         "title": title.strip(),
         "published_at": published.isoformat().replace("+00:00", "Z"),
         "publication_time_evidence": date_evidence.strip(),
+        "selected_by": selected_by.strip(),
+        "selected_at": selected_at.isoformat().replace("+00:00", "Z"),
+        "selection_rationale": rationale.strip(),
     }
     expected_id = hashlib.sha256(json.dumps(identity, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode("utf-8")).hexdigest()
     if candidate_record.get("candidate_id") != expected_id:
-        raise PermissionError("archive candidate ID does not match its evidence fields")
-    return {**identity, "candidate_id": expected_id, "selected_by": selected_by.strip(),
-            "selected_at": selected_at.isoformat().replace("+00:00", "Z"),
-            "selection_rationale": rationale.strip()}
+        raise PermissionError("archive candidate ID does not match its evidence and selection review fields")
+    return {**identity, "candidate_id": expected_id}
 
 
 def select_public_event_archive_candidate(
@@ -750,6 +751,7 @@ def select_public_event_archive_candidate(
     source = get_source(archive_capture.get("source_id"))
     raw_hash = archive_capture.get("raw_response_sha256")
     published = parse_timestamp(published_at, "published_at")
+    selected_at_normalized = parse_timestamp(selected_at, "selected_at").isoformat().replace("+00:00", "Z")
     identity = {
         "schema_version": ARCHIVE_CANDIDATE_SCHEMA,
         "source_id": archive_capture.get("source_id"),
@@ -759,15 +761,12 @@ def select_public_event_archive_candidate(
         "title": title.strip() if isinstance(title, str) else title,
         "published_at": published.isoformat().replace("+00:00", "Z"),
         "publication_time_evidence": publication_time_evidence.strip() if isinstance(publication_time_evidence, str) else publication_time_evidence,
+        "selected_by": selected_by.strip() if isinstance(selected_by, str) else selected_by,
+        "selected_at": selected_at_normalized,
+        "selection_rationale": selection_rationale.strip() if isinstance(selection_rationale, str) else selection_rationale,
     }
     candidate_id = hashlib.sha256(json.dumps(identity, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode("utf-8")).hexdigest()
-    candidate = {
-        **identity,
-        "candidate_id": candidate_id,
-        "selected_by": selected_by,
-        "selected_at": selected_at,
-        "selection_rationale": selection_rationale,
-    }
+    candidate = {**identity, "candidate_id": candidate_id}
     return validate_public_event_archive_candidate(archive_capture, candidate)
 
 
