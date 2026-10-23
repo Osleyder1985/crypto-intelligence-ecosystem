@@ -196,3 +196,34 @@ python -m scripts.market_selection.capture_public_event_archive promote --archiv
 ```
 
 Los cuatro pasos preservan evidencia distinta: índice de archivo, selección revisada, artículo completo y resolución de entidad. La revisión factual y la revisión causal siguen siendo contratos independientes. El flujo no habilita ninguna fuente por sí mismo.
+
+## 14. Registro verificable de cobertura del archivo histórico
+
+La CLI **coverage-manifest** registra el alcance declarado y las páginas realmente capturadas. Cada segmento se valida contra el estado actual de autorización de la fuente, su URL permitida, el código HTTP, la integridad del cuerpo y su SHA-256. El manifiesto enumera las páginas ausentes y distingue **PARTIAL** de **COMPLETE_FOR_DECLARED_SCOPE**.
+
+Ejemplo de entrada JSON:
+
+```json
+{
+  "source_id": "cftc_press_release_archive",
+  "scope_id": "cftc-2026",
+  "scope_definition": "Comunicados de 2026 según el filtro oficial indicado; no afirma exhaustividad fuera de ese filtro",
+  "expected_partitions": [
+    {"partition_id": "2026", "page_count": 2, "period_start": "2026-01-01", "period_end": "2026-12-31"}
+  ],
+  "segments": [
+    {"archive_capture_path": "captures/cftc-2026-page-1.json", "partition_id": "2026", "page_index": 1, "expected_page_count": 2},
+    {"archive_capture_path": "captures/cftc-2026-page-2.json", "partition_id": "2026", "page_index": 2, "expected_page_count": 2}
+  ],
+  "reviewed_by": "reviewer-id",
+  "reviewed_at": "2026-10-23T12:00:00Z"
+}
+```
+
+Ejecución:
+
+```bash
+python -m scripts.market_selection.capture_public_event_archive coverage-manifest --input <coverage-input.json> --output <coverage-manifest.json>
+```
+
+**COMPLETE_FOR_DECLARED_SCOPE** significa solamente que se registraron todas las páginas declaradas en el alcance revisado; no certifica que el sitio publique todo su histórico, que los filtros estén completos ni que no existan otras páginas/archivos. El campo **global_archive_exhaustiveness_claimed** siempre es **false**. Las páginas desconocidas o no capturadas permanecen fuera de la afirmación de cobertura.

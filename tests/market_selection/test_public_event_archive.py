@@ -6,6 +6,7 @@ from unittest.mock import patch
 
 from scripts.market_selection.capture_public_event_feed import (
     ARCHIVE_CAPTURE_SCHEMA,
+    build_public_event_archive_coverage_manifest,
     capture_public_event_archive_article,
     capture_public_event_archive_index,
     promote_public_archive_candidate_to_event,
@@ -27,18 +28,18 @@ ARCHIVE_HTML = (
 ARTICLE_HTML = b"<html><head><title>CFTC Announces Crypto-Related Enforcement Action</title></head><body>Official archive article body.</body></html>"
 
 
-def capture_archive(entry):
+def capture_archive(entry, archive_url=ARCHIVE_URL):
     with patch.dict(EVENT_SOURCE_REGISTRY["sources"], {"cftc_press_release_archive": entry}), patch(
         "scripts.market_selection.capture_public_event_feed._open_allowlisted_url",
         return_value=FakeResponse(
             ARCHIVE_HTML,
             headers={"Content-Type": "text/html; charset=utf-8"},
-            final_url=ARCHIVE_URL,
+            final_url=archive_url,
         ),
     ):
         return capture_public_event_archive_index(
             "cftc_press_release_archive",
-            ARCHIVE_URL,
+            archive_url,
             authorization_record(entry),
             USER_AGENT,
             captured_at="2026-10-22T12:30:00Z",
@@ -111,6 +112,39 @@ class PublicEventArchiveTests(unittest.TestCase):
         network.assert_not_called()
         self.assertEqual(result["capture_status"], "BLOCKED")
         self.assertIn("ARCHIVE_URL_OUTSIDE_ALLOWLIST", result["reason_codes"])
+
+    def test_coverage_manifest_distinguishes_complete_declared_scope_from_missing_page(self):
+        entry = approved_source("cftc_press_release_archive")
+        first = capture_archive(entry, "https://www.cftc.gov/PressRoom/PressReleases?page=0")
+        second = capture_archive(entry, "https://www.cftc.gov/PressRoom/PressReleases?page=1")
+        expected_partitions = [{
+            "partition_id": "2026",
+            "page_count": 2,
+            "period_start": "2026-01-01",
+            "period_end": "2026-12-31",
+        }]
+        def segment(capture, page_index):
+            return {
+                "archive_capture": capture,
+                "partition_id": "2026",
+                "page_index": page_index,
+                "expected_page_count": 2,
+            }
+        with patch.dict(EVENT_SOURCE_REGISTRY["sources"], {"cftc_press_release_archive": entry}):
+            complete = build_public_event_archive_coverage_manifest(
+                "cftc_press_release_archive", "cftc-2026", "CFTC releases dated in 2026, pages 0–1",
+                expected_partitions, [segment(first, 1), segment(second, 2)],
+                "offline-archive-reviewer", "2026-10-22T12:40:00Z",
+            )
+            partial = build_public_event_archive_coverage_manifest(
+                "cftc_press_release_archive", "cftc-2026", "CFTC releases dated in 2026, pages 0–1",
+                expected_partitions, [segment(first, 1)],
+                "offline-archive-reviewer", "2026-10-22T12:40:00Z",
+            )
+        self.assertEqual(complete["coverage_status"], "COMPLETE_FOR_DECLARED_SCOPE")
+        self.assertFalse(complete["global_archive_exhaustiveness_claimed"])
+        self.assertEqual(partial["coverage_status"], "PARTIAL")
+        self.assertEqual(partial["missing_pages"], [{"partition_id": "2026", "page_index": 2}])
 
     def test_archive_candidate_requires_url_title_and_date_evidence(self):
         entry = approved_source("cftc_press_release_archive")

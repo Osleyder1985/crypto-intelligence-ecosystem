@@ -742,6 +742,155 @@ def validate_public_event_archive_candidate(archive_capture: dict, candidate_rec
     return {**identity, "candidate_id": expected_id}
 
 
+
+ARCHIVE_COVERAGE_MANIFEST_SCHEMA = "crypto-public-event-archive-coverage-manifest-v1"
+
+
+def build_public_event_archive_coverage_manifest(
+    source_id: str,
+    scope_id: str,
+    scope_definition: str,
+    expected_partitions: list[dict],
+    segments: list[dict],
+    reviewed_by: str,
+    reviewed_at: str,
+) -> dict:
+    """Create an auditable coverage ledger without overstating archive completeness."""
+    source = get_source(source_id)
+    current_hash = source_entry_sha256(source)
+    if not source_is_approved(source):
+        raise PermissionError("archive coverage manifest requires an APPROVED source")
+    if not isinstance(scope_id, str) or not scope_id.strip():
+        raise ValueError("scope_id is required")
+    if not isinstance(scope_definition, str) or not scope_definition.strip():
+        raise ValueError("scope_definition must state the exact archive/time/filter scope")
+    if not isinstance(reviewed_by, str) or not reviewed_by.strip():
+        raise ValueError("reviewed_by is required")
+    reviewed_time = parse_timestamp(reviewed_at, "reviewed_at")
+    if not isinstance(expected_partitions, list) or not expected_partitions:
+        raise ValueError("expected_partitions must declare at least one partition")
+    partition_map = {}
+    for partition in expected_partitions:
+        if not isinstance(partition, dict):
+            raise ValueError("each expected partition must be an object")
+        partition_id = partition.get("partition_id")
+        page_count = partition.get("page_count")
+        period_start = partition.get("period_start")
+        period_end = partition.get("period_end")
+        if not isinstance(partition_id, str) or not partition_id.strip():
+            raise ValueError("partition_id is required")
+        if partition_id in partition_map:
+            raise ValueError("partition_id values must be unique")
+        if isinstance(page_count, bool) or not isinstance(page_count, int) or page_count < 1:
+            raise ValueError("page_count must be a positive integer")
+        if not isinstance(period_start, str) or not period_start.strip() or not isinstance(period_end, str) or not period_end.strip():
+            raise ValueError("period_start and period_end must declare the partition scope")
+        partition_map[partition_id] = {
+            "partition_id": partition_id,
+            "page_count": page_count,
+            "period_start": period_start.strip(),
+            "period_end": period_end.strip(),
+        }
+    if not isinstance(segments, list):
+        raise ValueError("segments must be a list")
+    normalized_segments = []
+    seen_pages = set()
+    seen_urls = set()
+    for index, segment in enumerate(segments):
+        if not isinstance(segment, dict):
+            raise ValueError(f"segments[{index}] must be an object")
+        capture = segment.get("archive_capture")
+        if not isinstance(capture, dict) or capture.get("schema_version") != ARCHIVE_CAPTURE_SCHEMA:
+            raise ValueError(f"segments[{index}].archive_capture has an invalid schema")
+        if (
+            capture.get("source_id") != source_id
+            or capture.get("capture_status") != "PASS"
+            or capture.get("capture_truncated") is not False
+            or capture.get("network_request_made") is not True
+            or capture.get("http_status") != 200
+            or capture.get("source_registry_status") != "APPROVED"
+            or capture.get("source_registry_entry_sha256") != current_hash
+            or not _archive_url_allowed(source, capture.get("requested_url"))
+            or not _archive_url_allowed(source, capture.get("final_url"))
+        ):
+            raise PermissionError(f"segments[{index}] is not a complete capture from the currently approved archive source")
+        raw_b64 = capture.get("raw_response_base64")
+        if not isinstance(raw_b64, str):
+            raise PermissionError(f"segments[{index}] has no preserved response body")
+        try:
+            raw = base64.b64decode(raw_b64, validate=True)
+        except (ValueError, base64.binascii.Error) as exc:
+            raise PermissionError(f"segments[{index}] response body is invalid base64") from exc
+        if (
+            hashlib.sha256(raw).hexdigest() != capture.get("raw_response_sha256")
+            or len(raw) != capture.get("raw_response_bytes")
+        ):
+            raise PermissionError(f"segments[{index}] response integrity check failed")
+        partition_id = segment.get("partition_id")
+        page_index = segment.get("page_index")
+        expected_page_count = segment.get("expected_page_count")
+        if partition_id not in partition_map:
+            raise ValueError(f"segments[{index}] references an undeclared partition")
+        partition = partition_map[partition_id]
+        if (
+            isinstance(page_index, bool) or not isinstance(page_index, int) or page_index < 1
+            or isinstance(expected_page_count, bool) or not isinstance(expected_page_count, int)
+            or expected_page_count != partition["page_count"] or page_index > expected_page_count
+        ):
+            raise ValueError(f"segments[{index}] page index/count disagrees with the declared partition")
+        page_key = (partition_id, page_index)
+        if page_key in seen_pages:
+            raise ValueError("duplicate partition/page index in archive coverage manifest")
+        requested_url = capture.get("requested_url")
+        if requested_url in seen_urls:
+            raise ValueError("duplicate archive URL in coverage manifest")
+        seen_pages.add(page_key)
+        seen_urls.add(requested_url)
+        normalized_segments.append({
+            "partition_id": partition_id,
+            "page_index": page_index,
+            "expected_page_count": expected_page_count,
+            "requested_url": requested_url,
+            "final_url": capture.get("final_url"),
+            "captured_at": capture.get("captured_at"),
+            "http_status": capture.get("http_status"),
+            "raw_response_bytes": capture.get("raw_response_bytes"),
+            "raw_response_sha256": capture.get("raw_response_sha256"),
+        })
+    normalized_segments.sort(key=lambda item: (item["partition_id"], item["page_index"]))
+    missing_pages = []
+    for partition_id, partition in partition_map.items():
+        for page_index in range(1, partition["page_count"] + 1):
+            if (partition_id, page_index) not in seen_pages:
+                missing_pages.append({"partition_id": partition_id, "page_index": page_index})
+    status = "COMPLETE_FOR_DECLARED_SCOPE" if not missing_pages else "PARTIAL"
+    manifest = {
+        "schema_version": ARCHIVE_COVERAGE_MANIFEST_SCHEMA,
+        "source_id": source_id,
+        "provider_id": source["provider_id"],
+        "source_registry_status": source["status"],
+        "source_registry_entry_sha256": current_hash,
+        "scope_id": scope_id.strip(),
+        "scope_definition": scope_definition.strip(),
+        "coverage_status": status,
+        "completeness_claim_scope": "DECLARED_SCOPE_ONLY" if not missing_pages else "NONE",
+        "expected_partitions": [partition_map[key] for key in sorted(partition_map)],
+        "captured_segment_count": len(normalized_segments),
+        "expected_segment_count": sum(item["page_count"] for item in partition_map.values()),
+        "missing_pages": missing_pages,
+        "segments": normalized_segments,
+        "reviewed_by": reviewed_by.strip(),
+        "reviewed_at": reviewed_time.isoformat().replace("+00:00", "Z"),
+        "global_archive_exhaustiveness_claimed": False,
+        "orders_submitted": False,
+    }
+    manifest["manifest_sha256"] = hashlib.sha256(
+        json.dumps(manifest, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode("utf-8")
+    ).hexdigest()
+    return manifest
+
+
+
 def select_public_event_archive_candidate(
     archive_capture: dict,
     *,

@@ -6,6 +6,7 @@ import json
 from pathlib import Path
 
 from scripts.market_selection.capture_public_event_feed import (
+    build_public_event_archive_coverage_manifest,
     capture_public_event_archive_article,
     capture_public_event_archive_index,
     promote_public_archive_candidate_to_event,
@@ -59,6 +60,10 @@ def main() -> int:
     article.add_argument("--captured-at")
     article.add_argument("--output", required=True, type=Path)
 
+    coverage = subparsers.add_parser("coverage-manifest", help="Validate declared archive page coverage and list missing pages")
+    coverage.add_argument("--input", required=True, type=Path, help="JSON with source_id, scope_id, scope_definition, expected_partitions and segments")
+    coverage.add_argument("--output", required=True, type=Path)
+
     promote = subparsers.add_parser("promote", help="Promote a reviewed archive candidate after stable-entity review")
     promote.add_argument("--archive-capture", required=True, type=Path)
     promote.add_argument("--candidate", required=True, type=Path)
@@ -69,7 +74,30 @@ def main() -> int:
     promote.add_argument("--output", required=True, type=Path)
 
     args = parser.parse_args()
-    if args.command == "capture-index":
+    if args.command == "coverage-manifest":
+        specification = _read_json(args.input)
+        if not isinstance(specification, dict):
+            parser.error("--input must contain a JSON object")
+        segments = []
+        for index, item in enumerate(specification.get("segments", [])):
+            if not isinstance(item, dict) or not isinstance(item.get("archive_capture_path"), str):
+                parser.error(f"segments[{index}] requires archive_capture_path")
+            segments.append({
+                "archive_capture": _read_json(Path(item["archive_capture_path"])),
+                "partition_id": item.get("partition_id"),
+                "page_index": item.get("page_index"),
+                "expected_page_count": item.get("expected_page_count"),
+            })
+        result = build_public_event_archive_coverage_manifest(
+            specification.get("source_id"),
+            specification.get("scope_id"),
+            specification.get("scope_definition"),
+            specification.get("expected_partitions"),
+            segments,
+            specification.get("reviewed_by"),
+            specification.get("reviewed_at"),
+        )
+    elif args.command == "capture-index":
         authorization_registry = _read_json(args.provider_authorization_registry)
         record = authorization_registry.get(args.source_id) if isinstance(authorization_registry, dict) else None
         result = capture_public_event_archive_index(
@@ -122,6 +150,8 @@ def main() -> int:
         "status": result.get("capture_status", result.get("capture_method", result.get("schema_version"))),
         "network_request_made": result.get("network_request_made"),
         "event_id": result.get("event_id"),
+        "coverage_status": result.get("coverage_status"),
+        "missing_pages": result.get("missing_pages", []),
         "reason_codes": result.get("reason_codes", []),
     }, ensure_ascii=False, indent=2))
     return 0
