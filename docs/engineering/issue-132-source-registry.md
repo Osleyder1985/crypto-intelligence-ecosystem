@@ -3,7 +3,7 @@
 - **Estado:** registro machine-readable añadido; ninguna fuente queda aprobada para ingestión automática. El adaptador SEC está implementado pero bloqueado por `TERMS_PENDING` hasta completar revisión de términos y autorización de uso.
 - **Issue:** [#132](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/issues/132)
 - **Contrato de evento:** [issue-132-event-evidence-contract.md](issue-132-event-evidence-contract.md)
-- **Fecha de consulta:** 2026-10-22
+- **Fecha de consulta:** 2026-10-23
 
 ## Principio de selección
 
@@ -60,3 +60,11 @@ Estas referencias acreditan puntos de acceso públicos, no aprobación de reutil
 - Se requiere un User-Agent proporcionado y revisado por el operador y un timeout explícito. El código no puede determinar si SEC considera clasificado ese agente.
 - La fuente solo se puede activar si se preservan los bytes de los términos revisados y su SHA-256 coincidente, se completan `reviewed_by`, `reviewed_at` y `allowed_use_cases`, y el registro de autorización del proveedor coincide con esa revisión. Aun así, la autorización de software no es dictamen legal.
 - El RSS es solo una ventana de feed, no archivo histórico completo. Los titulares no resuelven entidades: promover un evento requiere captura completa del artículo, IDs estables revisados y una afirmación explícita. El conector no infiere causalidad.
+
+## Comprobación actualizada de política oficial — 2026-10-23
+
+- **SEC:** la página [Website Dissemination](https://www.sec.gov/about/privacy-information) declara que la información de sec.gov es pública y puede copiarse/distribuirse sin permiso de SEC, con restricciones sobre sellos, logos y marcas. La [documentación de desarrolladores](https://www.sec.gov/about/developer-resources) sigue siendo la referencia para acceso automatizado.
+- **CFTC:** la [Web Policy](https://www.cftc.gov/WebPolicy/index.htm) declara que la información gubernamental es de dominio público con atribución, pero reconoce excepciones para recursos de terceros. La [página RSS](https://www.cftc.gov/RSS/index.htm) confirma que los feeds están temporalmente deshabilitados en octubre de 2026.
+- **Federal Reserve Board:** el [Disclaimer](https://www.federalreserve.gov/disclaimer.htm) declara que, salvo indicación contraria, la información del Board es de dominio público y puede copiarse/distribuirse con atribución; los materiales de terceros requieren revisión separada.
+
+Estas páginas aportan evidencia de reutilización del contenido oficial, pero no autorizan automáticamente la captura y persistencia indiscriminada de HTML completo, ni eliminan restricciones sobre terceros o condiciones de acceso automatizado. Por eso el registro permanece en TERMS_PENDING hasta que se aprueben por separado el alcance de captura, la política de retención y los casos de uso. No se ha realizado tráfico de red.
