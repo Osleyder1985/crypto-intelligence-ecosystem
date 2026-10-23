@@ -55,6 +55,19 @@ class MultiTimeframeSupportResistanceTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "same exchange, market type, and native symbol"):
             self.analyze([self.fixture("1h"), self.fixture("4h", exchange="other")])
 
+    def test_rejects_mixed_quote_assets(self):
+        primary = self.fixture("1h")
+        secondary = self.fixture("4h")
+        secondary["market"]["quote_asset"] = "USDC"
+        with self.assertRaisesRegex(ValueError, "same quote asset"):
+            self.analyze([primary, secondary])
+
+    def test_allows_missing_quote_asset_metadata(self):
+        primary = self.fixture("1h")
+        secondary = self.fixture("4h")
+        secondary["market"].pop("quote_asset", None)
+        self.assertEqual(self.analyze([primary, secondary])["timeframe_count"], 2)
+
     def test_rejects_duplicate_intervals(self):
         with self.assertRaisesRegex(ValueError, "duplicate timeframe"):
             self.analyze([self.fixture("1h"), self.fixture("1h")])
