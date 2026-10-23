@@ -114,17 +114,17 @@ class BinanceSpotResearchCaptureTests(unittest.TestCase):
     def test_fails_closed_when_symbol_not_found(self):
         raw = json.dumps({"symbols": []}).encode()
         with patch("scripts.market_selection.capture_binance_spot_research.urlopen", return_value=FakeResponse(raw)):
-            with self.assertRaisesRegex(ValueError, "found 0"):
+            with self.assertRaisesRegex(ValueError, "NO_MARKET"):
                 capture_exchange_info("NOPEUSDT", use_case="live_technical_test")
 
     def test_fails_closed_when_symbol_not_trading_or_spot_disabled(self):
         raw = json.dumps(exchange_info_payload(status="BREAK")).encode()
         with patch("scripts.market_selection.capture_binance_spot_research.urlopen", return_value=FakeResponse(raw)):
-            with self.assertRaisesRegex(ValueError, "not in TRADING"):
+            with self.assertRaisesRegex(ValueError, "NO_MARKET"):
                 capture_exchange_info("BTCUSDT", use_case="live_technical_test")
         raw = json.dumps(exchange_info_payload(spot=False)).encode()
         with patch("scripts.market_selection.capture_binance_spot_research.urlopen", return_value=FakeResponse(raw)):
-            with self.assertRaisesRegex(ValueError, "not explicitly marked"):
+            with self.assertRaisesRegex(ValueError, "NO_MARKET"):
                 capture_exchange_info("BTCUSDT", use_case="live_technical_test")
 
     def test_pipeline_blocks_technical_capture_before_internal_report(self):
