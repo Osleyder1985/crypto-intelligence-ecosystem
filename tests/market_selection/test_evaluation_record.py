@@ -167,6 +167,24 @@ class EvaluationRecordTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "endpoint"):
             build_evaluation_record(data, self.archive, self.records)
 
+    def test_source_window_with_naive_timestamp_is_rejected(self):
+        data = manifest(self.source)
+        data["source_artifacts"][0]["window_start_utc"] = "2026-10-21T12:00:00"
+        with self.assertRaisesRegex(ValueError, "must include a timezone"):
+            build_evaluation_record(data, self.archive, self.records)
+
+    def test_source_window_start_after_end_is_rejected(self):
+        data = manifest(self.source)
+        data["source_artifacts"][0]["window_start_utc"] = "2026-10-23T12:00:00Z"
+        with self.assertRaisesRegex(ValueError, "must not be after"):
+            build_evaluation_record(data, self.archive, self.records)
+
+    def test_source_window_timestamps_are_normalized_to_utc(self):
+        data = manifest(self.source)
+        data["source_artifacts"][0]["window_start_utc"] = "2026-10-21T14:00:00+02:00"
+        record = build_evaluation_record(data, self.archive, self.records)
+        self.assertEqual(record["source_artifacts"][0]["window_start_utc"], "2026-10-21T12:00:00.000Z")
+
     def test_comparison_uses_zero_safe_relative_delta(self):
         old = self.build(results={"return_pct": 0, "risk": {"drawdown_pct": -1.2}})
         source2 = self.root / "source2.json"

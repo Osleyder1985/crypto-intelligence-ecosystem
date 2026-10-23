@@ -107,6 +107,20 @@ def _validate_timestamp(value: str) -> str:
     return parsed.astimezone(timezone.utc).isoformat(timespec="milliseconds").replace("+00:00", "Z")
 
 
+def _validate_optional_timestamp(value, field: str) -> str | None:
+    if value is None:
+        return None
+    if not isinstance(value, str) or not value.strip():
+        raise ValueError(f"{field} must be an ISO-8601 timestamp with timezone or null")
+    try:
+        parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+    except ValueError as exc:
+        raise ValueError(f"{field} must be a valid ISO-8601 timestamp") from exc
+    if parsed.tzinfo is None or parsed.utcoffset() is None:
+        raise ValueError(f"{field} must include a timezone")
+    return parsed.astimezone(timezone.utc).isoformat(timespec="milliseconds").replace("+00:00", "Z")
+
+
 def _write_exclusive(path: Path, raw: bytes) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("xb") as stream:
@@ -137,6 +151,14 @@ def build_evaluation_record(manifest: dict, archive_dir: str | Path, output_dir:
         source_path = source.get("path")
         if not isinstance(source_path, str) or not source_path.strip():
             raise ValueError(f"source_artifacts[{index}].path is required")
+        window_start = _validate_optional_timestamp(
+            source.get("window_start_utc"), f"source_artifacts[{index}].window_start_utc"
+        )
+        window_end = _validate_optional_timestamp(
+            source.get("window_end_utc"), f"source_artifacts[{index}].window_end_utc"
+        )
+        if window_start is not None and window_end is not None and window_start > window_end:
+            raise ValueError(f"source_artifacts[{index}] window_start_utc must not be after window_end_utc")
         raw = Path(source_path).read_bytes()
         digest = _sha256(raw)
         relative = Path("sha256") / f"{digest}.bin"
@@ -151,8 +173,8 @@ def build_evaluation_record(manifest: dict, archive_dir: str | Path, output_dir:
         item = {
             "source": _require_text(source, "source"),
             "endpoint": _require_text(source, "endpoint"),
-            "window_start_utc": source.get("window_start_utc"),
-            "window_end_utc": source.get("window_end_utc"),
+            "window_start_utc": window_start,
+            "window_end_utc": window_end,
             "quality_status": _require_text(source, "quality_status"),
             "sha256": digest,
             "bytes": len(raw),
