@@ -116,3 +116,33 @@ Acordar objetivos predictivos, benchmarks y protocolo antes de evaluar señales.
 - [ ] La validación fuera de muestra y las puertas de seguridad/operación están documentadas antes de declarar producción.
 
 **Conclusión:** el trabajo debe pasar de prototipos analíticos separados a un producto integrado y validado. No se requiere reemplazar lo que ya funciona; se requiere conectar los componentes, cubrir las fuentes que faltan, formalizar las metodologías y demostrar el resultado con pruebas reproducibles.
+
+## 9. Actualización de estado — 2026-10-23
+
+Esta sección complementa la auditoría previa. No sustituye la revisión del árbol completo ni afirma que el flujo integral esté terminado.
+
+### Cambios adicionales ya integrados en `main`
+
+- **Evidencia de libro de órdenes:** el informe puede conservar capturas de profundidad con hash SHA-256, mejor bid/ask, spread, cantidades/notional visibles, desequilibrio descriptivo y niveles por lado. La captura representa liquidez visible en un instante; no revela órdenes ocultas ni garantiza ejecución.
+- **Corte temporal de la evidencia de libro de órdenes:** las capturas posteriores a `evaluation_as_of` se rechazan; una captura exactamente en el corte se admite. La CLI puede usar este corte con la entrada de libro de órdenes sin exigir eventos externos ni observaciones fundamentales.
+- **Consistencia del activo/cotización:** se comprueba la compatibilidad de `quote_asset` entre el mercado OHLCV principal, la evidencia de libro de órdenes y los artefactos multi-timeframe de soporte/resistencia cuando esos metadatos están presentes. La ausencia de metadatos sigue siendo compatible y no se convierte en una validación positiva de identidad.
+- **Confluencia multi-timeframe:** la tolerancia de confluencia entre marcos temporales es simétrica.
+- **Evidencia de eventos:** hay registro de fuentes, condiciones de aprobación, captura/preservación, resolución de entidad, deduplicación con revisión ante conflictos, promoción controlada de candidatos y asociación temporal configurable a movimientos. Las asociaciones siguen siendo temporales y no prueban causalidad.
+- **Frescura fundamental/on-chain:** existe una política opcional de antigüedad por métrica integrada en el informe y la CLI; observaciones obsoletas no aportan valor efectivo actual y se conservan para auditoría. Sin política declarada no se inventa una edad máxima universal.
+- **Integridad de evaluaciones:** los registros preservan hashes reproducibles; las comparaciones identifican cambios de metadatos de fuente y mantienen atribuciones conservadoras; las ventanas temporales opcionales se validan y normalizan a UTC.
+
+### PR de pruebas integrados desde la última actualización
+
+Los PR **#221–#224 y #232–#238** están integrados en `main`. Añaden cobertura para bloqueo de fuentes sin términos aprobados, disponibilidad temporal y coincidencia de identidad de eventos, corte `evaluation_as_of`, composición del informe integral, estados explícitos ante evidencia ausente, reproducibilidad de informes/registros, integridad de hashes, cambios en metadatos y ventanas temporales, e identidad explícita del mercado. Las ejecuciones de CI consultadas para los commits integrados finalizaron correctamente. Esta evidencia de pruebas no sustituye una revisión de producto ni una aprobación de términos de fuentes.
+
+### Brechas que permanecen abiertas
+
+1. **Fuentes reales autorizadas:** SEC, CFTC y Federal Reserve permanecen `TERMS_PENDING` en el registro revisado. No debe habilitarse captura persistente en vivo hasta documentar la revisión humana autorizada y el alcance exacto de uso.
+2. **Flujo E2E de producto:** no se ha demostrado todavía una API/interfaz que, a partir de un activo elegido, orqueste captura, movimientos, soportes/resistencias, liquidez, eventos y fundamentales/on-chain en un único informe de producto.
+3. **Horizontes y evaluación predictiva:** faltan pruebas reproducibles de extremo a extremo para corto/medio/largo plazo, validación walk-forward/fuera de muestra, comparación con referencias y costes, y controles contra filtración temporal y sobreajuste.
+4. **Cobertura de fuentes y activos:** la existencia de adaptadores o normalizadores aislados no demuestra cobertura universal ni calidad suficiente para cualquier criptoactivo, mercado o periodo.
+5. **Operación de producto:** no se ha demostrado persistencia central, API estable, interfaz Android/web operativa, observabilidad, recuperación/retención ni proceso de publicación de informes listo para producción.
+
+### Estado actualizado
+
+**PARCIAL EN COMPONENTES; FLUJO E2E DE PRODUCTO Y VALIDACIÓN PREDICTIVA NO DEMOSTRADOS.** Los avances fortalecen la integridad temporal, la identidad del activo y la trazabilidad de la evidencia, pero no autorizan por sí solos fuentes pendientes ni convierten asociaciones temporales en causalidad. La salida debe poder permanecer `INDETERMINATE` cuando falte evidencia suficiente.
