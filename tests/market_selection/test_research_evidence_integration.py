@@ -1,5 +1,4 @@
 import base64
-import base64
 import copy
 import hashlib
 import unittest
@@ -125,12 +124,12 @@ def event():
     with patch.dict(EVENT_SOURCE_REGISTRY["sources"], {"sec_press_releases": entry}):
         feed = capture_sec_press_releases_rss(
             record, user_agent, 5, captured_at="2026-10-20T10:01:00Z",
-            opener=FakeResponse(feed_raw, {"Content-Type": "application/rss+xml"}),
+            opener=lambda *args, **kwargs: FakeResponse(feed_raw, {"Content-Type": "application/rss+xml"}),
         )
         feed_item = feed["feed_items"][0]
         article = capture_sec_press_release_article(
             feed_item["link"], record, user_agent, 5, captured_at="2026-10-20T10:02:00Z",
-            opener=FakeResponse(article_raw, {"Content-Type": "text/html"}),
+            opener=lambda *args, **kwargs: FakeResponse(article_raw, {"Content-Type": "text/html"}),
         )
         return promote_sec_press_release_to_event(
             feed, feed_item["item_id"], article, "PROTOCOL_UPDATE", "An update was announced",
