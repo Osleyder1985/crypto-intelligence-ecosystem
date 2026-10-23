@@ -85,6 +85,19 @@ class NormalizeOrderBookProbeTests(unittest.TestCase):
                     authorization_registry={"binance_spot_market_data": {"trusted": True}},
                 )
 
+    def test_rejects_record_url_not_matching_registered_market(self):
+        artifact = probe_artifact()
+        artifact["records"][0]["url"] = "https://data-api.binance.vision/api/v3/depth?symbol=ETHUSDT&limit=100"
+        with patch(
+            "scripts.market_selection.normalize_order_book_probe.evaluate_provider_use",
+            return_value={"decision": "ALLOW", "reason_codes": []},
+        ):
+            with self.assertRaisesRegex(ValueError, "URL or asset"):
+                normalize_multi_exchange_order_book_probe(
+                    artifact, exchange="binance", symbol="BTCUSDT",
+                    authorization_registry={"binance_spot_market_data": {"trusted": True}},
+                )
+
     def test_rejects_parsed_payload_not_matching_preserved_bytes(self):
         artifact = probe_artifact()
         artifact["records"][0]["parsed_json"]["lastUpdateId"] = 999
