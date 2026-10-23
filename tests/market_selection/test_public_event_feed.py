@@ -154,13 +154,14 @@ class PublicEventFeedCaptureTests(unittest.TestCase):
             "evidence_record_base64": base64.b64encode(evidence).decode("ascii"),
             "evidence_record_sha256": hashlib.sha256(evidence).hexdigest(),
         }
-        event = promote_public_feed_candidate_to_event(
-            capture,
-            capture["feed_items"][0]["candidate_id"],
-            "REGULATORY_ENFORCEMENT",
-            "The preserved feed summary reports a regulatory announcement.",
-            resolution,
-        )
+        with patch.dict(EVENT_SOURCE_REGISTRY["sources"], {"cftc_general_press_releases": entry}):
+            event = promote_public_feed_candidate_to_event(
+                capture,
+                capture["feed_items"][0]["candidate_id"],
+                "REGULATORY_ENFORCEMENT",
+                "The preserved feed summary reports a regulatory announcement.",
+                resolution,
+            )
         self.assertEqual(event["source_id"], "cftc_general_press_releases")
         self.assertEqual(event["entities"], [{"id_type": "coingecko_id", "id": "example-asset"}])
         self.assertFalse(event["causality_claimed"])
@@ -189,14 +190,15 @@ class PublicEventFeedCaptureTests(unittest.TestCase):
             "evidence_record_base64": base64.b64encode(evidence).decode("ascii"),
             "evidence_record_sha256": hashlib.sha256(evidence).hexdigest(),
         }
-        with self.assertRaisesRegex(ValueError, "stable identifier"):
-            promote_public_feed_candidate_to_event(
-                capture,
-                capture["feed_items"][0]["candidate_id"],
-                "REGULATORY_ENFORCEMENT",
-                "Explicit claim from the preserved feed.",
-                resolution,
-            )
+        with patch.dict(EVENT_SOURCE_REGISTRY["sources"], {"cftc_general_press_releases": entry}):
+            with self.assertRaisesRegex(ValueError, "stable identifier"):
+                promote_public_feed_candidate_to_event(
+                    capture,
+                    capture["feed_items"][0]["candidate_id"],
+                    "REGULATORY_ENFORCEMENT",
+                    "Explicit claim from the preserved feed.",
+                    resolution,
+                )
 
     def test_future_publication_timestamp_is_flagged_against_capture_cutoff(self):
         entry = approved_source()
