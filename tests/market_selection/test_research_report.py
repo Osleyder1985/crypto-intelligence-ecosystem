@@ -475,6 +475,32 @@ class ResearchReportTests(unittest.TestCase):
                     build_research_report(self.source, invalid, "BTC")
 
 
+    def test_rejects_multi_timeframe_support_resistance_with_mismatched_quote_asset(self):
+        rows = [
+            candle(0, 10, 11, 9, 10),
+            candle(1, 10, 11, 8, 9),
+            candle(2, 9, 10, 7, 8),
+            candle(3, 8, 9, 8, 8.5),
+            candle(4, 8.5, 10, 8, 9.5),
+        ]
+        one_hour = artifact(rows)
+        four_hour = artifact([dict(row) for row in rows])
+        four_hour["market"]["interval"] = "4h"
+        four_hour["market"]["quote_asset"] = "USDC"
+        for index, row in enumerate(four_hour["candles"]):
+            row["open_time_ms"] = index * 14_400_000
+            row["close_time_ms"] = (index + 1) * 14_400_000 - 1
+        with patch("scripts.market_selection.research_report.evaluate_artifact_use", return_value={
+            "decision": "ALLOW", "reason_codes": ["SYNTHETIC_TEST_GATE_ONLY"],
+        }), patch("scripts.market_selection.analyze_support_resistance.evaluate_artifact_use", return_value={
+            "decision": "ALLOW", "reason_codes": ["SYNTHETIC_TEST_GATE_ONLY"],
+        }):
+            with self.assertRaisesRegex(ValueError, "quote asset"):
+                build_research_report(
+                    one_hour, config(), "BTC",
+                    multi_timeframe_support_resistance_artifacts=[one_hour, four_hour],
+                )
+
     def test_integrates_multi_timeframe_support_resistance_into_report(self):
         rows = [
             candle(0, 10, 11, 9, 10),
