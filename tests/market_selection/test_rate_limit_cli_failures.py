@@ -43,7 +43,7 @@ class TestStructuredRateLimitFailure(unittest.TestCase):
                        side_effect=RateLimitCoordinationError("private database path must not leak")), \
                  patch("scripts.market_selection.capture_public_event_feed.urlopen") as network, \
                  patch("scripts.market_selection.capture_public_event_feed._open_allowlisted_url") as article_network:
-                self.assertEqual(capture_public_event_feed.main(), 0)
+                self.assertEqual(capture_public_event_feed.main(), 2)
             network.assert_not_called()
             article_network.assert_not_called()
             self._assert_failure_artifact(output)
@@ -66,7 +66,7 @@ class TestStructuredRateLimitFailure(unittest.TestCase):
                  patch("scripts.market_selection.capture_public_event_feed._wait_for_rate_slot",
                        side_effect=RateLimitCoordinationError("private database path must not leak")), \
                  patch("scripts.market_selection.capture_public_event_feed._open_allowlisted_url") as network:
-                self.assertEqual(capture_public_event_archive.main(), 0)
+                self.assertEqual(capture_public_event_archive.main(), 2)
             network.assert_not_called()
             self._assert_failure_artifact(output)
 
