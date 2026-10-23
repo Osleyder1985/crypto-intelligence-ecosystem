@@ -94,3 +94,10 @@ La base inicial implementa el catálogo versionado, validación offline y prueba
 Las métricas de concentración, desbloqueos, reservas/atestaciones, seguridad y auditorías todavía necesitan fuentes específicas y resolución de entidad por activo. El trabajo restante incluye fuentes reales autorizadas, captura reproducible, fixtures reales permitidas, cobertura/calidad por categoría, datos contradictorios, manejo de reorgs cuando aplique y verificación anti-look-ahead con timestamps de publicación/captura. La integración de observaciones en el informe E2E existe, pero la integración completa de #134 en el producto no se considera terminada mientras falten esas fuentes y validaciones.
 
 Para cerrar #134 faltan adaptadores de fuentes autorizadas, capturas históricas reales reproducibles, manejo de reorgs y datos contradictorios de proveedores, controles de cobertura/calidad por categoría, validación de los vínculos activo-protocolo y pruebas anti-look-ahead con evidencia temporal verificable.
+
+
+## Política explícita de frescura por métrica
+
+La evaluación admite un mapa opcional `freshness_policy_seconds`, indexado por ID de métrica. Si se declara una edad máxima positiva, una observación `OBSERVED` más antigua que ese umbral se excluye del valor actual y se informa como `STALE`, con su ID conservado. Si coexisten observaciones antiguas y una observación vigente, se usa solo la vigente y se mantienen visibles las IDs obsoletas. La política y los IDs afectados quedan incluidos en la salida y en la cobertura.
+
+No hay umbrales universales incorporados: el llamador debe definirlos de acuerdo con la cadencia y semántica de cada métrica. Sin una política explícita, el comportamiento anterior se conserva y no se deduce frescura solo por antigüedad.

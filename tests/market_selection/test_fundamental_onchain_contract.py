@@ -62,6 +62,67 @@ class FundamentalOnchainContractTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "unit must match catalog unit"):
             validate_observation(obs(unit="usd"))
 
+    def test_configured_freshness_policy_marks_old_observation_stale(self):
+        result = evaluate_observations(
+            [obs()],
+            asset={"category": "smart_contract_token", "stable_id": "ethereum:0xabc"},
+            evaluation_as_of="2026-10-21T00:00:00Z",
+            freshness_policy_seconds={"supply.circulating": 3600},
+        )
+        metric = result["metrics"]["supply.circulating"]
+        self.assertEqual(metric["status"], "STALE")
+        self.assertIsNone(metric["value"])
+        self.assertEqual(metric["stale_observation_ids"], ["obs-1"])
+        self.assertEqual(metric["freshness_policy_max_age_seconds"], 3600)
+        self.assertEqual(result["coverage"]["stale_observation_ids"], ["obs-1"])
+
+    def test_fresh_observation_wins_over_stale_observation_without_hiding_stale_evidence(self):
+        fresh = obs(
+            observation_id="obs-fresh",
+            value=456.0,
+            observed_at="2026-10-20T23:30:00Z",
+            captured_at="2026-10-20T23:31:00Z",
+            published_at="2026-10-20T23:29:00Z",
+        )
+        result = evaluate_observations(
+            [obs(), fresh],
+            asset={"category": "smart_contract_token", "stable_id": "ethereum:0xabc"},
+            evaluation_as_of="2026-10-21T00:00:00Z",
+            freshness_policy_seconds={"supply.circulating": 3600},
+        )
+        metric = result["metrics"]["supply.circulating"]
+        self.assertEqual(metric["status"], "OBSERVED")
+        self.assertEqual(metric["value"], 456.0)
+        self.assertEqual(metric["stale_observation_ids"], ["obs-1"])
+        self.assertEqual(metric["observation_ids"], ["obs-1", "obs-fresh"])
+
+    def test_freshness_policy_is_opt_in_and_does_not_invent_default_age_thresholds(self):
+        result = evaluate_observations(
+            [obs()],
+            asset={"category": "smart_contract_token", "stable_id": "ethereum:0xabc"},
+            evaluation_as_of="2026-10-21T00:00:00Z",
+        )
+        self.assertEqual(result["metrics"]["supply.circulating"]["status"], "OBSERVED")
+        self.assertEqual(result["metrics"]["supply.circulating"]["freshness_policy_max_age_seconds"], None)
+        self.assertEqual(result["coverage"]["freshness_policy_seconds"], {})
+
+    def test_rejects_invalid_freshness_policy(self):
+        for policy in (
+            {"unknown.metric": 3600},
+            {"supply.circulating": 0},
+            {"supply.circulating": -1},
+            {"supply.circulating": True},
+            {"supply.circulating": 1.5},
+        ):
+            with self.subTest(policy=policy):
+                with self.assertRaises(ValueError):
+                    evaluate_observations(
+                        [],
+                        asset={"category": "smart_contract_token", "stable_id": "ethereum:0xabc"},
+                        evaluation_as_of="2026-10-21T00:00:00Z",
+                        freshness_policy_seconds=policy,
+                    )
+
     def test_future_publication_is_rejected_from_asof_assessment(self):
         result = evaluate_observations(
             [obs(published_at="2026-10-22T11:00:00Z", captured_at="2026-10-22T11:01:00Z")],
