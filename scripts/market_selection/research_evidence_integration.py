@@ -226,6 +226,8 @@ def _verify_promoted_sec_event(event_record: dict, source_entry: dict, registry_
          if key.lower() == "content-type"),
         "",
     )
+    if article_capture.get("http_status") != 200:
+        raise PermissionError("event article capture did not return HTTP 200")
     if content_type not in {"text/html", "application/xhtml+xml"}:
         raise PermissionError("event article capture has an unexpected Content-Type")
     if article_capture.get("captured_at") != event_record.get("captured_at"):
