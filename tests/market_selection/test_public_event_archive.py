@@ -93,6 +93,23 @@ class PublicEventArchiveTests(unittest.TestCase):
         self.assertEqual(result["capture_status"], "BLOCKED")
         self.assertFalse(result["network_request_made"])
 
+    def test_archive_path_prefix_does_not_allow_similar_unregistered_path(self):
+        entry = approved_source()
+        bad_url = "https://www.cftc.gov/PressRoom/PressReleasesEvil?page=0"
+        with patch.dict(EVENT_SOURCE_REGISTRY["sources"], {"cftc_general_press_releases": entry}), patch(
+            "scripts.market_selection.capture_public_event_feed._open_allowlisted_url"
+        ) as network:
+            result = capture_public_event_archive_index(
+                "cftc_general_press_releases",
+                bad_url,
+                authorization_record=authorization_record(entry),
+                user_agent=USER_AGENT,
+                captured_at="2026-10-22T12:30:00Z",
+            )
+        network.assert_not_called()
+        self.assertEqual(result["capture_status"], "BLOCKED")
+        self.assertIn("ARCHIVE_URL_OUTSIDE_ALLOWLIST", result["reason_codes"])
+
     def test_archive_candidate_requires_url_title_and_date_evidence(self):
         entry = approved_source()
         archive_capture = capture_archive(entry)
