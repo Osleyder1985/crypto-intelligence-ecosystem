@@ -62,7 +62,24 @@ python -m scripts.market_selection.capture_binance_spot_research \
   --report-output artifacts/crypto-asset-research-report.json
 ```
 
-Los dos tiempos son límites UTC en milisegundos Unix; el inicio es inclusivo y el final exclusivo. El símbolo debe ser el símbolo nativo exacto de Binance Spot y `--base-asset-ticker` debe coincidir con el `baseAsset` recibido. El ejemplo no significa que los archivos de autorización o identidad ya existan o estén aprobados: deben contener evidencia real, revisada y aplicable. Sin autorización válida para `internal_analysis`, la ejecución falla antes de solicitar metadatos; una autorización de prueba técnica no basta.
+Los dos tiempos son límites UTC en milisegundos Unix; el inicio es inclusivo y el final exclusivo. Puede usarse `--symbol BTCUSDT` para identificar un par exacto, o `--asset-ticker BTC --quote-asset USDT` para resolver el par a partir del ticker. Si un ticker coincide con varios pares y no se proporciona una cotización que deje un único candidato, la ejecución falla de forma explícita en lugar de elegir arbitrariamente. `--base-asset-ticker` es opcional y, si se proporciona, se valida contra el mercado resuelto.
+
+La captura conserva la respuesta completa de `exchangeInfo` sin filtro por símbolo ni límite local de bytes, con tamaño y SHA-256. El ejemplo no significa que los archivos de autorización o identidad ya existan o estén aprobados: deben contener evidencia real, revisada y aplicable. Sin autorización válida para `internal_analysis`, la ejecución falla antes de solicitar metadatos; una autorización de prueba técnica no basta.
+
+Para resolver por ticker, el selector equivalente es:
+
+```bash
+python -m scripts.market_selection.capture_binance_spot_research \
+  --asset-ticker BTC --quote-asset USDT \
+  --interval 1h \
+  --start-time-ms <START_TIME_MS_INCLUSIVE> \
+  --end-time-ms <END_TIME_MS_EXCLUSIVE> \
+  --config configs/technical-descriptive-baseline.json \
+  --authorization-record artifacts/reviewed-binance-authorization.json \
+  --identity-evidence artifacts/reviewed-canonical-identity.json \
+  --capture-output artifacts/binance-spot-ohlcv-capture.json \
+  --report-output artifacts/crypto-asset-research-report.json
+```
 
 La configuración incluida hace reproducible un experimento descriptivo, no define horizontes temporales aprobados, no genera probabilidades predictivas ni valida rentabilidad. No debe describirse como estrategia de inversión aprobada. Los horizontes se mantienen `INDETERMINATE` mientras falten las metodologías y evidencias requeridas.
 
