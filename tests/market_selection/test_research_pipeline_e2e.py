@@ -1,7 +1,7 @@
-"""Cross-module offline E2E for technical report, order book, and event timing.
+"""Prueba E2E offline del informe, libro de órdenes, eventos y métricas fundamentales.
 
-All provider responses and source approvals are synthetic fixtures. This test
-proves pipeline wiring and fail-safe semantics, not live source authorization.
+Todas las respuestas de proveedores y autorizaciones son fixtures sintéticas.
+La prueba valida la integración y los controles conservadores, no permisos reales.
 """
 import base64
 import copy
