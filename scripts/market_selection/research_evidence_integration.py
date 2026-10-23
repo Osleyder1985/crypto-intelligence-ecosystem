@@ -586,6 +586,13 @@ def enrich_research_report(
                 episode_context["episode_observable_only_at_ms"] / 1000,
                 tz=timezone.utc,
             ).isoformat(timespec="milliseconds").replace("+00:00", "Z")
+        pre_movement_window_minutes = item.get("pre_movement_window_minutes", 0)
+        if (
+            isinstance(pre_movement_window_minutes, bool)
+            or not isinstance(pre_movement_window_minutes, int)
+            or pre_movement_window_minutes < 0
+        ):
+            raise ValueError(f"events[{index}].pre_movement_window_minutes must be a non-negative integer")
         temporal_assessment = assess_temporal_association(
             event,
             movement_start=_timestamp(window.get("start"), f"events[{index}].movement_window.start"),
@@ -593,6 +600,7 @@ def enrich_research_report(
             evaluation_as_of=cutoff,
             target_entity=item.get("target_entity") or {},
             availability_cutoff=availability_cutoff,
+            pre_movement_window_minutes=pre_movement_window_minutes,
         )
         if episode_context is not None:
             published_ms = parse_timestamp(event["published_at"], "published_at").timestamp() * 1000
