@@ -73,6 +73,26 @@ class PublicEventArchiveTests(unittest.TestCase):
         self.assertEqual(result["capture_status"], "BLOCKED")
         self.assertFalse(result["network_request_made"])
 
+    def test_archive_article_capture_blocks_before_candidate_validation_when_terms_pending(self):
+        blocked_archive = capture_public_event_archive_index(
+            "cftc_general_press_releases",
+            ARCHIVE_URL,
+            authorization_record=None,
+            user_agent=USER_AGENT,
+            captured_at="2026-10-22T12:30:00Z",
+        )
+        with patch("scripts.market_selection.capture_public_event_feed._open_allowlisted_url") as network:
+            result = capture_public_event_archive_article(
+                blocked_archive,
+                {},
+                authorization_record=None,
+                user_agent=USER_AGENT,
+                captured_at="2026-10-22T12:32:00Z",
+            )
+        network.assert_not_called()
+        self.assertEqual(result["capture_status"], "BLOCKED")
+        self.assertFalse(result["network_request_made"])
+
     def test_archive_candidate_requires_url_title_and_date_evidence(self):
         entry = approved_source()
         archive_capture = capture_archive(entry)
