@@ -14,6 +14,7 @@ from typing import Any
 from scripts.market_selection.capture_multi_exchange_spot_book_probe import (
     PROVIDER_IDS,
     SCHEMA_VERSION as PROBE_SCHEMA_VERSION,
+    build_requests,
     extract_top_of_book,
 )
 from scripts.market_selection.provider_license_gate import evaluate_provider_use
@@ -50,6 +51,15 @@ def normalize_multi_exchange_order_book_probe(
     if len(matches) != 1:
         raise ValueError(f"expected exactly one probe record for {exchange_key}:{symbol_key}; found {len(matches)}")
     record = matches[0]
+    expected_spec = next(
+        (spec for spec in build_requests()
+         if spec["exchange"] == exchange_key and spec["symbol"].upper() == symbol_key),
+        None,
+    )
+    if expected_spec is None:
+        raise ValueError(f"no registered probe request for {exchange_key}:{symbol_key}")
+    if record.get("url") != expected_spec["url"] or record.get("asset") != expected_spec["asset"]:
+        raise ValueError("selected probe record URL or asset does not match the registered request")
     if record.get("capture_status") != "PASS" or record.get("http_status") != 200:
         raise ValueError("selected probe record must be a successful HTTP 200 capture")
     if record.get("error_type") is not None:
