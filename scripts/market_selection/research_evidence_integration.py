@@ -296,11 +296,53 @@ def _verify_promoted_public_feed_event(event_record: dict, source_entry: dict, r
         registry_hash=registry_hash,
         expected_requested_url=source_entry["source_url"],
     )
-    if feed_capture.get("captured_at") != event_record.get("captured_at"):
-        raise PermissionError("event captured_at does not match generic feed capture time")
+    captures = _object(event_record.get("source_capture_assessments"), "event.source_capture_assessments")
+    article_capture = _object(captures.get("article"), "event.source_capture_assessments.article")
+    article_raw = _verify_source_capture(
+        article_capture,
+        field="event.article_capture",
+        source_entry=source_entry,
+        registry_hash=registry_hash,
+        expected_requested_url=event_url,
+    )
     metadata = _object(event_record.get("metadata"), "event.metadata")
+    if article_capture.get("candidate_id") != metadata.get("feed_candidate_id"):
+        raise PermissionError("article capture candidate ID does not match event metadata")
+    content_type = next(
+        (value.split(";", 1)[0].strip().lower() for key, value in article_capture.get("response_headers", {}).items()
+         if key.lower() == "content-type"),
+        "",
+    )
+    if article_capture.get("http_status") != 200:
+        raise PermissionError("event article capture did not return HTTP 200")
+    if content_type not in {"text/html", "application/xhtml+xml"}:
+        raise PermissionError("event article capture has an unexpected Content-Type")
+    if article_capture.get("captured_at") != event_record.get("captured_at"):
+        raise PermissionError("event captured_at does not match article capture time")
+    if parse_timestamp(article_capture.get("captured_at"), "article_capture.captured_at") < parse_timestamp(
+        feed_capture.get("captured_at"), "feed_capture.captured_at"
+    ):
+        raise PermissionError("article capture precedes feed capture")
+    final_url = article_capture.get("final_url")
+    final_parts = urlsplit(final_url) if isinstance(final_url, str) else None
+    allowed_hosts = {host.casefold() for host in source_entry.get("allowed_article_hosts", [])}
+    if (
+        final_parts is None
+        or final_parts.scheme != "https"
+        or (final_parts.hostname or "").casefold() not in allowed_hosts
+        or final_parts.port not in (None, 443)
+        or final_parts.username is not None
+        or final_parts.password is not None
+    ):
+        raise PermissionError("article final URL is outside the source allowlist")
     if metadata.get("feed_raw_response_sha256") != feed_capture.get("raw_response_sha256"):
         raise PermissionError("event feed response hash does not match preserved capture")
+    if (
+        metadata.get("article_raw_response_sha256") != article_capture.get("raw_response_sha256")
+        or event_record.get("content_sha256") != article_capture.get("raw_response_sha256")
+        or hashlib.sha256(article_raw).hexdigest() != event_record.get("content_sha256")
+    ):
+        raise PermissionError("event article hash does not match preserved article capture")
     try:
         parsed_items, _, _ = _parse_public_feed(feed_raw, source_entry)
     except (ET.ParseError, ValueError) as exc:
@@ -317,9 +359,9 @@ def _verify_promoted_public_feed_event(event_record: dict, source_entry: dict, r
         event_record.get("title") != matched.get("title")
         or event_record.get("published_at") != matched.get("published_at")
         or event_url != matched.get("url")
-        or event_record.get("content_sha256") != matched.get("item_xml_sha256")
+        or article_capture.get("requested_url") != matched.get("url")
     ):
-        raise PermissionError("event title, URL, publication time or item hash is not grounded in captured feed")
+        raise PermissionError("event title, URL, or publication time is not grounded in captured feed/article")
     if matched.get("url_status") != "ALLOWLISTED_SOURCE_HOST" or matched.get("publication_time_status") != "PARSED":
         raise PermissionError("event candidate did not pass URL and publication-time eligibility")
     mapping_b64 = metadata.get("entity_resolution_evidence_record_base64")

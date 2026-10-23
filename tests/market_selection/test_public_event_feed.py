@@ -6,7 +6,9 @@ import unittest
 from unittest.mock import patch
 
 from scripts.market_selection.capture_public_event_feed import (
+    ARTICLE_CAPTURE_SCHEMA,
     FEED_CAPTURE_SCHEMA,
+    capture_public_event_article,
     capture_public_event_feed,
 )
 from scripts.market_selection.event_source_registry import EVENT_SOURCE_REGISTRY
@@ -21,10 +23,11 @@ USER_AGENT = "CryptoIntelligenceTest/1.0 (contact: offline-test-fixture)"
 
 
 class FakeResponse:
-    def __init__(self, body, status=200, headers=None):
+    def __init__(self, body, status=200, headers=None, final_url=None):
         self.body = body
         self.status = status
         self.headers = headers or {"Content-Type": "application/rss+xml", "ETag": '"synthetic"'}
+        self.final_url = final_url
         self.offset = 0
         self.closed = False
 
@@ -37,6 +40,9 @@ class FakeResponse:
 
     def close(self):
         self.closed = True
+
+    def geturl(self):
+        return self.final_url or "https://www.cftc.gov/PressRoom/press-1"
 
     def read(self, size=-1):
         if self.offset >= len(self.body):
@@ -86,6 +92,25 @@ def feed_xml():
         b'<guid>release-3</guid><description>No published timestamp in this fixture.</description></item>'
         b'</channel></rss>'
     )
+
+
+def capture_article(entry, feed_capture, *, final_url=None, captured_at="2026-10-22T12:31:00Z"):
+    raw = b"<html><head><title>Official announcement</title></head><body>Full preserved article body.</body></html>"
+    candidate = feed_capture["feed_items"][0]
+    with patch.dict(EVENT_SOURCE_REGISTRY["sources"], {"cftc_general_press_releases": entry}), patch(
+        "scripts.market_selection.capture_public_event_feed._open_allowlisted_url",
+        return_value=FakeResponse(
+            raw, headers={"Content-Type": "text/html; charset=utf-8"}, final_url=final_url
+        ),
+    ):
+        result = capture_public_event_article(
+            feed_capture,
+            candidate["candidate_id"],
+            authorization_record(entry),
+            USER_AGENT,
+            captured_at=captured_at,
+        )
+    return result
 
 
 class PublicEventFeedCaptureTests(unittest.TestCase):
@@ -154,13 +179,20 @@ class PublicEventFeedCaptureTests(unittest.TestCase):
             "evidence_record_base64": base64.b64encode(evidence).decode("ascii"),
             "evidence_record_sha256": hashlib.sha256(evidence).hexdigest(),
         }
+        article = capture_article(entry, capture)
+        self.assertEqual(article["schema_version"], ARTICLE_CAPTURE_SCHEMA)
+        self.assertEqual(article["capture_status"], "PASS")
+        self.assertEqual(article["raw_response_sha256"], hashlib.sha256(
+            base64.b64decode(article["raw_response_base64"])
+        ).hexdigest())
         with patch.dict(EVENT_SOURCE_REGISTRY["sources"], {"cftc_general_press_releases": entry}):
             event = promote_public_feed_candidate_to_event(
                 capture,
                 capture["feed_items"][0]["candidate_id"],
                 "REGULATORY_ENFORCEMENT",
-                "The preserved feed summary reports a regulatory announcement.",
+                "The preserved article body reports a regulatory announcement.",
                 resolution,
+                article_capture=article,
             )
         self.assertEqual(event["source_id"], "cftc_general_press_releases")
         self.assertEqual(event["entities"], [{"id_type": "coingecko_id", "id": "example-asset"}])
@@ -190,14 +222,16 @@ class PublicEventFeedCaptureTests(unittest.TestCase):
             "evidence_record_base64": base64.b64encode(evidence).decode("ascii"),
             "evidence_record_sha256": hashlib.sha256(evidence).hexdigest(),
         }
+        article = capture_article(entry, capture)
         with patch.dict(EVENT_SOURCE_REGISTRY["sources"], {"cftc_general_press_releases": entry}):
             with self.assertRaisesRegex(ValueError, "stable identifier"):
                 promote_public_feed_candidate_to_event(
                     capture,
                     capture["feed_items"][0]["candidate_id"],
                     "REGULATORY_ENFORCEMENT",
-                    "Explicit claim from the preserved feed.",
+                    "Explicit claim from the preserved article.",
                     resolution,
+                    article_capture=article,
                 )
 
     def test_future_publication_timestamp_is_flagged_against_capture_cutoff(self):
@@ -296,6 +330,39 @@ class PublicEventFeedCaptureTests(unittest.TestCase):
             for reason in ("AUTHORIZATION_RECORD_INVALID", "AUTHORIZATION_TERMS_HASH_MISMATCH")
         ))
 
+
+
+    def test_article_capture_blocks_terms_pending_source_before_network(self):
+        blocked_feed = capture_public_event_feed(
+            "cftc_general_press_releases", authorization_record=None,
+            user_agent=USER_AGENT, captured_at=self.captured_at,
+        )
+        with patch("scripts.market_selection.capture_public_event_feed._open_allowlisted_url") as network:
+            result = capture_public_event_article(
+                blocked_feed, "candidate-1", authorization_record=None,
+                user_agent=USER_AGENT, captured_at="2026-10-22T12:31:00Z",
+            )
+        network.assert_not_called()
+        self.assertEqual(result["capture_status"], "BLOCKED")
+        self.assertFalse(result["network_request_made"])
+
+    def test_article_capture_blocks_off_allowlist_final_url(self):
+        entry = approved_source()
+        with patch.dict(EVENT_SOURCE_REGISTRY["sources"], {"cftc_general_press_releases": entry}), patch(
+            "scripts.market_selection.capture_public_event_feed.urlopen",
+            return_value=FakeResponse(feed_xml()),
+        ):
+            feed = capture_public_event_feed(
+                "cftc_general_press_releases",
+                authorization_record=authorization_record(entry),
+                user_agent=USER_AGENT,
+                captured_at=self.captured_at,
+            )
+        result = capture_article(
+            entry, feed, final_url="https://evil.example/redirected-article",
+        )
+        self.assertEqual(result["capture_status"], "BLOCKED_REDIRECT_TARGET")
+        self.assertIn("FINAL_URL_OUTSIDE_ALLOWLIST", result["reason_codes"])
 
 
 if __name__ == "__main__":
