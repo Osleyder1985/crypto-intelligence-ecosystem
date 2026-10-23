@@ -15,7 +15,7 @@ Ante `RateLimitCoordinationError`, los CLI de feed/artículo y de índice/artíc
 - `errors[0].type: RATE_LIMIT_COORDINATION`
 - Un mensaje estable que no revela la ruta local de SQLite ni detalles internos.
 
-El comando termina con código cero únicamente porque produjo el artefacto de captura solicitado; el estado del artefacto indica explícitamente el bloqueo. Los consumidores deben evaluar `capture_status`, no interpretar el código del proceso como una captura correcta.
+El comando escribe el artefacto auditable y termina con código de salida 2 para indicar el bloqueo. Los consumidores deben comprobar tanto el código de salida como `capture_status`; nunca debe interpretarse el bloqueo como una captura correcta.
 
 ## Seguridad y alcance
 
