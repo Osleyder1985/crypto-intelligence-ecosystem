@@ -42,6 +42,11 @@ class CombinedResearchPipelineE2ETests(unittest.TestCase):
             candle(7, 11.5, 11.8, 10.5, 11.0),
         ]
         source = artifact(candles)
+        four_hour_source = copy.deepcopy(source)
+        four_hour_source["market"]["interval"] = "4h"
+        for index, row in enumerate(four_hour_source["candles"]):
+            row["open_time_ms"] = index * 14_400_000
+            row["close_time_ms"] = (index + 1) * 14_400_000 - 1
         raw_source = json.dumps(source, ensure_ascii=False, sort_keys=True).encode("utf-8")
         identity = copy.deepcopy(identity_evidence())
         identity["stable_id"] = "example-asset"
@@ -81,6 +86,8 @@ class CombinedResearchPipelineE2ETests(unittest.TestCase):
                 order_book_authorization_registry={
                     "binance_spot_market_data": {"synthetic_fixture_only": True},
                 },
+                multi_timeframe_support_resistance_artifacts=[source, four_hour_source],
+                multi_timeframe_confluence_tolerance_bps=25,
             )
 
         analyses = report["descriptive_analyses"]
@@ -89,6 +96,17 @@ class CombinedResearchPipelineE2ETests(unittest.TestCase):
         self.assertEqual(analyses["order_book"]["status"], "DESCRIPTIVE_SNAPSHOT")
         self.assertEqual(analyses["order_book"]["book"]["best_bid"], "10.9")
         self.assertEqual(analyses["order_book"]["book"]["best_ask"], "11.1")
+        multi = analyses["support_resistance_multi_timeframe"]
+        self.assertEqual(multi["timeframe_count"], 2)
+        self.assertEqual(
+            multi["cross_timeframe_confluence"],
+            "COMPUTED_BY_EXPLICIT_PRICE_TOLERANCE",
+        )
+        self.assertTrue(multi["confluence_groups"])
+        self.assertEqual(
+            {timeframe["interval"] for timeframe in multi["timeframes"]},
+            {"1h", "4h"},
+        )
 
         episode = analyses["movement_episodes"]["episodes"][0]
         source_entry = approved_generic_source()
