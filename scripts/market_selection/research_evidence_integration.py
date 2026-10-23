@@ -50,7 +50,10 @@ def _timestamp(value: Any, field: str) -> str:
 def _epoch_ms_iso(value: Any, field: str) -> str:
     if isinstance(value, bool) or not isinstance(value, int) or value < 0:
         raise ValueError(f"{field} must be a non-negative integer epoch timestamp in milliseconds")
-    return datetime.fromtimestamp(value / 1000, tz=timezone.utc).isoformat().replace("+00:00", "Z")
+    try:
+        return datetime.fromtimestamp(value / 1000, tz=timezone.utc).isoformat().replace("+00:00", "Z")
+    except (OverflowError, OSError, ValueError) as exc:
+        raise ValueError(f"{field} is outside the supported timestamp range") from exc
 
 
 
@@ -358,8 +361,6 @@ def enrich_research_report(
         if episode_id is not None:
             if not isinstance(episode_id, str) or not episode_id.strip():
                 raise ValueError(f"events[{index}].episode_id must be a non-empty string")
-            if item.get("movement_window") is not None:
-                raise ValueError(f"events[{index}] must provide episode_id or movement_window, not both")
             descriptive = report.get("descriptive_analyses")
             descriptive = descriptive if isinstance(descriptive, dict) else {}
             episode_output = descriptive.get("movement_episodes")
@@ -378,6 +379,14 @@ def enrich_research_report(
                 "start": _epoch_ms_iso(start_pivot.get("pivot_open_time_ms"), f"episode {episode_id}.start.pivot_open_time_ms"),
                 "end": _epoch_ms_iso(end_pivot.get("pivot_open_time_ms"), f"episode {episode_id}.end.pivot_open_time_ms"),
             }
+            # An explicit window may include a documented pre/post-event search interval.
+            # No default lookback is invented; the caller owns that methodology decision.
+            if item.get("movement_window") is not None:
+                explicit_window = _object(item.get("movement_window"), f"events[{index}].movement_window")
+                window = {
+                    "start": _timestamp(explicit_window.get("start"), f"events[{index}].movement_window.start"),
+                    "end": _timestamp(explicit_window.get("end"), f"events[{index}].movement_window.end"),
+                }
             observable_at = linked_episode.get("episode_observable_only_at_ms")
             if isinstance(observable_at, bool) or not isinstance(observable_at, int) or observable_at < 0:
                 raise ValueError(f"episode {episode_id} has invalid observable timestamp")
