@@ -8,6 +8,7 @@ import argparse
 import hashlib
 import json
 import math
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 
@@ -42,6 +43,77 @@ def _require_text(value: Any, field: str) -> str:
 
 def _sha256(raw: bytes) -> str:
     return hashlib.sha256(raw).hexdigest()
+
+
+def _utc_timestamp_ms(value: Any) -> int | None:
+    if not isinstance(value, str) or not value.strip():
+        return None
+    try:
+        parsed = datetime.fromisoformat(value.strip().replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    if parsed.tzinfo is None:
+        return None
+    return int(parsed.timestamp() * 1000)
+
+
+def _measure_candle_freshness(artifact: dict) -> dict:
+    """Measure age at capture without inventing a fresh/stale threshold."""
+    candles = artifact.get("candles")
+    if not isinstance(candles, list):
+        return {
+            "status": "INDETERMINATE",
+            "reason_code": "CANDLE_LIST_MISSING",
+            "freshness_policy_status": "NOT_APPROVED",
+            "freshness_conclusion": "NOT_ASSESSED",
+            "age_ms_at_capture": None,
+            "latest_closed_candle_close_time_ms": None,
+            "latest_closed_candle_captured_at_utc": None,
+        }
+    eligible = [
+        candle for candle in candles
+        if isinstance(candle, dict)
+        and candle.get("closed_at_capture") is True
+        and candle.get("eligible_for_closed_candle_analysis") is True
+        and isinstance(candle.get("close_time_ms"), int)
+        and not isinstance(candle.get("close_time_ms"), bool)
+    ]
+    if not eligible:
+        return {
+            "status": "INDETERMINATE",
+            "reason_code": "NO_CLOSED_CANDLE_ELIGIBLE_AT_CAPTURE",
+            "freshness_policy_status": "NOT_APPROVED",
+            "freshness_conclusion": "NOT_ASSESSED",
+            "age_ms_at_capture": None,
+            "latest_closed_candle_close_time_ms": None,
+            "latest_closed_candle_captured_at_utc": None,
+        }
+    latest = max(eligible, key=lambda candle: candle["close_time_ms"])
+    captured_at = latest.get("captured_at_utc")
+    captured_at_ms = _utc_timestamp_ms(captured_at)
+    close_time_ms = latest["close_time_ms"]
+    if captured_at_ms is None:
+        status = "INDETERMINATE"
+        reason = "CANDLE_CAPTURE_TIMESTAMP_MISSING_OR_INVALID"
+        age_ms = None
+    elif captured_at_ms < close_time_ms:
+        status = "INVALID"
+        reason = "CAPTURE_TIMESTAMP_PRECEDES_CANDLE_CLOSE"
+        age_ms = None
+    else:
+        status = "MEASURED"
+        reason = "AGE_MEASURED_NO_APPROVED_FRESHNESS_THRESHOLD"
+        age_ms = captured_at_ms - close_time_ms
+    return {
+        "status": status,
+        "reason_code": reason,
+        "freshness_policy_status": "NOT_APPROVED",
+        "freshness_conclusion": "NOT_ASSESSED",
+        "age_ms_at_capture": age_ms,
+        "latest_closed_candle_close_time_ms": close_time_ms,
+        "latest_closed_candle_captured_at_utc": captured_at,
+        "measurement_basis": "capture timestamp minus latest eligible closed candle close time",
+    }
 
 
 def _validate_config(config: dict) -> dict:
@@ -180,6 +252,7 @@ def build_research_report(
         },
     }
     input_capture_status = artifact.get("overall_status")
+    freshness_observation = _measure_candle_freshness(artifact)
     candles = artifact.get("candles")
     captured_payload_count = len(candles) if isinstance(candles, list) else None
     requested_count = artifact.get("requested_open_candle_count")
@@ -290,6 +363,7 @@ def build_research_report(
             "schema_version": artifact["schema_version"],
             "capture_status": input_capture_status,
             "historical_coverage": historical_coverage,
+            "freshness_observation": freshness_observation,
             "provider_use_assessment": artifact.get("provider_use_assessment"),
             "downstream_use_assessment": downstream_use,
             **source_integrity,
