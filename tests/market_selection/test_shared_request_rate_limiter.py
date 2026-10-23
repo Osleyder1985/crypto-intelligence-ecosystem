@@ -74,14 +74,31 @@ class SharedRequestRateLimiterTests(unittest.TestCase):
 
     def test_invalid_rate_is_rejected(self):
         with tempfile.TemporaryDirectory() as directory:
-            with self.assertRaisesRegex(RateLimitCoordinationError, "positive number"):
-                wait_for_rate_slot(
-                    "synthetic_source",
-                    0,
-                    Path(directory) / "rate.sqlite3",
-                    sleep=lambda _delay: None,
-                    clock=lambda: 1.0,
-                )
+            for rate in (0, -1):
+                with self.subTest(rate=rate):
+                    with self.assertRaisesRegex(RateLimitCoordinationError, "positive number"):
+                        wait_for_rate_slot(
+                            "synthetic_source",
+                            rate,
+                            Path(directory) / f"rate-{rate}.sqlite3",
+                            sleep=lambda _delay: None,
+                            clock=lambda: 1.0,
+                        )
+
+    def test_non_finite_rates_are_rejected_before_ledger_access(self):
+        with tempfile.TemporaryDirectory() as directory:
+            for rate in (float("nan"), float("inf"), float("-inf"), 10**10000):
+                with self.subTest(rate=str(rate)):
+                    database = Path(directory) / f"rate-{len(list(Path(directory).iterdir()))}.sqlite3"
+                    with self.assertRaisesRegex(RateLimitCoordinationError, "finite positive number"):
+                        wait_for_rate_slot(
+                            "synthetic_source",
+                            rate,
+                            database,
+                            sleep=lambda _delay: None,
+                            clock=lambda: 1.0,
+                        )
+                    self.assertFalse(database.exists())
 
 
 if __name__ == "__main__":
