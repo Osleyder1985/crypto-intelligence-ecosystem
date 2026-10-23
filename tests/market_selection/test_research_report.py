@@ -429,5 +429,71 @@ class ResearchReportTests(unittest.TestCase):
                     build_research_report(self.source, invalid, "BTC")
 
 
+    def test_integrates_matching_order_book_snapshot_into_report(self):
+        order_book = {
+            "schema_version": "crypto-spot-order-book-snapshot-v1",
+            "capture_status": "PASS",
+            "provider_use_assessment": {
+                "schema_version": ASSESSMENT_SCHEMA_VERSION,
+                "policy_version": POLICY_VERSION,
+                "provider_id": "binance_spot_market_data",
+                "use_case": "internal_analysis",
+                "decision": "ALLOW",
+                "reason_codes": ["SYNTHETIC_TEST_GATE_ONLY"],
+                "authorization": {
+                    "authorized_use_cases": ["internal_analysis"],
+                    "authorization_record_sha256": "b" * 64,
+                },
+            },
+            "market": {"exchange": "binance", "symbol_native": "BTCUSDT", "quote_asset": "USDT"},
+            "captured_at_utc": "2026-10-22T00:00:00Z",
+            "bids": [["9.4", "10"], ["9.3", "20"]],
+            "asks": [["9.6", "8"], ["9.7", "12"]],
+        }
+        with patch(
+            "scripts.market_selection.analyze_order_book_snapshot.evaluate_artifact_use",
+            return_value={"decision": "ALLOW", "reason_codes": ["SYNTHETIC_TEST_GATE_ONLY"]},
+        ):
+            report = build_research_report(
+                self.source, config(), "BTC", self.raw, order_book_artifact=order_book,
+            )
+        book = report["descriptive_analyses"]["order_book"]
+        self.assertEqual(book["status"], "DESCRIPTIVE_SNAPSHOT")
+        self.assertEqual(book["market"]["symbol_native"], "BTCUSDT")
+        self.assertEqual(book["book"]["best_bid"], "9.4")
+        self.assertEqual(book["book"]["best_ask"], "9.6")
+        self.assertFalse(book["orders_submitted"])
+
+    def test_rejects_order_book_for_different_market(self):
+        order_book = {
+            "schema_version": "crypto-spot-order-book-snapshot-v1",
+            "capture_status": "PASS",
+            "provider_use_assessment": {
+                "schema_version": ASSESSMENT_SCHEMA_VERSION,
+                "policy_version": POLICY_VERSION,
+                "provider_id": "binance_spot_market_data",
+                "use_case": "internal_analysis",
+                "decision": "ALLOW",
+                "reason_codes": ["SYNTHETIC_TEST_GATE_ONLY"],
+                "authorization": {
+                    "authorized_use_cases": ["internal_analysis"],
+                    "authorization_record_sha256": "b" * 64,
+                },
+            },
+            "market": {"exchange": "binance", "symbol_native": "ETHUSDT", "quote_asset": "USDT"},
+            "captured_at_utc": "2026-10-22T00:00:00Z",
+            "bids": [["9.4", "10"]],
+            "asks": [["9.6", "8"]],
+        }
+        with patch(
+            "scripts.market_selection.analyze_order_book_snapshot.evaluate_artifact_use",
+            return_value={"decision": "ALLOW", "reason_codes": ["SYNTHETIC_TEST_GATE_ONLY"]},
+        ):
+            with self.assertRaisesRegex(ValueError, "must match the OHLCV report market"):
+                build_research_report(
+                    self.source, config(), "BTC", self.raw, order_book_artifact=order_book,
+                )
+
+
 if __name__ == "__main__":
     unittest.main()
