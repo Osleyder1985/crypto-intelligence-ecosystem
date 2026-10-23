@@ -129,7 +129,7 @@ class Issue132ArchiveEndToEndTests(unittest.TestCase):
         self.assertFalse(episode["causality_claimed"])
         self.assertEqual(coverage["coverage_status"], "COMPLETE_FOR_DECLARED_SCOPE")
         self.assertFalse(coverage["global_archive_exhaustiveness_claimed"])
-        self.assertEqual(coverage["captured_segments"][0]["page_index"], 1)
+        self.assertEqual(coverage["segments"][0]["page_index"], 1)
 
 
 if __name__ == "__main__":
