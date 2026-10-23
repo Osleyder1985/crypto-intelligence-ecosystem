@@ -371,3 +371,16 @@ Esta comprobación se limita a páginas HTML públicas de índices y páginas de
 ### Límite y conclusión
 
 La consulta web de páginas públicas no constituye captura de datos de las fuentes ni reemplaza la preservación de evidencia de política exigida por la matriz. No se calcularon hashes de páginas de políticas porque no se preservaron sus bytes como artefactos; no inventar hashes a partir de resultados de búsqueda o texto extraído. No se cambió el registro operativo, no se ejecutó E2E ni backfill y no se cambió ningún estado `TERMS_PENDING`.
+
+
+## 16. Control de una posible atribución incorrecta del límite SEC — 2026-10-23
+
+La revisión de la documentación oficial detectó un punto que debe resolverse antes de activar `sec_press_releases`:
+
+- La FAQ de SEC Webmaster menciona un máximo de 10 solicitudes por segundo para acceso programático a **EDGAR**. La documentación consultada no permite atribuir automáticamente ese mismo límite al feed RSS `https://www.sec.gov/news/pressreleases.rss`.
+- La entrada actual `sec_press_releases` de `scripts/market_selection/event_source_registry.py` declara `max_requests_per_second: 10`. Aunque el origen permanece `TERMS_PENDING` y el acceso está bloqueado, ese valor no debe presentarse como una condición oficial específica del RSS sin evidencia adicional.
+- Antes de aprobar la fuente, la matriz debe distinguir explícitamente: (a) límite oficial aplicable al endpoint exacto, cuando esté documentado; (b) límite interno conservador elegido por el proyecto, identificado como política propia; y (c) límite agregado efectivo del despliegue. No usar el valor de EDGAR como sustituto de los otros dos.
+- No se debe activar la fuente ni aumentar la frecuencia de solicitudes a partir de esta observación. Si no se encuentra una regla específica para el RSS, documentar la incertidumbre y elegir una política operativa conservadora explícitamente etiquetada como interna, tras completar la revisión de acceso.
+- Este hallazgo es documental y preventivo: no se modificó el registro operativo ni se hizo tráfico externo.
+
+**Criterio pendiente para `sec_press_releases`:** resolver la procedencia del límite configurado, actualizar la documentación o el registro cuando corresponda, y probar el control agregado solo tras la aprobación individual de la fuente.
