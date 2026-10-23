@@ -98,9 +98,9 @@ class Issue132ArchiveEndToEndTests(unittest.TestCase):
                         "direction": "BEARISH",
                         "classification": "OBSERVED",
                         "segment_index": 0,
-                        "start": {"pivot_open_time_ms": 1792486800000},
-                        "end": {"pivot_open_time_ms": 1792494000000},
-                        "episode_observable_only_at_ms": 1792495800000,
+                        "start": {"pivot_open_time_ms": 1792666800000},
+                        "end": {"pivot_open_time_ms": 1792674000000},
+                        "episode_observable_only_at_ms": 1792674060000,
                     }],
                 },
             }
