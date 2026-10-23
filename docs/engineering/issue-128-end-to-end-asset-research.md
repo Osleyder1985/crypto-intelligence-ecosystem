@@ -34,10 +34,10 @@ El siguiente incremento debe cerrar bloqueadores con evidencia verificable; no d
 ### Incremento de libro de órdenes (integración descriptiva)
 
 - **Analizador:** `scripts/market_selection/analyze_order_book_snapshot.py`.
-- **Entrada:** `crypto-spot-order-book-snapshot-v1`, con `capture_status=PASS`, mercado, timestamp, niveles `bids/asks` y evaluación de autorización válida para `internal_analysis`.
-- **Integración:** `research_report.py --order-book-artifact PATH`. El exchange y el símbolo deben coincidir exactamente con el mercado del informe; un artefacto de otro mercado se rechaza.
+- **Entrada:** `crypto-spot-order-book-snapshot-v1`, con `capture_status=PASS`, `provider_id`, mercado, timestamp y niveles `bids/asks`. La autorización se resuelve fuera del artefacto mediante un registro confiable de despliegue.
+- **Integración:** `research_report.py --order-book-artifact PATH --provider-authorization-registry PATH`. El segundo archivo debe ser configuración confiable controlada por el despliegue, nunca un registro aportado por el usuario o incluido dentro de la instantánea. El exchange y el símbolo deben coincidir con el mercado del informe.
 - **Salida:** `descriptive_analyses.order_book`; calcula mejor bid/ask, precio medio, spread absoluto y en puntos básicos, cantidades visibles, nocional visible e imbalance descriptivo. Conserva todos los niveles recibidos en el artefacto.
-- **Fail-closed:** si la autorización para análisis interno no está acreditada, la integración falla; la autorización para una prueba técnica en vivo no se considera permiso para análisis interno ni persistencia.
+- **Fail-closed:** el módulo ignora cualquier autorización embebida en la instantánea y resuelve `provider_id` exclusivamente contra el registro confiable suministrado por el despliegue. Si falta autorización explícita para análisis interno, la integración falla; una prueba técnica en vivo no autoriza análisis interno ni persistencia.
 - **Límites:** el módulo analiza una instantánea ya normalizada; no la obtiene automáticamente desde los capturadores multi-exchange ni sustituye el libro local sincronizado de WebSocket. No clasifica órdenes como «muros» con umbrales inventados, no detecta órdenes ocultas, no promete liquidez ejecutable y no envía órdenes. Si no se suministra la instantánea, el informe marca `NOT_PROVIDED`.
 
 ## 1. Resultado de producto
