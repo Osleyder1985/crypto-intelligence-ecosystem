@@ -576,6 +576,50 @@ class ResearchReportTests(unittest.TestCase):
         self.assertEqual(book["book"]["best_ask"], "9.6")
         self.assertFalse(book["orders_submitted"])
 
+    def test_rejects_order_book_snapshot_captured_after_evaluation_cutoff(self):
+        order_book = {
+            "schema_version": "crypto-spot-order-book-snapshot-v1",
+            "capture_status": "PASS",
+            "provider_id": "binance_spot_market_data",
+            "market": {"exchange": "binance", "symbol_native": "BTCUSDT", "quote_asset": "USDT"},
+            "captured_at_utc": "2026-10-22T00:00:00Z",
+            "bids": [["9.4", "10"]],
+            "asks": [["9.6", "8"]],
+        }
+        with patch(
+            "scripts.market_selection.analyze_order_book_snapshot.evaluate_provider_use",
+            return_value={"decision": "ALLOW", "reason_codes": ["SYNTHETIC_TEST_GATE_ONLY"]},
+        ):
+            with self.assertRaisesRegex(ValueError, "captured after evaluation_as_of cutoff"):
+                build_research_report(
+                    self.source, config(), "BTC", self.raw,
+                    order_book_artifact=order_book,
+                    order_book_authorization_registry={"binance_spot_market_data": {"trusted": True}},
+                    evaluation_as_of="2026-10-21T23:59:59Z",
+                )
+
+    def test_order_book_snapshot_at_evaluation_cutoff_is_allowed(self):
+        order_book = {
+            "schema_version": "crypto-spot-order-book-snapshot-v1",
+            "capture_status": "PASS",
+            "provider_id": "binance_spot_market_data",
+            "market": {"exchange": "binance", "symbol_native": "BTCUSDT", "quote_asset": "USDT"},
+            "captured_at_utc": "2026-10-22T00:00:00Z",
+            "bids": [["9.4", "10"]],
+            "asks": [["9.6", "8"]],
+        }
+        with patch(
+            "scripts.market_selection.analyze_order_book_snapshot.evaluate_provider_use",
+            return_value={"decision": "ALLOW", "reason_codes": ["SYNTHETIC_TEST_GATE_ONLY"]},
+        ):
+            report = build_research_report(
+                self.source, config(), "BTC", self.raw,
+                order_book_artifact=order_book,
+                order_book_authorization_registry={"binance_spot_market_data": {"trusted": True}},
+                evaluation_as_of="2026-10-22T00:00:00Z",
+            )
+        self.assertEqual(report["descriptive_analyses"]["order_book"]["captured_at_utc"], "2026-10-22T00:00:00Z")
+
     def test_external_evidence_integration_requires_reviewed_canonical_identity(self):
         with self.assertRaisesRegex(ValueError, "reviewed canonical asset identity"):
             build_research_report(
