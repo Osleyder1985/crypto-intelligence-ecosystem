@@ -1,7 +1,8 @@
 # Informe integrado de investigación — contrato inicial de Issue #130
 
 - **Estado:** primer contrato técnico propuesto; no es una recomendación de inversión ni el cierre de Issue #128.
-- **Implementación:** `scripts/market_selection/research_report.py`, `scripts/market_selection/canonical_asset_identity.py`.
+- **Implementación:** `scripts/market_selection/research_report.py`, `scripts/market_selection/canonical_asset_identity.py` y `scripts/market_selection/capture_binance_spot_research.py` (captura de solo lectura más composición del informe).
+- **Configuración de ejemplo:** `configs/technical-descriptive-baseline.json` (experimental; sus parámetros no están aprobados como señal de inversión).
 - **Pruebas:** `tests/market_selection/test_research_report.py`, `tests/market_selection/test_canonical_asset_identity.py`.
 - **Schema de salida:** `crypto-asset-research-report-v2`.
 - **Entrada:** artefacto preservado `binance-spot-ohlcv-capture-v1` y archivo de configuración de metodología con parámetros explícitos.
@@ -16,7 +17,9 @@ El orquestador reutiliza los analizadores existentes para generar un único arte
 - resultados separados para `short`, `medium` y `long`;
 - limitaciones, estados y causas de abstención.
 
-El CLI es offline: no descarga datos ni busca noticias. Recibe un artefacto histórico, configuración y, si existe, evidencia canónica revisada. No busca por sí mismo nombres/tickers ni sustituye la futura API/interfaz; sin evidencia de identidad, el resultado permanece parcial.
+`research_report.py` es offline: no descarga datos ni busca noticias. Recibe un artefacto histórico, configuración y, si existe, evidencia canónica revisada. Por separado, `capture_binance_spot_research.py` ya implementa una secuencia de solo lectura que captura `exchangeInfo` para un símbolo nativo exacto, obtiene velas OHLCV y llama al generador de informes. No resuelve por sí mismo un nombre/ticker ambiguo ni sustituye una futura API/interfaz.
+
+La captura en vivo está sometida al control `provider_license_gate`: `live_technical_test` permite una prueba técnica, pero no habilita el análisis interno. Para generar un informe desde una captura en vivo, `internal_analysis` exige un registro de autorización válido para ese proveedor y uso; la disponibilidad pública de un endpoint no demuestra por sí sola una licencia. No se debe inventar ni reutilizar una autorización sintética como permiso real. La identidad canónica también requiere evidencia única, revisada y vinculada al activo base. Si falta cualquiera de estas condiciones, el flujo debe bloquearse o entregar un informe parcial/indeterminado, nunca eludir el control.
 
 ## Reglas conservadoras
 
@@ -33,6 +36,28 @@ El CLI es offline: no descarga datos ni busca noticias. Recibe un artefacto hist
 
 Para intentar resolver identidad canónica, proporciona un archivo `crypto-canonical-asset-identity-v1` revisado mediante `--identity-evidence` y declara el tipo del identificador con `--asset-id-type`. Sin esa evidencia, el informe permanece parcial aunque el ticker coincida con `base_asset`.
 
+## Captura y evaluación integrada desde Binance Spot
+
+Con los requisitos de autorización y de identidad ya satisfechos mediante evidencias reales revisadas, el flujo integrado se invoca así:
+
+```bash
+python -m scripts.market_selection.capture_binance_spot_research \
+  --symbol BTCUSDT \
+  --base-asset-ticker BTC \
+  --interval 1h \
+  --start-time-ms <START_TIME_MS_INCLUSIVE> \
+  --end-time-ms <END_TIME_MS_EXCLUSIVE> \
+  --config configs/technical-descriptive-baseline.json \
+  --authorization-record artifacts/reviewed-binance-authorization.json \
+  --identity-evidence artifacts/reviewed-canonical-identity.json \
+  --capture-output artifacts/binance-spot-ohlcv-capture.json \
+  --report-output artifacts/crypto-asset-research-report.json
+```
+
+Los dos tiempos son límites UTC en milisegundos Unix; el inicio es inclusivo y el final exclusivo. El símbolo debe ser el símbolo nativo exacto de Binance Spot y `--base-asset-ticker` debe coincidir con el `baseAsset` recibido. El ejemplo no significa que los archivos de autorización o identidad ya existan o estén aprobados: deben contener evidencia real, revisada y aplicable. Sin autorización válida para `internal_analysis`, la ejecución falla antes de solicitar metadatos; una autorización de prueba técnica no basta.
+
+La configuración incluida hace reproducible un experimento descriptivo, no define horizontes temporales aprobados, no genera probabilidades predictivas ni valida rentabilidad. No debe describirse como estrategia de inversión aprobada. Los horizontes se mantienen `INDETERMINATE` mientras falten las metodologías y evidencias requeridas.
+
 
 ```bash
 python -m scripts.market_selection.research_report \
@@ -47,7 +72,7 @@ El archivo de configuración debe contener `methodology_id`, `methodology_versio
 
 ## Limitaciones pendientes
 
-- No captura ni selecciona por sí mismo las fuentes históricas.
+- El generador offline no captura ni selecciona por sí mismo las fuentes históricas; el capturador integrado actual cubre solamente metadatos de mercado y OHLCV de Binance Spot.
 - No ingiere noticias, anuncios, regulación ni eventos on-chain.
 - No tiene metodología de horizontes aprobada y no emite tesis de inversión.
 - No hay persistencia central, API, UI, autenticación ni multiusuario.
