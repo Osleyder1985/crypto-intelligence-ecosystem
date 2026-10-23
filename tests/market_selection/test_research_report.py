@@ -176,7 +176,14 @@ class ResearchReportTests(unittest.TestCase):
         ), patch(
             "scripts.market_selection.capture_binance_spot_research.capture_history",
             return_value=self.source,
-        ) as candles:
+        ) as candles, patch(
+            "scripts.market_selection.research_report.evaluate_artifact_use",
+            return_value={
+                "decision": "ALLOW",
+                "reason_codes": ["SYNTHETIC_TEST_GATE_ONLY"],
+                "authorization_evidence_status": "SYNTHETIC_TEST_GATE_ONLY",
+            },
+        ):
             captured, report = capture_and_build_report(
                 symbol=None,
                 base_asset_ticker="BTC",
