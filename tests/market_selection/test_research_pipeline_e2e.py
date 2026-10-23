@@ -3,19 +3,30 @@
 All provider responses and source approvals are synthetic fixtures. This test
 proves pipeline wiring and fail-safe semantics, not live source authorization.
 """
+import base64
 import copy
+import hashlib
 import json
 import unittest
 from unittest.mock import patch
 
+from scripts.market_selection.capture_public_event_feed import (
+    capture_public_event_feed,
+    promote_public_feed_candidate_to_event,
+)
 from scripts.market_selection.event_source_registry import EVENT_SOURCE_REGISTRY
 from scripts.market_selection.research_report import build_research_report
 from scripts.market_selection.research_evidence_integration import enrich_research_report
 
-from test_research_report import artifact, candle, config, identity_evidence
-from test_research_evidence_integration import (
-    approved_event_source, event, methodology,
+from test_public_event_feed import (
+    FakeResponse as GenericFeedFakeResponse,
+    USER_AGENT as GENERIC_FEED_USER_AGENT,
+    approved_source as approved_generic_source,
+    authorization_record as generic_authorization_record,
+    feed_xml as generic_feed_xml,
 )
+from test_research_report import artifact, candle, config, identity_evidence
+from test_research_evidence_integration import methodology
 
 
 class CombinedResearchPipelineE2ETests(unittest.TestCase):
@@ -80,10 +91,39 @@ class CombinedResearchPipelineE2ETests(unittest.TestCase):
         self.assertEqual(analyses["order_book"]["book"]["best_ask"], "11.1")
 
         episode = analyses["movement_episodes"]["episodes"][0]
-        source_entry = approved_event_source()
+        source_entry = approved_generic_source()
+        mapping_evidence = b'{"asset":"example-asset","mapping":"reviewed synthetic fixture"}'
+        entity_resolution = {
+            "status": "APPROVED",
+            "reviewed_by": "offline-test-fixture",
+            "reviewed_at": "2026-10-22T12:20:00Z",
+            "entities": [{"id_type": "coingecko_id", "id": "example-asset"}],
+            "evidence_record_base64": base64.b64encode(mapping_evidence).decode("ascii"),
+            "evidence_record_sha256": hashlib.sha256(mapping_evidence).hexdigest(),
+        }
         with patch.dict(
             EVENT_SOURCE_REGISTRY["sources"],
-            {"sec_press_releases": source_entry},
+            {"cftc_general_press_releases": source_entry},
+        ), patch(
+            "scripts.market_selection.capture_public_event_feed.urlopen",
+            return_value=GenericFeedFakeResponse(generic_feed_xml()),
+        ):
+            feed_capture = capture_public_event_feed(
+                "cftc_general_press_releases",
+                authorization_record=generic_authorization_record(source_entry),
+                user_agent=GENERIC_FEED_USER_AGENT,
+                captured_at="2026-10-22T12:30:00Z",
+            )
+            promoted_event = promote_public_feed_candidate_to_event(
+                feed_capture,
+                feed_capture["feed_items"][0]["candidate_id"],
+                "REGULATORY_ENFORCEMENT",
+                "The preserved synthetic feed summary reports a regulatory announcement.",
+                entity_resolution,
+            )
+        with patch.dict(
+            EVENT_SOURCE_REGISTRY["sources"],
+            {"cftc_general_press_releases": source_entry},
         ), patch(
             "scripts.market_selection.research_evidence_integration.evaluate_artifact_use",
             return_value={"decision": "ALLOW", "reason_codes": ["SYNTHETIC_TEST_GATE_ONLY"]},
@@ -91,7 +131,7 @@ class CombinedResearchPipelineE2ETests(unittest.TestCase):
             enriched = enrich_research_report(
                 report,
                 events=[{
-                    "event": event(),
+                    "event": promoted_event,
                     "target_entity": {
                         "id_type": "coingecko_id",
                         "id": "example-asset",
