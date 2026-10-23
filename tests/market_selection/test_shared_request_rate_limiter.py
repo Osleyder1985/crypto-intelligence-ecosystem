@@ -1,5 +1,6 @@
 """Pruebas sintéticas del limitador persistente de solicitudes."""
 from concurrent.futures import ProcessPoolExecutor
+import math
 import sqlite3
 import tempfile
 from pathlib import Path
@@ -73,15 +74,17 @@ class SharedRequestRateLimiterTests(unittest.TestCase):
                 )
 
     def test_invalid_rate_is_rejected(self):
-        with tempfile.TemporaryDirectory() as directory:
-            with self.assertRaisesRegex(RateLimitCoordinationError, "positive number"):
-                wait_for_rate_slot(
-                    "synthetic_source",
-                    0,
-                    Path(directory) / "rate.sqlite3",
-                    sleep=lambda _delay: None,
-                    clock=lambda: 1.0,
-                )
+        for invalid_rate in (0, -1, math.nan, math.inf, -math.inf):
+            with self.subTest(requests_per_second=invalid_rate):
+                with tempfile.TemporaryDirectory() as directory:
+                    with self.assertRaisesRegex(RateLimitCoordinationError, "finite positive number"):
+                        wait_for_rate_slot(
+                            "synthetic_source",
+                            invalid_rate,
+                            Path(directory) / "rate.sqlite3",
+                            sleep=lambda _delay: None,
+                            clock=lambda: 1.0,
+                        )
 
 
 if __name__ == "__main__":
