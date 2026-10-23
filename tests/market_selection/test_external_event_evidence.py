@@ -148,6 +148,24 @@ class ExternalEventEvidenceTests(unittest.TestCase):
         self.assertEqual(result["causality_label"], "CAUSE_UNIDENTIFIED")
         self.assertFalse(result["causality_claimed"])
 
+    def test_late_capture_is_excluded_at_decision_time_even_in_later_retrospective_review(self):
+        value = event(
+            published_at="2026-10-22T10:00:00Z",
+            captured_at="2026-10-22T13:00:00Z",
+        )
+        result = assess_temporal_association(
+            value,
+            movement_start="2026-10-22T09:00:00Z",
+            movement_end="2026-10-22T11:00:00Z",
+            evaluation_as_of="2026-10-23T00:00:00Z",
+            availability_cutoff="2026-10-22T11:00:00Z",
+            target_entity={"id_type": "coingecko_id", "id": "example-coin"},
+        )
+        self.assertEqual(result["status"], "NOT_AVAILABLE_AT_DECISION_TIME")
+        self.assertEqual(result["causality_label"], "CAUSE_UNIDENTIFIED")
+        self.assertEqual(result["availability_cutoff"], "2026-10-22T11:00:00Z")
+        self.assertFalse(result["causality_claimed"])
+
     def test_overlap_is_only_temporal_association_not_causality(self):
         result = assess_temporal_association(
             event(),
