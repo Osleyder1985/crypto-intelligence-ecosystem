@@ -221,6 +221,29 @@ def event():
         )
 
 
+def fact_review_for(event_record, decision="VERIFIED_PRIMARY_SOURCE", reviewed_at="2026-10-20T10:04:00Z", evidence_refs=None):
+    refs = evidence_refs or [{
+        "url": event_record["source"]["url"],
+        "role": "PRIMARY_SOURCE",
+        "publisher": "SEC",
+    }]
+    review_record = {
+        "schema_version": "crypto-event-fact-review-v1",
+        "event_id": event_record["event_id"],
+        "decision": decision,
+        "reviewed_by": "offline-fact-reviewer",
+        "reviewed_at": reviewed_at,
+        "rationale": "Synthetic reviewer rationale; this fixture is not a real fact verification.",
+        "evidence_refs": refs,
+    }
+    raw = json.dumps(review_record, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    return {
+        **review_record,
+        "evidence_record_base64": base64.b64encode(raw).decode("ascii"),
+        "evidence_record_sha256": hashlib.sha256(raw).hexdigest(),
+    }
+
+
 class ResearchEvidenceIntegrationTests(unittest.TestCase):
     def test_event_for_different_stable_entity_does_not_support_movement_episode(self):
         enriched_report = report()
@@ -1089,6 +1112,113 @@ class ResearchEvidenceIntegrationTests(unittest.TestCase):
                         "target_entity": {"id_type": "coingecko_id", "id": "example-asset"},
                         "movement_window": {"start": "2026-10-20T09:00:00Z", "end": "2026-10-20T09:59:00Z"},
                         "post_movement_window_minutes": True,
+                    }],
+                    observations=[], methodology=methodology(),
+                    asset={"stable_id": "example-asset", "category": "smart_contract_token"},
+                    evaluation_as_of="2026-10-21T00:00:00Z",
+                )
+
+
+
+    def test_fact_verification_is_not_inferred_from_article_or_temporal_proximity(self):
+        event_record = event()
+        with patch.dict(EVENT_SOURCE_REGISTRY["sources"], {"sec_press_releases": approved_event_source()}):
+            enriched = enrich_research_report(
+                report(),
+                events=[{
+                    "event": event_record,
+                    "target_entity": {"id_type": "coingecko_id", "id": "example-asset"},
+                    "movement_window": {"start": "2026-10-20T09:00:00Z", "end": "2026-10-20T11:00:00Z"},
+                }],
+                observations=[], methodology=methodology(),
+                asset={"stable_id": "example-asset", "category": "smart_contract_token"},
+                evaluation_as_of="2026-10-21T00:00:00Z",
+            )
+        assessment = enriched["external_event_evidence"]["assessments"][0]
+        self.assertEqual(assessment["causality_label"], "TEMPORAL_ASSOCIATION")
+        self.assertEqual(assessment["fact_verification"]["effective_decision"], "NOT_REVIEWED")
+        self.assertFalse(assessment["fact_verification"]["available_as_of"])
+
+    def test_valid_primary_source_fact_review_is_reported_separately_from_causality(self):
+        event_record = event()
+        event_record["metadata"]["fact_review"] = fact_review_for(event_record)
+        with patch.dict(EVENT_SOURCE_REGISTRY["sources"], {"sec_press_releases": approved_event_source()}):
+            enriched = enrich_research_report(
+                report(),
+                events=[{
+                    "event": event_record,
+                    "target_entity": {"id_type": "coingecko_id", "id": "example-asset"},
+                    "movement_window": {"start": "2026-10-20T09:00:00Z", "end": "2026-10-20T11:00:00Z"},
+                }],
+                observations=[], methodology=methodology(),
+                asset={"stable_id": "example-asset", "category": "smart_contract_token"},
+                evaluation_as_of="2026-10-21T00:00:00Z",
+            )
+        assessment = enriched["external_event_evidence"]["assessments"][0]
+        self.assertEqual(assessment["fact_verification"]["effective_decision"], "VERIFIED_PRIMARY_SOURCE")
+        self.assertEqual(assessment["causality_label"], "TEMPORAL_ASSOCIATION")
+        self.assertFalse(assessment["causality_claimed"])
+
+    def test_fact_review_after_evaluation_cutoff_is_not_used_as_historical_knowledge(self):
+        event_record = event()
+        event_record["metadata"]["fact_review"] = fact_review_for(
+            event_record, reviewed_at="2026-10-22T10:04:00Z",
+        )
+        with patch.dict(EVENT_SOURCE_REGISTRY["sources"], {"sec_press_releases": approved_event_source()}):
+            enriched = enrich_research_report(
+                report(),
+                events=[{
+                    "event": event_record,
+                    "target_entity": {"id_type": "coingecko_id", "id": "example-asset"},
+                    "movement_window": {"start": "2026-10-20T09:00:00Z", "end": "2026-10-20T11:00:00Z"},
+                }],
+                observations=[], methodology=methodology(),
+                asset={"stable_id": "example-asset", "category": "smart_contract_token"},
+                evaluation_as_of="2026-10-21T00:00:00Z",
+            )
+        fact = enriched["external_event_evidence"]["assessments"][0]["fact_verification"]
+        self.assertEqual(fact["decision"], "VERIFIED_PRIMARY_SOURCE")
+        self.assertEqual(fact["effective_decision"], "NOT_AVAILABLE_AS_OF")
+        self.assertFalse(fact["available_as_of"])
+
+    def test_fact_review_rejects_tampered_evidence_hash(self):
+        event_record = event()
+        review = fact_review_for(event_record)
+        review["evidence_record_sha256"] = "0" * 64
+        event_record["metadata"]["fact_review"] = review
+        with patch.dict(EVENT_SOURCE_REGISTRY["sources"], {"sec_press_releases": approved_event_source()}):
+            with self.assertRaisesRegex(PermissionError, "SHA-256 mismatch"):
+                enrich_research_report(
+                    report(),
+                    events=[{
+                        "event": event_record,
+                        "target_entity": {"id_type": "coingecko_id", "id": "example-asset"},
+                        "movement_window": {"start": "2026-10-20T09:00:00Z", "end": "2026-10-20T11:00:00Z"},
+                    }],
+                    observations=[], methodology=methodology(),
+                    asset={"stable_id": "example-asset", "category": "smart_contract_token"},
+                    evaluation_as_of="2026-10-21T00:00:00Z",
+                )
+
+    def test_conflicting_fact_review_requires_two_distinct_sources(self):
+        event_record = event()
+        event_record["metadata"]["fact_review"] = fact_review_for(
+            event_record,
+            decision="CONFLICTING_SOURCES",
+            evidence_refs=[{
+                "url": event_record["source"]["url"],
+                "role": "PRIMARY_SOURCE",
+                "publisher": "SEC",
+            }],
+        )
+        with patch.dict(EVENT_SOURCE_REGISTRY["sources"], {"sec_press_releases": approved_event_source()}):
+            with self.assertRaisesRegex(ValueError, "at least two distinct URLs"):
+                enrich_research_report(
+                    report(),
+                    events=[{
+                        "event": event_record,
+                        "target_entity": {"id_type": "coingecko_id", "id": "example-asset"},
+                        "movement_window": {"start": "2026-10-20T09:00:00Z", "end": "2026-10-20T11:00:00Z"},
                     }],
                     observations=[], methodology=methodology(),
                     asset={"stable_id": "example-asset", "category": "smart_contract_token"},
