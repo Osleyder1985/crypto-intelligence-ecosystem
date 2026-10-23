@@ -373,14 +373,33 @@ Esta comprobación se limita a páginas HTML públicas de índices y páginas de
 La consulta web de páginas públicas no constituye captura de datos de las fuentes ni reemplaza la preservación de evidencia de política exigida por la matriz. No se calcularon hashes de páginas de políticas porque no se preservaron sus bytes como artefactos; no inventar hashes a partir de resultados de búsqueda o texto extraído. No se cambió el registro operativo, no se ejecutó E2E ni backfill y no se cambió ningún estado `TERMS_PENDING`.
 
 
-## 16. Control de una posible atribución incorrecta del límite SEC — 2026-10-23
+## 16. Verificación de límites y acceso automatizado SEC — 2026-10-23
 
-La revisión de la documentación oficial detectó un punto que debe resolverse antes de activar `sec_press_releases`:
+La revisión cruzada de las páginas oficiales precisa la interpretación del límite de solicitudes SEC:
 
-- La FAQ de SEC Webmaster menciona un máximo de 10 solicitudes por segundo para acceso programático a **EDGAR**. La documentación consultada no permite atribuir automáticamente ese mismo límite al feed RSS `https://www.sec.gov/news/pressreleases.rss`.
-- La entrada actual `sec_press_releases` de `scripts/market_selection/event_source_registry.py` declara `max_requests_per_second: 10`. Aunque el origen permanece `TERMS_PENDING` y el acceso está bloqueado, ese valor no debe presentarse como una condición oficial específica del RSS sin evidencia adicional.
-- Antes de aprobar la fuente, la matriz debe distinguir explícitamente: (a) límite oficial aplicable al endpoint exacto, cuando esté documentado; (b) límite interno conservador elegido por el proyecto, identificado como política propia; y (c) límite agregado efectivo del despliegue. No usar el valor de EDGAR como sustituto de los otros dos.
-- No se debe activar la fuente ni aumentar la frecuencia de solicitudes a partir de esta observación. Si no se encuentra una regla específica para el RSS, documentar la incertidumbre y elegir una política operativa conservadora explícitamente etiquetada como interna, tras completar la revisión de acceso.
-- Este hallazgo es documental y preventivo: no se modificó el registro operativo ni se hizo tráfico externo.
+- La página oficial [SEC Web Site Privacy and Security Policy](https://www.sec.gov/about/privacy-information) indica que SEC.gov limita el acceso automatizado a un total de no más de 10 solicitudes por segundo, independientemente del número de máquinas que las generen, y advierte que las herramientas automatizadas no clasificadas no están permitidas.
+- La FAQ de SEC Webmaster menciona también un máximo de 10 solicitudes por segundo para acceso programático a EDGAR. Esa referencia de EDGAR no debe ser la única justificación del límite del RSS; la política general de SEC.gov es la referencia más amplia para el control agregado del sitio.
+- Por tanto, el valor `max_requests_per_second: 10` del registro tiene apoyo en la política general publicada de SEC.gov como techo agregado, pero no demuestra por sí solo que el adaptador cumpla el requisito de clasificación de bot, el User-Agent ni cualquier instrucción específica adicional aplicable al feed.
+- Antes de activar `sec_press_releases` o `sec_press_release_archive`, el despliegue debe usar un User-Agent identificable/revisado, coordinar el límite global entre procesos y máquinas que compartan la salida de red y revisar cualquier instrucción específica del endpoint. El control debe fallar de forma segura si no puede demostrar el límite agregado.
+- El límite de 10 solicitudes por segundo es un máximo publicado, no una frecuencia objetivo ni una recomendación para emitir solicitudes continuamente. El proyecto puede adoptar un límite interno inferior, etiquetado como política propia y con su justificación.
 
-**Criterio pendiente para `sec_press_releases`:** resolver la procedencia del límite configurado, actualizar la documentación o el registro cuando corresponda, y probar el control agregado solo tras la aprobación individual de la fuente.
+Fuentes oficiales:
+- https://www.sec.gov/about/privacy-information
+- https://www.sec.gov/about/developer-resources
+- https://www.sec.gov/files/about/webmaster-faq.htm
+
+Este ajuste corrige la trazabilidad documental; no cambia estados, no habilita captura y no constituye una captura preservada de las páginas de políticas. Los seis orígenes continúan `TERMS_PENDING` hasta completar sus expedientes verificables y la configuración operativa requerida.
+
+## 17. Estado de la autorización funcional y decisiones de proveedor
+
+El propietario del proyecto ya autorizó expresamente avanzar con las seis fuentes y no debe volver a solicitarse esa misma autorización. La autorización está registrada en el [Issue #132](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/issues/132).
+
+Esta decisión permite continuar la implementación y la validación técnica dentro del alcance funcional del proyecto. No debe confundirse con una licencia de terceros, una aprobación emitida por los organismos fuente o evidencia de que cualquier modalidad de acceso automatizado y persistencia esté permitida.
+
+- **SEC (feed y archivo):** la política general de SEC.gov publica un límite agregado de 10 solicitudes/segundo y prohíbe herramientas automatizadas no clasificadas; antes de habilitar, debe demostrarse User-Agent identificable y limitador agregado compartido.
+- **CFTC RSS:** no solicitar mientras el aviso oficial indique que los feeds están temporalmente deshabilitados. El archivo HTML es una fuente distinta, con su propia revisión de rutas, frecuencia y cobertura.
+- **Federal Reserve (feed y archivo):** conservar atribución al Board y excluir/aislar recursos identificados como material de terceros sin evidencia específica de permiso.
+- **Las seis fuentes:** mantener separadas las decisiones sobre metadatos, texto oficial, HTML completo, adjuntos, persistencia, retención y redistribución. No inventar un plazo de retención cuando las políticas consultadas no establezcan uno.
+- **Evidencia técnica pendiente:** preservar los bytes reales de las páginas de políticas revisadas, calcular sus SHA-256 sobre esos bytes, registrar metadatos de captura y actualizar el registro únicamente con evidencia verificable.
+
+La autorización del propietario no vuelve disponibles los endpoints ni elimina restricciones de terceros. No se ha ejecutado captura de feeds, descarga de artículos ni backfill como parte de esta revisión.
