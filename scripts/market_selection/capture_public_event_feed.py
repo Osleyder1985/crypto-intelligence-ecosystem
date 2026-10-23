@@ -34,6 +34,7 @@ from scripts.market_selection.external_event_evidence import (
 )
 from scripts.market_selection.provider_license_gate import (
     ASSESSMENT_SCHEMA_VERSION,
+    POLICY_VERSION,
     evaluate_artifact_use,
     evaluate_provider_use,
 )
