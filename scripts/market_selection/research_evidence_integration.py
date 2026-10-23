@@ -351,6 +351,7 @@ def enrich_research_report(
     asset: dict,
     evaluation_as_of: str,
     provider_authorization_registry: dict | None = None,
+    fundamental_freshness_policy_seconds: dict[str, int] | None = None,
 ) -> dict:
     """Validate and attach supplied evidence while retaining fail-closed decision states.
 
@@ -522,6 +523,7 @@ def enrich_research_report(
         observations,
         asset={"stable_id": stable_id.strip(), "category": category.strip()},
         evaluation_as_of=cutoff,
+        freshness_policy_seconds=fundamental_freshness_policy_seconds,
     )
 
     horizons = report.get("horizons")
@@ -645,12 +647,20 @@ def main() -> int:
     parser.add_argument("--asset-stable-id", required=True)
     parser.add_argument("--asset-category", required=True)
     parser.add_argument("--evaluation-as-of", required=True)
+    parser.add_argument(
+        "--fundamental-freshness-policy", type=Path,
+        help="Optional JSON object mapping metric IDs to maximum observation age in seconds",
+    )
     parser.add_argument("--output", required=True, type=Path)
     args = parser.parse_args()
     report = json.loads(args.report.read_text(encoding="utf-8"))
     events = json.loads(args.events.read_text(encoding="utf-8"))
     observations = json.loads(args.observations.read_text(encoding="utf-8"))
     methodology = json.loads(args.methodology.read_text(encoding="utf-8"))
+    freshness_policy = (
+        json.loads(args.fundamental_freshness_policy.read_text(encoding="utf-8"))
+        if args.fundamental_freshness_policy is not None else None
+    )
     enriched = enrich_research_report(
         report,
         events=events,
@@ -658,6 +668,7 @@ def main() -> int:
         methodology=methodology,
         asset={"stable_id": args.asset_stable_id, "category": args.asset_category},
         evaluation_as_of=args.evaluation_as_of,
+        fundamental_freshness_policy_seconds=freshness_policy,
     )
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(enriched, ensure_ascii=False, indent=2, sort_keys=True, allow_nan=False) + "\n", encoding="utf-8")
