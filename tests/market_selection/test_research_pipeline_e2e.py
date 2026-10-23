@@ -25,6 +25,7 @@ from test_public_event_feed import (
     approved_source as approved_generic_source,
     authorization_record as generic_authorization_record,
     feed_xml as generic_feed_xml,
+    capture_article as capture_generic_article,
 )
 from test_research_report import artifact, candle, config, identity_evidence
 from test_research_evidence_integration import (
@@ -139,12 +140,14 @@ class CombinedResearchPipelineE2ETests(unittest.TestCase):
                 user_agent=GENERIC_FEED_USER_AGENT,
                 captured_at="2026-10-22T12:30:00Z",
             )
+            article_capture = capture_generic_article(source_entry, feed_capture)
             promoted_event = promote_public_feed_candidate_to_event(
                 feed_capture,
                 feed_capture["feed_items"][0]["candidate_id"],
                 "REGULATORY_ENFORCEMENT",
-                "The preserved synthetic feed summary reports a regulatory announcement.",
+                "The preserved synthetic article body reports a regulatory announcement.",
                 entity_resolution,
+                article_capture=article_capture,
             )
         with patch.dict(
             EVENT_SOURCE_REGISTRY["sources"],
