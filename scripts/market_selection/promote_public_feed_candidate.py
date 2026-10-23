@@ -23,9 +23,11 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--event-type", required=True,
                         help="Explicit event taxonomy label; no causality is inferred")
     parser.add_argument("--claim", required=True,
-                        help="Explicit claim grounded in the preserved feed metadata")
+                        help="Explicit claim grounded in the preserved article body")
     parser.add_argument("--entity-resolution", required=True, type=Path,
                         help="Reviewed entity-resolution JSON including stable IDs and evidence bytes/hash")
+    parser.add_argument("--article-capture", required=True, type=Path,
+                        help="Complete authorized crypto-public-event-article-capture-v1 JSON for this candidate")
     parser.add_argument("--output", required=True, type=Path,
                         help="Output path for the promoted validated event JSON")
     args = parser.parse_args(argv)
@@ -33,6 +35,7 @@ def main(argv: list[str] | None = None) -> int:
     try:
         capture = json.loads(args.capture.read_text(encoding="utf-8"))
         resolution = json.loads(args.entity_resolution.read_text(encoding="utf-8"))
+        article_capture = json.loads(args.article_capture.read_text(encoding="utf-8"))
     except (OSError, UnicodeDecodeError, json.JSONDecodeError) as exc:
         parser.error(f"cannot read valid UTF-8 JSON input: {exc}")
 
@@ -42,6 +45,7 @@ def main(argv: list[str] | None = None) -> int:
         args.event_type,
         args.claim,
         resolution,
+        article_capture=article_capture,
     )
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(
