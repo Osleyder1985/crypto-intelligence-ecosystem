@@ -11,6 +11,7 @@ from scripts.market_selection.horizon_assessment_contract import (
     ASSESSMENT_SCHEMA,
     validate_horizon_assessment,
 )
+from scripts.market_selection.methodology_contract import METHODOLOGY_SCHEMA, validate_methodology
 from scripts.market_selection.research_report import REPORT_SCHEMA
 
 INTEGRATION_SCHEMA = "crypto-research-report-horizon-assessment-integration-v1"
@@ -20,8 +21,10 @@ def attach_horizon_assessment(
     report: object,
     assessment: object,
     *,
+    methodology: object,
     report_bytes: bytes | None = None,
     assessment_bytes: bytes | None = None,
+    methodology_bytes: bytes | None = None,
 ) -> dict:
     """Attach a validated assessment without overwriting the report's baseline conclusions."""
     if not isinstance(report, dict):
@@ -70,16 +73,39 @@ def attach_horizon_assessment(
     if validated["asset_id"] != asset_id.strip():
         raise ValueError("assessment.asset_id must exactly match report.requested_asset_id")
 
+    validated_methodology = validate_methodology(methodology)
+    if validated_methodology["schema_version"] != METHODOLOGY_SCHEMA:
+        raise ValueError(f"methodology.schema_version must be {METHODOLOGY_SCHEMA}")
+    if validated_methodology["status"] != "APPROVED":
+        raise ValueError("methodology.status must be APPROVED to attach a horizon assessment")
+    if validated_methodology["methodology_id"] != validated["methodology_id"]:
+        raise ValueError("assessment.methodology_id must match the approved methodology")
+    if validated_methodology["version"] != validated["methodology_version"]:
+        raise ValueError("assessment.methodology_version must match the approved methodology")
+    if methodology_bytes is None:
+        methodology_bytes = json.dumps(methodology, sort_keys=True, separators=(",", ":"), ensure_ascii=False, allow_nan=False).encode("utf-8")
+    elif not isinstance(methodology_bytes, bytes):
+        raise ValueError("methodology_bytes must be bytes")
+    else:
+        try:
+            if json.loads(methodology_bytes.decode("utf-8")) != methodology:
+                raise ValueError("methodology_bytes do not match the supplied methodology object")
+        except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+            raise ValueError("methodology_bytes must contain the same UTF-8 JSON methodology") from exc
+
     enriched = dict(report)
     enriched["horizon_assessment"] = {
         "integration_schema": INTEGRATION_SCHEMA,
         "status": "VALIDATED_ASSESSMENT_ATTACHED",
         "source_report_sha256": hashlib.sha256(report_bytes).hexdigest(),
         "source_assessment_sha256": hashlib.sha256(assessment_bytes).hexdigest(),
+        "source_methodology_sha256": hashlib.sha256(methodology_bytes).hexdigest(),
+        "approved_methodology": {"methodology_id": validated_methodology["methodology_id"], "version": validated_methodology["version"], "status": validated_methodology["status"]},
         "assessment": validated,
         "interpretation": (
             "This appendix preserves independent horizon assessments without aggregating them "
             "or replacing the report's baseline horizon statuses, decision_status, or order state. "
+            "The methodology record is marked APPROVED and matches the assessment id/version, but this adapter does not independently audit the approver or approval evidence. "
             "Contract validation does not establish predictive utility or investment suitability."
         ),
     }
@@ -100,12 +126,15 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--report", required=True, type=Path, help="Existing crypto-asset-research-report-v2 JSON")
     parser.add_argument("--assessment", required=True, type=Path, help="JSON assessment with separate short/medium/long horizons")
+    parser.add_argument("--methodology", required=True, type=Path, help="Metodología versionada con estado APPROVED y aprobación documentada")
     parser.add_argument("--output", required=True, type=Path, help="Output path; existing assessment evidence is never overwritten")
     args = parser.parse_args()
     report, report_raw = _read_json(args.report)
     assessment, assessment_raw = _read_json(args.assessment)
+    methodology, methodology_raw = _read_json(args.methodology)
     enriched = attach_horizon_assessment(
-        report, assessment, report_bytes=report_raw, assessment_bytes=assessment_raw
+        report, assessment, methodology=methodology, report_bytes=report_raw,
+        assessment_bytes=assessment_raw, methodology_bytes=methodology_raw,
     )
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(

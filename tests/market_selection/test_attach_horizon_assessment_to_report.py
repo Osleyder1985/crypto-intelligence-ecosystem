@@ -9,6 +9,7 @@ from scripts.market_selection.attach_horizon_assessment_to_report import (
     attach_horizon_assessment,
 )
 from scripts.market_selection.horizon_assessment_contract import ASSESSMENT_SCHEMA
+from scripts.market_selection.methodology_contract import METHODOLOGY_SCHEMA
 from scripts.market_selection.research_report import REPORT_SCHEMA
 
 
@@ -69,6 +70,35 @@ def assessment():
     }
 
 
+def approved_methodology(*, status="APPROVED", methodology_id="spot-forward-return", version="1.0.0"):
+    record = {
+        "schema_version": METHODOLOGY_SCHEMA,
+        "methodology_id": methodology_id,
+        "version": version,
+        "status": status,
+        "created_at": "2026-10-01T00:00:00Z",
+        "horizons": {
+            "short": {"target_window_seconds": 3600, "target": "return", "target_unit": "fraction", "description": "Fixture de corto plazo"},
+            "medium": {"target_window_seconds": 86400, "target": "return", "target_unit": "fraction", "description": "Fixture de medio plazo"},
+            "long": {"target_window_seconds": 604800, "target": "return", "target_unit": "fraction", "description": "Fixture de largo plazo"},
+        },
+        "target_definition": {"formula": "close_end / close_start - 1", "price_source": "synthetic-fixture", "sampling_rule": "closed candle"},
+        "threshold_policy": {"status": "APPROVED", "approval_evidence": "Fixture sintético; no es una aprobación real", "favorable_threshold": 0.05, "unfavorable_threshold": -0.05},
+        "validation": {"walk_forward": True, "out_of_sample": True, "leakage_checks": True, "splits": [{"train_end": "2026-01-01T00:00:00Z", "test_start": "2026-01-02T00:00:00Z", "test_end": "2026-01-03T00:00:00Z"}]},
+        "cost_model": {
+            "fees": {"status": "NOT_AVAILABLE", "basis_points": None},
+            "spread": {"status": "NOT_AVAILABLE", "basis_points": None},
+            "slippage": {"status": "NOT_AVAILABLE", "basis_points": None},
+            "funding_or_borrow": {"status": "NOT_APPLICABLE", "basis_points": None, "reason": "Fixture spot-only"},
+            "other": {"status": "NOT_AVAILABLE", "basis_points": None},
+        },
+        "features": [{"feature_id": "closed-candle-return", "source_id": "spot-ohlcv", "availability_timestamp_field": "captured_at", "transformation_version": "return-v1"}],
+    }
+    if status == "APPROVED":
+        record["approval"] = {"approved_by": "synthetic-test-reviewer", "approved_at": "2026-10-01T00:00:00Z", "evidence_url": "https://example.org/synthetic-approval-fixture"}
+    return record
+
+
 def report():
     return {
         "schema_version": REPORT_SCHEMA,
@@ -86,7 +116,7 @@ def report():
 class AttachHorizonAssessmentTests(unittest.TestCase):
     def test_attaches_independent_horizons_without_aggregation_or_decision_change(self):
         original = report()
-        result = attach_horizon_assessment(original, assessment())
+        result = attach_horizon_assessment(original, assessment(), methodology=approved_methodology())
         attached = result["horizon_assessment"]
         self.assertEqual(attached["integration_schema"], INTEGRATION_SCHEMA)
         self.assertEqual(attached["status"], "VALIDATED_ASSESSMENT_ATTACHED")
@@ -103,61 +133,79 @@ class AttachHorizonAssessmentTests(unittest.TestCase):
         original, item = report(), assessment()
         report_raw = json.dumps(original, sort_keys=True).encode("utf-8")
         assessment_raw = json.dumps(item, sort_keys=True).encode("utf-8")
-        result = attach_horizon_assessment(original, item, report_bytes=report_raw, assessment_bytes=assessment_raw)
+        method = approved_methodology()
+        method_raw = json.dumps(method, sort_keys=True).encode("utf-8")
+        result = attach_horizon_assessment(
+            original, item, methodology=method, report_bytes=report_raw,
+            assessment_bytes=assessment_raw, methodology_bytes=method_raw,
+        )
         attached = result["horizon_assessment"]
         self.assertEqual(attached["source_report_sha256"], hashlib.sha256(report_raw).hexdigest())
         self.assertEqual(attached["source_assessment_sha256"], hashlib.sha256(assessment_raw).hexdigest())
+        self.assertEqual(attached["source_methodology_sha256"], hashlib.sha256(method_raw).hexdigest())
+
+    def test_rejects_draft_methodology(self):
+        with self.assertRaisesRegex(ValueError, "must be APPROVED"):
+            attach_horizon_assessment(report(), assessment(), methodology=approved_methodology(status="DRAFT"))
+
+    def test_rejects_methodology_id_mismatch(self):
+        with self.assertRaisesRegex(ValueError, "methodology_id must match"):
+            attach_horizon_assessment(report(), assessment(), methodology=approved_methodology(methodology_id="other-method"))
+
+    def test_rejects_methodology_version_mismatch(self):
+        with self.assertRaisesRegex(ValueError, "methodology_version must match"):
+            attach_horizon_assessment(report(), assessment(), methodology=approved_methodology(version="2.0.0"))
 
     def test_rejects_asset_mismatch(self):
         item = assessment()
         item["asset_id"] = "binance:ETHUSDT"
         with self.assertRaisesRegex(ValueError, "exactly match"):
-            attach_horizon_assessment(report(), item)
+            attach_horizon_assessment(report(), item, methodology=approved_methodology())
 
     def test_rejects_wrong_report_schema(self):
         item = report()
         item["schema_version"] = "unknown"
         with self.assertRaisesRegex(ValueError, "schema_version"):
-            attach_horizon_assessment(item, assessment())
+            attach_horizon_assessment(item, assessment(), methodology=approved_methodology())
 
     def test_rejects_non_indeterminate_report(self):
         item = report()
         item["decision_status"] = "FAVORABLE"
         with self.assertRaisesRegex(ValueError, "only INDETERMINATE"):
-            attach_horizon_assessment(item, assessment())
+            attach_horizon_assessment(item, assessment(), methodology=approved_methodology())
 
     def test_rejects_order_submission_claim(self):
         item = report()
         item["orders_submitted"] = True
         with self.assertRaisesRegex(ValueError, "orders_submitted must be false"):
-            attach_horizon_assessment(item, assessment())
+            attach_horizon_assessment(item, assessment(), methodology=approved_methodology())
 
     def test_refuses_to_overwrite_existing_assessment(self):
         item = report()
         item["horizon_assessment"] = {"status": "EXISTING"}
         with self.assertRaisesRegex(ValueError, "refusing to overwrite"):
-            attach_horizon_assessment(item, assessment())
+            attach_horizon_assessment(item, assessment(), methodology=approved_methodology())
 
     def test_rejects_mismatched_raw_bytes(self):
         with self.assertRaisesRegex(ValueError, "report_bytes do not match"):
-            attach_horizon_assessment(report(), assessment(), report_bytes=b'{"wrong": true}')
+            attach_horizon_assessment(report(), assessment(), methodology=approved_methodology(), report_bytes=b'{"wrong": true}')
 
     def test_rejects_feature_after_data_cutoff(self):
         item = assessment()
         item["horizons"]["short"]["factors"][0]["captured_at"] = "2026-10-20T10:00:01Z"
         with self.assertRaisesRegex(ValueError, "not available at data_as_of"):
-            attach_horizon_assessment(report(), item)
+            attach_horizon_assessment(report(), item, methodology=approved_methodology())
 
     def test_rejects_abstention_with_non_indeterminate_conclusion(self):
         item = assessment()
         item["horizons"]["short"]["decision_mode"] = "ABSTAIN"
         item["horizons"]["short"]["abstention_reasons"] = ["Evidencia insuficiente"]
         with self.assertRaisesRegex(ValueError, "must be INDETERMINATE"):
-            attach_horizon_assessment(report(), item)
+            attach_horizon_assessment(report(), item, methodology=approved_methodology())
 
     def test_rejects_non_object_report(self):
         with self.assertRaisesRegex(ValueError, "report must be a JSON object"):
-            attach_horizon_assessment([], assessment())
+            attach_horizon_assessment([], assessment(), methodology=approved_methodology())
 
 
 if __name__ == "__main__":

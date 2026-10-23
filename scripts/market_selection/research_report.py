@@ -539,6 +539,7 @@ def main() -> int:
     parser.add_argument("--evidence-asset-category", help="Explicit category for evidence evaluation, e.g. native_l1 or smart_contract_token")
     parser.add_argument("--evaluation-as-of", help="Explicit ISO-8601 availability cutoff for supplied external evidence and/or order-book snapshot")
     parser.add_argument("--horizon-assessment", type=Path, help="Optional validated crypto-investment-horizon-assessment-v1 JSON to attach without changing baseline conclusions")
+    parser.add_argument("--horizon-methodology", type=Path, help="Versioned APPROVED methodology matching the horizon assessment; required with --horizon-assessment")
     parser.add_argument("--output", required=True, type=Path, help="Path to the research report JSON")
     args = parser.parse_args()
 
@@ -573,6 +574,10 @@ def main() -> int:
     fundamental_observations = json.loads(args.fundamental_observations.read_text(encoding="utf-8")) if args.fundamental_observations else None
     horizon_assessment_raw = args.horizon_assessment.read_bytes() if args.horizon_assessment else None
     horizon_assessment = json.loads(horizon_assessment_raw.decode("utf-8")) if horizon_assessment_raw is not None else None
+    horizon_methodology_raw = args.horizon_methodology.read_bytes() if args.horizon_methodology else None
+    horizon_methodology = json.loads(horizon_methodology_raw.decode("utf-8")) if horizon_methodology_raw is not None else None
+    if (horizon_assessment_raw is None) != (horizon_methodology_raw is None):
+        parser.error("--horizon-assessment and --horizon-methodology must be supplied together")
     evidence_methodology = json.loads(args.evidence_methodology.read_text(encoding="utf-8")) if args.evidence_methodology else None
     if args.live_depth_evidence:
         if order_book_artifact is not None or args.multi_exchange_order_book_probe is not None:
@@ -626,7 +631,9 @@ def main() -> int:
         report = attach_horizon_assessment(
             report,
             horizon_assessment,
+            methodology=horizon_methodology,
             assessment_bytes=horizon_assessment_raw,
+            methodology_bytes=horizon_methodology_raw,
         )
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(
