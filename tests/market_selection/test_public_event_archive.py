@@ -223,5 +223,24 @@ class PublicEventArchiveTests(unittest.TestCase):
         self.assertEqual(event_record["metadata"]["archive_raw_response_sha256"], archive_capture["raw_response_sha256"])
 
 
+    def test_every_pending_archive_source_is_blocked_before_network(self):
+        # Archive IDs are separate authorization scopes from their related feeds.
+        for source_id, entry in EVENT_SOURCE_REGISTRY["sources"].items():
+            if "archive" not in source_id or entry["status"] != "TERMS_PENDING":
+                continue
+            with self.subTest(source_id=source_id):
+                with patch("scripts.market_selection.capture_public_event_feed._open_allowlisted_url") as network:
+                    result = capture_public_event_archive_index(
+                        source_id,
+                        entry["source_url"] + ("?page=0" if "?" not in entry["source_url"] else ""),
+                        authorization_record=None,
+                        user_agent=USER_AGENT,
+                        captured_at="2026-10-22T12:30:00Z",
+                    )
+                network.assert_not_called()
+                self.assertEqual(result["capture_status"], "BLOCKED")
+                self.assertFalse(result["network_request_made"])
+
+
 if __name__ == "__main__":
     unittest.main()
