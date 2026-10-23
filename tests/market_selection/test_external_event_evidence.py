@@ -70,6 +70,26 @@ class ExternalEventEvidenceTests(unittest.TestCase):
         self.assertTrue(result["duplicates"][0]["conflict"])
         self.assertEqual(result["duplicates"][0]["resolution"], "CONFLICT_REQUIRES_REVIEW")
 
+    def test_deduplicates_url_variants_with_tracking_parameters(self):
+        first = event(source={
+            "source_type": "PRIMARY_OFFICIAL",
+            "url": "https://EXAMPLE.org/announcements/upgrade/?utm_source=feed",
+            "publisher": "Example Project",
+        })
+        variant = event(
+            event_id="event-tracking-variant",
+            source={
+                "source_type": "PRIMARY_OFFICIAL",
+                "url": "https://example.org/announcements/upgrade?utm_campaign=launch&fbclid=abc123",
+                "publisher": "Example Project",
+            },
+        )
+        result = deduplicate_events([first, variant])
+        self.assertEqual(result["unique_count"], 1)
+        self.assertEqual(result["duplicate_count"], 1)
+        self.assertFalse(result["duplicates"][0]["conflict"])
+        self.assertEqual(result["duplicates"][0]["resolution"], "DUPLICATE_COLLAPSED")
+
     def test_same_url_with_changed_content_hash_requires_review(self):
         first = event()
         revised = event(event_id="event-revised", content_sha256="b" * 64)
