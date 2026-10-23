@@ -331,7 +331,7 @@ class ResearchEvidenceIntegrationTests(unittest.TestCase):
             assessment["availability_cutoff"],
             __import__("datetime").datetime.fromtimestamp(
                 (end_ms + 1) / 1000, tz=__import__("datetime").timezone.utc
-            ).isoformat(timespec="milliseconds").replace("+00:00", "Z"),
+).isoformat().replace("+00:00", "Z"),
         )
         self.assertFalse(assessment["causality_claimed"])
 
