@@ -38,7 +38,7 @@ from scripts.market_selection.provider_license_gate import (
     evaluate_provider_use,
 )
 
-from scripts.market_selection.shared_request_rate_limiter import wait_for_rate_slot as _wait_for_rate_slot
+from scripts.market_selection.shared_request_rate_limiter import RateLimitCoordinationError, wait_for_rate_slot as _wait_for_rate_slot
 
 FEED_CAPTURE_SCHEMA = "crypto-public-event-feed-capture-v1"
 ARTICLE_CAPTURE_SCHEMA = "crypto-public-event-article-capture-v1"
@@ -1647,48 +1647,70 @@ def main() -> int:
         parser.error("--feed-capture and --article-candidate-id must be supplied together")
     registry = json.loads(args.provider_authorization_registry.read_text(encoding="utf-8"))
     record = registry.get(args.source_id) if isinstance(registry, dict) else None
-    if args.feed_capture is not None:
-        feed_capture = json.loads(args.feed_capture.read_text(encoding="utf-8"))
-        if not isinstance(feed_capture, dict) or feed_capture.get("source_id") != args.source_id:
-            parser.error("--feed-capture source_id must match --source-id")
-        result = capture_public_event_article(
-            feed_capture,
-            args.article_candidate_id,
-            authorization_record=record,
-            user_agent=args.user_agent,
-            timeout_seconds=args.timeout_seconds,
-            captured_at=args.captured_at,
-        )
-        summary = {
-            "output": str(args.output),
-            "source_id": result["source_id"],
-            "candidate_id": result["candidate_id"],
-            "capture_status": result["capture_status"],
-            "network_request_made": result["network_request_made"],
-            "raw_response_bytes": result["raw_response_bytes"],
-            "reason_codes": result["reason_codes"],
+    failure_exit_code = 0
+    try:
+        if args.feed_capture is not None:
+            feed_capture = json.loads(args.feed_capture.read_text(encoding="utf-8"))
+            if not isinstance(feed_capture, dict) or feed_capture.get("source_id") != args.source_id:
+                parser.error("--feed-capture source_id must match --source-id")
+            result = capture_public_event_article(
+                feed_capture,
+                args.article_candidate_id,
+                authorization_record=record,
+                user_agent=args.user_agent,
+                timeout_seconds=args.timeout_seconds,
+                captured_at=args.captured_at,
+            )
+            summary = {
+                "output": str(args.output),
+                "source_id": result["source_id"],
+                "candidate_id": result["candidate_id"],
+                "capture_status": result["capture_status"],
+                "network_request_made": result["network_request_made"],
+                "raw_response_bytes": result["raw_response_bytes"],
+                "reason_codes": result["reason_codes"],
+            }
+        else:
+            result = capture_public_event_feed(
+                args.source_id,
+                authorization_record=record,
+                user_agent=args.user_agent,
+                timeout_seconds=args.timeout_seconds,
+                captured_at=args.captured_at,
+            )
+            summary = {
+                "output": str(args.output),
+                "source_id": result["source_id"],
+                "capture_status": result["capture_status"],
+                "network_request_made": result["network_request_made"],
+                "feed_item_count": result["feed_item_count"],
+                "duplicate_item_count": result["duplicate_item_count"],
+                "reason_codes": result["reason_codes"],
+            }
+    except RateLimitCoordinationError:
+        failure_exit_code = 2
+        result = {
+            "schema_version": "crypto-public-event-capture-error-v1",
+            "source_id": args.source_id,
+            "capture_status": "BLOCKED_RATE_LIMIT_COORDINATION",
+            "network_request_made": False,
+            "reason_codes": ["RATE_LIMIT_COORDINATION_FAILED"],
+            "errors": [{
+                "type": "RATE_LIMIT_COORDINATION",
+                "message": "Shared request-rate coordination is unavailable; no network request was made.",
+            }],
         }
-    else:
-        result = capture_public_event_feed(
-            args.source_id,
-            authorization_record=record,
-            user_agent=args.user_agent,
-            timeout_seconds=args.timeout_seconds,
-            captured_at=args.captured_at,
-        )
         summary = {
             "output": str(args.output),
-            "source_id": result["source_id"],
+            "source_id": args.source_id,
             "capture_status": result["capture_status"],
-            "network_request_made": result["network_request_made"],
-            "feed_item_count": result["feed_item_count"],
-            "duplicate_item_count": result["duplicate_item_count"],
+            "network_request_made": False,
             "reason_codes": result["reason_codes"],
         }
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(result, ensure_ascii=False, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     print(json.dumps(summary, ensure_ascii=False, indent=2))
-    return 0
+    return failure_exit_code
 
 
 if __name__ == "__main__":
