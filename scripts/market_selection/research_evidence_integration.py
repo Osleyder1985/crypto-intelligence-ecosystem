@@ -805,7 +805,7 @@ def enrich_research_report(
     output["external_event_evidence"] = {
         "source_coverage": event_coverage_assessment,
         "schema_version": "crypto-event-evidence-assessment-v1",
-        "status": "ASSESSED" if event_assessments else "NOT_AVAILABLE",
+        "status": "ASSESSED" if event_assessments or event_coverage_assessment["status"] == "ASSESSED" else "NOT_AVAILABLE",
         "event_count": len(event_assessments),
         "assessments": event_assessments,
         "causality_claimed": False,
