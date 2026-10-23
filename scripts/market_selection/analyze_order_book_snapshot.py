@@ -5,11 +5,10 @@ future price reactions, or executable liquidity.
 """
 from __future__ import annotations
 
-import math
 from decimal import Decimal, InvalidOperation
 from typing import Any
 
-from scripts.market_selection.provider_license_gate import evaluate_artifact_use
+from scripts.market_selection.provider_license_gate import evaluate_provider_use
 
 INPUT_SCHEMA = "crypto-spot-order-book-snapshot-v1"
 OUTPUT_SCHEMA = "crypto-spot-order-book-analysis-v1"
@@ -45,12 +44,22 @@ def _levels(value: Any, field: str, *, descending: bool) -> list[dict[str, str]]
     return result
 
 
-def analyze_order_book_snapshot(artifact: dict) -> dict:
+def analyze_order_book_snapshot(artifact: dict, authorization_registry: dict | None = None) -> dict:
     if not isinstance(artifact, dict) or artifact.get("schema_version") != INPUT_SCHEMA:
         raise ValueError(f"expected schema_version {INPUT_SCHEMA}")
     if artifact.get("capture_status") != "PASS":
         raise ValueError("order-book capture_status must be PASS")
-    provider_use = evaluate_artifact_use(artifact, "internal_analysis")
+    if not isinstance(authorization_registry, dict):
+        authorization_registry = {}
+    provider_id = artifact.get("provider_id")
+    if not isinstance(provider_id, str) or not provider_id.strip():
+        raise PermissionError("order-book provider_id is required for trusted authorization lookup")
+    try:
+        provider_use = evaluate_provider_use(
+            provider_id, "internal_analysis", authorization_registry.get(provider_id),
+        )
+    except ValueError as exc:
+        raise PermissionError("order-book provider authorization record is invalid") from exc
     if provider_use["decision"] != "ALLOW":
         raise PermissionError("order-book analysis blocked before use: " + ",".join(provider_use["reason_codes"]))
 
