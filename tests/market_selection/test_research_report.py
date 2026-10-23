@@ -6,8 +6,10 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 from scripts.market_selection.research_report import build_research_report
+from scripts.market_selection.capture_binance_spot_research import EXCHANGE_INFO_URL, capture_and_build_report
 from scripts.market_selection.provider_license_gate import ASSESSMENT_SCHEMA_VERSION, POLICY_VERSION, evaluate_provider_use
 from scripts.market_selection.canonical_asset_identity import SCHEMA_VERSION as IDENTITY_SCHEMA_VERSION
 
@@ -111,6 +113,27 @@ def config():
     }
 
 
+class FakeExchangeInfoResponse:
+    def __init__(self, raw):
+        self.raw = raw
+        self.position = 0
+        self.status = 200
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *args):
+        return False
+
+    def read(self, size=-1):
+        if self.position >= len(self.raw):
+            return b""
+        end = min(self.position + min(size, 13), len(self.raw))
+        chunk = self.raw[self.position:end]
+        self.position = end
+        return chunk
+
+
 class ResearchReportTests(unittest.TestCase):
     def setUp(self):
         self.source = artifact([
@@ -122,6 +145,85 @@ class ResearchReportTests(unittest.TestCase):
             candle(5, 9.5, 11, 9, 10.5),
         ])
         self.raw = json.dumps(self.source, ensure_ascii=False, sort_keys=True).encode("utf-8")
+
+    def test_offline_end_to_end_from_base_ticker_to_reproducible_report(self):
+        exchange_payload = {
+            "symbols": [
+                {"symbol": "BTCUSDT", "baseAsset": "BTC", "quoteAsset": "USDT",
+                 "status": "TRADING", "isSpotTradingAllowed": True,
+                 "baseAssetPrecision": 8, "quoteAssetPrecision": 8, "filters": []},
+                {"symbol": "BTCUSDC", "baseAsset": "BTC", "quoteAsset": "USDC",
+                 "status": "TRADING", "isSpotTradingAllowed": True,
+                 "baseAssetPrecision": 8, "quoteAssetPrecision": 8, "filters": []},
+            ]
+        }
+        metadata_raw = json.dumps(exchange_payload, separators=(",", ":")).encode("utf-8")
+        allowed_test_assessment = {
+            "schema_version": ASSESSMENT_SCHEMA_VERSION,
+            "policy_version": POLICY_VERSION,
+            "provider_id": "binance_spot_market_data",
+            "use_case": "internal_analysis",
+            "decision": "ALLOW",
+            "reason_codes": ["SYNTHETIC_TEST_GATE_ONLY"],
+            "authorization_evidence_status": "SYNTHETIC_TEST_GATE_ONLY",
+        }
+        with patch(
+            "scripts.market_selection.capture_binance_spot_research.urlopen",
+            return_value=FakeExchangeInfoResponse(metadata_raw),
+        ) as network, patch(
+            "scripts.market_selection.capture_binance_spot_research.evaluate_provider_use",
+            return_value=allowed_test_assessment,
+        ), patch(
+            "scripts.market_selection.capture_binance_spot_research.capture_history",
+            return_value=self.source,
+        ) as candles, patch(
+            "scripts.market_selection.research_report.evaluate_artifact_use",
+            return_value={
+                "decision": "ALLOW",
+                "reason_codes": ["SYNTHETIC_TEST_GATE_ONLY"],
+                "authorization_evidence_status": "SYNTHETIC_TEST_GATE_ONLY",
+            },
+        ), patch(
+            "scripts.market_selection.analyze_ohlcv_risk_profile.evaluate_artifact_use",
+            return_value={"decision": "ALLOW", "reason_codes": ["SYNTHETIC_TEST_GATE_ONLY"]},
+        ), patch(
+            "scripts.market_selection.analyze_support_resistance.evaluate_artifact_use",
+            return_value={"decision": "ALLOW", "reason_codes": ["SYNTHETIC_TEST_GATE_ONLY"]},
+        ), patch(
+            "scripts.market_selection.detect_ohlcv_movement_events.evaluate_artifact_use",
+            return_value={"decision": "ALLOW", "reason_codes": ["SYNTHETIC_TEST_GATE_ONLY"]},
+        ):
+            captured, report = capture_and_build_report(
+                symbol=None,
+                base_asset_ticker="BTC",
+                quote_asset="USDT",
+                interval="1h",
+                start_time_ms=0,
+                end_time_ms_exclusive=6 * 3_600_000,
+                config=config(),
+                use_case="internal_analysis",
+                requested_identifier_type="symbol",
+                requested_asset_identifier="BTC",
+            )
+
+        network.assert_called_once()
+        self.assertEqual(network.call_args.args[0].full_url, EXCHANGE_INFO_URL)
+        candles.assert_called_once_with(
+            "BTCUSDT", "1h", 0, 6 * 3_600_000,
+            use_case="internal_analysis", authorization_record=None,
+        )
+        self.assertEqual(captured["artifact"]["market"]["symbol_native"], "BTCUSDT")
+        self.assertEqual(captured["artifact"]["market"]["base_asset"], "BTC")
+        self.assertEqual(captured["artifact"]["market"]["quote_asset"], "USDT")
+        self.assertEqual(report["schema_version"], "crypto-asset-research-report-v2")
+        self.assertEqual(report["pipeline"]["market_identity_basis"], "BINANCE_EXCHANGE_INFO_BASE_ASSET_ONLY")
+        self.assertEqual(report["canonical_asset_identity_status"], "NOT_RESOLVED")
+        self.assertEqual(report["report_status"], "PARTIAL")
+        self.assertEqual(set(report["horizons"]), {"short", "medium", "long"})
+        self.assertTrue(all(item["status"] == "INDETERMINATE" for item in report["horizons"].values()))
+        self.assertFalse(report["orders_submitted"])
+        self.assertTrue(report["pipeline"]["capture_artifact_sha256"])
+        self.assertEqual(report["pipeline"]["capture_artifact_bytes"], len(captured["raw_bytes"]))
 
     def test_assembles_existing_analyses_and_abstains_on_all_horizons(self):
         report = build_research_report(self.source, config(), "BTC", self.raw)
