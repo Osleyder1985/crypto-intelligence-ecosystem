@@ -127,3 +127,44 @@ En ambas ejecuciones, el job de detección de alcance también terminó correcta
 - Run 40056223784: https://github.com/Osleyder1985/crypto-intelligence-ecosystem/actions/runs/40056223784
 - Run 40056223782: https://github.com/Osleyder1985/crypto-intelligence-ecosystem/actions/runs/40056223782
 - PR: https://github.com/Osleyder1985/crypto-intelligence-ecosystem/pull/301
+
+
+## 9. Artefacto adicional: contrato API preliminar
+
+Se añadió `docs/architecture/stack-poc-openapi.yaml` con un contrato OpenAPI 3.1.0 provisional para:
+- búsqueda del catálogo canónico de activos;
+- consulta de evaluaciones históricas inmutables por activo/horizonte;
+- solicitud de evaluación bajo demanda con clave de idempotencia;
+- consulta del estado de procesamiento y estados explícitos `failed`/`indeterminate`.
+
+El servidor `example.invalid` es deliberadamente un marcador de posición, no un endpoint operativo. El contrato todavía requiere validación con un parser OpenAPI, pruebas de contrato y revisión de autenticación/autorización antes de considerarse válido o implementado. La existencia del YAML no acredita una API funcionando.
+
+## 10. Diagrama de límites propuesto
+
+```mermaid
+flowchart LR
+  Web[Web client] --> API[Versioned product API]
+  Android[Android client] --> API
+  IOS[iOS client] --> API
+  API --> Domain[Canonical domain and evaluation service]
+  Domain --> DB[(PostgreSQL candidate)]
+  Domain --> Queue[Persisted task state / worker]
+  Queue --> Sources[Read-only source adapters]
+  Sources --> Evidence[Evidence and provenance store]
+  Evidence --> DB
+  Domain --> Results[Immutable evaluation records]
+  Results --> DB
+```
+
+Este diagrama expresa límites propuestos, no infraestructura desplegada. La elección concreta de worker, persistencia de evidencia y almacenamiento de objetos queda pendiente de PoC y requisitos de retención.
+
+## 11. Estado actualizado de aceptación
+
+- [x] Criterios y pesos de evaluación documentados como propuesta (sin puntuaciones inventadas).
+- [x] ADR provisional con alternativas, riesgos y condiciones de revisión.
+- [x] Contrato OpenAPI inicial y diagrama lógico propuestos.
+- [x] Dos workflows existentes observados en PASS, con sus límites documentados.
+- [ ] Validación automatizada del contrato OpenAPI y pruebas de contrato.
+- [ ] PoC comparativas de cliente móvil/gráficos, API, persistencia histórica y tarea asíncrona.
+- [ ] Matriz puntuada con resultados medidos y análisis de sensibilidad.
+- [ ] ADR definitivo ratificado y revisión del PR.
