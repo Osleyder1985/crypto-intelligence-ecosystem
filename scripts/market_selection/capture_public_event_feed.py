@@ -1449,21 +1449,15 @@ def promote_public_archive_candidate_to_event(
         or final_parts.port not in (None, 443) or final_parts.username is not None or final_parts.password is not None
     ):
         raise PermissionError("article final URL is outside the approved HTTPS host allowlist")
-    article_b64 = article_capture.get("raw_response_base64")
     article_hash = article_capture.get("raw_response_sha256")
     article_size = article_capture.get("raw_response_bytes")
     if (
-        not isinstance(article_b64, str) or not isinstance(article_hash, str)
+        not isinstance(article_hash, str)
         or not re.fullmatch(r"[0-9a-f]{64}", article_hash)
         or isinstance(article_size, bool) or not isinstance(article_size, int) or article_size < 0
     ):
-        raise PermissionError("article body, byte count, or SHA-256 is missing or invalid")
-    try:
-        article_raw = base64.b64decode(article_b64, validate=True)
-    except (ValueError, base64.binascii.Error) as exc:
-        raise PermissionError("article body base64 is invalid") from exc
-    if hashlib.sha256(article_raw).hexdigest() != article_hash or len(article_raw) != article_size:
-        raise PermissionError("article body integrity check failed")
+        raise PermissionError("article original response byte count or SHA-256 is missing or invalid")
+    _load_archive_text_evidence(article_capture)
     content_type = article_capture.get("content_type")
     if not isinstance(content_type, str) or content_type.split(";", 1)[0].strip().lower() not in {"text/html", "application/xhtml+xml"}:
         raise PermissionError("article content type must be HTML or XHTML")
