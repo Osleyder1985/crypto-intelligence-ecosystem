@@ -296,3 +296,15 @@ La segunda ejecución del workflow [40058638191](https://github.com/Osleyder1985
 Mediana de las tres medianas: **0.001663 ms**; rango de medianas: **0.001652–0.002985 ms**. Entorno: Linux hosted runner, Node v22.23.3, AMD EPYC 9V45, 4 vCPU, RAM reportada 16,766,414,848 bytes. Fixture SHA-256: `0265cfa5e4d4e6673476bc7db84ed98d43147409172a00deda958bd82823f63d`. Los 3 tests geométricos terminaron PASS.
 
 La repetición independiente mejora la reproducibilidad de la microoperación, pero no equivale a tres builds limpios ni mide la pantalla renderizada. El RSS sigue siendo muestreo antes/después, no pico. No usar esta cifra para clasificar el stack frente a Flutter/React Native ni para inferir experiencia real de usuario.
+
+
+## 23. Windows-hosted geometry cross-check and fixture line endings (2026-10-24)
+
+The Windows measurement script initially exposed that Git's CRLF checkout changed the raw SHA-256 of the canonical JSON fixture even though the parsed JSON was identical. Added `.gitattributes` to force LF for canonical fixture JSON and the web benchmark inputs. The next Windows workflow run confirmed the same raw fixture SHA-256 as Linux: `0265cfa5e4d4e6673476bc7db84ed98d43147409172a00deda958bd82823f63d`.
+
+| Environment / evidence | Node | Fixture SHA-256 | Median geometry time | p95 | RSS before → after |
+|---|---|---|---:|---:|---:|
+| Hosted Linux, [run 40058638191](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/actions/runs/40058638191) | 22.23.3 | `0265cfa5e4d4e6673476bc7db84ed98d43147409172a00deda958bd82823f63d` | 0.001663 ms (median of 3 process medians) | 0.003796 ms (max of process p95s) | ~51–55 MB per process |
+| Hosted Windows Server 2025, [run 40059988216](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/actions/runs/40059988216) | 22.23.4 | same | 0.0032 ms | 0.0076 ms | 35,377,152 → 39,354,368 bytes |
+
+These runs validate cross-platform fixture integrity and the measurement script, not a cross-OS performance ranking. They use different hosted machines/OS runtimes, and the Windows run is not the user's Windows 11 PC. Both measure Node geometry only, not browser rendering or on-screen chart readiness. The Windows result is preserved in `docs/architecture/evidence/issue-9-web-geometry-windows-ci-40059988216.json`.
