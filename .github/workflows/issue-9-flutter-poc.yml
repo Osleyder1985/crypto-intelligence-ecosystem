@@ -37,9 +37,17 @@ jobs:
       - name: Run Flutter widget tests
         working-directory: pocs/issue-9/flutter
         run: flutter test
-      - name: Build Android debug APK and record runner measurements
+      - name: Run three clean Android builds and record runner measurements
         working-directory: pocs/issue-9/flutter
         run: |
           set -o pipefail
-          /usr/bin/time -v flutter build apk --debug 2>&1 | tee flutter-build-measurement.log
-          stat --printf='APK_BYTES=%s\n' build/app/outputs/flutter-apk/app-debug.apk
+          : > flutter-build-measurement.log
+          for run in 1 2 3; do
+            flutter clean
+            flutter pub get
+            /usr/bin/time -f "CLEAN_BUILD_RUN=$run ELAPSED_SECONDS=%e PEAK_RSS_KB=%M" flutter build apk --debug 2>&1 | tee -a flutter-build-measurement.log
+            stat --printf="CLEAN_BUILD_RUN=$run APK_BYTES=%s\n" build/app/outputs/flutter-apk/app-debug.apk | tee -a flutter-build-measurement.log
+          done
+          touch lib/main.dart
+          /usr/bin/time -f 'INCREMENTAL_BUILD_AFTER_SOURCE_TOUCH_SECONDS=%e PEAK_RSS_KB=%M' flutter build apk --debug 2>&1 | tee -a flutter-build-measurement.log
+          stat --printf='FINAL_APK_BYTES=%s\n' build/app/outputs/flutter-apk/app-debug.apk | tee -a flutter-build-measurement.log
