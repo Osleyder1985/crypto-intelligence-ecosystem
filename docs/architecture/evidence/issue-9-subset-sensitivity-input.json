@@ -1,0 +1,42 @@
+{
+  "_metadata": {
+    "scope": "diagnostic subset only; not final stack selection",
+    "included_criteria": ["charts_series", "historical_persistence", "tests_ci"],
+    "excluded_candidates": ["Kotlin native Android + separate iOS client"],
+    "reason": "Only these three criteria have comparable evidence for Web, Flutter and bare React Native at this checkpoint. Other matrix criteria remain N/E."
+  },
+  "weights": {
+    "charts_series": 42.85714285714286,
+    "historical_persistence": 28.57142857142857,
+    "tests_ci": 28.57142857142857
+  },
+  "candidates": [
+    {
+      "name": "Web React/Vite + shared API",
+      "scores": {"charts_series": 4, "historical_persistence": 3, "tests_ci": 4},
+      "evidence": {
+        "charts_series": "run 40060309796: Chromium test loaded 12 canonical candles, verified 12 rows and exercised zoom/pan",
+        "historical_persistence": "run 40060309822: shared PostgreSQL history PoC passed; web client API integration is not yet implemented",
+        "tests_ci": "run 40060309796: geometry unit tests, browser smoke test and three-process geometry benchmark passed"
+      }
+    },
+    {
+      "name": "Flutter + shared API",
+      "scores": {"charts_series": 4, "historical_persistence": 3, "tests_ci": 4},
+      "evidence": {
+        "charts_series": "run 40059925721: widget tests passed for candles, volume, zoom/pan and textual data; physical-device accessibility remains pending",
+        "historical_persistence": "run 40060309822: shared PostgreSQL history PoC passed; Flutter client API integration is not yet implemented",
+        "tests_ci": "run 40059925721: three clean Android Debug builds, incremental build and Android Release build passed; current iOS Release rerun is pending"
+      }
+    },
+    {
+      "name": "React Native bare + shared API",
+      "scores": {"charts_series": 3, "historical_persistence": 3, "tests_ci": 3},
+      "evidence": {
+        "charts_series": "run 40059801779: shared fixture, three iOS Simulator Debug builds and incremental build passed; no automated native UI interaction test yet",
+        "historical_persistence": "run 40060309822: shared PostgreSQL history PoC passed; React Native client API integration is not yet implemented",
+        "tests_ci": "run 40059801779: fixture validator, three iOS Debug builds and incremental build passed; Android repeated/Release rerun is pending"
+      }
+    }
+  ]
+}
