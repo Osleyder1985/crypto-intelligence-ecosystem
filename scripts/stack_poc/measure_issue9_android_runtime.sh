@@ -32,11 +32,11 @@ measure_app() {
   activity="$(printf '%s\n' "$badging" | sed -n "s/^launchable-activity: name='\([^']*\)'.*/\1/p" | head -n 1)"
   if [[ -z "$pkg" || -z "$activity" ]]; then echo "Unable to discover package/activity for $label" >&2; exit 1; fi
   echo "INSTALL stack=$label package=$pkg activity=$activity apk_bytes=$(stat -c %s "$apk")" | tee -a "$LOG"
-  install_out="$(adb install -r "$apk" 2>&1)"
+  install_out="$(timeout 120s adb install -r "$apk" 2>&1)"
   printf '%s\n' "$install_out" | tee -a "$LOG"
   for run in 1 2 3; do
     adb shell am force-stop "$pkg" || true
-    start_out="$(adb shell am start -W -n "$pkg/$activity" 2>&1)"
+    start_out="$(timeout 45s adb shell am start -W -n "$pkg/$activity" 2>&1)"
     printf 'START stack=%s run=%s\\n%s\\n' "$label" "$run" "$start_out" | tee -a "$LOG"
     if ! printf '%s\\n' "$start_out" | grep -q 'Status: ok'; then
       echo "Activity failed to start: stack=$label run=$run package=$pkg activity=$activity" | tee -a "$LOG"
@@ -49,7 +49,7 @@ measure_app() {
     rss_max=0
     for sample in 1 2 3; do
       local mem pss_now rss_now
-      mem="$(adb shell dumpsys meminfo "$pkg" 2>&1 || true)"
+      mem="$(timeout 15s adb shell dumpsys meminfo "$pkg" 2>&1 || true)"
       pss_now="$(printf '%s\n' "$mem" | awk '/TOTAL PSS:/ {print $3; exit}')"
       rss_now="$(printf '%s\n' "$mem" | awk '/TOTAL RSS:/ {print $3; exit}')"
       if [[ "$pss_now" =~ ^[0-9]+$ ]] && (( pss_now > pss_max )); then pss_max="$pss_now"; fi
@@ -57,12 +57,16 @@ measure_app() {
       sleep 1
     done
     ui_file="$OUT_DIR/${label}-ui-${run}.xml"
-    adb shell uiautomator dump /sdcard/issue9-window.xml >/dev/null 2>&1 || true
-    adb pull /sdcard/issue9-window.xml "$ui_file" >/dev/null 2>&1 || true
+    timeout 20s adb shell uiautomator dump /sdcard/issue9-window.xml >/dev/null 2>&1 || true
+    timeout 15s adb pull /sdcard/issue9-window.xml "$ui_file" >/dev/null 2>&1 || true
     title_visible=false
     fixture_visible=false
     if [[ -f "$ui_file" ]] && grep -Fq "$expected_title" "$ui_file"; then title_visible=true; fi
     if [[ -f "$ui_file" ]] && grep -Fq "$expected_fixture" "$ui_file"; then fixture_visible=true; fi
+    if [[ "$title_visible" != true || "$fixture_visible" != true ]]; then
+      echo "UI verification failed: stack=$label run=$run title_visible=$title_visible fixture_label_visible=$fixture_visible hierarchy_file=$ui_file" | tee -a "$LOG"
+      exit 1
+    fi
     [[ "$pss_max" -gt 0 ]] || pss_max=""
     [[ "$rss_max" -gt 0 ]] || rss_max=""
     printf '%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s\n' "$label" "$run" "$pkg" "$activity" "${wait:-}" "${total:-}" "$pss_max" "$rss_max" "$title_visible" "$fixture_visible" "$API" >> "$CSV"
