@@ -38,6 +38,11 @@ def candidates(package: dict, pub_cache: Path, flutter_root: Path | None) -> lis
         licence_dir = root / "licenses"
         if licence_dir.is_dir():
             found.extend(p for p in licence_dir.iterdir() if p.is_file())
+    # SDK packages can be covered by the SDK repository's top-level licence.
+    if not found and source == "sdk" and flutter_root:
+        sdk_license = flutter_root / "LICENSE"
+        if sdk_license.is_file():
+            found.append(sdk_license)
     return sorted(set(found), key=lambda p: p.name.casefold())
 
 
