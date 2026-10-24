@@ -17,14 +17,14 @@ from urllib.error import HTTPError, URLError
 from urllib.parse import urlsplit
 from urllib.request import Request, urlopen
 
+ALLOWED_HOSTS = {"sec.gov", "www.sec.gov", "cftc.gov", "www.cftc.gov", "federalreserve.gov", "www.federalreserve.gov"}
+
 POLICY_URLS = {
     "sec_website_dissemination": "https://www.sec.gov/about/privacy-information",
     "sec_developer_resources": "https://www.sec.gov/about/developer-resources",
-    "sec_rss_feeds": "https://www.sec.gov/about/rss-feeds",
     "cftc_web_policy": "https://www.cftc.gov/WebPolicy/index.htm",
     "cftc_rss_status": "https://www.cftc.gov/RSS/index.htm",
     "federal_reserve_disclaimer": "https://www.federalreserve.gov/disclaimer.htm",
-    "federal_reserve_rss_feeds": "https://www.federalreserve.gov/feeds/feeds.htm",
 }
 
 
@@ -33,6 +33,12 @@ def utc_now() -> str:
 
 
 def capture(url: str, user_agent: str, timeout: float, attempts: int) -> tuple[dict, bytes | None]:
+    parsed_url = urlsplit(url)
+    if parsed_url.scheme != "https" or parsed_url.hostname not in ALLOWED_HOSTS or parsed_url.port not in (None, 443):
+        return {"requested_url": url, "final_url": None, "captured_at": utc_now(), "http_status": None,
+                "content_type": None, "last_modified": None, "etag": None, "response_headers": {},
+                "attempts_used": 0, "body_bytes": 0, "body_sha256": hashlib.sha256(b"").hexdigest(),
+                "capture_status": "BLOCKED_URL", "error": "URL must use HTTPS on an allowlisted official host."}, None
     last_error = None
     for attempt in range(1, attempts + 1):
         request = Request(url, headers={"User-Agent": user_agent, "Accept": "text/html,application/xhtml+xml"}, method="GET")
@@ -40,7 +46,17 @@ def capture(url: str, user_agent: str, timeout: float, attempts: int) -> tuple[d
             with urlopen(request, timeout=timeout) as response:
                 body = response.read()
                 status = int(getattr(response, "status", 200))
-                headers = {str(k): str(v) for k, v in response.headers.items()}
+                headers = {str(k): str(v) for k, v in response.headers.items() if str(k).lower() not in {"set-cookie", "cookie", "authorization"}}
+                final_parts = urlsplit(response.geturl())
+                if final_parts.scheme != "https" or final_parts.hostname not in ALLOWED_HOSTS or final_parts.port not in (None, 443):
+                    return {
+                        "requested_url": url, "final_url": response.geturl(), "captured_at": utc_now(),
+                        "http_status": status, "content_type": headers.get("Content-Type"),
+                        "last_modified": headers.get("Last-Modified"), "etag": headers.get("ETag"),
+                        "response_headers": headers, "attempts_used": attempt, "body_bytes": 0,
+                        "body_sha256": hashlib.sha256(b"").hexdigest(), "capture_status": "BLOCKED_REDIRECT",
+                        "error": "Redirect target is outside the official HTTPS host allowlist.",
+                    }, None
                 record = {
                     "requested_url": url,
                     "final_url": response.geturl(),
@@ -60,23 +76,40 @@ def capture(url: str, user_agent: str, timeout: float, attempts: int) -> tuple[d
         except HTTPError as exc:
             body = exc.read()
             headers = {str(k): str(v) for k, v in (exc.headers.items() if exc.headers else [])}
+            status = int(exc.code)
+            # Reintentar solo errores transitorios; nunca tratarlos como aprobación.
+            if status in {429, 500, 502, 503, 504} and attempt < attempts:
+                retry_after = headers.get("Retry-After", "")
+                try:
+                    delay = min(max(float(retry_after), 0.0), 30.0) if retry_after else min(2 ** (attempt - 1), 8)
+                except ValueError:
+                    delay = min(2 ** (attempt - 1), 8)
+                time.sleep(delay)
+                continue
             return {
                 "requested_url": url, "final_url": exc.geturl(), "captured_at": utc_now(),
-                "http_status": int(exc.code), "content_type": headers.get("Content-Type"),
+                "http_status": status, "content_type": headers.get("Content-Type"),
                 "last_modified": headers.get("Last-Modified"), "etag": headers.get("ETag"),
                 "response_headers": headers, "attempts_used": attempt, "body_bytes": len(body),
                 "body_sha256": hashlib.sha256(body).hexdigest(), "capture_status": "HTTP_ERROR",
                 "error": str(exc),
             }, body
         except (URLError, TimeoutError, OSError, socket.gaierror) as exc:
-            last_error = {"type": type(exc).__name__, "message": str(exc)}
+            last_error = {"type": type(exc).__name__, "message": "Network request failed after bounded retries."}
             if attempt < attempts:
                 time.sleep(min(2 ** (attempt - 1), 8))
+    hostname = urlsplit(url).hostname
+    dns_diagnostic = {"host": hostname, "resolved_addresses": [], "error": None}
+    try:
+        dns_diagnostic["resolved_addresses"] = sorted({item[4][0] for item in socket.getaddrinfo(hostname, 443, type=socket.SOCK_STREAM)})
+    except (OSError, socket.gaierror) as exc:
+        dns_diagnostic["error"] = {"type": type(exc).__name__, "message": str(exc)}
     return {
         "requested_url": url, "final_url": None, "captured_at": utc_now(),
         "http_status": None, "content_type": None, "last_modified": None, "etag": None,
         "response_headers": {}, "attempts_used": attempts, "body_bytes": 0,
         "body_sha256": hashlib.sha256(b"").hexdigest(), "capture_status": "NETWORK_ERROR",
+        "dns_diagnostic": dns_diagnostic,
         "error": last_error,
     }, None
 
