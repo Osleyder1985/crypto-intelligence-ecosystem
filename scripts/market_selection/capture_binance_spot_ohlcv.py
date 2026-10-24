@@ -165,7 +165,13 @@ def build_url(symbol: str, interval: str, start_time_ms: int, end_time_ms_exclus
     return BASE_URL + "?" + query
 
 
-def request_page(url: str, *, use_case: str = "live_technical_test", authorization_record: dict | None = None) -> dict:
+def request_page(
+    url: str,
+    *,
+    use_case: str = "live_technical_test",
+    authorization_record: dict | None = None,
+    user_agent: str = "crypto-intelligence-ecosystem-ohlcv/1.0",
+) -> dict:
     started = utc_now()
     record = {
         "url": url, "request_started_at_utc": started, "captured_at_utc": None,
@@ -182,7 +188,11 @@ def request_page(url: str, *, use_case: str = "live_technical_test", authorizati
     if assessment["decision"] != "ALLOW":
         record.update(captured_at_utc=utc_now(),capture_status="BLOCKED",error_type="ProviderUseBlocked",error_message=";".join(assessment["reason_codes"]))
         return record
-    req = Request(url, headers={"Accept": "application/json", "User-Agent": "crypto-intelligence-ecosystem-ohlcv/1.0"})
+    if not isinstance(user_agent, str) or not user_agent.strip() or "\\r" in user_agent or "\\n" in user_agent:
+        record.update(captured_at_utc=utc_now(), capture_status="FAIL", error_type="InvalidUserAgent",
+                      error_message="user_agent must be non-empty and contain no CR/LF")
+        return record
+    req = Request(url, headers={"Accept": "application/json", "User-Agent": user_agent})
     try:
         with urlopen(req, timeout=TIMEOUT_SECONDS) as response:
             status = getattr(response, "status", None)
@@ -212,7 +222,16 @@ def request_page(url: str, *, use_case: str = "live_technical_test", authorizati
     return record
 
 
-def capture_history(symbol: str, interval: str, start_time_ms: int, end_time_ms_exclusive: int, *, use_case: str = "live_technical_test", authorization_record: dict | None = None) -> dict:
+def capture_history(
+    symbol: str,
+    interval: str,
+    start_time_ms: int,
+    end_time_ms_exclusive: int,
+    *,
+    use_case: str = "live_technical_test",
+    authorization_record: dict | None = None,
+    user_agent: str = "crypto-intelligence-ecosystem-ohlcv/1.0",
+) -> dict:
     if not isinstance(symbol, str) or not symbol or symbol.strip() != symbol:
         raise ValueError("symbol must be a non-empty native Binance symbol")
     symbol = symbol.upper()
@@ -247,7 +266,12 @@ def capture_history(symbol: str, interval: str, start_time_ms: int, end_time_ms_
     candles_by_open = {}
     while cursor < end_time_ms_exclusive:
         url = build_url(symbol, interval, start_time_ms, end_time_ms_exclusive, cursor)
-        page = request_page(url, use_case=use_case, authorization_record=authorization_record)
+        page = request_page(
+            url,
+            use_case=use_case,
+            authorization_record=authorization_record,
+            user_agent=user_agent,
+        )
         pages.append(page)
         if page["capture_status"] != "PASS":
             break

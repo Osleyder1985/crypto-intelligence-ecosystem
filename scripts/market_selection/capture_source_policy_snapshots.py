@@ -17,7 +17,7 @@ from urllib.error import HTTPError, URLError
 from urllib.parse import urlsplit
 from urllib.request import Request, urlopen
 
-ALLOWED_HOSTS = {"sec.gov", "www.sec.gov", "cftc.gov", "www.cftc.gov", "federalreserve.gov", "www.federalreserve.gov"}
+ALLOWED_HOSTS = {"sec.gov", "www.sec.gov", "cftc.gov", "www.cftc.gov", "federalreserve.gov", "www.federalreserve.gov", "developers.binance.com"}
 
 POLICY_URLS = {
     "sec_website_dissemination": "https://www.sec.gov/about/privacy-information",
@@ -26,6 +26,7 @@ POLICY_URLS = {
     "cftc_web_policy": "https://www.cftc.gov/WebPolicy/index.htm",
     "cftc_rss_status": "https://www.cftc.gov/RSS/index.htm",
     "federal_reserve_disclaimer": "https://www.federalreserve.gov/disclaimer.htm",
+    "binance_spot_rest_api": "https://developers.binance.com/en/docs/products/spot/rest-api",
 }
 
 
@@ -139,15 +140,37 @@ def main() -> int:
         record, body = capture(url, args.user_agent, args.timeout_seconds, args.attempts)
         record["source_id"] = source_id
         record["body_file"] = None
-        if body is not None:
+        if source_id == "binance_spot_rest_api" and record.get("http_status") == 202:
+            # Binance's documentation CDN may challenge automated clients. Record the block,
+            # but never preserve its challenge body as if it were policy text.
+            record["capture_status"] = "AUTOMATION_CHALLENGE"
+            record["manual_review_required"] = True
+            record["policy_evidence_captured"] = False
+            record["error"] = "Official documentation endpoint returned HTTP 202; no policy body accepted."
+            body = None
+        if body is not None and record["capture_status"] == "PASS":
             filename = f"{source_id}.html"
             (args.output_dir / filename).write_bytes(body)
             record["body_file"] = filename
         manifest["sources"].append(record)
         print(f"{source_id}: {record['capture_status']} bytes={record['body_bytes']} attempts={record['attempts_used']}")
+    manifest["manual_review_required_sources"] = [
+        item["source_id"] for item in manifest["sources"]
+        if item.get("capture_status") == "AUTOMATION_CHALLENGE"
+    ]
+    manifest["overall_status"] = (
+        "PARTIAL_MANUAL_REVIEW_REQUIRED"
+        if manifest["manual_review_required_sources"]
+        else "PASS"
+    )
     manifest_path = args.output_dir / "manifest.json"
     manifest_path.write_text(json.dumps(manifest, ensure_ascii=False, indent=2, sort_keys=True) + "\n", encoding="utf-8")
-    return 0 if all(x["capture_status"] == "PASS" for x in manifest["sources"]) else 1
+    blocking_failures = [
+        item for item in manifest["sources"]
+        if item["capture_status"] != "PASS"
+        and item.get("capture_status") != "AUTOMATION_CHALLENGE"
+    ]
+    return 0 if not blocking_failures else 1
 
 
 if __name__ == "__main__":

@@ -9,7 +9,7 @@ import argparse
 import base64
 import hashlib
 import json
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 from scripts.market_selection.capture_public_event_feed import (
@@ -20,6 +20,10 @@ from scripts.market_selection.capture_public_event_feed import (
     select_public_event_archive_candidate,
 )
 from scripts.market_selection.event_source_registry import get_source, source_entry_sha256
+from scripts.market_selection.capture_binance_spot_ohlcv import capture_history
+from scripts.market_selection.analyze_support_resistance import analyze_support_resistance
+from scripts.market_selection.build_movement_episodes import build_movement_episodes
+from scripts.market_selection.external_event_evidence import assess_temporal_association
 
 
 REVIEWER = "AI-assisted technical review; owner-authorized project scope"
@@ -228,6 +232,197 @@ def capture_one(
     }
 
 
+def iso_utc_ms(value: int) -> str:
+    return datetime.fromtimestamp(value / 1000, timezone.utc).isoformat(timespec="milliseconds").replace("+00:00", "Z")
+
+
+def capture_btc_movement_context(
+    *,
+    output_dir: Path,
+    event_record: dict,
+    authorization_record: dict,
+    captured_at: str,
+) -> dict:
+    """Analyze real BTC Spot swings around a real event without persisting raw OHLCV."""
+    event_date = datetime.fromisoformat(event_record["published_at"].replace("Z", "+00:00")).astimezone(timezone.utc).date()
+    window_start = datetime(event_date.year, event_date.month, event_date.day, tzinfo=timezone.utc)
+    start = window_start - timedelta(days=14)
+    end_exclusive = window_start + timedelta(days=15)
+    start_ms = int(start.timestamp() * 1000)
+    end_ms = int(end_exclusive.timestamp() * 1000)
+
+    capture = capture_history(
+        "BTCUSDT",
+        "1h",
+        start_ms,
+        end_ms,
+        use_case="internal_analysis",
+        authorization_record=authorization_record,
+        user_agent=authorization_record.get("approval_scope", {}).get("automated_access", {}).get(
+            "user_agent", "crypto-intelligence-ecosystem-ohlcv/1.0"
+        ),
+    )
+    if capture.get("overall_status") != "PASS":
+        raise RuntimeError(
+            "Binance historical BTC Spot capture did not pass: "
+            f"status={capture.get('overall_status')}, "
+            f"assessment={capture.get('provider_use_assessment')}, "
+            f"missing_candles={len(capture.get('missing_open_time_ms') or [])}"
+        )
+
+    repository_root = Path(__file__).resolve().parents[2]
+    methodology_path = repository_root / "configs" / "technical-descriptive-baseline.json"
+    methodology_bytes = methodology_path.read_bytes()
+    config = json.loads(methodology_bytes.decode("utf-8"))
+    pivot = config["support_resistance"]
+    sr = analyze_support_resistance(
+        capture,
+        pivot_left=pivot["pivot_left"],
+        pivot_right=pivot["pivot_right"],
+        tolerance_bps=pivot["tolerance_bps"],
+    )
+    episodes_artifact = build_movement_episodes(sr)
+    episodes = episodes_artifact["episodes"]
+
+    page_evidence = []
+    for page in capture.get("pages", []):
+        page_evidence.append({
+            "url": page.get("url"),
+            "request_started_at_utc": page.get("request_started_at_utc"),
+            "captured_at_utc": page.get("captured_at_utc"),
+            "http_status": page.get("http_status"),
+            "response_bytes": page.get("response_bytes"),
+            "response_sha256": page.get("response_sha256"),
+            "capture_status": page.get("capture_status"),
+            "normalization_status": page.get("normalization_status"),
+        })
+
+    publication_day_start_ms = start_ms + (14 * 86_400_000)
+    publication_day_end_ms = publication_day_start_ms + 86_400_000
+    temporal_assessments = []
+    for episode in episodes:
+        movement_start_ms = episode["start"]["pivot_open_time_ms"]
+        movement_end_ms = episode["end"]["pivot_open_time_ms"]
+        observable_at_ms = episode["episode_observable_only_at_ms"]
+        if movement_end_ms < publication_day_start_ms:
+            date_relation = "SWING_PRECEDES_PUBLICATION_DATE"
+        elif movement_start_ms >= publication_day_end_ms:
+            date_relation = "SWING_FOLLOWS_PUBLICATION_DATE"
+        else:
+            date_relation = "PUBLICATION_DATE_OVERLAPS_SWING_TIME_UNKNOWN"
+
+        point_in_time = assess_temporal_association(
+            event_record,
+            movement_start=iso_utc_ms(movement_start_ms),
+            movement_end=iso_utc_ms(movement_end_ms),
+            evaluation_as_of=captured_at,
+            target_entity={"id_type": "coingecko_id", "id": "bitcoin"},
+            availability_cutoff=iso_utc_ms(observable_at_ms),
+            pre_movement_window_minutes=0,
+            post_movement_window_minutes=0,
+        )
+        temporal_assessments.append({
+            "event_id": event_record["event_id"],
+            "event_published_at_normalized": event_record["published_at"],
+            "publication_time_precision": "DATE_ONLY",
+            "publication_time_evidence": event_record.get("metadata", {}).get("archive_publication_time_evidence"),
+            "movement_episode_id": episode["episode_id"],
+            "movement_direction": episode["direction"],
+            "movement_start": iso_utc_ms(movement_start_ms),
+            "movement_end": iso_utc_ms(movement_end_ms),
+            "episode_observable_only_at": iso_utc_ms(observable_at_ms),
+            "publication_date_relation": date_relation,
+            "point_in_time_assessment": point_in_time,
+            "causality_status": "NOT_ASSESSED",
+            "interpretation": (
+                "Retrospective temporal context only. The article was captured after this historical episode; "
+                "the point-in-time gate must not treat it as information available at the episode's observation cutoff."
+            ),
+        })
+
+    response_bytes_total = sum(
+        page["response_bytes"] for page in page_evidence
+        if isinstance(page.get("response_bytes"), int) and not isinstance(page.get("response_bytes"), bool)
+    )
+    report = {
+        "schema_version": "crypto-issue-132-movement-context-report-v1",
+        "created_at": captured_at,
+        "asset": {
+            "stable_id": "coingecko_id:bitcoin",
+            "asset_name": "Bitcoin",
+            "symbol_native": "BTC",
+            "market_symbol": "BTCUSDT",
+            "identity_basis": "Exact stable entity identifier in the CFTC event record; no ticker-only event matching.",
+        },
+        "event": {
+            "event_id": event_record["event_id"],
+            "source_id": event_record["source_id"],
+            "title": event_record["title"],
+            "url": event_record.get("source", {}).get("url"),
+            "published_at": event_record["published_at"],
+            "publication_time_precision": "DATE_ONLY",
+            "captured_at": event_record["captured_at"],
+            "causality_status": "NOT_ASSESSED",
+        },
+        "market_data": {
+            "provider_id": "binance_spot_market_data",
+            "endpoint": capture.get("source"),
+            "user_agent": authorization_record.get("approval_scope", {}).get("automated_access", {}).get(
+                "user_agent", "crypto-intelligence-ecosystem-ohlcv/1.0"
+            ),
+            "interval": "1h",
+            "window_start_utc": start.isoformat().replace("+00:00", "Z"),
+            "window_end_exclusive_utc": end_exclusive.isoformat().replace("+00:00", "Z"),
+            "capture_status": capture["overall_status"],
+            "requested_candle_count": capture["requested_open_candle_count"],
+            "captured_candle_count": capture["captured_candle_count"],
+            "missing_candle_count": len(capture.get("missing_open_time_ms") or []),
+            "response_bytes_total": response_bytes_total,
+            "pages": page_evidence,
+            "provider_use_assessment": capture.get("provider_use_assessment"),
+            "raw_ohlcv_persisted": False,
+        },
+        "methodology": {
+            "config_path": "configs/technical-descriptive-baseline.json",
+            "config_sha256": hashlib.sha256(methodology_bytes).hexdigest(),
+            "methodology_id": config.get("methodology_id"),
+            "methodology_version": config.get("methodology_version"),
+            "status": "EXPERIMENTAL_NOT_APPROVED",
+            "support_resistance_method": sr.get("method"),
+            "support_resistance_sample": sr.get("sample"),
+            "episode_method": episodes_artifact.get("method"),
+            "window_rationale": (
+                "A symmetric 14-calendar-day context on either side of the publication date is used only to inspect "
+                "nearby observed swings. It is not a validated causal window or an investment horizon."
+            ),
+        },
+        "movement_episodes": episodes,
+        "event_episode_assessments": temporal_assessments,
+        "causality_claimed": False,
+        "limitations": [
+            "Raw OHLCV response payloads and candle rows were used transiently in memory and are not persisted in this report.",
+            "The methodology configuration is explicitly experimental and not approved for investment decisions.",
+            "The publication source gives a date but no exact time of day; intraday ordering on that date is indeterminate.",
+            "The historical article was captured after the movement, so it was not available to the system at the episode's historical observation cutoff.",
+            "A technical swing and temporal overlap do not establish that the event caused the move.",
+            "This is a single-exchange BTC Spot context, not a global-market or cross-exchange causal attribution.",
+        ],
+    }
+    report["report_sha256"] = digest_json(report)
+    output_path = output_dir / "btc-movement-context-report.json"
+    write_json(output_path, report)
+    return {
+        "path": str(output_path.relative_to(output_dir)),
+        "bytes": len(output_path.read_bytes()),
+        "sha256": hashlib.sha256(output_path.read_bytes()).hexdigest(),
+        "report_sha256": report["report_sha256"],
+        "event_episode_assessment_count": len(temporal_assessments),
+        "movement_episode_count": len(episodes),
+        "status": "PASS",
+        "raw_ohlcv_persisted": False,
+    }
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--authorization-registry", type=Path, required=True)
@@ -307,6 +502,33 @@ def main() -> int:
             write_json(args.output_dir / f"{source_id}-failure.json", failure)
             print(json.dumps(failure, ensure_ascii=False, indent=2))
 
+    market_context_record = None
+    try:
+        cftc_record_path = args.output_dir / "cftc_press_release_archive" / "event-record.json"
+        if not cftc_record_path.is_file():
+            raise RuntimeError("CFTC event record is unavailable; cannot create a BTC movement context")
+        market_authorization = auth_registry.get("binance_spot_market_data")
+        if not isinstance(market_authorization, dict):
+            raise PermissionError("no scoped Binance public market-data authorization record")
+        cftc_event_record = json.loads(cftc_record_path.read_text(encoding="utf-8"))
+        market_context_record = capture_btc_movement_context(
+            output_dir=args.output_dir,
+            event_record=cftc_event_record,
+            authorization_record=market_authorization,
+            captured_at=now_utc(),
+        )
+    except Exception as exc:
+        failure = {
+            "source_id": "binance_spot_market_data",
+            "status": "FAILED",
+            "error_type": type(exc).__name__,
+            "error": str(exc),
+            "recorded_at": now_utc(),
+        }
+        failures.append(failure)
+        write_json(args.output_dir / "binance_spot_market_data-failure.json", failure)
+        print(json.dumps(failure, ensure_ascii=False, indent=2))
+
     event_bundle_records = []
     contextual_records = []
     for record in records:
@@ -338,12 +560,21 @@ def main() -> int:
                 "temporal_association_status": "NOT_EVALUATED_NO_MOVEMENT_WINDOW",
                 "causality_status": "NOT_ASSESSED",
             })
+    if market_context_record is not None:
+        for event_item in event_bundle_records:
+            if event_item.get("source_id") == "cftc_press_release_archive":
+                event_item["temporal_assessment_status"] = "ASSESSED_PER_OBSERVED_BTC_EPISODE"
+                event_item["movement_context_report_path"] = market_context_record["path"]
+                event_item["movement_context_report_sha256"] = market_context_record["sha256"]
+                event_item["temporal_assessment_count"] = market_context_record["event_episode_assessment_count"]
+
     research_bundle = {
         "schema_version": "crypto-issue-132-research-event-evidence-bundle-v1",
         "created_at": now_utc(),
-        "scope": "Official regulatory event evidence attached for later asset-report correlation; no market movement window or causal conclusion is inferred here.",
+        "scope": "Official regulatory event evidence plus retrospective, descriptive BTC movement context; no market-causality conclusion is inferred.",
         "events": event_bundle_records,
         "contextual_unmapped_sources": contextual_records,
+        "movement_context_report": market_context_record,
         "causality_claimed": False,
     }
     research_bundle["bundle_sha256"] = digest_json(research_bundle)
@@ -369,6 +600,7 @@ def main() -> int:
             "bundle_sha256": research_bundle["bundle_sha256"],
         },
         "sources": records,
+        "market_context_report": market_context_record,
         "failures": failures,
     }
     backfill["manifest_sha256"] = digest_json(backfill)

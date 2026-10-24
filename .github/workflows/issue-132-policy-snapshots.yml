@@ -38,8 +38,8 @@ jobs:
           path: ${{ runner.temp }}/issue-132-policy-snapshots/
           if-no-files-found: error
           retention-days: 7
-      - name: Fallar si faltó alguna política
+      - name: Fallar en errores inesperados; registrar bloqueos de automatización
         if: always() && steps.capture.outcome != 'success'
         run: |
-          echo "No se capturaron todas las políticas oficiales. Revisar el manifiesto del artefacto."
+          echo "Falló una captura de política fuera de los bloqueos HTTP 202 documentados. Revisar el manifiesto del artefacto."
           exit 1
