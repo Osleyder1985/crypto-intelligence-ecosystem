@@ -46,7 +46,7 @@ jobs:
             if curl --fail --silent http://127.0.0.1:8000/pocs/issue-9/web/index.html >/dev/null; then break; fi
             sleep 1
           done
-          npx playwright test browser_smoke.spec.js --reporter=list
+          npx playwright test browser_smoke.spec.js --repeat-each=3 --reporter=list
       - name: Run three independent geometry benchmark processes
         working-directory: pocs/issue-9/web
         run: |
