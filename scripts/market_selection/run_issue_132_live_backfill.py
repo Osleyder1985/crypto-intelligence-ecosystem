@@ -23,7 +23,7 @@ from scripts.market_selection.event_source_registry import get_source, source_en
 
 
 REVIEWER = "AI-assisted technical review; owner-authorized project scope"
-USER_AGENT = "CryptoIntelligenceEcosystem/1.0 (+https://github.com/Osleyder1985/crypto-intelligence-ecosystem)"
+USER_AGENT = "CryptoIntelligenceIssue132PolicyReview/1.0 (contact: repository maintainer)"
 SEC_MANGO_URL = "https://www.sec.gov/newsroom/press-releases/2024-154"
 CFTC_BTC_URL = "https://www.cftc.gov/PressRoom/PressReleases/9240-26"
 FED_STABLECOIN_URL = "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm"
