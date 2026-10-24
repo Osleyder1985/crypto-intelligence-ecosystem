@@ -372,3 +372,19 @@ El input reproducible está en `docs/architecture/evidence/issue-9-partial-score
 Estos subtotales **no son una clasificación de stacks**: las coberturas difieren y varias puntuaciones son provisionales. El criterio de contratos cliente/API queda N/E porque las pantallas PoC todavía no consumen el API real. Los scores están respaldados por los runs referenciados en el input JSON.
 
 Para una sensibilidad acotada, se tomó solo el subconjunto con evidencia para Web, Flutter y React Native: gráficos/series, persistencia histórica común y pruebas/CI. Los pesos originales 15:10:10 se normalizaron a 42.8571:28.5714:28.5714. Con scores (Web 4/3/4, Flutter 4/3/4, React Native 3/3/3), el subtotal de este subconjunto es Web=Flutter 74.2857 y React Native 60. El script recalcula cada peso ±20% (seis escenarios) y la ordenación de este subconjunto no cambia: Web y Flutter empatados por encima de React Native. Este resultado no incluye seis criterios, no incluye Kotlin y **no ratifica un ganador final**. El input de sensibilidad reproducible está en `docs/architecture/evidence/issue-9-subset-sensitivity-input.json`; el workflow debe terminar y preservar el artefacto antes de considerar este resultado verificado.
+
+
+## 29. Comparación observada de builds Android Release (2026-10-24)
+
+Los dos resultados siguientes se ejecutaron en la misma clase de runner Ubuntu 24.04 / imagen `20261012.334`, AMD EPYC 7763, 4 vCPU, 16.77 GB RAM, Node 22.23.3 y Temurin JDK 17.0.20.1. Son instancias separadas; cada registro conserva su propio estado de caché.
+
+| Stack | Build Release | Artefacto Release | Debug limpio: mediana | Artefacto Debug | Evidencia |
+|---|---:|---:|---:|---:|---|
+| Flutter 3.47.5 | 57.13 s | 45,445,816 bytes | 19.42 s (3 runs; rango 18.74–163.34 s) | 150,302,356 bytes | `issue-9-flutter-android-ci-40059925721.md` |
+| React Native bare 0.88.0 | 124.23 s | 55,447,309 bytes | 70.62 s (3 runs; rango 67.66–147.40 s) | 125,271,411 bytes | `issue-9-react-native-android-repeated-builds-40059801811.md` |
+
+En estas observaciones, Flutter Release compiló aproximadamente un 54.0% más rápido y produjo un APK aproximadamente un 18.0% más pequeño que React Native Release. Esto es una comparación de artefactos de PoC en la misma clase de host, no una conclusión global: el incremental Release tras editar el JavaScript aún está pendiente en React Native, las firmas son de prueba/no producción y no se midieron arranque ni memoria del proceso ejecutándose. Los tamaños Debug no deben usarse como sustituto de los Release.
+
+### iOS — Debug disponible, Release todavía no comparable
+
+Flutter iOS Debug: mediana 23.43 s, rango 22.49–40.14 s, app 97,276 KB; Release 29.56 s / 14,560 KB (code signing disabled). React Native iOS Debug: mediana 40.60 s, rango 39.76–64.51 s, app 163,404 KB. La Release de React Native y su recompilación incremental después de editar `App.js` siguen pendientes; por ello no se declara un ganador iOS todavía.
