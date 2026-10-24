@@ -45,6 +45,17 @@ jobs:
           python -m piplicenses --format=json --from=all --with-urls --with-description --with-license-file --with-notice-file > issue-9-python-license-inventory.json
           python -m piplicenses --format=markdown --from=all --with-urls --with-description
           python scripts/stack_poc/review_license_inventory.py issue-9-python-license-inventory.json issue-9-python-license-review.json
+      - name: Verify version-pinned upstream licence snapshots and record hashes
+        if: always()
+        run: |
+          set -euo pipefail
+          sha256sum \
+            docs/architecture/evidence/licenses/license-expression-30.4.4-Apache-2.0.LICENSE \
+            docs/architecture/evidence/licenses/packageurl-python-0.17.6-MIT.LICENSE \
+            docs/architecture/evidence/licenses/pip-requirements-parser-32.0.1-MIT.LICENSE \
+            docs/architecture/evidence/licenses/typing_extensions-4.16.0-PYTHON-LICENSE \
+            > issue-9-upstream-license-text-sha256.txt
+          cat issue-9-upstream-license-text-sha256.txt
       - name: Preserve licence inventory as a CI artifact
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
@@ -53,5 +64,6 @@ jobs:
           path: |
             issue-9-python-license-inventory.json
             issue-9-python-license-review.json
+            issue-9-upstream-license-text-sha256.txt
           if-no-files-found: warn
           retention-days: 30
