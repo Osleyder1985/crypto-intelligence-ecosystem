@@ -484,3 +484,19 @@ Current workflow checkpoints: [Android runtime rerun 40090510337](https://github
 The score anchors, N/E rules, sensitivity scenarios and ratification gates are now explicit in [Issue 9 scoring and sensitivity protocol](issue-9-scoring-and-sensitivity-protocol.md). Scores must be supported by a stable run/artifact/source reference; a green CI job alone is not enough to award a high score. The full matrix input remains intentionally incomplete, so no full ranking or full sensitivity result is authorized yet.
 
 Current check at 2026-10-24 11:45 UTC: the API/history PoC and Windows script validation are green on the current PR #301 head; the shared Android runtime comparison and Flutter/React Native platform workflows are still running. The earlier shared-emulator attempt was cancelled after its ADB/emulator failure and is not scored. ADR-0001 remains proposed, and Issue #9 remains open.
+
+
+## 42. Sensibilidad reproducida sobre cobertura común — 2026-10-24
+
+Se recalculó el archivo `docs/architecture/evidence/issue-9-subset-sensitivity-input.json` con la misma fórmula de `scripts/stack_poc/sensitivity_analysis.py`: normalización ponderada a 100 puntos y perturbación individual de cada peso ±20 %. Entrada: tres criterios con cobertura para cuatro referencias; pesos normalizados 42.8571 % (gráficos/series), 28.5714 % (persistencia histórica) y 28.5714 % (pruebas/CI).
+
+| Referencia | Resultado diagnóstico / 100 | Cobertura de la matriz completa | Interpretación |
+|---|---:|---|---|
+| Web React/Vite + API compartida | 74.2857 | 3 de 9 criterios | Empate en el subconjunto con Flutter; no es ganador global |
+| Flutter + API compartida | 74.2857 | 3 de 9 criterios | Empate en el subconjunto con Web; runtime común pendiente |
+| Kotlin nativo Android | 60.0000 | 3 de 9 criterios | Solo referencia Android; iOS N/E |
+| React Native bare + API compartida | 60.0000 | 3 de 9 criterios | Mismo subtotal que Kotlin en el subconjunto; no demuestra equivalencia de producto |
+
+En las seis perturbaciones (tres criterios × dos factores) el orden del subconjunto no cambia: Flutter/Web empatan arriba y Kotlin/React Native empatan abajo. El resultado es estable **solo para este subconjunto y estas puntuaciones**. No permite seleccionar un stack completo: faltan seis criterios, la verificación de runtime común y varias obligaciones de licencia/distribución. Las puntuaciones se mantienen N/E en la matriz global allí donde no hay evidencia comparable; no se normalizan subtotales de distinta cobertura para crear un ranking.
+
+La matriz global queda completada en cuanto a trazabilidad de las nueve dimensiones, sus pesos, los requisitos de evidencia y los N/E explícitos; no se rellena artificialmente con números. La sensibilidad global queda bloqueada por diseño hasta que todos los candidatos finales tengan cobertura comparable en los criterios puntuados. La decisión ratificada en ADR-0001 es diferir el ganador, no confundir el análisis de sensibilidad parcial con una decisión final.
