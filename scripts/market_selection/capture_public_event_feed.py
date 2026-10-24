@@ -542,6 +542,90 @@ class _ArchiveHTMLParser(HTMLParser):
             self.anchors.append(self._anchor)
             self._anchor = None
 
+
+def _archive_text_evidence(raw: bytes) -> dict:
+    """Extract only visible archive text and first-party anchor text/URLs."""
+    parser = _ArchiveHTMLParser()
+    parser.feed(raw.decode("utf-8", errors="replace"))
+    parser.close()
+    return {
+        "schema_version": "official-archive-text-evidence-v1",
+        "anchors": parser.anchors,
+        "page_text": parser.page_text,
+    }
+
+
+def _load_archive_text_evidence(capture: dict) -> dict:
+    """Load and verify derived text evidence, or derive it from a retained full response."""
+    mode = capture.get("stored_content_mode", "FULL_RESPONSE")
+    if mode == "EXTRACTED_TEXT_EVIDENCE":
+        encoded = capture.get("text_evidence_base64")
+        expected_hash = capture.get("text_evidence_sha256")
+        expected_size = capture.get("text_evidence_bytes")
+        if not isinstance(encoded, str):
+            raise PermissionError("archive extracted text evidence is missing")
+        try:
+            payload = base64.b64decode(encoded, validate=True)
+        except (ValueError, base64.binascii.Error) as exc:
+            raise PermissionError("archive extracted text evidence is invalid base64") from exc
+        if hashlib.sha256(payload).hexdigest() != expected_hash or len(payload) != expected_size:
+            raise PermissionError("archive extracted text evidence integrity check failed")
+        try:
+            parsed = json.loads(payload.decode("utf-8"))
+        except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+            raise PermissionError("archive extracted text evidence is not valid JSON") from exc
+        if (
+            not isinstance(parsed, dict)
+            or parsed.get("schema_version") != "official-archive-text-evidence-v1"
+            or not isinstance(parsed.get("anchors"), list)
+            or not isinstance(parsed.get("page_text"), list)
+        ):
+            raise PermissionError("archive extracted text evidence schema is invalid")
+        return parsed
+    raw_b64 = capture.get("raw_response_base64")
+    if not isinstance(raw_b64, str):
+        raise PermissionError("archive capture body is missing")
+    try:
+        raw = base64.b64decode(raw_b64, validate=True)
+    except (ValueError, base64.binascii.Error) as exc:
+        raise PermissionError("archive capture body base64 is invalid") from exc
+    if hashlib.sha256(raw).hexdigest() != capture.get("raw_response_sha256") or len(raw) != capture.get("raw_response_bytes"):
+        raise PermissionError("archive capture body integrity check failed")
+    return _archive_text_evidence(raw)
+
+
+def _store_response_body_fields(source: dict, raw: bytes, *, html: bool) -> dict:
+    """Hash the complete response but persist only derived text when source policy requires it."""
+    fields = {
+        "raw_response_bytes": len(raw),
+        "raw_response_sha256": hashlib.sha256(raw).hexdigest(),
+        "capture_truncated": False,
+    }
+    if source.get("response_storage_mode") == "EXTRACTED_TEXT_EVIDENCE" and html:
+        payload = json.dumps(
+            _archive_text_evidence(raw),
+            sort_keys=True,
+            separators=(",", ":"),
+            ensure_ascii=False,
+        ).encode("utf-8")
+        fields.update({
+            "stored_content_mode": "EXTRACTED_TEXT_EVIDENCE",
+            "raw_response_base64": None,
+            "text_evidence_base64": base64.b64encode(payload).decode("ascii"),
+            "text_evidence_sha256": hashlib.sha256(payload).hexdigest(),
+            "text_evidence_bytes": len(payload),
+        })
+    else:
+        fields.update({
+            "stored_content_mode": "FULL_RESPONSE",
+            "raw_response_base64": base64.b64encode(raw).decode("ascii"),
+            "text_evidence_base64": None,
+            "text_evidence_sha256": None,
+            "text_evidence_bytes": None,
+        })
+    return fields
+
+
 def _path_has_prefix(path: str, prefix: str) -> bool:
     normalized = prefix.rstrip("/")
     return path == normalized or path.startswith(normalized + "/")
