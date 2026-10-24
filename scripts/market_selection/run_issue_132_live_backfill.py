@@ -367,6 +367,9 @@ def capture_btc_movement_context(
         "market_data": {
             "provider_id": "binance_spot_market_data",
             "endpoint": capture.get("source"),
+            "user_agent": authorization_record.get("approval_scope", {}).get("automated_access", {}).get(
+                "user_agent", "crypto-intelligence-ecosystem-ohlcv/1.0"
+            ),
             "interval": "1h",
             "window_start_utc": start.isoformat().replace("+00:00", "Z"),
             "window_end_exclusive_utc": end_exclusive.isoformat().replace("+00:00", "Z"),
