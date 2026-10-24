@@ -1,6 +1,6 @@
 # Issue 9 React Native chart reference PoC
 
-This reference pins Expo SDK 58.0.17, React Native 0.88.0 and React 19.3.0. It uses React Native core components only, with no third-party chart library. It renders the canonical synthetic OHLCV fixture, candles and volume, horizontal panning, accessible zoom controls, and a text table.
+This reference pins Expo SDK 58.0.17, React Native 0.88.0 and React 19.3.0. Version selection was checked against the [official Expo SDK table](https://docs.expo.dev/versions/latest/) and [React Native release overview](https://reactnative.dev/releases/overview) on 2026-10-24. It uses React Native core components only, with no third-party chart library. It renders the canonical synthetic OHLCV fixture, candles and volume, horizontal panning, accessible zoom controls, and a text table.
 
 ## Scope and limits
 
