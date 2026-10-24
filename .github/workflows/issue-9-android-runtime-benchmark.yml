@@ -132,17 +132,21 @@ jobs:
       - name: Install and measure all three apps on the same Android emulator
         uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d
         with:
-          api-level: 35
+          api-level: 34
           target: google_apis
           arch: x86_64
           profile: pixel_2
           disable-animations: true
-          emulator-boot-timeout: 1200
-          emulator-options: -no-window -no-audio -no-boot-anim -no-snapshot -gpu swiftshader
+          emulator-boot-timeout: 1800
+          emulator-options: -no-window -no-audio -no-boot-anim -no-snapshot -gpu swiftshader_indirect
           script: |
             set -euo pipefail
             # The emulator action waits for boot, but ADB can briefly report the device as offline.
             # Retry only the device handshake; fail with diagnostics rather than recording invalid data.
+            # Release build daemons can starve the emulator during boot on the 4-vCPU runner.
+            (cd pocs/issue-9/kotlin-android && ./gradlew --stop) || true
+            (cd pocs/issue-9/react-native/build-project/android && ./gradlew --stop) || true
+            pkill -f "GradleDaemon" || true
             ready=0
             for attempt in $(seq 1 120); do
               state="$(adb get-state 2>/dev/null || true)"
@@ -157,6 +161,8 @@ jobs:
               exit 1
             fi
             adb shell getprop ro.build.version.sdk
+            echo "ADB_READY_AT=$(date -u +%FT%TZ)" | tee "$OUTPUT_DIR/emulator-ready.txt"
+            adb devices -l | tee -a "$OUTPUT_DIR/emulator-ready.txt"
             bash scripts/stack_poc/measure_issue9_android_runtime.sh
         env:
           FLUTTER_APK: ${{ github.workspace }}/pocs/issue-9/flutter/build/app/outputs/flutter-apk/app-release.apk
