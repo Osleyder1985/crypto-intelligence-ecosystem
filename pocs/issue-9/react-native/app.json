@@ -1,12 +1,4 @@
 {
-  "expo": {
-    "name": "Crypto Intelligence RN Reference",
-    "slug": "issue-9-react-native-chart-reference",
-    "version": "1.0.0",
-    "orientation": "portrait",
-    "userInterfaceStyle": "light",
-    "newArchEnabled": true,
-    "android": {"package":"com.crypto.intelligence.issue9rn"},
-    "ios": {"bundleIdentifier":"com.crypto.intelligence.issue9rn","supportsTablet":true}
-  }
+  "name": "Issue9RnReference",
+  "displayName": "Crypto Intelligence RN Reference"
 }
