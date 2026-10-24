@@ -174,10 +174,10 @@ paths:
                   status:
                     type: string
                     enum: [queued, running, completed, failed, indeterminate]
-                  evaluation:
-                    oneOf:
-                      - $ref: '#/components/schemas/Evaluation'
-                      - type: 'null'
+                  evaluations:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Evaluation'
                   error:
                     oneOf:
                       - $ref: '#/components/schemas/ApiError'
