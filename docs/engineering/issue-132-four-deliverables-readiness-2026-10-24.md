@@ -32,7 +32,7 @@ Para cerrar, el manifiesto debe registrar `source_id`, `scope_id`, definición d
 
 ## CI y cambio de cobertura
 
-El PR [#292](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/pull/292) corrige el filtro `push.paths` para ejecutar las pruebas cuando cambie `capture_public_event_feed.py`. Su workflow de pruebas terminó en éxito: [run #177](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/actions/runs/40050655862). También finalizaron en éxito los workflows consultados de trazabilidad y gobernanza en el mismo commit. El estado combinado de commits no expone checks de estado tradicionales; esto no equivale por sí solo a una verificación exhaustiva de todas las reglas requeridas de protección de rama. No se declara el PR fusionado.
+El PR [#292](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/pull/292) se fusionó tras pasar los checks. Además de sincronizar `push.paths` y `pull_request.paths`, incluye `test_public_event_archive.py` y `test_issue_132_archive_e2e.py` en ambos disparadores y los ejecuta junto con los contratos de eventos y la integración del informe. La ejecución actualizada [run #179](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/actions/runs/40051579888) terminó en éxito; los nueve workflows asociados al head `441947eb4e7b486151d7deb757d5e4e8dee44a28` terminaron con conclusión `success`. La prueba E2E sigue usando fixtures sintéticos: la mejora de CI no se presenta como captura histórica real.
 
 ## Condición de cierre
 
