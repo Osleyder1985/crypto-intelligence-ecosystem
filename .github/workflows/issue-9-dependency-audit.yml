@@ -32,7 +32,7 @@ jobs:
         with:
           python-version: '3.12'
       - name: Test conservative licence triage and version-bound overrides
-        run: python -m unittest discover -s tests/stack_poc -p 'test_review_license_inventory.py' -v
+        run: python -m unittest discover -s tests/stack_poc -p 'test_*license*.py' -v
       - name: Install pinned application dependencies and audit tools
         run: python -m pip install --disable-pip-version-check -r requirements-stack-poc.txt pip-audit==2.9.0 pip-licenses==5.0.0
       - name: Verify dependency consistency
