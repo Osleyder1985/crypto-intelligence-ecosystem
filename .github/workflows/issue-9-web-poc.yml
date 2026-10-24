@@ -30,11 +30,17 @@ jobs:
       - name: Test deterministic OHLCV chart geometry
         working-directory: pocs/issue-9/web
         run: npm test
-      - name: Install pinned Playwright browser test tooling
+      - name: Resolve and install pinned Playwright test dependencies
         working-directory: pocs/issue-9/web
         run: |
-          npm install --no-save --package-lock=false @playwright/test@1.56.1
-          npx playwright install --with-deps chromium
+          npm install --package-lock-only --ignore-scripts --save-dev @playwright/test@1.56.1
+          npm ci --ignore-scripts
+      - name: Audit browser test tooling dependencies
+        working-directory: pocs/issue-9/web
+        run: npm audit --audit-level=high --json > npm-audit.json
+      - name: Install Chromium
+        working-directory: pocs/issue-9/web
+        run: npx playwright install --with-deps chromium
       - name: Test real browser rendering and zoom/pan
         working-directory: pocs/issue-9/web
         shell: bash
