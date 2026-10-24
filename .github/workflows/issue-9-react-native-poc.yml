@@ -20,7 +20,7 @@ permissions:
 jobs:
   react-native-android:
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 60
     steps:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
@@ -38,41 +38,47 @@ jobs:
           npm --version
       - name: Verify app fixture matches canonical fixture byte-for-byte
         run: cmp tests/stack_poc/fixtures/ohlcv_synthetic_v1.json pocs/issue-9/react-native/assets/ohlcv_synthetic_v1.json
-      - name: Generate package lock from exact direct pins
+      - name: Scaffold pinned bare React Native project
         working-directory: pocs/issue-9/react-native
-        run: npm install --package-lock-only --ignore-scripts
-      - name: Install locked dependencies
-        working-directory: pocs/issue-9/react-native
-        run: npm ci
-      - name: Audit npm dependency advisories
-        working-directory: pocs/issue-9/react-native
-        run: npm audit --audit-level=high
-      - name: Record resolved dependency tree
-        working-directory: pocs/issue-9/react-native
-        run: npm ls --all --json > issue-9-rn-dependency-tree.json
-      - name: Generate third-party licence inventory
-        working-directory: pocs/issue-9/react-native
-        run: npx --yes license-checker-rseidelsohn@5.0.1 --json > issue-9-rn-license-inventory.json
-      - name: Validate OHLCV fixture
-        working-directory: pocs/issue-9/react-native
-        run: npm run test:fixture
-      - name: Generate Android project
-        working-directory: pocs/issue-9/react-native
-        run: npx expo prebuild --platform android --no-install
-      - name: Build Android debug APK and record measurements
+        run: npx --yes @react-native-community/cli@20.0.0 init Issue9RnReference --version 0.88.0 --directory .build --skip-install
+      - name: Inject reference screen and shared fixture
         working-directory: pocs/issue-9/react-native
         run: |
-          /usr/bin/time -f 'ANDROID_BUILD_SECONDS=%e PEAK_RSS_KB=%M' sh -c 'cd android && ./gradlew assembleDebug'
-          stat --printf='ANDROID_APK_BYTES=%s\n' android/app/build/outputs/apk/debug/app-debug.apk
-      - name: Preserve lockfile and dependency inventory
+          cp App.js .build/App.js
+          cp index.js .build/index.js
+          cp app.json .build/app.json
+          mkdir -p .build/assets
+          cp assets/ohlcv_synthetic_v1.json .build/assets/ohlcv_synthetic_v1.json
+      - name: Generate and install dependency lock
+        working-directory: pocs/issue-9/react-native/.build
+        run: |
+          npm install --package-lock-only --ignore-scripts
+          npm ci
+      - name: Audit npm dependency advisories
+        working-directory: pocs/issue-9/react-native/.build
+        run: npm audit --audit-level=high
+      - name: Record dependency tree and licence inventory
+        working-directory: pocs/issue-9/react-native/.build
+        run: |
+          npm ls --all --json > issue-9-rn-dependency-tree.json
+          npx --yes license-checker-rseidelsohn@5.0.1 --json > issue-9-rn-license-inventory.json
+      - name: Validate OHLCV fixture
+        working-directory: pocs/issue-9/react-native
+        run: node scripts/validate_fixture.mjs
+      - name: Build Android debug APK and record measurements
+        working-directory: pocs/issue-9/react-native/.build
+        run: |
+          /usr/bin/time -f 'ANDROID_BUILD_SECONDS=%e PEAK_RSS_KB=%M' sh -c 'cd android && ./gradlew assembleDebug' 2>&1 | tee android-build-measurement.log
+          stat --printf='ANDROID_APK_BYTES=%s\n' android/app/build/outputs/apk/debug/app-debug.apk | tee -a android-build-measurement.log
+      - name: Preserve lockfile and dependency/licence inventory
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
-          name: issue-9-react-native-lock-and-inventory
+          name: issue-9-react-native-android-evidence
           path: |
-            pocs/issue-9/react-native/package-lock.json
-            pocs/issue-9/react-native/node_modules/.package-lock.json
-            pocs/issue-9/react-native/issue-9-rn-dependency-tree.json
-            pocs/issue-9/react-native/issue-9-rn-license-inventory.json
+            pocs/issue-9/react-native/.build/package-lock.json
+            pocs/issue-9/react-native/.build/issue-9-rn-dependency-tree.json
+            pocs/issue-9/react-native/.build/issue-9-rn-license-inventory.json
+            pocs/issue-9/react-native/.build/android-build-measurement.log
           if-no-files-found: warn
           retention-days: 30
