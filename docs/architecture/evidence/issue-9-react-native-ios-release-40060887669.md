@@ -25,7 +25,7 @@
 | Release build | 79.73 s | 200,228,864 bytes | 111,315,648 bytes | 41,784 KB |
 | Release rebuild after touching `App.js` | 19.27 s | 194,969,600 bytes | 103,352,896 bytes | 41,784 KB |
 
-Clean Debug median: **70.30 s**; range: **46.05–110.60 s**. Debug bundle sizes varied across the three clean runs (163,404–168,604 KB); retain the variation rather than selecting a preferred value. Release bundle size was stable at 41,784 KB. Release incremental rebuild after a JavaScript edit is 19.27 s.
+Clean Debug median: **70.30 s**; range: **46.05–110.60 s**. Debug bundle sizes varied across the three clean runs (163,404–168,604 KB); retain the variation rather than selecting a preferred value. Release bundle size was stable at 41,784 KB. The 19.27 s Release rebuild followed a timestamp-only touch; this is preliminary and is not accepted as proof that Metro rebundled JavaScript. The updated workflow appends a temporary comment to `App.js` to force a content change and measures Release again; that result is pending.
 
 ## Comparability caveat
 
