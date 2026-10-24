@@ -51,6 +51,19 @@ class LicenceInventoryReviewTests(unittest.TestCase):
         self.assertEqual(report["identified_from_versioned_upstream_license_text"], 1)
         self.assertEqual(report["manual_review_required"], 0)
 
+    def test_starlette_1100_license_is_pinned_to_tagged_three_clause_bsd_text(self):
+        report, _ = self.run_review([{
+            "Name": "starlette", "Version": "1.10.0",
+            "License-Metadata": "UNKNOWN", "License-Classifier": "UNKNOWN",
+            "LicenseText": "UNKNOWN", "LicenseFile": "UNKNOWN",
+            "NoticeFile": "UNKNOWN", "NoticeText": "UNKNOWN",
+            "URL": "https://github.com/Kludex/starlette",
+        }])
+        package = report["packages"][0]
+        self.assertEqual(package["license_expression"], "BSD-3-Clause")
+        self.assertEqual(package["status"], "identified-from-versioned-license-text")
+        self.assertIn("starlette/blob/1.10.0/LICENSE.md", package["evidence"])
+
     def test_override_does_not_carry_forward_to_unreviewed_version(self):
         report, _ = self.run_review([{
             "Name": "CacheControl", "Version": "99.0.0",
