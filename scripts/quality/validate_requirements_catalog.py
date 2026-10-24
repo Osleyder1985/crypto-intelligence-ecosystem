@@ -197,7 +197,7 @@ def validate_issue_traceability(content: str) -> list[str]:
             )
         mapped.update(ids)
 
-    required_issues = {3, 4, 5, 6, 7, 8, 9, 10, 11, 13, 16, 17, 18, 19, 20, 21, 22}
+    required_issues = {3, 4, 5, 6, 7, 8, 9, 10, 11, 13, 16, 17, 18, 19, 20, 21, 22, 128, 130, 132, 133, 134, 266, 270}
     missing_issues = sorted(required_issues - issues_found)
     if missing_issues:
         errors.append(
@@ -230,7 +230,7 @@ def validate_issue_acceptance_review(content: str) -> list[str]:
         if match:
             found.add(int(match.group(1)))
 
-    required = {3, 4, 5, 6, 7, 8, 9, 10, 11, 13, 16, 17, 18, 19, 20, 21}
+    required = {3, 4, 5, 6, 7, 8, 9, 10, 11, 13, 16, 17, 18, 19, 20, 21, 128, 130, 132, 133, 134, 266, 270}
     missing = sorted(required - found)
     if missing:
         return [
