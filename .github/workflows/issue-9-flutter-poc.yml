@@ -40,5 +40,6 @@ jobs:
       - name: Build Android debug APK and record runner measurements
         working-directory: pocs/issue-9/flutter
         run: |
+          set -o pipefail
           /usr/bin/time -v flutter build apk --debug 2>&1 | tee flutter-build-measurement.log
           stat --printf='APK_BYTES=%s\n' build/app/outputs/flutter-apk/app-debug.apk
