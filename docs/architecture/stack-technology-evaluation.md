@@ -206,3 +206,11 @@ La PoC verifica:
 - rechazo explícito de `UPDATE` y `DELETE` sobre el historial mediante trigger de PostgreSQL.
 
 **Resultado CI observado:** los runs [40056876625](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/actions/runs/40056876625) y [40056885420](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/actions/runs/40056885420) completaron el job `postgres-history` con conclusión `success`, incluidos inicialización del servicio PostgreSQL, instalación de psycopg y ejecución de las pruebas. Es una prueba de esquema/retención de historial, no un benchmark representativo, una migración de producción ni una validación de recuperación/backup. El worker persistente y la idempotencia transaccional todavía requieren PoC separada.
+
+## 15. Worker persistente de PoC y abstención explícita
+
+Se añadió `scripts/stack_poc/research_worker.py` y una prueba que solicita dos horizontes, procesa una tarea pendiente una sola vez, verifica que una segunda ejecución no duplique el resultado y consulta el estado persistido. Cuando el motor analítico no está integrado, el worker registra resultados `indeterminate` con la limitación `analysis_engine_not_integrated`; no inventa una evaluación de inversión.
+
+La respuesta de `GET /v1/evaluation-requests/{request_id}` y el contrato OpenAPI se ajustaron para devolver una lista de evaluaciones por horizonte. El workflow API run [40056998071](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/actions/runs/40056998071) ejecutó el paso de tests con conclusión `success`; el job estaba terminando la limpieza cuando se verificó. El workflow OpenAPI run [40056998001](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/actions/runs/40056998001) completó el paso de validación con `success`.
+
+**Límite restante:** este worker PoC procesa una tarea en una transacción SQLite y demuestra persistencia/idempotencia secuencial. No acredita concurrencia entre múltiples workers, recuperación tras caída a mitad de ejecución, reintentos temporizados ni integración con fuentes/analizador real. Esos casos requieren pruebas específicas antes de considerar completa la PoC asíncrona.
