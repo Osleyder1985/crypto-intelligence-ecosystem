@@ -31,20 +31,22 @@ jobs:
         working-directory: pocs/issue-9/web
         run: npm test
       - name: Install pinned Playwright browser test tooling
+        working-directory: pocs/issue-9/web
         run: |
           npm install --no-save --package-lock=false @playwright/test@1.56.1
           npx playwright install --with-deps chromium
       - name: Test real browser rendering and zoom/pan
+        working-directory: pocs/issue-9/web
         shell: bash
         run: |
-          python -m http.server 8000 --bind 127.0.0.1 > /tmp/issue9-web-server.log 2>&1 &
+          (cd "$GITHUB_WORKSPACE" && python -m http.server 8000 --bind 127.0.0.1) > /tmp/issue9-web-server.log 2>&1 &
           server_pid=$!
           trap 'kill "$server_pid" 2>/dev/null || true' EXIT
           for attempt in $(seq 1 30); do
             if curl --fail --silent http://127.0.0.1:8000/pocs/issue-9/web/index.html >/dev/null; then break; fi
             sleep 1
           done
-          npx playwright test pocs/issue-9/web/browser_smoke.spec.js --reporter=list
+          npx playwright test browser_smoke.spec.js --reporter=list
       - name: Run three independent geometry benchmark processes
         working-directory: pocs/issue-9/web
         run: |
