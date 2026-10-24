@@ -1,0 +1,17 @@
+name: issue_9_flutter_chart_reference
+description: Dependency-free Flutter chart reference for the Issue 9 stack evaluation.
+publish_to: none
+version: 0.1.0+1
+environment:
+  sdk: '>=3.5.0 <4.0.0'
+  flutter: '>=3.24.0'
+dependencies:
+  flutter:
+    sdk: flutter
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/ohlcv_synthetic_v1.json
