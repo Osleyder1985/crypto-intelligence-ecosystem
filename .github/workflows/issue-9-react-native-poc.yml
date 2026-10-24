@@ -65,11 +65,20 @@ jobs:
       - name: Validate OHLCV fixture
         working-directory: pocs/issue-9/react-native
         run: node scripts/validate_fixture.mjs
-      - name: Build Android debug APK and record measurements
+      - name: Run three clean Android builds and record measurements
         working-directory: pocs/issue-9/react-native/build-project
         run: |
-          /usr/bin/time -f 'ANDROID_BUILD_SECONDS=%e PEAK_RSS_KB=%M' sh -c 'cd android && ./gradlew assembleDebug' 2>&1 | tee android-build-measurement.log
-          stat --printf='ANDROID_APK_BYTES=%s\n' android/app/build/outputs/apk/debug/app-debug.apk | tee -a android-build-measurement.log
+          set -o pipefail
+          : > android-build-measurement.log
+          for run in 1 2 3; do
+            (cd android && ./gradlew clean)
+            /usr/bin/time -f "CLEAN_ANDROID_BUILD_RUN=$run ELAPSED_SECONDS=%e PEAK_RSS_KB=%M" sh -c 'cd android && ./gradlew assembleDebug' 2>&1 | tee -a android-build-measurement.log
+            stat --printf="CLEAN_ANDROID_BUILD_RUN=$run DEBUG_APK_BYTES=%s\\n" android/app/build/outputs/apk/debug/app-debug.apk | tee -a android-build-measurement.log
+          done
+          touch App.js
+          /usr/bin/time -f 'INCREMENTAL_ANDROID_BUILD_AFTER_SOURCE_TOUCH_SECONDS=%e PEAK_RSS_KB=%M' sh -c 'cd android && ./gradlew assembleDebug' 2>&1 | tee -a android-build-measurement.log
+          /usr/bin/time -f 'ANDROID_RELEASE_BUILD_SECONDS=%e PEAK_RSS_KB=%M' sh -c 'cd android && ./gradlew assembleRelease' 2>&1 | tee -a android-build-measurement.log
+          stat --printf='ANDROID_RELEASE_APK_BYTES=%s\\n' android/app/build/outputs/apk/release/app-release.apk | tee -a android-build-measurement.log
       - name: Preserve lockfile and dependency/licence inventory
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
