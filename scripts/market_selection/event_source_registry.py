@@ -60,7 +60,7 @@ EVENT_SOURCE_REGISTRY = {
             "source_type": "REGULATORY",
             "source_url": "https://www.cftc.gov/RSS/RSSGP/rssgp.xml",
             "allowed_article_hosts": ["www.cftc.gov", "cftc.gov"],
-            "terms_url": "https://www.cftc.gov/sites/default/files/cftc/cftcprivacy.htm",
+            "terms_url": "https://www.cftc.gov/WebPolicy/index.htm",
             "status": "TERMS_PENDING",
             "terms_sha256": None,
             "terms_content_base64": None,
@@ -84,7 +84,7 @@ EVENT_SOURCE_REGISTRY = {
             "source_type": "PRIMARY_OFFICIAL",
             "source_url": "https://www.federalreserve.gov/feeds/press_all.xml",
             "allowed_article_hosts": ["www.federalreserve.gov", "federalreserve.gov"],
-            "terms_url": "https://www.federalreserve.gov/policies.htm",
+            "terms_url": "https://www.federalreserve.gov/disclaimer.htm",
             "status": "TERMS_PENDING",
             "terms_sha256": None,
             "terms_content_base64": None,
@@ -216,13 +216,20 @@ def validate_source_entry(entry: dict) -> dict:
     source_type = _non_empty(entry.get("source_type"), "source_type")
     source_url = _https_url(entry.get("source_url"), "source_url")
     terms_url = _https_url(entry.get("terms_url"), "terms_url")
-    if source_id == "sec_press_releases":
-        if source_type != "REGULATORY":
-            raise ValueError("SEC press releases must remain classified as REGULATORY")
-        if source_url != "https://www.sec.gov/news/pressreleases.rss":
-            raise ValueError("SEC feed URL must match the reviewed official RSS URL")
-        if terms_url != "https://www.sec.gov/about/developer-resources":
-            raise ValueError("SEC terms URL must match the reviewed official developer-resources URL")
+    expected_source_terms = {
+        "sec_press_releases": ("REGULATORY", "https://www.sec.gov/news/pressreleases.rss", "https://www.sec.gov/about/developer-resources"),
+        "cftc_general_press_releases": ("REGULATORY", "https://www.cftc.gov/RSS/RSSGP/rssgp.xml", "https://www.cftc.gov/WebPolicy/index.htm"),
+        "federal_reserve_press_releases": ("PRIMARY_OFFICIAL", "https://www.federalreserve.gov/feeds/press_all.xml", "https://www.federalreserve.gov/disclaimer.htm"),
+    }
+    expected = expected_source_terms.get(source_id)
+    if expected is not None:
+        expected_type, expected_source_url, expected_terms_url = expected
+        if source_type != expected_type:
+            raise ValueError(f"{source_id} source_type must match the reviewed official source classification")
+        if source_url != expected_source_url:
+            raise ValueError(f"{source_id} source_url must match the reviewed official endpoint")
+        if terms_url != expected_terms_url:
+            raise ValueError(f"{source_id} terms_url must match the official policy URL documented for review")
     hosts = entry.get("allowed_article_hosts")
     if not isinstance(hosts, list) or not hosts or any(not isinstance(host, str) or not host.strip() for host in hosts):
         raise ValueError("allowed_article_hosts must be a non-empty list of hostnames")
