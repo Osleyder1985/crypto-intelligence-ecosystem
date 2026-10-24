@@ -410,3 +410,10 @@ La primera auditoría Python sí pasó `pip-audit` y `pip check`, pero 16 de 42 
 **iOS:** las medidas anteriores se excluyen de la comparación directa porque Flutter construía para `iphoneos` y React Native para Simulator. Los workflows se corrigieron para usar iOS Simulator ARM64 en ambos; el nuevo par de ejecuciones debe terminar y sus logs confirmarse antes de puntuar build, memoria o tamaño iOS.
 
 **Decisión:** todavía no se ratifica ADR-0001 ni se cierra Issue #9. Las celdas de ejecución en el Windows 11 del usuario, UI en dispositivo físico, accesibilidad móvil, revisión legal de todos los avisos, API/persistencia bajo carga representativa y sensibilidad de la matriz completa permanecen N/E o pendientes de evidencia.
+
+
+## 32. Web PoC browser verification — 2026-10-24
+
+The latest [web chart workflow run 40063297746](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/actions/runs/40063297746) passed all steps on the current evaluation branch. Playwright 1.64.1/Chromium 156 ran the same synthetic 12-candle fixture three times; all three browser smoke tests passed. Measured chart-ready samples: 128.745, 173.772 and 121.467 ms. Three fresh Node processes measured geometry-only median times of 0.003226, 0.003296 and 0.003226 ms (aggregate median-of-medians 0.003226 ms). These are different measurements: browser chart-ready includes the tested page rendering path; the geometry microbenchmark excludes DOM/layout/GPU and must not be treated as user-visible latency. Full evidence and limits: `docs/architecture/evidence/issue-9-web-browser-benchmark-40063297746.md`.
+
+The browser tooling audit reported zero npm vulnerabilities. The workflow logs nevertheless include upstream Node deprecation warnings for `punycode` and `url.parse()`, and a Node 20 deprecation warning for pinned GitHub Actions. Record these as maintenance follow-ups; they are not npm audit vulnerabilities. Mobile same-emulator runtime measurement, updated iOS comparisons, full licence-obligation review and the user's own Windows 11 benchmark remain pending. This evidence does not change the provisional ranking or authorize ADR ratification.
