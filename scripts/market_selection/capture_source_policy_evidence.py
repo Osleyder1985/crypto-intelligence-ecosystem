@@ -84,42 +84,35 @@ def capture_policy_page(
     metadata_path = output_dir / "policy-evidence.json"
     client = opener or build_opener(AllowlistedRedirectHandler())
     attempts = []
+    last_error = None
     for attempt in range(retries + 1):
-        req = Request(url, headers={"User-Agent": user_agent.strip(), "Accept": "text/html,application/xhtml+xml;q=0.9,*/*;q=0.1"}, method="GET")
+        req = Request(
+            url,
+            headers={
+                "User-Agent": user_agent.strip(),
+                "Accept": "text/html,application/xhtml+xml;q=0.9,*/*;q=0.1",
+            },
+            method="GET",
+        )
+        # Keep transport exceptions separate from local persistence failures. Only
+        # transport failures may trigger a retry; disk errors must never repeat GET.
         try:
             with client.open(req, timeout=float(timeout_seconds)) as response:
                 status = int(getattr(response, "status", 200))
                 raw = response.read()
-                headers = {str(k): str(v) for k, v in response.headers.items() if str(k).lower() not in {"set-cookie", "authorization"}}
+                headers = {
+                    str(k): str(v)
+                    for k, v in response.headers.items()
+                    if str(k).lower() not in {"set-cookie", "authorization"}
+                }
                 final_url = response.geturl()
             validate_url(final_url)
             attempts.append({"attempt": attempt + 1, "http_status": status})
             if status in RETRYABLE_HTTP and attempt < retries:
                 sleep(backoff_seconds * (2 ** attempt))
                 continue
-            _atomic_write(body_path, raw)
-            result = {
-                "schema_version": "official-source-policy-evidence-v1",
-                "capture_status": "PASS" if status == 200 else "HTTP_ERROR",
-                "requested_url": url,
-                "final_url": final_url,
-                "captured_at": utc_now(),
-                "http_status": status,
-                "response_headers": headers,
-                "user_agent": user_agent.strip(),
-                "attempts": attempts,
-                "retry_count": len(attempts) - 1,
-                "body_file": body_path.name,
-                "body_bytes": len(raw),
-                "body_sha256": hashlib.sha256(raw).hexdigest(),
-                "read_to_eof": True,
-                "application_size_limit_bytes": None,
-                "provider_approved": False,
-                "approval_note": "Evidence capture only; human review of scope, retention, attribution, and third-party content remains required.",
-                "errors": [],
-            }
-            _atomic_write(metadata_path, (json.dumps(result, ensure_ascii=False, indent=2, sort_keys=True) + "\n").encode("utf-8"))
-            return result
+            last_error = None
+            break
         except HTTPError as exc:
             attempts.append({"attempt": attempt + 1, "http_status": int(exc.code)})
             retryable = exc.code in RETRYABLE_HTTP
@@ -130,20 +123,64 @@ def capture_policy_page(
             if retryable and attempt < retries:
                 sleep(backoff_seconds * (2 ** attempt))
                 continue
-            error = {"type": "HTTPError", "message": f"HTTP {exc.code}", "http_status": int(exc.code)}
+            last_error = {
+                "type": "HTTPError",
+                "message": f"HTTP {exc.code}",
+                "http_status": int(exc.code),
+            }
+            raw = None
+            headers = {}
+            final_url = None
+            status = int(exc.code)
+            break
         except (URLError, TimeoutError, socket.gaierror, OSError) as exc:
-            attempts.append({"attempt": attempt + 1, "error_type": type(exc).__name__, "message": str(exc)})
+            attempts.append({
+                "attempt": attempt + 1,
+                "error_type": type(exc).__name__,
+                "message": str(exc),
+            })
             if attempt < retries:
                 sleep(backoff_seconds * (2 ** attempt))
                 continue
-            error = {"type": type(exc).__name__, "message": str(exc)}
+            last_error = {"type": type(exc).__name__, "message": str(exc)}
+            raw = None
+            headers = {}
+            final_url = None
+            status = None
+            break
+
+    if last_error is None:
+        # Persistence deliberately sits outside the transport retry loop.
+        # If disk write fails, propagate it rather than issuing another GET.
+        _atomic_write(body_path, raw)
         result = {
             "schema_version": "official-source-policy-evidence-v1",
-            "capture_status": "NETWORK_ERROR" if "http_status" not in error else "HTTP_ERROR",
+            "capture_status": "PASS" if status == 200 else "HTTP_ERROR",
+            "requested_url": url,
+            "final_url": final_url,
+            "captured_at": utc_now(),
+            "http_status": status,
+            "response_headers": headers,
+            "user_agent": user_agent.strip(),
+            "attempts": attempts,
+            "retry_count": len(attempts) - 1,
+            "body_file": body_path.name,
+            "body_bytes": len(raw),
+            "body_sha256": hashlib.sha256(raw).hexdigest(),
+            "read_to_eof": True,
+            "application_size_limit_bytes": None,
+            "provider_approved": False,
+            "approval_note": "Evidence capture only; human review of scope, retention, attribution, and third-party content remains required.",
+            "errors": [],
+        }
+    else:
+        result = {
+            "schema_version": "official-source-policy-evidence-v1",
+            "capture_status": "NETWORK_ERROR" if "http_status" not in last_error else "HTTP_ERROR",
             "requested_url": url,
             "final_url": None,
             "captured_at": utc_now(),
-            "http_status": error.get("http_status"),
+            "http_status": last_error.get("http_status"),
             "response_headers": {},
             "user_agent": user_agent.strip(),
             "attempts": attempts,
@@ -155,11 +192,13 @@ def capture_policy_page(
             "application_size_limit_bytes": None,
             "provider_approved": False,
             "approval_note": "No policy body captured; do not approve the source from this result.",
-            "errors": [error],
+            "errors": [last_error],
         }
-        _atomic_write(metadata_path, (json.dumps(result, ensure_ascii=False, indent=2, sort_keys=True) + "\n").encode("utf-8"))
-        return result
-    raise AssertionError("retry loop ended unexpectedly")
+    _atomic_write(
+        metadata_path,
+        (json.dumps(result, ensure_ascii=False, indent=2, sort_keys=True) + "\\n").encode("utf-8"),
+    )
+    return result
 
 
 def main(argv=None) -> int:
