@@ -10,5 +10,6 @@ void main() {
     expect(find.textContaining('Synthetic test data only.'), findsOneWidget);
     expect(find.textContaining('2026-01-05T00:00:00Z'), findsWidgets);
     expect(find.byType(DataTable), findsOneWidget);
+    expect(find.byType(InteractiveViewer), findsOneWidget);
   });
 }
