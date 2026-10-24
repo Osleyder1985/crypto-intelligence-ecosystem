@@ -65,12 +65,13 @@ class PublicEventArchiveTests(unittest.TestCase):
     def test_archive_text_evidence_excludes_embedded_scripts_and_media(self):
         from scripts.market_selection.capture_public_event_feed import _ArchiveHTMLParser
 
-        parser = _ArchiveHTMLParser()
+        parser = _ArchiveHTMLParser(allowed_hosts={"www.federalreserve.gov", "federalreserve.gov"})
         parser.feed(
             '<html><body><script><a href="https://third-party.example/leak">Injected</a>'
             'SECRET_SCRIPT_TEXT</script><style>SECRET_STYLE_TEXT</style>'
             '<iframe>SECRET_FRAME_TEXT</iframe><svg><text>SECRET_SVG_TEXT</text></svg>'
             '<img src="https://third-party.example/image.png" alt="Third party image">'
+            '<a href="https://www.federalregister.gov/doc">THIRD_PARTY_LINK_LABEL</a>'
             '<a href="/newsevents/pressreleases/bcreg20260924a.htm">'
             'Federal Reserve Board requests public comment</a>'
             '<p>Published September 24, 2026</p></body></html>'
@@ -82,6 +83,7 @@ class PublicEventArchiveTests(unittest.TestCase):
         self.assertNotIn("SECRET_FRAME_TEXT", extracted)
         self.assertNotIn("SECRET_SVG_TEXT", extracted)
         self.assertNotIn("Third party image", extracted)
+        self.assertNotIn("THIRD_PARTY_LINK_LABEL", extracted)
         self.assertEqual(len(parser.anchors), 1)
         self.assertEqual(
             parser.anchors[0]["href"],
