@@ -356,3 +356,19 @@ The measurements support the feasibility of both Flutter and bare React Native, 
 ## 27. Parciales con cobertura de evidencia (2026-10-24)
 
 El script `scripts/stack_poc/sensitivity_analysis.py` ahora devuelve `partial_scores` cuando faltan datos: criterios puntuados, criterios ausentes, porcentaje de peso cubierto y un subtotal normalizado sobre los criterios con evidencia. En estado `incomplete`, la salida sigue teniendo `ranking=[]` y `sensitivity=[]`. Los subtotales parciales son diagnósticos y no se pueden comparar entre candidatos con distinta cobertura; no sustituyen la matriz completa ni autorizan ratificar ADR-0001. Se añadió un test que verifica este comportamiento.
+
+
+## 28. Puntuación parcial con evidencia y sensibilidad de subconjunto (2026-10-24)
+
+El input reproducible está en `docs/architecture/evidence/issue-9-partial-score-input.json`; el workflow genera el JSON de salida como artefacto y comprueba que, al faltar criterios, no se produce ranking final ni sensibilidad completa. La cobertura de pesos y subtotales diagnósticos en este checkpoint es:
+
+| Alternativa | Criterios con puntuación/evidencia | Peso cubierto | Subtotal normalizado parcial | Interpretación |
+|---|---|---:|---:|---|
+| Web React/Vite + API compartida | Gráficos 4, persistencia 3, pruebas/CI 4 | 35% | 74.2857/100 | Diagnóstico parcial; seguridad, build/recursos, mantenibilidad, contratos cliente y coste/licencias siguen N/E |
+| Flutter + API compartida | Gráficos 4, persistencia 3, pruebas/CI 4 | 35% | 74.2857/100 | Diagnóstico parcial; iOS Debug/Release actualizado y revisión de licencias siguen pendientes |
+| React Native bare + API compartida | Gráficos 3, seguridad 3, persistencia 3, pruebas/CI 3 | 50% | 60/100 | Diagnóstico parcial; build Android Release repetido, UI nativa automatizada y revisión legal de licencias siguen pendientes |
+| Kotlin Android + cliente iOS separado | Persistencia 3 | 10% | 60/100 | No comparable; no hay PoC de cliente Kotlin ni cliente iOS separado |
+
+Estos subtotales **no son una clasificación de stacks**: las coberturas difieren y varias puntuaciones son provisionales. El criterio de contratos cliente/API queda N/E porque las pantallas PoC todavía no consumen el API real. Los scores están respaldados por los runs referenciados en el input JSON.
+
+Para una sensibilidad acotada, se tomó solo el subconjunto con evidencia para Web, Flutter y React Native: gráficos/series, persistencia histórica común y pruebas/CI. Los pesos originales 15:10:10 se normalizaron a 42.8571:28.5714:28.5714. Con scores (Web 4/3/4, Flutter 4/3/4, React Native 3/3/3), el subtotal de este subconjunto es Web=Flutter 74.2857 y React Native 60. El script recalcula cada peso ±20% (seis escenarios) y la ordenación de este subconjunto no cambia: Web y Flutter empatados por encima de React Native. Este resultado no incluye seis criterios, no incluye Kotlin y **no ratifica un ganador final**. El input de sensibilidad reproducible está en `docs/architecture/evidence/issue-9-subset-sensitivity-input.json`; el workflow debe terminar y preservar el artefacto antes de considerar este resultado verificado.
