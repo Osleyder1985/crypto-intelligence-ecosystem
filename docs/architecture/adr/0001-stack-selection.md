@@ -98,7 +98,7 @@ The mobile build-only evidence has advanced since the earlier checkpoint:
 - Web browser chart PoC [run 40063297746](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/actions/runs/40063297746): PASS; three Chromium interactions and 121.467–173.772 ms chart-ready observations for the synthetic fixture.
 - Python dependency scan [run 40063600439](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/actions/runs/40063600439): `pip check` PASS and `pip-audit` reported no known vulnerabilities. Licence triage is partial: 4 manual-review packages, 3 without captured licence text, and 39 packages without a separate NOTICE file/text. Missing separate NOTICE is not automatically a violation, but distribution obligations remain unreviewed.
 
-**Still not ratified:** the common Android-emulator runtime comparison (startup/visible fixture/PSS/RSS) remains in progress; Flutter's Dart/Gradle/CocoaPods licence text inventory is being added and must be reviewed; the 4 Python licence items need resolution; the Windows 11 PC actually used by the owner has not been measured; physical-device accessibility, screen-reader behaviour, and full-matrix sensitivity remain incomplete. The subset sensitivity remains diagnostic and does not include all criteria or the Kotlin reference. Do not mark ADR-0001 ratified or close Issue #9 on build evidence alone.
+**Still not ratified:** the common Android-emulator runtime comparison (startup/visible fixture/PSS/RSS) remains in progress; Flutter's Dart/Gradle/CocoaPods licence text inventory is being added and must be reviewed; the 3 Python licence items need resolution; the Windows 11 PC actually used by the owner has not been measured; physical-device accessibility, screen-reader behaviour, and full-matrix sensitivity remain incomplete. The subset sensitivity remains diagnostic and does not include all criteria or the Kotlin reference. Do not mark ADR-0001 ratified or close Issue #9 on build evidence alone.
 
 
 ## Kotlin reference evidence and comparison correction — 2026-10-24
@@ -109,4 +109,9 @@ The native Kotlin Android reference now compiles and packages successfully in [r
 
 The Kotlin Release build uses debug-key signing solely for emulator installation, not production. The build graph has no third-party chart library; runtime dependencies are Kotlin stdlib and JetBrains annotations, while the Android Gradle/Kotlin build-plugin graph remains subject to licence review. Gradle emitted a deprecation warning for `kotlinOptions` and a future Gradle 10 compatibility warning.
 
-ADR-0001 remains **provisional**: no overall winner is ratified until the common-emulator comparison passes, the four Python licence items and special npm/Dart/build-tool obligations are reviewed, the Windows 11 target-machine report exists, and the complete sensitivity analysis uses approved scoring weights and documented uncertainty.
+ADR-0001 remains **provisional**: no overall winner is ratified until the common-emulator comparison passes, the three Python licence items and special npm/Dart/build-tool obligations are reviewed, the Windows 11 target-machine report exists, and the complete sensitivity analysis uses approved scoring weights and documented uncertainty.
+
+
+## Python licence triage update — 2026-10-24
+
+The latest [run 40065193397](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/actions/runs/40065193397) now identifies `typing_extensions 4.16.0` as `PSF-2.0` from its exact upstream version tag and records the source URL. The Python manual-review list is reduced to three distributions whose licence texts are not present in the installed-package inventory: `license-expression 30.4.4`, `packageurl-python 0.17.6`, and `pip-requirements-parser 32.0.1`. The scan remains security PASS but licence review PARTIAL until those exact upstream texts and applicable notice obligations are preserved and reviewed.

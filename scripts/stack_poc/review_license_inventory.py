@@ -9,6 +9,14 @@ from pathlib import Path
 # Curated from the exact installed distribution's captured LICENSE text.
 # Keep versions pinned here: a new version must be reviewed rather than inheriting
 # an unverified licence classification.
+SOURCE_METADATA_OVERRIDES = {
+    ("typing_extensions", "4.16.0"): (
+        "PSF-2.0",
+        "Version-tagged upstream pyproject.toml declares PSF-2.0; the installed LICENSE file is captured",
+        "https://github.com/python/typing_extensions/blob/4.16.0/pyproject.toml",
+    ),
+}
+
 TEXT_OVERRIDES = {
     ("cachecontrol", "0.14.4"): ("Apache-2.0", "LICENSE text states Apache License 2.0"),
     ("pygments", "2.21.0"): ("BSD-2-Clause", "LICENSE text has the two-clause BSD conditions"),
@@ -51,9 +59,13 @@ def main() -> int:
         basis = None
         status = "manual-review-required"
 
+        source_url = None
         if key in TEXT_OVERRIDES:
             expression, basis = TEXT_OVERRIDES[key]
             status = "identified-from-versioned-license-text"
+        elif key in SOURCE_METADATA_OVERRIDES:
+            expression, basis, source_url = SOURCE_METADATA_OVERRIDES[key]
+            status = "identified-from-versioned-source-metadata"
         elif known(metadata) and known(classifier):
             expression = str(metadata)
             basis = "package metadata and PyPI classifier both declare a licence; text not independently normalized here"
@@ -82,6 +94,7 @@ def main() -> int:
             "metadata_license": metadata,
             "classifier_license": classifier,
             "package_url": item.get("URL"),
+            "source_url": source_url,
         })
 
     unresolved = [x for x in reviewed if x["status"] == "manual-review-required"]
@@ -89,6 +102,7 @@ def main() -> int:
         "schema_version": "1.0",
         "inventory_count": len(reviewed),
         "identified_from_versioned_license_text": sum(x["status"] == "identified-from-versioned-license-text" for x in reviewed),
+        "identified_from_versioned_source_metadata": sum(x["status"] == "identified-from-versioned-source-metadata" for x in reviewed),
         "metadata_aligned_review_required": sum(x["status"] == "metadata-aligned-review-required" for x in reviewed),
         "metadata_review_required": sum(x["status"] == "metadata-review-required" for x in reviewed),
         "classifier_review_required": sum(x["status"] == "classifier-review-required" for x in reviewed),
