@@ -6,7 +6,7 @@ on:
       - 'docs/architecture/stack-poc-openapi.yaml'
       - '.github/workflows/issue-9-openapi-contract.yml'
   push:
-    branches: [main]
+    branches: [main, docs/issue-9-stack-evaluation]
     paths:
       - 'docs/architecture/stack-poc-openapi.yaml'
       - '.github/workflows/issue-9-openapi-contract.yml'
