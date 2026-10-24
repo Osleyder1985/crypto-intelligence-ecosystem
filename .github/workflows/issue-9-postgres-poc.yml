@@ -46,4 +46,4 @@ jobs:
       - name: Install pinned PostgreSQL driver
         run: python -m pip install --disable-pip-version-check psycopg[binary]==3.2.6
       - name: Run PostgreSQL history tests
-        run: python -m unittest tests.stack_poc.test_postgres_history -v
+        run: python -m unittest discover -s tests/stack_poc -p 'test_postgres_history.py' -v
