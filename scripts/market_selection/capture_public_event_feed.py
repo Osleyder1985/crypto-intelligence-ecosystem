@@ -629,6 +629,14 @@ def _store_response_body_fields(source: dict, raw: bytes, *, html: bool) -> dict
             "text_evidence_sha256": hashlib.sha256(payload).hexdigest(),
             "text_evidence_bytes": len(payload),
         })
+    elif source.get("response_storage_mode") == "EXTRACTED_TEXT_EVIDENCE":
+        fields.update({
+            "stored_content_mode": "UNSUPPORTED_CONTENT_NOT_PERSISTED",
+            "raw_response_base64": None,
+            "text_evidence_base64": None,
+            "text_evidence_sha256": None,
+            "text_evidence_bytes": None,
+        })
     else:
         fields.update({
             "stored_content_mode": "FULL_RESPONSE",
