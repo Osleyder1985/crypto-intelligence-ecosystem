@@ -81,3 +81,10 @@ The run is evidence for the pinned Python PoC environment only, not for the comp
 The Starlette rule is pinned to version 1.10.0; any version change must trigger fresh review. The test initially exposed that a metadata-only synthetic test fixture cannot pass a rule requiring captured text. The fixture has been corrected to include representative captured BSD licence text, and the audit workflow is being rerun. Do not treat the correction as verified until the rerun passes.
 
 **Disposition:** automated known-vulnerability check PASS for this run; licence inventory PASS as an inventory; manual legal/distribution review remains open for the intended product distribution and bundled components.
+
+
+### Follow-up verified — run 40118746772 (2026-10-24)
+
+The corrected audit workflow completed successfully: [run 40118746772](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/actions/runs/40118746772). All 7 licence-triage regression tests passed; `pip check` passed; `pip-audit` reported no known vulnerabilities for the pinned Python PoC requirements at scan time. The generated inventory reports 42 distributions, 15 versioned captured-text identifications, 4 exact upstream release-text identifications, 14 metadata/classifier-aligned rows, 2 metadata-only rows, 7 classifier-only rows, **0 manual-review-required rows**, and **0 missing licence-text rows**. Thirty-nine distributions did not provide a separate NOTICE file/text in the inventory; this is not by itself a violation and still requires obligation-by-obligation review.
+
+The Starlette 1.10.0 BSD-3-Clause classification is now covered by a regression test and the tagged upstream LICENSE.md basis. The audit inventory's automated triage is now complete for these 42 Python distributions. This does **not** close the legal/distribution review: the intended distribution model, required copyright/attribution notices, bundled Psycopg binary/native components, and the full mobile/native dependency graphs must still be reviewed. The exact version-pinned inventory and scan are evidence for this PoC environment only.
