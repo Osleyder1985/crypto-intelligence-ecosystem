@@ -75,19 +75,7 @@ class ResearchApiPocTests(unittest.TestCase):
             conn.execute("UPDATE evaluation_requests SET status='completed' WHERE request_id=?",
                          (request["request_id"],))
             conn.commit()
-            # A second evaluation is stored separately; no UPDATE overwrites eval-1.
-            conn.execute(
-                """INSERT INTO evaluations
-                   (evaluation_id, request_id, asset_id, horizon, methodology_version,
-                    created_at, status, conclusion, evidence_refs_json, limitations_json)
-                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
-                ("eval-2", request["request_id"] + "-second", "asset-btc", "long", "poc-0.2",
-                 "2026-10-23T11:00:00Z", "indeterminate", "not enough evidence",
-                 '["fixture:btc-v2"]', '["synthetic test data"]'),
-            )
-            # The second row needs a valid parent request, so insert its parent first if needed.
-            conn.rollback()
-            # Instead, keep the request table relationally valid and create a distinct request.
+            # Store a second evaluation under a distinct persisted request; no UPDATE overwrites eval-1.
             conn.execute(
                 """INSERT INTO evaluation_requests
                    (request_id, asset_id, idempotency_key, request_json, status, created_at)
