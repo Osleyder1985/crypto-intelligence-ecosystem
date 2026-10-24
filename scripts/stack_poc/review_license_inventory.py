@@ -23,6 +23,7 @@ TEXT_OVERRIDES = {
     ("pydantic_core", "2.50.1"): ("MIT", "LICENSE text identifies The MIT License"),
     ("pyparsing", "3.3.3"): ("MIT", "LICENSE text matches the MIT permission and disclaimer"),
     ("starlette", "1.9.0"): ("BSD-3-Clause", "LICENSE text has the three-clause BSD conditions"),
+    ("starlette", "1.10.0"): ("BSD-3-Clause", "version-tagged upstream LICENSE.md contains the three-clause BSD conditions; source https://github.com/Kludex/starlette/blob/1.10.0/LICENSE.md"),
     ("typing-inspection", "0.4.4"): ("MIT", "LICENSE text identifies The MIT License"),
     ("urllib3", "2.8.0"): ("MIT", "LICENSE text identifies The MIT License"),
 }
