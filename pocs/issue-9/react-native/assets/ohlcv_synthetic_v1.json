@@ -1,9 +1,9 @@
 {
-  "fixture_version":"1.0.0",
-  "kind":"synthetic-not-market-data",
-  "interval":"5m",
-  "currency":"USD",
-  "candles":[
+  "fixture_version": "1.0.0",
+  "kind": "synthetic-not-market-data",
+  "interval": "5m",
+  "currency": "USD",
+  "candles": [
     {"timestamp":"2026-01-05T00:00:00Z","open":100.0,"high":103.0,"low":99.0,"close":102.0,"volume":120.0},
     {"timestamp":"2026-01-05T00:05:00Z","open":102.0,"high":104.0,"low":101.0,"close":103.0,"volume":135.0},
     {"timestamp":"2026-01-05T00:10:00Z","open":103.0,"high":105.0,"low":102.0,"close":104.0,"volume":150.0},
