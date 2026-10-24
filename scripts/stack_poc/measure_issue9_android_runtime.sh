@@ -36,7 +36,9 @@ measure_app() {
   echo "INSTALL stack=$label package=$pkg activity=$activity apk_bytes=$(stat -c %s "$apk")" | tee -a "$LOG"
   # Release APK transfer/install can be slow on a cold software-rendered emulator.
   # Keep the operation bounded, but preserve diagnostics if ADB stalls or install fails.
-  if ! install_out="$(timeout 300s adb install -r "$apk" 2>&1)"; then
+  if install_out="$(timeout 300s adb install -r "$apk" 2>&1)"; then
+    :
+  else
     install_status=$?
     printf '%s\n' "${install_out:-ADB install timed out or failed (exit=$install_status)}" | tee -a "$LOG" >&2
     echo "ADB_INSTALL_DIAGNOSTICS stack=$label" | tee -a "$LOG"
