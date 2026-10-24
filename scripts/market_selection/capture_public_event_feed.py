@@ -785,15 +785,7 @@ def validate_public_event_archive_candidate(archive_capture: dict, candidate_rec
         or not _archive_url_allowed(source, archive_capture.get("final_url"))
     ):
         raise PermissionError("archive capture is incomplete, stale, or outside the approved archive path")
-    raw_b64 = archive_capture.get("raw_response_base64")
-    if not isinstance(raw_b64, str):
-        raise PermissionError("archive capture body is missing")
-    try:
-        raw = base64.b64decode(raw_b64, validate=True)
-    except (ValueError, base64.binascii.Error) as exc:
-        raise PermissionError("archive capture body base64 is invalid") from exc
-    if hashlib.sha256(raw).hexdigest() != archive_capture.get("raw_response_sha256") or len(raw) != archive_capture.get("raw_response_bytes"):
-        raise PermissionError("archive capture body integrity check failed")
+    text_evidence = _load_archive_text_evidence(archive_capture)
     if not isinstance(candidate_record, dict) or candidate_record.get("schema_version") != ARCHIVE_CANDIDATE_SCHEMA:
         raise ValueError("candidate_record has an invalid schema")
     if (
@@ -825,11 +817,8 @@ def validate_public_event_archive_candidate(archive_capture: dict, candidate_rec
     if published > parse_timestamp(archive_capture["captured_at"], "archive_capture.captured_at"):
         raise ValueError("archive candidate publication timestamp is after archive capture")
     parser = _ArchiveHTMLParser()
-    try:
-        parser.feed(raw.decode("utf-8", errors="replace"))
-        parser.close()
-    except Exception as exc:
-        raise ValueError("archive index HTML could not be parsed") from exc
+    parser.anchors = text_evidence["anchors"]
+    parser.page_text = text_evidence["page_text"]
     archive_url = archive_capture["requested_url"]
     archive_base_url = archive_capture.get("final_url") or archive_url
     candidate_url_canonical = candidate_url.split("#", 1)[0]
