@@ -9,7 +9,7 @@ import argparse
 import base64
 import hashlib
 import json
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 from scripts.market_selection.capture_public_event_feed import (
@@ -496,6 +496,33 @@ def main() -> int:
             write_json(args.output_dir / f"{source_id}-failure.json", failure)
             print(json.dumps(failure, ensure_ascii=False, indent=2))
 
+    market_context_record = None
+    try:
+        cftc_record_path = args.output_dir / "cftc_press_release_archive" / "event-record.json"
+        if not cftc_record_path.is_file():
+            raise RuntimeError("CFTC event record is unavailable; cannot create a BTC movement context")
+        market_authorization = auth_registry.get("binance_spot_market_data")
+        if not isinstance(market_authorization, dict):
+            raise PermissionError("no scoped Binance public market-data authorization record")
+        cftc_event_record = json.loads(cftc_record_path.read_text(encoding="utf-8"))
+        market_context_record = capture_btc_movement_context(
+            output_dir=args.output_dir,
+            event_record=cftc_event_record,
+            authorization_record=market_authorization,
+            captured_at=now_utc(),
+        )
+    except Exception as exc:
+        failure = {
+            "source_id": "binance_spot_market_data",
+            "status": "FAILED",
+            "error_type": type(exc).__name__,
+            "error": str(exc),
+            "recorded_at": now_utc(),
+        }
+        failures.append(failure)
+        write_json(args.output_dir / "binance_spot_market_data-failure.json", failure)
+        print(json.dumps(failure, ensure_ascii=False, indent=2))
+
     event_bundle_records = []
     contextual_records = []
     for record in records:
@@ -527,12 +554,21 @@ def main() -> int:
                 "temporal_association_status": "NOT_EVALUATED_NO_MOVEMENT_WINDOW",
                 "causality_status": "NOT_ASSESSED",
             })
+    if market_context_record is not None:
+        for event_item in event_bundle_records:
+            if event_item.get("source_id") == "cftc_press_release_archive":
+                event_item["temporal_assessment_status"] = "ASSESSED_PER_OBSERVED_BTC_EPISODE"
+                event_item["movement_context_report_path"] = market_context_record["path"]
+                event_item["movement_context_report_sha256"] = market_context_record["sha256"]
+                event_item["temporal_assessment_count"] = market_context_record["event_episode_assessment_count"]
+
     research_bundle = {
         "schema_version": "crypto-issue-132-research-event-evidence-bundle-v1",
         "created_at": now_utc(),
-        "scope": "Official regulatory event evidence attached for later asset-report correlation; no market movement window or causal conclusion is inferred here.",
+        "scope": "Official regulatory event evidence plus retrospective, descriptive BTC movement context; no market-causality conclusion is inferred.",
         "events": event_bundle_records,
         "contextual_unmapped_sources": contextual_records,
+        "movement_context_report": market_context_record,
         "causality_claimed": False,
     }
     research_bundle["bundle_sha256"] = digest_json(research_bundle)
@@ -558,6 +594,7 @@ def main() -> int:
             "bundle_sha256": research_bundle["bundle_sha256"],
         },
         "sources": records,
+        "market_context_report": market_context_record,
         "failures": failures,
     }
     backfill["manifest_sha256"] = digest_json(backfill)
