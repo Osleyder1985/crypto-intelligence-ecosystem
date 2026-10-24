@@ -5,12 +5,12 @@ import json
 import unittest
 from unittest.mock import patch
 from scripts.market_selection.provider_license_gate import ASSESSMENT_SCHEMA_VERSION, POLICY_VERSION, SCHEMA_VERSION as AUTH_SCHEMA_VERSION
-from scripts.market_selection.event_source_registry import EVENT_SOURCE_REGISTRY
+from scripts.market_selection.event_source_registry import EVENT_SOURCE_REGISTRY, source_entry_sha256
 from scripts.market_selection.capture_sec_press_releases_rss import (
     capture_sec_press_release_article, capture_sec_press_releases_rss, promote_sec_press_release_to_event,
 )
 
-from scripts.market_selection.research_evidence_integration import enrich_research_report
+from scripts.market_selection.research_evidence_integration import enrich_research_report, _verify_source_capture
 from scripts.market_selection.methodology_contract import METHODOLOGY_SCHEMA
 from test_analyze_support_resistance import artifact as support_artifact, candle as support_candle
 
@@ -297,6 +297,56 @@ def causal_review_for(event_record, decision="SUPPORTED_CAUSALITY", reviewed_at=
 
 
 class ResearchEvidenceIntegrationTests(unittest.TestCase):
+    def test_source_capture_verifier_accepts_hash_checked_text_only_archive_evidence(self):
+        entry = copy.deepcopy(EVENT_SOURCE_REGISTRY["sources"]["federal_reserve_press_release_archive"])
+        registry_hash = source_entry_sha256(entry)
+        evidence_bytes = json.dumps(
+            {
+                "schema_version": "official-archive-text-evidence-v1",
+                "anchors": [{"href": "/newsevents/pressreleases/example.htm", "text": "Official title"}],
+                "page_text": ["Official title", "September 24, 2026"],
+            },
+            sort_keys=True,
+            separators=(",", ":"),
+            ensure_ascii=False,
+        ).encode("utf-8")
+        capture = {
+            "capture_status": "PASS",
+            "capture_truncated": False,
+            "network_request_made": True,
+            "source_registry_status": "APPROVED",
+            "source_registry_entry_sha256": registry_hash,
+            "source_url": entry["source_url"],
+            "requested_url": entry["source_url"],
+            "provider_use_assessment": {"provider_id": entry["provider_id"], "decision": "ALLOW"},
+            "persistent_storage_assessment": {"provider_id": entry["provider_id"], "decision": "ALLOW"},
+            "raw_response_sha256": "a" * 64,
+            "raw_response_bytes": 98765,
+            "stored_content_mode": "EXTRACTED_TEXT_EVIDENCE",
+            "raw_response_base64": None,
+            "text_evidence_base64": base64.b64encode(evidence_bytes).decode("ascii"),
+            "text_evidence_sha256": hashlib.sha256(evidence_bytes).hexdigest(),
+            "text_evidence_bytes": len(evidence_bytes),
+        }
+        verified = _verify_source_capture(
+            capture,
+            field="test.archive_capture",
+            source_entry=entry,
+            registry_hash=registry_hash,
+            expected_requested_url=entry["source_url"],
+        )
+        self.assertEqual(verified, evidence_bytes)
+        capture["text_evidence_sha256"] = "b" * 64
+        with self.assertRaisesRegex(PermissionError, "extracted text evidence integrity"):
+            _verify_source_capture(
+                capture,
+                field="test.archive_capture",
+                source_entry=entry,
+                registry_hash=registry_hash,
+                expected_requested_url=entry["source_url"],
+            )
+
+
     def test_event_for_different_stable_entity_does_not_support_movement_episode(self):
         enriched_report = report()
         enriched_report["descriptive_analyses"] = {
