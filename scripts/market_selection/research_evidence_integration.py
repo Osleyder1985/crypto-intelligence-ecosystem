@@ -972,7 +972,17 @@ def _verify_promoted_public_archive_event(
         or event_url != candidate["candidate_url"]
         or metadata.get("article_raw_response_sha256") != article_capture.get("raw_response_sha256")
         or event_record.get("content_sha256") != article_capture.get("raw_response_sha256")
-        or hashlib.sha256(article_raw).hexdigest() != event_record.get("content_sha256")
+        or (
+            article_capture.get("stored_content_mode") == "EXTRACTED_TEXT_EVIDENCE"
+            and (
+                metadata.get("article_text_evidence_sha256") != article_capture.get("text_evidence_sha256")
+                or hashlib.sha256(article_raw).hexdigest() != article_capture.get("text_evidence_sha256")
+            )
+        )
+        or (
+            article_capture.get("stored_content_mode") != "EXTRACTED_TEXT_EVIDENCE"
+            and hashlib.sha256(article_raw).hexdigest() != event_record.get("content_sha256")
+        )
     ):
         raise PermissionError("event title, publication time, URL or article hash is not grounded in archive evidence")
     expected_event_id = f"{candidate['source_id']}:" + hashlib.sha256(candidate["candidate_id"].encode("utf-8")).hexdigest()
