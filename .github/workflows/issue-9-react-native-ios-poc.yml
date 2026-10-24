@@ -57,11 +57,20 @@ jobs:
       - name: Audit npm dependency advisories
         working-directory: pocs/issue-9/react-native/build-project
         run: npm audit --audit-level=high
-      - name: Record dependency tree and licence inventory
+      - name: Record resolved dependency tree
         working-directory: pocs/issue-9/react-native/build-project
-        run: |
-          npm ls --all --json > issue-9-rn-dependency-tree.json
-          npx --yes license-checker-rseidelsohn@5.0.1 --json > issue-9-rn-license-inventory.json
+        run: npm ls --all --json > issue-9-rn-dependency-tree.json
+      - name: Set up Node.js 24 for the current licence inventory tool
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '24'
+      - name: Generate third-party licence inventory
+        working-directory: pocs/issue-9/react-native/build-project
+        run: npx --yes license-checker-rseidelsohn@5.0.1 --json > issue-9-rn-license-inventory.json
+      - name: Restore Node.js 22 for the React Native toolchain
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22'
       - name: Validate OHLCV fixture
         working-directory: pocs/issue-9/react-native
         run: node scripts/validate_fixture.mjs
