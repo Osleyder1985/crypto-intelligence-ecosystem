@@ -191,6 +191,36 @@ def _verify_source_capture(
         assessment = _object(capture.get(key), f"{field}.{key}")
         if assessment.get("provider_id") != source_entry["provider_id"] or assessment.get("decision") != "ALLOW":
             raise PermissionError(f"{field} does not authorize {use_case}")
+    digest = capture.get("raw_response_sha256")
+    size = capture.get("raw_response_bytes")
+    if not isinstance(digest, str) or not _SHA256_RE.fullmatch(digest):
+        raise PermissionError(f"{field} raw response SHA-256 is invalid")
+    if isinstance(size, bool) or not isinstance(size, int) or size < 0:
+        raise PermissionError(f"{field} raw response byte count is invalid")
+    if capture.get("stored_content_mode") == "EXTRACTED_TEXT_EVIDENCE":
+        if source_entry.get("response_storage_mode") != "EXTRACTED_TEXT_EVIDENCE":
+            raise PermissionError(f"{field} uses extracted text without a matching source storage policy")
+        encoded_evidence = capture.get("text_evidence_base64")
+        evidence_hash = capture.get("text_evidence_sha256")
+        evidence_size = capture.get("text_evidence_bytes")
+        if not isinstance(encoded_evidence, str):
+            raise PermissionError(f"{field} extracted text evidence is missing")
+        try:
+            evidence_bytes = base64.b64decode(encoded_evidence, validate=True)
+        except (ValueError, base64.binascii.Error) as exc:
+            raise PermissionError(f"{field} extracted text evidence base64 is invalid") from exc
+        if (
+            not isinstance(evidence_hash, str)
+            or not _SHA256_RE.fullmatch(evidence_hash)
+            or hashlib.sha256(evidence_bytes).hexdigest() != evidence_hash
+            or isinstance(evidence_size, bool)
+            or not isinstance(evidence_size, int)
+            or len(evidence_bytes) != evidence_size
+        ):
+            raise PermissionError(f"{field} extracted text evidence integrity check failed")
+        return evidence_bytes
+    if capture.get("stored_content_mode") == "UNSUPPORTED_CONTENT_NOT_PERSISTED":
+        raise PermissionError(f"{field} response content type was not eligible for persistence")
     encoded = capture.get("raw_response_base64")
     if not isinstance(encoded, str):
         raise PermissionError(f"{field} raw response bytes are missing")
@@ -198,13 +228,9 @@ def _verify_source_capture(
         raw = base64.b64decode(encoded, validate=True)
     except (ValueError, base64.binascii.Error) as exc:
         raise PermissionError(f"{field} raw response base64 is invalid") from exc
-    digest = capture.get("raw_response_sha256")
-    size = capture.get("raw_response_bytes")
-    if not isinstance(digest, str) or not _SHA256_RE.fullmatch(digest):
-        raise PermissionError(f"{field} raw response SHA-256 is invalid")
     if hashlib.sha256(raw).hexdigest() != digest:
         raise PermissionError(f"{field} raw response SHA-256 mismatch")
-    if isinstance(size, bool) or not isinstance(size, int) or len(raw) != size:
+    if len(raw) != size:
         raise PermissionError(f"{field} raw response byte count mismatch")
     return raw
 
