@@ -34,7 +34,17 @@ measure_app() {
   activity="$(printf '%s\n' "$badging" | sed -n "s/^launchable-activity: name='\([^']*\)'.*/\1/p" | head -n 1)"
   if [[ -z "$pkg" || -z "$activity" ]]; then echo "Unable to discover package/activity for $label" >&2; exit 1; fi
   echo "INSTALL stack=$label package=$pkg activity=$activity apk_bytes=$(stat -c %s "$apk")" | tee -a "$LOG"
-  install_out="$(timeout 120s adb install -r "$apk" 2>&1)"
+  # Release APK transfer/install can be slow on a cold software-rendered emulator.
+  # Keep the operation bounded, but preserve diagnostics if ADB stalls or install fails.
+  if ! install_out="$(timeout 300s adb install -r "$apk" 2>&1)"; then
+    install_status=$?
+    printf '%s\n' "${install_out:-ADB install timed out or failed (exit=$install_status)}" | tee -a "$LOG" >&2
+    echo "ADB_INSTALL_DIAGNOSTICS stack=$label" | tee -a "$LOG"
+    timeout 15s adb devices -l 2>&1 | tee -a "$LOG" || true
+    timeout 20s adb shell getprop sys.boot_completed 2>&1 | tee -a "$LOG" || true
+    timeout 30s adb logcat -d -t 250 2>&1 | tail -n 250 | tee -a "$LOG" || true
+    exit 1
+  fi
   printf '%s\n' "$install_out" | tee -a "$LOG"
   for run in 1 2 3; do
     adb shell am force-stop "$pkg" || true
