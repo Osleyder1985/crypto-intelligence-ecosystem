@@ -81,10 +81,11 @@ jobs:
       - name: Validate OHLCV fixture
         working-directory: pocs/issue-9/react-native
         run: node scripts/validate_fixture.mjs
-      - name: Run three clean iOS simulator builds and record measurements
+      - name: Run three clean iOS simulator builds and record device Release measurements
         working-directory: pocs/issue-9/react-native/build-project
+        shell: bash
         run: |
-          set -o pipefail
+          set -euo pipefail
           cd ios
           pod install
           cd ..
@@ -97,28 +98,32 @@ jobs:
           : > ios-build-measurement.log
           for run in 1 2 3; do
             xcodebuild -workspace "$workspace" -scheme "$scheme" -configuration Debug -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' ARCHS=arm64 ONLY_ACTIVE_ARCH=YES -derivedDataPath "$derived" CODE_SIGNING_ALLOWED=NO clean 2>&1 | tee -a ios-build-measurement.log
+            started=$(date +%s)
             /usr/bin/time -l xcodebuild -workspace "$workspace" -scheme "$scheme" -configuration Debug -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' ARCHS=arm64 ONLY_ACTIVE_ARCH=YES -derivedDataPath "$derived" CODE_SIGNING_ALLOWED=NO build 2>&1 | tee -a ios-build-measurement.log
-            printf 'CLEAN_IOS_BUILD_RUN=%s\n' "$run" | tee -a ios-build-measurement.log
+            elapsed=$(($(date +%s)-started))
+            printf 'CLEAN_IOS_SIMULATOR_DEBUG_RUN=%s ELAPSED_SECONDS=%s\n' "$run" "$elapsed" | tee -a ios-build-measurement.log
             app=$(find "$derived/Build/Products/Debug-iphonesimulator" -maxdepth 1 -name '*.app' -type d | head -n 1)
             test -n "$app"
             du -sk "$app" | tee -a ios-build-measurement.log
           done
           started=$(date +%s)
-          /usr/bin/time -l xcodebuild -workspace "$workspace" -scheme "$scheme" -configuration Release -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' ARCHS=arm64 ONLY_ACTIVE_ARCH=YES -derivedDataPath "$derived" CODE_SIGNING_ALLOWED=NO build 2>&1 | tee -a ios-build-measurement.log
+          /usr/bin/time -l xcodebuild -workspace "$workspace" -scheme "$scheme" -configuration Release -sdk iphoneos -destination 'generic/platform=iOS' ARCHS=arm64 ONLY_ACTIVE_ARCH=YES -derivedDataPath "$derived" CODE_SIGNING_ALLOWED=NO build 2>&1 | tee -a ios-build-measurement.log
           elapsed=$(($(date +%s)-started))
-          printf 'IOS_RELEASE_BUILD_COMPLETE ELAPSED_SECONDS=%s\\n' "$elapsed" | tee -a ios-build-measurement.log
-          release_app=$(find "$derived/Build/Products/Release-iphonesimulator" -maxdepth 1 -name '*.app' -type d | head -n 1)
+          printf 'IOS_DEVICE_RELEASE_BUILD_COMPLETE ELAPSED_SECONDS=%s\n' "$elapsed" | tee -a ios-build-measurement.log
+          release_app=$(find "$derived/Build/Products/Release-iphoneos" -maxdepth 1 -name '*.app' -type d | head -n 1)
           test -n "$release_app"
           du -sk "$release_app" | tee -a ios-build-measurement.log
           cp App.js App.js.benchmark-original
+          trap 'mv App.js.benchmark-original App.js 2>/dev/null || true' EXIT
           printf '\n// Issue 9 benchmark-only source edit.\n' >> App.js
           started=$(date +%s)
-          /usr/bin/time -l xcodebuild -workspace "$workspace" -scheme "$scheme" -configuration Release -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' ARCHS=arm64 ONLY_ACTIVE_ARCH=YES -derivedDataPath "$derived" CODE_SIGNING_ALLOWED=NO build 2>&1 | tee -a ios-build-measurement.log
+          /usr/bin/time -l xcodebuild -workspace "$workspace" -scheme "$scheme" -configuration Release -sdk iphoneos -destination 'generic/platform=iOS' ARCHS=arm64 ONLY_ACTIVE_ARCH=YES -derivedDataPath "$derived" CODE_SIGNING_ALLOWED=NO build 2>&1 | tee -a ios-build-measurement.log
           elapsed=$(($(date +%s)-started))
-          printf 'INCREMENTAL_IOS_RELEASE_BUILD_AFTER_JS_EDIT ELAPSED_SECONDS=%s\\n' "$elapsed" | tee -a ios-build-measurement.log
-          release_app=$(find "$derived/Build/Products/Release-iphonesimulator" -maxdepth 1 -name '*.app' -type d | head -n 1)
-          du -sk "$release_app" | tee -a ios-build-measurement.log
           mv App.js.benchmark-original App.js
+          trap - EXIT
+          printf 'INCREMENTAL_IOS_DEVICE_RELEASE_AFTER_JS_EDIT ELAPSED_SECONDS=%s\n' "$elapsed" | tee -a ios-build-measurement.log
+          release_app=$(find "$derived/Build/Products/Release-iphoneos" -maxdepth 1 -name '*.app' -type d | head -n 1)
+          du -sk "$release_app" | tee -a ios-build-measurement.log
       - name: Preserve lockfile and dependency/licence inventory
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
