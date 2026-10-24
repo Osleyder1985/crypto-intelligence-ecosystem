@@ -1,0 +1,47 @@
+{
+  "evidence_id": "issue-9-web-geometry-linux-ci-40058638191",
+  "workflow_run": "https://github.com/Osleyder1985/crypto-intelligence-ecosystem/actions/runs/40058638191",
+  "source_commit": "d6f545c8847250e9311984feb7a887fb2f0aeb7f",
+  "benchmark": "issue-9-web-chart-geometry-three-run-summary-v1",
+  "fixture": {
+    "version": "1.0.0",
+    "sha256": "0265cfa5e4d4e6673476bc7db84ed98d43147409172a00deda958bd82823f63d",
+    "candle_count": 12,
+    "classification": "synthetic-not-market-data"
+  },
+  "environment": {
+    "runtime": "Node.js v22.23.3",
+    "os": "Linux",
+    "kernel": "6.17.0-1022-azure",
+    "architecture": "x64",
+    "cpu": "AMD EPYC 9V45 96-Core Processor",
+    "logical_cpus": 4,
+    "total_memory_bytes": 16766414848,
+    "runner_type": "GitHub-hosted Actions runner"
+  },
+  "conditions": {
+    "chart_width": 1200,
+    "chart_height": 640,
+    "padding": 24,
+    "warmup_iterations_per_process": 100,
+    "measured_iterations_per_process": 1000,
+    "fresh_process_repetitions": 3
+  },
+  "process_runs": [
+    {"run": 1, "median_ms": 0.001663, "p95_ms": 0.003435, "min_ms": 0.001552, "max_ms": 0.384539, "rss_before_bytes": 51240960, "rss_after_bytes": 55762944},
+    {"run": 2, "median_ms": 0.001652, "p95_ms": 0.003505, "min_ms": 0.001572, "max_ms": 0.311369, "rss_before_bytes": 51232768, "rss_after_bytes": 55754752},
+    {"run": 3, "median_ms": 0.002985, "p95_ms": 0.003796, "min_ms": 0.001572, "max_ms": 0.354934, "rss_before_bytes": 51412992, "rss_after_bytes": 55672832}
+  ],
+  "aggregate": {
+    "median_of_process_medians_ms": 0.001663,
+    "range_of_process_medians_ms": {"min": 0.001652, "max": 0.002985}
+  },
+  "automated_geometry_tests": {"passed": 3, "failed": 0},
+  "limitations": [
+    "Three fresh Node processes in one hosted CI job, not three clean application builds.",
+    "Geometry microbenchmark only; excludes browser rendering, layout, GPU, network and end-to-end chart readiness.",
+    "RSS is sampled before and after each run, not peak memory.",
+    "Do not compare these hosted Linux measurements directly with local Windows, Android, iOS or other runner types.",
+    "Does not represent Flutter, React Native or a production financial chart library."
+  ]
+}
