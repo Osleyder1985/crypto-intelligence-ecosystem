@@ -253,3 +253,20 @@ No se considera completado el Issue #9 hasta cerrar las condiciones pendientes c
 Se añadió `scripts/stack_poc/sensitivity_analysis.py` y `tests/stack_poc/test_sensitivity_analysis.py`. La herramienta exige que cada alternativa tenga puntuación entera 1–5 y referencia de evidencia no vacía para **cada** criterio, y que los pesos sumen 100. Si falta cualquier dato, devuelve `status=incomplete`, una lista de ausencias y no calcula ranking (código de salida 2). Si la matriz está completa, calcula puntuación ponderada y cambia cada peso individualmente ±20%, renormaliza el total y registra si cambia el orden.
 
 Los tests cubren bloqueo por datos ausentes, ranking/sensibilidad con datos sintéticos de test y validación de pesos. Los candidatos sintéticos del test solo prueban el algoritmo; no son puntuaciones de Flutter, React Native ni de ninguna tecnología real. La matriz real permanece N/E hasta adjuntar evidencia comparativa. El workflow de PoC incluye ahora esta suite.
+
+
+## 18. Medición de geometría web disponible (2026-10-24)
+
+La PoC de referencia ejecutó sus tres tests de geometría y un microbenchmark en el runner GitHub Actions del workflow [40058440405](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/actions/runs/40058440405), commit `5554cb2be65cb9b55f663d3234a8bf259616561b`. Registro durable: `docs/architecture/evidence/issue-9-web-geometry-linux-ci-40058440405.json`.
+
+- Entorno: Linux hosted runner, Node.js v22.23.3, AMD EPYC 9V74, 4 vCPU, RAM reportada 16,766,414,848 bytes.
+- Fixture: 12 velas sintéticas, SHA-256 `0265cfa5e4d4e6673476bc7db84ed98d43147409172a00deda958bd82823f63d`.
+- Geometría JavaScript: 100 iteraciones de calentamiento y 1.000 medidas; mínimo 0.001512 ms, mediana 0.002433 ms, p95 0.004987 ms, máximo 0.419061 ms.
+- RSS: 51,630,080 bytes antes y 55,463,936 bytes después. Son dos muestras de RSS, no memoria pico.
+- Tests: 3 PASS, 0 FAIL.
+
+**Interpretación:** esto solo mide el cálculo geométrico de velas, no renderizado DOM, GPU, memoria pico, arranque ni preparación visible del gráfico. Es una sola ejecución de CI, no un conjunto de tres builds y no debe compararse con Windows local o con Flutter/React Native. Por ello no se asigna aún puntuación de rendimiento al stack web.
+
+## 19. Flutter Android PoC: medición en curso
+
+La rama `feat/issue-9-flutter-chart-reference` contiene una PoC Flutter que dibuja el mismo fixture canónico con `CustomPainter`, volumen y tabla de datos. El workflow [40058442391](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/actions/runs/40058442391) comprobó la igualdad byte a byte del fixture; en la última consulta la instalación de Flutter seguía en curso, por lo que no se declaran todavía tests ni builds PASS. El workflow está diseñado para ejecutar tests de widgets y tres builds Android limpios, registrar tiempo, RSS máximo del proceso y tamaño APK; después deben conservarse los resultados y comparar solo las medidas compatibles.
