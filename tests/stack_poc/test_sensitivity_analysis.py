@@ -30,6 +30,22 @@ class SensitivityAnalysisTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'sum to 100'):
             analyze({'weights': {'contracts': 40}, 'candidates': [{'name': 'A'}]})
 
+    def test_boolean_is_not_a_valid_numeric_weight_or_score(self):
+        with self.assertRaisesRegex(ValueError, 'weights must be positive'):
+            analyze({'weights': {'contracts': True, 'charts': 99}, 'candidates': []})
+        result = analyze({
+            'weights': {'contracts': 100},
+            'candidates': [{'name': 'A', 'scores': {'contracts': True}, 'evidence': {'contracts': 'run-1'}}],
+        })
+        self.assertEqual(result['status'], 'incomplete')
+        self.assertEqual(result['ranking'], [])
+
+    def test_candidate_names_must_be_unique_and_non_empty(self):
+        with self.assertRaisesRegex(ValueError, 'unique'):
+            analyze({'weights': {'contracts': 100}, 'candidates': [{'name': 'A'}, {'name': 'A'}]})
+        with self.assertRaisesRegex(ValueError, 'non-empty name'):
+            analyze({'weights': {'contracts': 100}, 'candidates': [{'name': '  '}] })
+
 
 if __name__ == '__main__':
     unittest.main()
