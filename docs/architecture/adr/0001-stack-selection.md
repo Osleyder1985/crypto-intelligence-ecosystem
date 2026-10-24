@@ -99,3 +99,14 @@ The mobile build-only evidence has advanced since the earlier checkpoint:
 - Python dependency scan [run 40063600439](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/actions/runs/40063600439): `pip check` PASS and `pip-audit` reported no known vulnerabilities. Licence triage is partial: 4 manual-review packages, 3 without captured licence text, and 39 packages without a separate NOTICE file/text. Missing separate NOTICE is not automatically a violation, but distribution obligations remain unreviewed.
 
 **Still not ratified:** the common Android-emulator runtime comparison (startup/visible fixture/PSS/RSS) remains in progress; Flutter's Dart/Gradle/CocoaPods licence text inventory is being added and must be reviewed; the 4 Python licence items need resolution; the Windows 11 PC actually used by the owner has not been measured; physical-device accessibility, screen-reader behaviour, and full-matrix sensitivity remain incomplete. The subset sensitivity remains diagnostic and does not include all criteria or the Kotlin reference. Do not mark ADR-0001 ratified or close Issue #9 on build evidence alone.
+
+
+## Kotlin reference evidence and comparison correction — 2026-10-24
+
+The native Kotlin Android reference now compiles and packages successfully in [run 40064396892](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/actions/runs/40064396892). Three clean Debug builds: 22.84 / 12.13 / 11.98 s; incremental Debug 5.74 s; Release 25.92 s; Debug APK 839,249 bytes and Release APK 638,316 bytes. The hosted runner was Ubuntu 24.04 / AMD EPYC 9V45 / 4 vCPU / ~16.77 GB / Temurin JDK 17.0.20.1. This is a different virtual CPU model from the standalone Flutter and React Native builds.
+
+**Scoring correction:** standalone build times from different virtual CPU models are not scored head-to-head. Artifact sizes can be recorded, but performance/build-time ranking must use the shared-runner workflow or a controlled repeated run with matching hardware/software/cache conditions. The common Android emulator workflow is being extended to Flutter, React Native and Kotlin and must verify that each app visibly renders the canonical fixture before recording launch/PSS/RSS.
+
+The Kotlin Release build uses debug-key signing solely for emulator installation, not production. The build graph has no third-party chart library; runtime dependencies are Kotlin stdlib and JetBrains annotations, while the Android Gradle/Kotlin build-plugin graph remains subject to licence review. Gradle emitted a deprecation warning for `kotlinOptions` and a future Gradle 10 compatibility warning.
+
+ADR-0001 remains **provisional**: no overall winner is ratified until the common-emulator comparison passes, the four Python licence items and special npm/Dart/build-tool obligations are reviewed, the Windows 11 target-machine report exists, and the complete sensitivity analysis uses approved scoring weights and documented uncertainty.
