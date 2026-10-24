@@ -80,6 +80,9 @@ jobs:
             flutter pub get
             /usr/bin/time -f "FLUTTER_CLEAN_RELEASE_RUN=$run ELAPSED_SECONDS=%e PEAK_RSS_KB=%M" flutter build apk --release 2>&1 | tee -a "$GITHUB_WORKSPACE/artifacts/issue-9-android-runtime/flutter-release-build.log"
             stat --printf="FLUTTER_CLEAN_RELEASE_RUN=$run APK_BYTES=%s\n" build/app/outputs/flutter-apk/app-release.apk | tee -a "$GITHUB_WORKSPACE/artifacts/issue-9-android-runtime/flutter-release-build.log"
+            mkdir -p "$GITHUB_WORKSPACE/artifacts/issue-9-android-runtime/apks/flutter"
+            cp build/app/outputs/flutter-apk/app-release.apk "$GITHUB_WORKSPACE/artifacts/issue-9-android-runtime/apks/flutter/flutter-release-run-$run.apk"
+            sha256sum "$GITHUB_WORKSPACE/artifacts/issue-9-android-runtime/apks/flutter/flutter-release-run-$run.apk" >> "$GITHUB_WORKSPACE/artifacts/issue-9-android-runtime/apk-sha256.txt"
           done
           touch lib/main.dart
           /usr/bin/time -f 'FLUTTER_INCREMENTAL_RELEASE_AFTER_SOURCE_TOUCH_SECONDS=%e PEAK_RSS_KB=%M' flutter build apk --release 2>&1 | tee -a "$GITHUB_WORKSPACE/artifacts/issue-9-android-runtime/flutter-release-build.log"
@@ -110,6 +113,9 @@ jobs:
             (cd android && ./gradlew clean)
             /usr/bin/time -f "RN_CLEAN_RELEASE_RUN=$run ELAPSED_SECONDS=%e PEAK_RSS_KB=%M" sh -c 'cd android && ./gradlew assembleRelease' 2>&1 | tee -a "$GITHUB_WORKSPACE/artifacts/issue-9-android-runtime/react-native-release-build.log"
             stat --printf="RN_CLEAN_RELEASE_RUN=$run APK_BYTES=%s\n" android/app/build/outputs/apk/release/app-release.apk | tee -a "$GITHUB_WORKSPACE/artifacts/issue-9-android-runtime/react-native-release-build.log"
+            mkdir -p "$GITHUB_WORKSPACE/artifacts/issue-9-android-runtime/apks/react-native"
+            cp android/app/build/outputs/apk/release/app-release.apk "$GITHUB_WORKSPACE/artifacts/issue-9-android-runtime/apks/react-native/react-native-release-run-$run.apk"
+            sha256sum "$GITHUB_WORKSPACE/artifacts/issue-9-android-runtime/apks/react-native/react-native-release-run-$run.apk" >> "$GITHUB_WORKSPACE/artifacts/issue-9-android-runtime/apk-sha256.txt"
           done
           touch App.js
           /usr/bin/time -f 'RN_INCREMENTAL_RELEASE_AFTER_SOURCE_TOUCH_SECONDS=%e PEAK_RSS_KB=%M' sh -c 'cd android && ./gradlew assembleRelease' 2>&1 | tee -a "$GITHUB_WORKSPACE/artifacts/issue-9-android-runtime/react-native-release-build.log"
@@ -125,6 +131,9 @@ jobs:
             ./gradlew clean
             /usr/bin/time -f "KOTLIN_CLEAN_RELEASE_RUN=$run ELAPSED_SECONDS=%e PEAK_RSS_KB=%M" ./gradlew assembleRelease 2>&1 | tee -a "$GITHUB_WORKSPACE/artifacts/issue-9-android-runtime/kotlin-release-build.log"
             stat --printf="KOTLIN_CLEAN_RELEASE_RUN=$run APK_BYTES=%s\n" app/build/outputs/apk/release/app-release.apk | tee -a "$GITHUB_WORKSPACE/artifacts/issue-9-android-runtime/kotlin-release-build.log"
+            mkdir -p "$GITHUB_WORKSPACE/artifacts/issue-9-android-runtime/apks/kotlin"
+            cp app/build/outputs/apk/release/app-release.apk "$GITHUB_WORKSPACE/artifacts/issue-9-android-runtime/apks/kotlin/kotlin-release-run-$run.apk"
+            sha256sum "$GITHUB_WORKSPACE/artifacts/issue-9-android-runtime/apks/kotlin/kotlin-release-run-$run.apk" >> "$GITHUB_WORKSPACE/artifacts/issue-9-android-runtime/apk-sha256.txt"
           done
           touch app/src/main/java/com/crypto/intelligence/issue9kotlin/MainActivity.kt
           /usr/bin/time -f 'KOTLIN_INCREMENTAL_RELEASE_AFTER_SOURCE_TOUCH_SECONDS=%e PEAK_RSS_KB=%M' ./gradlew assembleRelease 2>&1 | tee -a "$GITHUB_WORKSPACE/artifacts/issue-9-android-runtime/kotlin-release-build.log"
@@ -146,7 +155,7 @@ jobs:
             # Release build daemons can starve the emulator during boot on the 4-vCPU runner.
             (cd pocs/issue-9/kotlin-android && ./gradlew --stop) || true
             (cd pocs/issue-9/react-native/build-project/android && ./gradlew --stop) || true
-            pkill -f "GradleDaemon" || true
+            jps -l | awk '/GradleDaemon/ {print $1}' | xargs -r kill || true
             ready=0
             for attempt in $(seq 1 120); do
               state="$(adb get-state 2>/dev/null || true)"
