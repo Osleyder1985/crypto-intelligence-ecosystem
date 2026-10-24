@@ -66,6 +66,9 @@ jobs:
           channel: stable
           flutter-version: 3.47.5
           cache: true
+      - name: Generate missing Flutter Android platform project
+        working-directory: pocs/issue-9/flutter
+        run: flutter create --platforms=android --project-name issue_9_flutter_chart_reference --org com.crypto.intelligence --no-pub .
       - name: Build Flutter Release APK
         working-directory: pocs/issue-9/flutter
         shell: bash
