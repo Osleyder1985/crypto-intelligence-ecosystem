@@ -7,7 +7,7 @@ on:
       - 'tests/stack_poc/**'
       - 'requirements-stack-poc.txt'
       - 'docs/architecture/evidence/issue-9-partial-score-input.json'
-      - 'docs/architecture/evidence/issue-9-partial-score-input.json'
+      - 'docs/architecture/evidence/issue-9-subset-sensitivity-input.json'
       - '.github/workflows/issue-9-stack-poc.yml'
   push:
     branches: [main, docs/issue-9-stack-evaluation]
@@ -15,6 +15,8 @@ on:
       - 'scripts/stack_poc/**'
       - 'tests/stack_poc/**'
       - 'requirements-stack-poc.txt'
+      - 'docs/architecture/evidence/issue-9-partial-score-input.json'
+      - 'docs/architecture/evidence/issue-9-subset-sensitivity-input.json'
       - '.github/workflows/issue-9-stack-poc.yml'
   workflow_dispatch:
 
@@ -47,12 +49,18 @@ jobs:
           set -e
           test "$result" -eq 2
           python -c "import json; d=json.load(open('artifacts/issue-9-partial-score-output.json')); assert d['status']=='incomplete'; assert d['ranking']==[] and d['sensitivity']==[]; assert [x['weight_coverage_percent'] for x in d['partial_scores']]==[35,35,50,10]; assert [x['partial_score_out_of_100'] for x in d['partial_scores']]==[74.2857,74.2857,60.0,60.0]"
+      - name: Run diagnostic sensitivity on common evidenced criteria
+        run: |
+          python scripts/stack_poc/sensitivity_analysis.py docs/architecture/evidence/issue-9-subset-sensitivity-input.json --output artifacts/issue-9-subset-sensitivity-output.json
+          python -c "import json; d=json.load(open('artifacts/issue-9-subset-sensitivity-output.json')); assert d['status']=='complete'; assert [x['candidate'] for x in d['ranking']]==['Web React/Vite + shared API','Flutter + shared API','React Native bare + shared API']; assert all(not x['ranking_changed'] for x in d['sensitivity']); assert len(d['sensitivity'])==6"
       - name: Preserve partial scoring output
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: issue-9-partial-scoring-report
-          path: artifacts/issue-9-partial-score-output.json
+          path: |
+            artifacts/issue-9-partial-score-output.json
+            artifacts/issue-9-subset-sensitivity-output.json
           if-no-files-found: warn
           retention-days: 30
       - name: Run API, history and idempotency PoC tests
