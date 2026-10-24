@@ -71,11 +71,23 @@ jobs:
           /usr/bin/time -l flutter build ios --release --no-codesign 2>&1 | tee -a flutter-ios-build-measurement.log
           printf 'IOS_RELEASE_BUILD_COMPLETE\n' | tee -a flutter-ios-build-measurement.log
           du -sk build/ios/iphoneos/Runner.app | tee -a flutter-ios-build-measurement.log
+      - name: Record Dart and iOS CocoaPods dependency inventories
+        working-directory: pocs/issue-9/flutter
+        shell: bash
+        run: |
+          flutter pub deps --json > flutter-pub-dependencies.json
+          if [[ -f ios/Podfile.lock ]]; then cp ios/Podfile.lock flutter-ios-Podfile.lock; fi
+          if command -v pod >/dev/null 2>&1; then pod list > flutter-ios-pods.txt; fi
       - name: Preserve iOS build measurements
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: issue-9-flutter-ios-build-measurements
-          path: pocs/issue-9/flutter/flutter-ios-build-measurement.log
+          path: |
+            pocs/issue-9/flutter/flutter-ios-build-measurement.log
+            pocs/issue-9/flutter/pubspec.lock
+            pocs/issue-9/flutter/flutter-pub-dependencies.json
+            pocs/issue-9/flutter/flutter-ios-Podfile.lock
+            pocs/issue-9/flutter/flutter-ios-pods.txt
           if-no-files-found: warn
           retention-days: 30
