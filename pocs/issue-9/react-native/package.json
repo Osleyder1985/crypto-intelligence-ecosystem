@@ -1,0 +1,8 @@
+{
+  "name": "issue-9-react-native-chart-reference",
+  "version": "1.0.0",
+  "private": true,
+  "main": "index.js",
+  "scripts": {"test:fixture":"node scripts/validate_fixture.mjs"},
+  "dependencies": {"expo":"58.0.17","react":"19.3.0","react-native":"0.88.0"}
+}
