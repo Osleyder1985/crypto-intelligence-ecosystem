@@ -14,6 +14,10 @@ on:
       - '.github/workflows/issue-9-react-native-ios-poc.yml'
   workflow_dispatch:
 
+concurrency:
+  group: issue-9-rn-ios-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
 
