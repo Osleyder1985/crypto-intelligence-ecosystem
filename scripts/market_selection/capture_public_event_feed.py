@@ -16,6 +16,8 @@ from html.parser import HTMLParser
 import re
 from pathlib import Path
 from urllib.error import HTTPError, URLError
+import socket
+import time
 from urllib.parse import urljoin, urlsplit
 from urllib.request import HTTPRedirectHandler, Request, build_opener, urlopen
 import xml.etree.ElementTree as ET
@@ -38,7 +40,7 @@ from scripts.market_selection.provider_license_gate import (
     evaluate_provider_use,
 )
 
-from scripts.market_selection.shared_request_rate_limiter import wait_for_rate_slot as _wait_for_rate_slot
+from scripts.market_selection.shared_request_rate_limiter import RateLimitCoordinationError, wait_for_rate_slot as _wait_for_rate_slot
 
 FEED_CAPTURE_SCHEMA = "crypto-public-event-feed-capture-v1"
 ARTICLE_CAPTURE_SCHEMA = "crypto-public-event-article-capture-v1"
@@ -64,6 +66,22 @@ def _safe_headers(headers: Any) -> dict[str, str]:
         for key, value in headers.items()
         if str(key).lower() not in excluded
     }
+
+
+def _urlopen_with_transient_dns_retries(request: Request, timeout_seconds: float, attempts: int = 3):
+    """Retry only DNS resolution failures; never retry HTTP responses or ambiguous timeouts."""
+    if isinstance(attempts, bool) or not isinstance(attempts, int) or attempts < 1:
+        raise ValueError("attempts must be a positive integer")
+    for attempt in range(attempts):
+        try:
+            return urlopen(request, timeout=float(timeout_seconds))
+        except (URLError, OSError) as exc:
+            reason = exc.reason if isinstance(exc, URLError) else exc
+            if not isinstance(reason, socket.gaierror) or attempt + 1 >= attempts:
+                raise
+            # DNS failed before an HTTP request could be sent. Short bounded backoff
+            # helps transient resolver failures without retrying server-side failures.
+            time.sleep(0.25 * (2 ** attempt))
 
 
 def _read_to_eof(stream: Any) -> tuple[bytes, Exception | None]:
@@ -318,7 +336,7 @@ def capture_public_event_feed(
     raw = b""
     read_error: Exception | None = None
     try:
-        with urlopen(request, timeout=float(timeout_seconds)) as response:
+        with _urlopen_with_transient_dns_retries(request, timeout_seconds) as response:
             status_code = int(getattr(response, "status", 200))
             headers = _safe_headers(getattr(response, "headers", None))
             raw, read_error = _read_to_eof(response)
@@ -1647,48 +1665,70 @@ def main() -> int:
         parser.error("--feed-capture and --article-candidate-id must be supplied together")
     registry = json.loads(args.provider_authorization_registry.read_text(encoding="utf-8"))
     record = registry.get(args.source_id) if isinstance(registry, dict) else None
-    if args.feed_capture is not None:
-        feed_capture = json.loads(args.feed_capture.read_text(encoding="utf-8"))
-        if not isinstance(feed_capture, dict) or feed_capture.get("source_id") != args.source_id:
-            parser.error("--feed-capture source_id must match --source-id")
-        result = capture_public_event_article(
-            feed_capture,
-            args.article_candidate_id,
-            authorization_record=record,
-            user_agent=args.user_agent,
-            timeout_seconds=args.timeout_seconds,
-            captured_at=args.captured_at,
-        )
-        summary = {
-            "output": str(args.output),
-            "source_id": result["source_id"],
-            "candidate_id": result["candidate_id"],
-            "capture_status": result["capture_status"],
-            "network_request_made": result["network_request_made"],
-            "raw_response_bytes": result["raw_response_bytes"],
-            "reason_codes": result["reason_codes"],
+    failure_exit_code = 0
+    try:
+        if args.feed_capture is not None:
+            feed_capture = json.loads(args.feed_capture.read_text(encoding="utf-8"))
+            if not isinstance(feed_capture, dict) or feed_capture.get("source_id") != args.source_id:
+                parser.error("--feed-capture source_id must match --source-id")
+            result = capture_public_event_article(
+                feed_capture,
+                args.article_candidate_id,
+                authorization_record=record,
+                user_agent=args.user_agent,
+                timeout_seconds=args.timeout_seconds,
+                captured_at=args.captured_at,
+            )
+            summary = {
+                "output": str(args.output),
+                "source_id": result["source_id"],
+                "candidate_id": result["candidate_id"],
+                "capture_status": result["capture_status"],
+                "network_request_made": result["network_request_made"],
+                "raw_response_bytes": result["raw_response_bytes"],
+                "reason_codes": result["reason_codes"],
+            }
+        else:
+            result = capture_public_event_feed(
+                args.source_id,
+                authorization_record=record,
+                user_agent=args.user_agent,
+                timeout_seconds=args.timeout_seconds,
+                captured_at=args.captured_at,
+            )
+            summary = {
+                "output": str(args.output),
+                "source_id": result["source_id"],
+                "capture_status": result["capture_status"],
+                "network_request_made": result["network_request_made"],
+                "feed_item_count": result["feed_item_count"],
+                "duplicate_item_count": result["duplicate_item_count"],
+                "reason_codes": result["reason_codes"],
+            }
+    except RateLimitCoordinationError:
+        failure_exit_code = 2
+        result = {
+            "schema_version": "crypto-public-event-capture-error-v1",
+            "source_id": args.source_id,
+            "capture_status": "BLOCKED_RATE_LIMIT_COORDINATION",
+            "network_request_made": False,
+            "reason_codes": ["RATE_LIMIT_COORDINATION_FAILED"],
+            "errors": [{
+                "type": "RATE_LIMIT_COORDINATION",
+                "message": "Shared request-rate coordination is unavailable; no network request was made.",
+            }],
         }
-    else:
-        result = capture_public_event_feed(
-            args.source_id,
-            authorization_record=record,
-            user_agent=args.user_agent,
-            timeout_seconds=args.timeout_seconds,
-            captured_at=args.captured_at,
-        )
         summary = {
             "output": str(args.output),
-            "source_id": result["source_id"],
+            "source_id": args.source_id,
             "capture_status": result["capture_status"],
-            "network_request_made": result["network_request_made"],
-            "feed_item_count": result["feed_item_count"],
-            "duplicate_item_count": result["duplicate_item_count"],
+            "network_request_made": False,
             "reason_codes": result["reason_codes"],
         }
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(result, ensure_ascii=False, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     print(json.dumps(summary, ensure_ascii=False, indent=2))
-    return 0
+    return failure_exit_code
 
 
 if __name__ == "__main__":

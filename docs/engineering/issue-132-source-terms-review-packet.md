@@ -20,8 +20,8 @@ El acceso público a una página o feed **no demuestra por sí solo** que todos 
 | ID de fuente | Endpoint de feed | Página de condiciones/políticas registrada | Estado |
 | --- | --- | --- | --- |
 | `sec_press_releases` | https://www.sec.gov/news/pressreleases.rss | https://www.sec.gov/about/developer-resources | `TERMS_PENDING` |
-| `cftc_general_press_releases` | https://www.cftc.gov/RSS/RSSGP/rssgp.xml | https://www.cftc.gov/sites/default/files/cftc/cftcprivacy.htm | `TERMS_PENDING` |
-| `federal_reserve_press_releases` | https://www.federalreserve.gov/feeds/press_all.xml | https://www.federalreserve.gov/policies.htm | `TERMS_PENDING` |
+| `cftc_general_press_releases` | https://www.cftc.gov/RSS/RSSGP/rssgp.xml | https://www.cftc.gov/WebPolicy/index.htm | `TERMS_PENDING` |
+| `federal_reserve_press_releases` | https://www.federalreserve.gov/feeds/press_all.xml | https://www.federalreserve.gov/disclaimer.htm | `TERMS_PENDING` |
 
 Los enlaces son los actualmente declarados en `scripts/market_selection/event_source_registry.py`. Si la autoridad publica una política específica para RSS, APIs o reutilización de contenido, inclúyase como evidencia adicional; no se debe asumir que la página genérica registrada resuelve todas las cuestiones.
 
@@ -139,3 +139,24 @@ Esta sección complementa la revisión preliminar. No cambia automáticamente lo
 - **Federal Reserve Board:** https://www.federalreserve.gov/disclaimer.htm declara que, salvo indicación contraria, la información del Board es de dominio público y puede copiarse/distribuirse con atribución; los materiales de terceros quedan sujetos a sus propios derechos.
 
 La evidencia pública reduce la incertidumbre sobre copyright del contenido oficial, pero no es autorización general para almacenar indiscriminadamente todos los bytes HTML de páginas que puedan incluir contenido de terceros. El revisor debe documentar el alcance por fuente, definir si se almacenará HTML completo o contenido textual oficial extraído, revisar las condiciones de acceso automatizado y aprobar por separado los casos de uso. Hasta entonces, no cambiar el estado ni los casos de uso permitidos en el registro.
+
+
+## 11. Captura real de páginas oficiales de política — 2026-10-24
+
+El workflow [run 40045854045](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/actions/runs/40045854045) capturó siete páginas oficiales con HTTP 200. El artefacto `issue-132-source-policy-snapshots` se descargó y se verificó localmente: el tamaño y SHA-256 de cada cuerpo coinciden con `manifest.json`. Los SHA-256 y tamaños están registrados en `issue-132-source-approval-matrix.md`.
+
+### Hallazgos observables en los bytes capturados
+
+1. **SEC:** la página Website Dissemination declara que la información presentada en sec.gov es pública y puede copiarse o distribuirse sin permiso de SEC, con cita apropiada. Developer Resources solicita moderar el tráfico, establece un límite total de 10 solicitudes por segundo para SEC.gov y dice que no permite bots o herramientas automatizadas no clasificadas. La implementación deberá identificar el agente, aplicar límites agregados conservadores y validar las reglas aplicables al endpoint concreto.
+2. **CFTC:** Web Policy indica que la información gubernamental del sitio es de dominio público y puede copiarse/distribuirse con reconocimiento apropiado; advierte que algunos materiales son de terceros. RSS status declara que todos los feeds enumerados están temporalmente deshabilitados en octubre de 2026. No hacer polling de esos feeds mientras siga vigente el aviso. Un archivo HTML sería otro origen con su propia revisión y estado de disponibilidad.
+3. **Federal Reserve Board:** el disclaimer indica que la información del Board, salvo indicación contraria, es de dominio público y puede copiarse/distribuirse con atribución; recursos de terceros identificados requieren permiso separado. La página RSS explica cómo utilizar agregadores, pero no constituye por sí sola un permiso explícito para conservar indefinidamente HTML y adjuntos completos.
+
+### Decisión técnica recomendada, aún no activada
+
+- Considerar por separado para cada fuente el uso de metadatos y texto oficial, con atribución y enlace a la fuente; excluir recursos de terceros no autorizados.
+- Mantener deshabilitados HTML completo, adjuntos y retención indefinida hasta registrar una justificación y duración de retención para cada modalidad.
+- Aplicar un User-Agent identificable, límites agregados, reintentos acotados, validación de redirecciones y captura íntegra de bytes cuando la modalidad esté habilitada.
+- No consultar el RSS CFTC mientras el aviso oficial indique que está deshabilitado; mantener separado el archivo HTML si se estudia como alternativa.
+- Mantener los tres registros en `TERMS_PENDING` hasta completar `approval_scope` por origen y obtener una decisión registrada del revisor autorizado. La captura de políticas no es una captura de noticias/eventos y no constituye aprobación jurídica.
+
+El artefacto de Actions tiene retención de siete días. Si se requiere evidencia duradera para auditoría, debe archivarse de forma aprobada o recapturarse en un mecanismo de retención aprobado; no declarar permanente el artefacto temporal.

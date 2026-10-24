@@ -1,6 +1,6 @@
 # Plan Maestro Top Mundial del Crypto Intelligence Ecosystem
 
-- **Estado:** propuesta para revisión; no aprobado hasta decisión explícita del propietario.
+- **Estado:** aprobado por el propietario del proyecto el 2026-10-23; implementación y cumplimiento sujetos a evidencia verificable.
 - **Versión del documento:** 1.0.0
 - **Idioma:** español; nombres de archivos, directorios, código e identificadores técnicos en inglés.
 - **Issue rector:** [#11 — Definir el marco maestro de ingeniería, gobernanza y hoja de ruta](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/issues/11).
