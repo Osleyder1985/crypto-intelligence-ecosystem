@@ -118,14 +118,13 @@ def capture_one(
         candidate_url=candidate_url,
         title=title,
         published_at=published_at,
-        publication_time_evidence=(
-            f"{date_evidence}; date-only source evidence, normalized to 00:00:00Z without asserting time-of-day."
-        ),
+        publication_time_evidence=date_evidence,
         selected_by=REVIEWER,
         selected_at=now_utc(),
         selection_rationale=(
             "Selected only because the official archive capture contains the canonical URL, title, "
-            "and publication-date evidence. This is event identity review, not causal attribution."
+            "and publication-date evidence. Date-only evidence is normalized to 00:00:00Z without asserting "
+            "time-of-day. This is event identity review, not causal attribution."
         ),
     )
     candidate_path = source_dir / "candidate.json"
