@@ -104,6 +104,11 @@ jobs:
           printf 'INCREMENTAL_IOS_BUILD_AFTER_SOURCE_TOUCH\n' | tee -a ios-build-measurement.log
           app=$(find "$derived/Build/Products/Debug-iphonesimulator" -maxdepth 1 -name '*.app' -type d | head -n 1)
           du -sk "$app" | tee -a ios-build-measurement.log
+          /usr/bin/time -l xcodebuild -workspace "$workspace" -scheme "$scheme" -configuration Release -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' -derivedDataPath "$derived" CODE_SIGNING_ALLOWED=NO build 2>&1 | tee -a ios-build-measurement.log
+          printf 'IOS_RELEASE_BUILD_COMPLETE\\n' | tee -a ios-build-measurement.log
+          release_app=$(find "$derived/Build/Products/Release-iphonesimulator" -maxdepth 1 -name '*.app' -type d | head -n 1)
+          test -n "$release_app"
+          du -sk "$release_app" | tee -a ios-build-measurement.log
       - name: Preserve lockfile and dependency/licence inventory
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
