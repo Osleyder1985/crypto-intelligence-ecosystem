@@ -20,3 +20,10 @@ The CI workflow generates the bare native template in a temporary build director
 cd pocs/issue-9/react-native
 node scripts/validate_fixture.mjs
 ```
+
+
+## Shared Android runtime benchmark
+
+The shared benchmark installs the Release APK alongside Flutter and the native Kotlin reference on one Android API 36 emulator. It checks the accessible title and fixture label before recording ActivityManager start timing and sampled PSS/RSS. The expected visible labels are `Crypto Intelligence` and `12 candles`. A missing label or failed UI hierarchy capture fails the benchmark instead of being counted as a successful observation.
+
+The Release APK is a PoC artifact for the emulator, not a production-signed build. Results from the shared emulator are kept separate from standalone build timings on other hosted runners; neither substitutes for physical-device accessibility or the owner's Windows 11 build.
