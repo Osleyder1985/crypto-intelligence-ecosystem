@@ -308,3 +308,22 @@ The Windows measurement script initially exposed that Git's CRLF checkout change
 | Hosted Windows Server 2025, [run 40059988216](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/actions/runs/40059988216) | 22.23.4 | same | 0.0032 ms | 0.0076 ms | 35,377,152 → 39,354,368 bytes |
 
 These runs validate cross-platform fixture integrity and the measurement script, not a cross-OS performance ranking. They use different hosted machines/OS runtimes, and the Windows run is not the user's Windows 11 PC. Both measure Node geometry only, not browser rendering or on-screen chart readiness. The Windows result is preserved in `docs/architecture/evidence/issue-9-web-geometry-windows-ci-40059988216.json`.
+
+
+## 24. Trazabilidad normativa oficial para la evaluación (2026-10-24)
+
+La matriz y el protocolo se alinean con estos modelos oficiales como referencia de evaluación; no se afirma certificación ni conformidad completa del producto.
+
+| Norma oficial | Estado consultado | Aplicación en Issue #9 | Límite explícito |
+|---|---|---|---|
+| [ISO/IEC 25010:2023](https://www.iso.org/standard/78176.html) — modelo de calidad del producto | Edición 2 publicada en 2023; reemplaza ISO/IEC 25010:2011 | Trazar adecuación funcional, eficiencia de rendimiento, compatibilidad, capacidad de interacción, fiabilidad, seguridad, mantenibilidad, flexibilidad y seguridad operacional según aplique | El modelo no aporta por sí solo puntuaciones de candidatos ni umbrales universales |
+| [ISO/IEC 25023:2016](https://www.iso.org/standard/35747.html) — medición de calidad del producto | La página oficial indica que sigue vigente tras revisión, pero está en proceso de revisión y muestra ISO/IEC DIS 25000-23.2 en desarrollo | Definir medidas operacionales, método de captura, entorno, repeticiones y registro de resultados | La norma no establece rangos universales para calificar medidas; los criterios deben basarse en necesidades y categoría del sistema |
+| [ISO/IEC/IEEE 12207:2026](https://www.iso.org/es/contents/data/standard/09/02/90219.html) — procesos del ciclo de vida del software | Edición 2 publicada en abril de 2026; la edición 2017 figura retirada en la página oficial | Gobernanza de requisitos, diseño, construcción, verificación, operación, mantenimiento y control de cambios del proceso de selección | No sustituye la planificación real ni demuestra que un proceso se haya ejecutado correctamente |
+| [ISO/IEC 27001:2022](https://committee.iso.org/es/norma/27001) — sistema de gestión de seguridad de la información | Edición 3 publicada en 2022, con Amendment 1:2024 | Enmarcar la identificación de riesgos, tratamiento de dependencias, gestión de secretos, control de cambios y evidencia de revisión | No certifica la PoC ni sustituye el análisis técnico de vulnerabilidades/licencias |
+
+### Regla de uso
+
+1. Se conserva la evidencia de fuente y edición consultada; si ISO publica una nueva edición o borrador, se vuelve a verificar el estado antes de actualizar el criterio.
+2. Los tiempos, memoria, tamaño de artefactos y resultados de seguridad se reportan como observaciones reproducibles, no como “cumple/no cumple ISO” por un número inventado.
+3. Los pesos de la matriz son decisiones del producto, no pesos prescritos por ISO. La escala 1–5 requiere evidencia y justificación explícita.
+4. Una auditoría de dependencias o una compilación verde no equivale a conformidad normativa ni certificación.
