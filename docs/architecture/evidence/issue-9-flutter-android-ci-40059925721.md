@@ -22,7 +22,7 @@
 | Clean debug build 1 | 163.34 s | 281,224 KB | 150,302,356 bytes |
 | Clean debug build 2 | 19.42 s | 116,092 KB | 150,302,356 bytes |
 | Clean debug build 3 | 18.74 s | 108,880 KB | 150,302,356 bytes |
-| Incremental debug build after source timestamp touch | 4.50 s | 102,080 KB | 150,302,356 bytes |
+| Incremental debug build after source timestamp touch | 4.50 s (preliminary; content-edit measurement pending) | 102,080 KB | 150,302,356 bytes |
 | Release build | 57.13 s | 124,632 KB | 45,445,816 bytes |
 
 The three clean-build observations have median **19.42 s** and range **18.74–163.34 s**. The first run is a cold-run outlier and must remain in the record; do not discard it to improve the result. The debug APK is not a production-size proxy; release APK is recorded separately.
