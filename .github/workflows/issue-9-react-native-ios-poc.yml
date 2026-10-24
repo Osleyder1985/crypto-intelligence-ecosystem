@@ -53,6 +53,9 @@ jobs:
         working-directory: pocs/issue-9/react-native/build-project
         run: |
           npm install --package-lock-only --ignore-scripts
+          actual=$(node -e "const fs=require('fs'),c=require('crypto');process.stdout.write(c.createHash('sha256').update(fs.readFileSync('package-lock.json')).digest('hex'))")
+          expected=$(cat ../package-lock.sha256)
+          test "$actual" = "$expected" || { echo "package-lock SHA-256 mismatch: $actual"; exit 1; }
           npm ci
       - name: Audit npm dependency advisories
         working-directory: pocs/issue-9/react-native/build-project
