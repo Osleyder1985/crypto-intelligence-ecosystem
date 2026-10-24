@@ -59,6 +59,20 @@ class LicenceInventoryReviewTests(unittest.TestCase):
         self.assertFalse(package["license_text_present"])
         self.assertEqual(report["missing_license_text_count"], 1)
 
+    def test_typing_extensions_uses_versioned_upstream_license_metadata(self):
+        report, _ = self.run_review([{
+            "Name": "typing_extensions", "Version": "4.16.0",
+            "License-Metadata": "UNKNOWN", "License-Classifier": "UNKNOWN",
+            "LicenseText": "Python license history bundle", "LicenseFile": "/package/LICENSE",
+            "NoticeFile": "UNKNOWN", "NoticeText": "UNKNOWN",
+            "URL": "https://pypi.org/project/typing-extensions/4.16.0/",
+        }])
+        package = report["packages"][0]
+        self.assertEqual(package["license_expression"], "PSF-2.0")
+        self.assertEqual(package["status"], "identified-from-versioned-source-metadata")
+        self.assertEqual(package["source_url"], "https://github.com/python/typing_extensions/blob/4.16.0/pyproject.toml")
+        self.assertEqual(report["manual_review_required"], 0)
+
     def test_aligned_metadata_is_not_misrepresented_as_text_review(self):
         report, _ = self.run_review([{
             "Name": "example", "Version": "1.0",
