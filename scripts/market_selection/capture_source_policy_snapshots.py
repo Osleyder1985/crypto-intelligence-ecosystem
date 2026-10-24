@@ -17,7 +17,7 @@ from urllib.error import HTTPError, URLError
 from urllib.parse import urlsplit
 from urllib.request import Request, urlopen
 
-ALLOWED_HOSTS = {"sec.gov", "www.sec.gov", "cftc.gov", "www.cftc.gov", "federalreserve.gov", "www.federalreserve.gov"}
+ALLOWED_HOSTS = {"sec.gov", "www.sec.gov", "cftc.gov", "www.cftc.gov", "federalreserve.gov", "www.federalreserve.gov", "developers.binance.com"}
 
 POLICY_URLS = {
     "sec_website_dissemination": "https://www.sec.gov/about/privacy-information",
