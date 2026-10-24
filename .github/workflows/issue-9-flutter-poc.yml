@@ -66,8 +66,10 @@ jobs:
             stat --printf="CLEAN_BUILD_RUN=$run APK_BYTES=%s\n" build/app/outputs/flutter-apk/app-debug.apk | tee -a flutter-build-measurement.log
           done
           touch lib/main.dart
-          /usr/bin/time -f 'INCREMENTAL_BUILD_AFTER_SOURCE_TOUCH_SECONDS=%e PEAK_RSS_KB=%M' flutter build apk --debug 2>&1 | tee -a flutter-build-measurement.log
-          stat --printf='FINAL_APK_BYTES=%s\n' build/app/outputs/flutter-apk/app-debug.apk | tee -a flutter-build-measurement.log
+          /usr/bin/time -f 'INCREMENTAL_DEBUG_BUILD_AFTER_SOURCE_TOUCH_SECONDS=%e PEAK_RSS_KB=%M' flutter build apk --debug 2>&1 | tee -a flutter-build-measurement.log
+          stat --printf='FINAL_DEBUG_APK_BYTES=%s\n' build/app/outputs/flutter-apk/app-debug.apk | tee -a flutter-build-measurement.log
+          /usr/bin/time -f 'ANDROID_RELEASE_BUILD_SECONDS=%e PEAK_RSS_KB=%M' flutter build apk --release 2>&1 | tee -a flutter-build-measurement.log
+          stat --printf='ANDROID_RELEASE_APK_BYTES=%s\n' build/app/outputs/flutter-apk/app-release.apk | tee -a flutter-build-measurement.log
       - name: Preserve Android build measurements
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
