@@ -21,9 +21,9 @@
 | Clean Debug build 1 | 64.51 s | 205,275,136 bytes | 123,276,096 bytes | 163,404 KB |
 | Clean Debug build 2 | 39.76 s | 214,040,576 bytes | 123,292,480 bytes | 163,404 KB |
 | Clean Debug build 3 | 40.60 s | 212,500,480 bytes | 121,801,600 bytes | 163,404 KB |
-| Incremental Debug after source timestamp touch | 13.86 s | 196,411,392 bytes | 105,827,008 bytes | 163,404 KB |
+| Incremental Debug after JS timestamp touch | 13.86 s | 196,411,392 bytes | 105,827,008 bytes | 163,404 KB (native incremental only; Debug may skip JS bundling) |
 
-Clean-build median: **40.60 s**; range: **39.76–64.51 s**. The first run remains in the record. Bundle size is the simulator Debug app and is not a production-size measure.
+Clean-build median: **40.60 s**; range: **39.76–64.51 s**. The first run remains in the record. Bundle size is the simulator Debug app and is not a production-size measure. The 13.86 s Debug rebuild is not treated as a valid JavaScript-bundle incremental measure because the Debug configuration can skip JS bundling; the updated workflow measures a Release rebuild after the same JS source touch.
 
 ## Dependency/licence evidence
 
