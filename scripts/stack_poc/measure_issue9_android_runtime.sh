@@ -50,9 +50,13 @@ measure_app() {
   printf '%s\n' "$install_out" | tee -a "$LOG"
   for run in 1 2 3; do
     adb shell am force-stop "$pkg" || true
-    start_out="$(timeout 45s adb shell am start -W -n "$pkg/$activity" 2>&1)"
-    printf 'START stack=%s run=%s\\n%s\\n' "$label" "$run" "$start_out" | tee -a "$LOG"
-    if ! printf '%s\\n' "$start_out" | grep -q 'Status: ok'; then
+    if start_out="$(timeout 45s adb shell am start -W -n "$pkg/$activity" 2>&1)"; then
+      start_status=0
+    else
+      start_status=$?
+    fi
+    printf 'START stack=%s run=%s exit=%s\n%s\n' "$label" "$run" "$start_status" "$start_out" | tee -a "$LOG"
+    if [[ "$start_status" -ne 0 ]] || ! printf '%s\n' "$start_out" | grep -q 'Status: ok'; then
       echo "Activity failed to start: stack=$label run=$run package=$pkg activity=$activity" | tee -a "$LOG"
       echo "START_FAILURE_DIAGNOSTICS stack=$label run=$run" | tee -a "$LOG"
       timeout 15s adb shell dumpsys activity activities 2>&1 | tail -n 160 | tee -a "$LOG" || true
