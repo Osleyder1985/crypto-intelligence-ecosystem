@@ -4,15 +4,16 @@ This is a dependency-free browser reference implementation for checking the shar
 
 ## Run locally
 
-Requirements: Python 3 for the static file server and Node.js 22 for the geometry unit tests. From the repository root:
+Requirements: Python 3 for the static file server and Node.js 22 for the geometry unit tests. From the repository root, run:
 
 ```bash
 cd pocs/issue-9/web
 npm test
+cd ../../..
 python -m http.server 8000
 ```
 
-Open `http://localhost:8000/pocs/issue-9/web/` from the repository-root server (or serve the repository root with an equivalent static server). The app loads `tests/stack_poc/fixtures/ohlcv_synthetic_v1.json`, draws candlesticks and volume, and shows a text table. It does not connect to an exchange, submit orders, or generate investment advice.
+Open `http://localhost:8000/pocs/issue-9/web/`. The app loads `/tests/stack_poc/fixtures/ohlcv_synthetic_v1.json`, draws candlesticks and volume, and shows a text table. It does not connect to an exchange, submit orders, or generate investment advice.
 
 ## Automated checks
 
@@ -27,6 +28,7 @@ The GitHub Actions workflow runs Node.js tests for geometry bounds, rising/falli
 | Chart readiness | N/E |
 | Memory | N/E |
 | Build duration/artifact size | N/A for this no-build static reference; do not compare this value to compiled clients |
+| Correctness | Geometry unit tests only; browser-level verification pending |
 | Accessibility | Partial: semantic status and data table present; screen-reader/keyboard testing still required |
 | Security/licence | No third-party runtime package; still review repository policy and deployment headers before production |
 
