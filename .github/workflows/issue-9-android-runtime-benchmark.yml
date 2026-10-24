@@ -160,34 +160,7 @@ jobs:
           disable-animations: true
           emulator-boot-timeout: 1800
           emulator-options: -no-window -no-audio -no-boot-anim -no-snapshot -gpu swiftshader_indirect
-          script: |
-            # The action runs this script through /usr/bin/sh, not necessarily Bash.
-            # Invoke Bash explicitly because this script intentionally uses pipefail and [[ ]].
-            bash -euo pipefail <<'ISSUE9_BASH'
-            # The emulator action waits for boot, but ADB can briefly report the device as offline.
-            # Retry only the device handshake; fail with diagnostics rather than recording invalid data.
-            # Release build daemons can starve the emulator during boot on the 4-vCPU runner.
-            (cd pocs/issue-9/kotlin-android && ./gradlew --stop) || true
-            (cd pocs/issue-9/react-native/build-project/android && ./gradlew --stop) || true
-            jps -l | awk '/GradleDaemon/ {print $1}' | xargs -r kill || true
-            ready=0
-            for attempt in $(seq 1 120); do
-              state="$(adb get-state 2>/dev/null || true)"
-              boot="$(adb shell getprop sys.boot_completed 2>/dev/null | tr -d '\\r' || true)"
-              if [[ "$state" == "device" && "$boot" == "1" ]]; then ready=1; break; fi
-              sleep 5
-            done
-            if [[ "$ready" != "1" ]]; then
-              adb devices -l || true
-              adb logcat -d -t 300 || true
-              echo "Android emulator did not reach device/boot_completed=1 within 10 minutes" >&2
-              exit 1
-            fi
-            adb shell getprop ro.build.version.sdk
-            echo "ADB_READY_AT=$(date -u +%FT%TZ)" | tee "$OUTPUT_DIR/emulator-ready.txt"
-            adb devices -l | tee -a "$OUTPUT_DIR/emulator-ready.txt"
-            bash scripts/stack_poc/measure_issue9_android_runtime.sh
-            ISSUE9_BASH
+          script: bash scripts/stack_poc/run_issue9_android_runtime.sh
         env:
           FLUTTER_APK: ${{ github.workspace }}/pocs/issue-9/flutter/build/app/outputs/flutter-apk/app-release.apk
           RN_APK: ${{ github.workspace }}/pocs/issue-9/react-native/build-project/android/app/build/outputs/apk/release/app-release.apk
