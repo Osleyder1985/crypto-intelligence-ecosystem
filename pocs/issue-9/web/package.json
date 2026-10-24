@@ -1,0 +1,9 @@
+{
+  "name": "issue-9-web-chart-reference-poc",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test chart_geometry.test.js",
+    "serve": "python -m http.server 8000"
+  }
+}
