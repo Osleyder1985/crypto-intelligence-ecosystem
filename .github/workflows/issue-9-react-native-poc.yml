@@ -44,6 +44,15 @@ jobs:
       - name: Install locked dependencies
         working-directory: pocs/issue-9/react-native
         run: npm ci
+      - name: Audit npm dependency advisories
+        working-directory: pocs/issue-9/react-native
+        run: npm audit --audit-level=high
+      - name: Record resolved dependency tree
+        working-directory: pocs/issue-9/react-native
+        run: npm ls --all --json > issue-9-rn-dependency-tree.json
+      - name: Generate third-party licence inventory
+        working-directory: pocs/issue-9/react-native
+        run: npx --yes license-checker@25.0.1 --json > issue-9-rn-license-inventory.json
       - name: Validate OHLCV fixture
         working-directory: pocs/issue-9/react-native
         run: npm run test:fixture
@@ -63,5 +72,7 @@ jobs:
           path: |
             pocs/issue-9/react-native/package-lock.json
             pocs/issue-9/react-native/node_modules/.package-lock.json
+            pocs/issue-9/react-native/issue-9-rn-dependency-tree.json
+            pocs/issue-9/react-native/issue-9-rn-license-inventory.json
           if-no-files-found: warn
           retention-days: 30
