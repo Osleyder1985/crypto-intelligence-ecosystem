@@ -168,3 +168,10 @@ Este diagrama expresa límites propuestos, no infraestructura desplegada. La ele
 - [ ] PoC comparativas de cliente móvil/gráficos, API, persistencia histórica y tarea asíncrona.
 - [ ] Matriz puntuada con resultados medidos y análisis de sensibilidad.
 - [ ] ADR definitivo ratificado y revisión del PR.
+
+
+## 12. CI específico del contrato OpenAPI
+
+Se añadió `.github/workflows/issue-9-openapi-contract.yml`, que valida el parseo YAML, versión OpenAPI, estructura de rutas, `operationId` únicos, respuestas por operación y referencias locales resolubles. El workflow se configura para ejecutarse en la rama de evaluación y en PRs/cambios relevantes de `main`.
+
+**Estado de ejecución:** pendiente de resultado para el último commit de esta rama. El workflow comprueba invariantes estructurales esenciales; no sustituye un validador completo de conformidad OpenAPI ni pruebas de contrato cliente-servidor.
