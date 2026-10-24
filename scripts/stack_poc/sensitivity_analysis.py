@@ -82,7 +82,7 @@ def analyze(payload):
 
     def totals(active_weights):
         denom = sum(active_weights.values())
-        return {name: sum(active_weights[k] * item['scores'][k] / 5 for k in active_weights) / denom for name, item in normalized.items()}
+        return {name: round(sum(active_weights[k] * item['scores'][k] / 5 for k in active_weights) / denom * 100, 4) for name, item in normalized.items()}
 
     baseline = totals(weights)
     baseline_order = [name for name, _ in sorted(baseline.items(), key=lambda item: (-item[1], item[0]))]
