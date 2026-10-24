@@ -74,7 +74,7 @@ def create_app(database_path: str | Path | None = None, bearer_token: str | None
                 );
                 CREATE TABLE IF NOT EXISTS evaluations (
                     evaluation_id TEXT PRIMARY KEY,
-                    request_id TEXT NOT NULL UNIQUE REFERENCES evaluation_requests(request_id),
+                    request_id TEXT NOT NULL REFERENCES evaluation_requests(request_id),
                     asset_id TEXT NOT NULL REFERENCES assets(asset_id),
                     horizon TEXT NOT NULL CHECK(horizon IN ('short','medium','long')),
                     methodology_version TEXT NOT NULL,
@@ -82,7 +82,8 @@ def create_app(database_path: str | Path | None = None, bearer_token: str | None
                     status TEXT NOT NULL CHECK(status IN ('complete','partial','indeterminate')),
                     conclusion TEXT NOT NULL,
                     evidence_refs_json TEXT NOT NULL,
-                    limitations_json TEXT NOT NULL
+                    limitations_json TEXT NOT NULL,
+                    UNIQUE(request_id, horizon)
                 );
             """)
             conn.commit()
@@ -168,18 +169,18 @@ def create_app(database_path: str | Path | None = None, bearer_token: str | None
             ).fetchone()
             if not row:
                 raise HTTPException(status_code=404, detail="request not found")
-            evaluation = conn.execute(
+            evaluations = conn.execute(
                 """SELECT evaluation_id, asset_id, created_at, horizon, methodology_version,
                           status, conclusion, evidence_refs_json, limitations_json
-                   FROM evaluations WHERE request_id=?""", (request_id,)
-            ).fetchone()
-        result = {"request_id": row["request_id"], "status": row["status"], "evaluation": None, "error": None}
-        if evaluation:
+                   FROM evaluations WHERE request_id=? ORDER BY horizon""", (request_id,)
+            ).fetchall()
+        items = []
+        for evaluation in evaluations:
             item = dict(evaluation)
             item["evidence_refs"] = json.loads(item.pop("evidence_refs_json"))
             item["limitations"] = json.loads(item.pop("limitations_json"))
-            result["evaluation"] = item
-        return result
+            items.append(item)
+        return {"request_id": row["request_id"], "status": row["status"], "evaluations": items, "error": None}
 
     # Explicit seed helper used by PoC tests only; not exposed as a public route.
     app.state.poc_connect = connect
