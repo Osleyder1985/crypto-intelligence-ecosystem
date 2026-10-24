@@ -11,7 +11,7 @@ on:
       - ".github/workflows/issue-132-live-backfill.yml"
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   live-backfill:
@@ -21,6 +21,8 @@ jobs:
     steps:
       - name: Obtener código
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref }}
       - name: Configurar Python
         uses: actions/setup-python@v5
         with:
@@ -30,6 +32,19 @@ jobs:
           PYTHONPATH=. python scripts/market_selection/run_issue_132_live_backfill.py \
             --authorization-registry config/provider_authorization_registry.issue-132.json \
             --output-dir "$RUNNER_TEMP/issue-132-live-backfill"
+      - name: Persistir expediente de evidencia autorizado en la rama del PR
+        if: success()
+        run: |
+          destination="data/research_evidence/issue-132/live-backfill"
+          mkdir -p "$destination"
+          cp -R "$RUNNER_TEMP/issue-132-live-backfill/." "$destination/"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add "$destination"
+          if ! git diff --cached --quiet; then
+            git commit -m "data: persist verified Issue 132 backfill evidence"
+            git push origin "HEAD:refs/heads/$GITHUB_HEAD_REF"
+          fi
       - name: Publicar capturas derivadas y manifiesto verificable
         if: always()
         uses: actions/upload-artifact@v4
