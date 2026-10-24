@@ -1,0 +1,72 @@
+name: Issue 9 React Native iOS chart reference PoC
+
+on:
+  pull_request:
+    paths:
+      - 'pocs/issue-9/react-native/**'
+      - 'tests/stack_poc/fixtures/ohlcv_synthetic_v1.json'
+      - '.github/workflows/issue-9-react-native-ios-poc.yml'
+  push:
+    branches: [main, docs/issue-9-stack-evaluation]
+    paths:
+      - 'pocs/issue-9/react-native/**'
+      - 'tests/stack_poc/fixtures/ohlcv_synthetic_v1.json'
+      - '.github/workflows/issue-9-react-native-ios-poc.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  react-native-ios:
+    runs-on: macos-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - name: Set up Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22'
+      - name: Record macOS, Xcode and Node environment
+        run: |
+          sw_vers
+          uname -a
+          system_profiler SPHardwareDataType
+          xcodebuild -version
+          node --version
+          npm --version
+      - name: Verify app fixture matches canonical fixture byte-for-byte
+        run: cmp tests/stack_poc/fixtures/ohlcv_synthetic_v1.json pocs/issue-9/react-native/assets/ohlcv_synthetic_v1.json
+      - name: Generate package lock from exact direct pins
+        working-directory: pocs/issue-9/react-native
+        run: npm install --package-lock-only --ignore-scripts
+      - name: Install locked dependencies
+        working-directory: pocs/issue-9/react-native
+        run: npm ci
+      - name: Validate OHLCV fixture
+        working-directory: pocs/issue-9/react-native
+        run: npm run test:fixture
+      - name: Generate iOS project
+        working-directory: pocs/issue-9/react-native
+        run: npx expo prebuild --platform ios --no-install
+      - name: Build iOS simulator app without code signing
+        working-directory: pocs/issue-9/react-native
+        run: |
+          workspace=$(find ios -maxdepth 2 -name '*.xcworkspace' | head -n 1)
+          scheme_file=$(find ios -path '*/xcshareddata/xcschemes/*.xcscheme' | head -n 1)
+          test -n "$workspace"
+          test -n "$scheme_file"
+          scheme=$(basename "$scheme_file" .xcscheme)
+          /usr/bin/time -l xcodebuild -workspace "$workspace" -scheme "$scheme" -configuration Debug -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' CODE_SIGNING_ALLOWED=NO build 2>&1 | tee ios-build-measurement.log
+          du -sk ios/build/Build/Products/Debug-iphonesimulator/*.app | tee -a ios-build-measurement.log
+      - name: Preserve iOS build measurements and dependency lock
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: issue-9-react-native-ios-measurements
+          path: |
+            pocs/issue-9/react-native/ios-build-measurement.log
+            pocs/issue-9/react-native/package-lock.json
+          if-no-files-found: warn
+          retention-days: 30
