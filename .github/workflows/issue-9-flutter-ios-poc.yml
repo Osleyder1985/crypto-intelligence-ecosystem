@@ -21,6 +21,7 @@ jobs:
   flutter-ios-reference:
     runs-on: macos-latest
     timeout-minutes: 45
+    timeout-minutes: 45
     env:
       CI: 'true'
       FLUTTER_SUPPRESS_ANALYTICS: 'true'
@@ -52,8 +53,27 @@ jobs:
       - name: Run Flutter widget tests
         working-directory: pocs/issue-9/flutter
         run: flutter test
-      - name: Build iOS without code signing and record resource data
+      - name: Run three clean iOS builds and record resource data
         working-directory: pocs/issue-9/flutter
         run: |
-          /usr/bin/time -l flutter build ios --no-codesign 2>&1 | tee flutter-ios-build-measurement.log
+          set -o pipefail
+          : > flutter-ios-build-measurement.log
+          for run in 1 2 3; do
+            flutter clean
+            flutter pub get
+            /usr/bin/time -l flutter build ios --no-codesign 2>&1 | tee -a flutter-ios-build-measurement.log
+            printf 'CLEAN_IOS_BUILD_RUN=%s\n' "$run" | tee -a flutter-ios-build-measurement.log
+            du -sk build/ios/iphoneos/Runner.app | tee -a flutter-ios-build-measurement.log
+          done
+          touch lib/main.dart
+          /usr/bin/time -l flutter build ios --no-codesign 2>&1 | tee -a flutter-ios-build-measurement.log
+          printf 'INCREMENTAL_IOS_BUILD_AFTER_SOURCE_TOUCH\n' | tee -a flutter-ios-build-measurement.log
           du -sk build/ios/iphoneos/Runner.app | tee -a flutter-ios-build-measurement.log
+      - name: Preserve iOS build measurements
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: issue-9-flutter-ios-build-measurements
+          path: pocs/issue-9/flutter/flutter-ios-build-measurement.log
+          if-no-files-found: warn
+          retention-days: 30
