@@ -1,0 +1,67 @@
+name: Issue 9 React Native chart reference PoC
+
+on:
+  pull_request:
+    paths:
+      - 'pocs/issue-9/react-native/**'
+      - 'tests/stack_poc/fixtures/ohlcv_synthetic_v1.json'
+      - '.github/workflows/issue-9-react-native-poc.yml'
+  push:
+    branches: [main, docs/issue-9-stack-evaluation]
+    paths:
+      - 'pocs/issue-9/react-native/**'
+      - 'tests/stack_poc/fixtures/ohlcv_synthetic_v1.json'
+      - '.github/workflows/issue-9-react-native-poc.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  react-native-android:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - name: Set up Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22'
+      - name: Record runner environment
+        run: |
+          uname -a
+          lscpu
+          free -b
+          java -version
+          node --version
+          npm --version
+      - name: Verify app fixture matches canonical fixture byte-for-byte
+        run: cmp tests/stack_poc/fixtures/ohlcv_synthetic_v1.json pocs/issue-9/react-native/assets/ohlcv_synthetic_v1.json
+      - name: Generate package lock from exact direct pins
+        working-directory: pocs/issue-9/react-native
+        run: npm install --package-lock-only --ignore-scripts
+      - name: Install locked dependencies
+        working-directory: pocs/issue-9/react-native
+        run: npm ci
+      - name: Validate OHLCV fixture
+        working-directory: pocs/issue-9/react-native
+        run: npm run test:fixture
+      - name: Generate Android project
+        working-directory: pocs/issue-9/react-native
+        run: npx expo prebuild --platform android --no-install
+      - name: Build Android debug APK and record measurements
+        working-directory: pocs/issue-9/react-native
+        run: |
+          /usr/bin/time -f 'ANDROID_BUILD_SECONDS=%e PEAK_RSS_KB=%M' sh -c 'cd android && ./gradlew assembleDebug'
+          stat --printf='ANDROID_APK_BYTES=%s\n' android/app/build/outputs/apk/debug/app-debug.apk
+      - name: Preserve lockfile and dependency inventory
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: issue-9-react-native-lock-and-inventory
+          path: |
+            pocs/issue-9/react-native/package-lock.json
+            pocs/issue-9/react-native/node_modules/.package-lock.json
+          if-no-files-found: warn
+          retention-days: 30
