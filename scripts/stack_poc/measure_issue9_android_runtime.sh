@@ -37,7 +37,11 @@ measure_app() {
   for run in 1 2 3; do
     adb shell am force-stop "$pkg" || true
     start_out="$(adb shell am start -W -n "$pkg/$activity" 2>&1)"
-    printf 'START stack=%s run=%s\n%s\n' "$label" "$run" "$start_out" | tee -a "$LOG"
+    printf 'START stack=%s run=%s\\n%s\\n' "$label" "$run" "$start_out" | tee -a "$LOG"
+    if ! printf '%s\\n' "$start_out" | grep -q 'Status: ok'; then
+      echo "Activity failed to start: stack=$label run=$run package=$pkg activity=$activity" | tee -a "$LOG"
+      exit 1
+    fi
     total="$(printf '%s\n' "$start_out" | awk -F': ' '/TotalTime:/ {print $2; exit}')"
     wait="$(printf '%s\n' "$start_out" | awk -F': ' '/WaitTime:/ {print $2; exit}')"
     sleep 5
