@@ -133,3 +133,15 @@ El artefacto es temporal y tiene retención de siete días; esta tabla permite c
 - **Federal Reserve Board:** el disclaimer indica que la información del Board, salvo indicación contraria, es de dominio público y puede copiarse/distribuirse con atribución; fotos, gráficos y materiales identificados como pertenecientes a terceros requieren tratamiento separado. La página RSS explica el uso de lectores/agregadores, pero eso por sí solo no resuelve retención automatizada ilimitada ni el tratamiento de todos los recursos enlazados.
 
 **Conclusión de esta revisión técnica:** la evidencia observada apoya la reutilización de contenido oficial en términos generales en las tres instituciones, con condiciones específicas de acceso y atribución. No equivale a aprobación global de HTML completo, adjuntos, contenido de terceros, retención indefinida o backfill ilimitado. Esas decisiones deben quedar acotadas en `approval_scope` por cada `source_id` antes de activar la modalidad correspondiente. Los estados permanecen `TERMS_PENDING`.
+
+
+## Alcance funcional multifuente y estado operativo
+
+El objetivo funcional es evaluar las seis fuentes registradas como candidatas para investigar noticias y eventos relacionados con movimientos del mercado cripto. Ese alcance no debe reducirse a un piloto único por defecto. La priorización de implementación puede organizar el trabajo, pero no limita el alcance final solicitado.
+
+La autorización para continuar el desarrollo no debe confundirse con una autorización específica para acceder, capturar, persistir o redistribuir contenido de una fuente concreta. No se atribuirá al propietario una aprobación individual de SEC, CFTC o Federal Reserve que no haya declarado expresamente. La decisión de activar cada modalidad se documenta por fuente con evidencia oficial, disponibilidad y controles técnicos verificables.
+
+- Mantener cada origen en `TERMS_PENDING` mientras falten las condiciones operativas documentadas para su modalidad.
+- No consultar los feeds de CFTC mientras el aviso oficial indique que están deshabilitados; el archivo HTML es un origen separado.
+- No inferir permiso para conservar indefinidamente HTML, adjuntos o contenido de terceros a partir de una política general de reutilización.
+- No inferir causalidad entre un evento y un movimiento de precio solo por proximidad temporal.
