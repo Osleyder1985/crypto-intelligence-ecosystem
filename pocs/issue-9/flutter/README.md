@@ -4,7 +4,7 @@ This app is a dependency-free Flutter reference for Android chart rendering. It 
 
 ## Local commands
 
-Requires Flutter SDK 3.35.7 or a compatible SDK and Android build tooling for APK generation. The repository intentionally stores the Dart app and generates the platform-specific Android scaffold during setup:
+Requires Flutter SDK 3.47.5 or a compatible SDK and Android build tooling for APK generation. The repository intentionally stores the Dart app and generates the platform-specific Android scaffold during setup:
 
 ```bash
 cd pocs/issue-9/flutter
@@ -18,7 +18,7 @@ The canonical fixture is `tests/stack_poc/fixtures/ohlcv_synthetic_v1.json`; the
 
 ## CI evidence
 
-The workflow uses an Ubuntu GitHub-hosted runner, installs Flutter 3.35.7, runs widget tests and builds a debug APK. `/usr/bin/time -v` records the runner's build duration and peak resident memory, and `stat` reports APK bytes. These numbers are Linux hosted-runner observations, not measurements of the user's Windows PC, and must not be mixed with web or future React Native measurements. The workflow currently records one build observation; three clean repetitions and incremental-build measurements are still required by the benchmark protocol.
+The workflow uses an Ubuntu GitHub-hosted runner, installs Flutter 3.47.5, runs widget tests and builds a debug APK. `/usr/bin/time -v` records the runner's build duration and peak resident memory, and `stat` reports APK bytes. These numbers are Linux hosted-runner observations, not measurements of the user's Windows PC, and must not be mixed with web or future React Native measurements. The workflow currently records one build observation; three clean repetitions and incremental-build measurements are still required by the benchmark protocol.
 
 ## Limitations
 
