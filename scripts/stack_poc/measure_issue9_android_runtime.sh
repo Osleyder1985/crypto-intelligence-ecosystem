@@ -8,7 +8,7 @@ OUT_DIR="${OUTPUT_DIR:-artifacts/issue-9-android-runtime}"
 mkdir -p "$OUT_DIR"
 CSV="$OUT_DIR/runtime-measurements.csv"
 LOG="$OUT_DIR/runtime-measurements.log"
-printf 'stack,run,package,activity,start_wait_ms,total_time_ms,pss_kb_max,rss_kb_max,title_visible,fixture_label_visible,android_api\n' > "$CSV"
+printf 'stack,run,package,activity,start_wait_ms,total_time_ms,pss_kb_max,rss_kb_max,title_visible,fixture_label_visible,fixture_data_visible,android_api\n' > "$CSV"
 : > "$LOG"
 
 SDK_ROOT="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-$HOME/Android/Sdk}}"
@@ -27,7 +27,8 @@ measure_app() {
   local apk="$2"
   local expected_title="$3"
   local expected_fixture="$4"
-  local badging pkg activity install_out start_out total wait pss rss pss_max rss_max title_visible fixture_visible ui_file
+  local expected_data="$5"
+  local badging pkg activity install_out start_out total wait pss rss pss_max rss_max title_visible fixture_visible data_visible ui_file data_ui_file
   badging="$("$AAPT" dump badging "$apk")"
   pkg="$(printf '%s\n' "$badging" | sed -n "s/^package: name='\([^']*\)'.*/\1/p" | head -n 1)"
   activity="$(printf '%s\n' "$badging" | sed -n "s/^launchable-activity: name='\([^']*\)'.*/\1/p" | head -n 1)"
@@ -60,26 +61,35 @@ measure_app() {
     title_visible=true
     fixture_visible=true
     if [[ "$run" == 1 ]]; then
-      ui_file="$OUT_DIR/${label}-ui.xml"
+      ui_file="$OUT_DIR/${label}-ui-initial.xml"
       timeout 20s adb shell uiautomator dump /sdcard/issue9-window.xml >/dev/null 2>&1 || true
       timeout 15s adb pull /sdcard/issue9-window.xml "$ui_file" >/dev/null 2>&1 || true
+      timeout 20s adb exec-out screencap -p > "$OUT_DIR/${label}-screen-initial.png"
       title_visible=false
       fixture_visible=false
+      data_visible=false
       if [[ -f "$ui_file" ]] && grep -Fq "$expected_title" "$ui_file"; then title_visible=true; fi
       if [[ -f "$ui_file" ]] && grep -Fq "$expected_fixture" "$ui_file"; then fixture_visible=true; fi
-      if [[ "$title_visible" != true || "$fixture_visible" != true ]]; then
-        echo "UI verification failed: stack=$label title_visible=$title_visible fixture_label_visible=$fixture_visible hierarchy_file=$ui_file" | tee -a "$LOG"
+      # Scroll to the visible fixture table and inspect actual values, not only the bundled JSON file.
+      for scroll in 1 2 3; do adb shell input swipe 540 1650 540 450 450; sleep 1; done
+      data_ui_file="$OUT_DIR/${label}-ui-fixture-data.xml"
+      timeout 20s adb shell uiautomator dump /sdcard/issue9-fixture-data.xml >/dev/null 2>&1 || true
+      timeout 15s adb pull /sdcard/issue9-fixture-data.xml "$data_ui_file" >/dev/null 2>&1 || true
+      timeout 20s adb exec-out screencap -p > "$OUT_DIR/${label}-screen-fixture-data.png"
+      if [[ -f "$data_ui_file" ]] && grep -Fq "$expected_data" "$data_ui_file" && grep -Fq "102.0" "$data_ui_file"; then data_visible=true; fi
+      if [[ "$title_visible" != true || "$fixture_visible" != true || "$data_visible" != true ]]; then
+        echo "UI verification failed: stack=$label title_visible=$title_visible fixture_label_visible=$fixture_visible fixture_data_visible=$data_visible initial_hierarchy=$ui_file data_hierarchy=$data_ui_file" | tee -a "$LOG"
         exit 1
       fi
     fi
     [[ "$pss_max" -gt 0 ]] || pss_max=""
     [[ "$rss_max" -gt 0 ]] || rss_max=""
-    printf '%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s\n' "$label" "$run" "$pkg" "$activity" "${wait:-}" "${total:-}" "$pss_max" "$rss_max" "$title_visible" "$fixture_visible" "$API" >> "$CSV"
-    echo "RESULT stack=$label run=$run wait_ms=${wait:-N/E} total_ms=${total:-N/E} max_pss_kb=$pss_max max_rss_kb=$rss_max title_visible=$title_visible fixture_label_visible=$fixture_visible" | tee -a "$LOG"
+    printf '%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s\n' "$label" "$run" "$pkg" "$activity" "${wait:-}" "${total:-}" "$pss_max" "$rss_max" "$title_visible" "$fixture_visible" "$data_visible" "$API" >> "$CSV"
+    echo "RESULT stack=$label run=$run wait_ms=${wait:-N/E} total_ms=${total:-N/E} max_pss_kb=$pss_max max_rss_kb=$rss_max title_visible=$title_visible fixture_label_visible=$fixture_visible fixture_data_visible=$data_visible" | tee -a "$LOG"
     adb shell am force-stop "$pkg" || true
   done
 }
 
-measure_app "flutter" "$FLUTTER_APK" "Market chart reference PoC" "12 synthetic OHLCV candles"
-measure_app "react-native" "$RN_APK" "Crypto Intelligence" "12 candles"
-measure_app "kotlin" "$KOTLIN_APK" "Kotlin chart reference" "12 synthetic OHLCV candles"
+measure_app "flutter" "$FLUTTER_APK" "Market chart reference PoC" "12 synthetic OHLCV candles" "2026-01-05T00:00:00Z"
+measure_app "react-native" "$RN_APK" "Crypto Intelligence" "12 candles" "2026-01-05T00:00:00Z"
+measure_app "kotlin" "$KOTLIN_APK" "Kotlin chart reference" "12 synthetic OHLCV candles" "2026-01-05T00:00:00Z"
