@@ -196,3 +196,13 @@ Comportamientos que cubren las pruebas automatizadas:
 
 El workflow instala versiones fijadas de FastAPI y HTTPX y ejecuta `unittest` en Python 3.12. **Resultado CI observado:** el run [40056765545](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/actions/runs/40056765545) ejecutó el job `api-history-idempotency` y el paso `Run API, history and idempotency PoC tests` terminó en `success`. El job figura con todos los pasos completados; la consulta general del run todavía mostraba estado `in_progress` durante la verificación, por lo que se confirma el paso de pruebas PASS, no el cierre final del run. Esta evidencia corresponde al commit de pruebas `dcbc8c63f7365195258f39c923c6e7270ece4871`; el commit documental posterior no modifica el código probado. La implementación no ejecuta análisis real ni worker asíncrono: las solicitudes permanecen `queued` en esta PoC. Tampoco implementa autorización por roles, migraciones, PostgreSQL, límites operativos ni pruebas de concurrencia; estos son riesgos/alcances pendientes.
 
+## 14. PoC de persistencia PostgreSQL
+
+Se añadió `scripts/stack_poc/postgres_schema.sql`, una prueba de integración `tests/stack_poc/test_postgres_history.py` y el workflow `.github/workflows/issue-9-postgres-poc.yml`. El workflow levanta PostgreSQL 16 como servicio efímero, instala `psycopg[binary]==3.2.6` y ejecuta pruebas con Python 3.12.
+
+La PoC verifica:
+- escritura de evaluaciones distintas para el mismo activo, con horizonte y versión metodológica;
+- orden de consulta por timestamp descendente;
+- rechazo explícito de `UPDATE` y `DELETE` sobre el historial mediante trigger de PostgreSQL.
+
+**Estado:** implementación añadida; ejecución CI pendiente de confirmación. No registrar PASS hasta consultar el job. Es una prueba de esquema/retención de historial, no un benchmark representativo, una migración de producción ni una validación de recuperación/backup. El worker persistente y la idempotencia transaccional todavía requieren PoC separada.
