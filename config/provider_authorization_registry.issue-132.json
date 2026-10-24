@@ -38,7 +38,8 @@
     "terms_url": "https://developers.binance.com/en/docs/products/spot/rest-api",
     "terms_sha256": "7b98e2a2961eceab65592628930600a9c6681651637031ba9fae6dc4604a6cc1",
     "terms_content_base64": "Rm9yIEFQSXMgdGhhdCBvbmx5IHNlbmQgcHVibGljIG1hcmtldCBkYXRhLCBwbGVhc2UgdXNlIHRoZSBiYXNlIGVuZHBvaW50IGh0dHBzOi8vZGF0YS1hcGkuYmluYW5jZS52aXNpb24u",
-    "terms_evidence_scope": "Exact excerpt from the official Spot REST API documentation identifying data-api.binance.vision as the endpoint for public market-data APIs. This is technical-use evidence, not a blanket license for redistribution.",
+    "terms_evidence_scope": "SHA-256 covers the quoted excerpt stored in terms_content_base64, not the full page bytes. The official developer documentation endpoint returned HTTP 202 to the automated snapshot workflow, so no full-page policy snapshot is claimed. The excerpt identifies data-api.binance.vision as the public market-data endpoint; this is technical-use evidence, not a blanket license for redistribution.",
+    "automated_policy_snapshot_status": "AUTOMATION_CHALLENGE_HTTP_202_MANUAL_REVIEW_REQUIRED",
     "reviewed_by": "AI-assisted technical review; owner-authorized internal research scope",
     "reviewed_at": "2026-10-24T02:40:00Z",
     "approval_scope": {
