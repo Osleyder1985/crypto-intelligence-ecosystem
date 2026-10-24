@@ -24,3 +24,17 @@ No incremental Simulator Debug measurement was recorded by this workflow; do not
 ## Comparison with Flutter
 
 On the same runner class (macOS 26 ARM64 / virtual Apple M1 / 3 cores / 7 GB / Xcode 26.6), the current Flutter run measured iOS Simulator Debug 81 / 57 / 40 s, 142,300 KB app bundle, and device-target Release 44 s / 14,560 KB. These separate workflow runs have their own cache states, so build times are observations rather than a controlled A/B. On this evidence, Flutter's device-target Release build was faster and the app bundle smaller; that is only one criterion and does not determine the overall stack choice. The common Android emulator runtime benchmark, actual Windows 11 local build, physical-device readiness and accessibility remain pending.
+
+
+## Licence-expression follow-up list from the 804-entry inventory
+
+The non-baseline expressions requiring obligation/notice review are:
+- `caniuse-lite@1.0.30001819` — `CC-BY-4.0` (review attribution and source/notice requirements).
+- `minimatch@10.2.6` — `BlueOak-1.0.0` (review its own terms; do not treat it as MIT/BSD).
+- `argparse@2.0.1` — `Python-2.0`.
+- `fb-dotslash@0.5.8` — `MIT OR Apache-2.0`.
+- `jsc-safe-url@0.2.4` — `0BSD`.
+- `type-fest@0.20.2`, `type-fest@0.21.3`, `type-fest@0.7.1` — `MIT OR CC0-1.0`.
+- `Issue9RnReference@0.0.1` is the private PoC app's own `UNLICENSED` entry, not an external dependency.
+
+This list identifies where review effort should focus; it does not itself satisfy attribution/notice obligations. Preserve the exact lockfile and inventory artifact when a release candidate is prepared, verify the license text for each exact package version, and generate the product's third-party notices bundle before distribution.
