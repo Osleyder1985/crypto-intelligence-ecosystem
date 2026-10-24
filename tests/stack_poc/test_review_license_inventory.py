@@ -62,7 +62,7 @@ class LicenceInventoryReviewTests(unittest.TestCase):
         package = report["packages"][0]
         self.assertEqual(package["license_expression"], "BSD-3-Clause")
         self.assertEqual(package["status"], "identified-from-versioned-license-text")
-        self.assertIn("starlette/blob/1.10.0/LICENSE.md", package["evidence"])
+        self.assertIn("starlette/blob/1.10.0/LICENSE.md", package["basis"])
 
     def test_override_does_not_carry_forward_to_unreviewed_version(self):
         report, _ = self.run_review([{
