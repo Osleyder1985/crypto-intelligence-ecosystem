@@ -17,6 +17,8 @@ from html.parser import HTMLParser
 import re
 from pathlib import Path
 from urllib.error import HTTPError, URLError
+import socket
+import time
 from urllib.parse import urljoin, urlsplit
 from urllib.request import HTTPRedirectHandler, Request, build_opener, urlopen
 import xml.etree.ElementTree as ET
@@ -65,6 +67,22 @@ def _safe_headers(headers: Any) -> dict[str, str]:
         for key, value in headers.items()
         if str(key).lower() not in excluded
     }
+
+
+def _urlopen_with_transient_dns_retries(request: Request, timeout_seconds: float, attempts: int = 3):
+    """Retry only DNS resolution failures; never retry HTTP responses or ambiguous timeouts."""
+    if isinstance(attempts, bool) or not isinstance(attempts, int) or attempts < 1:
+        raise ValueError("attempts must be a positive integer")
+    for attempt in range(attempts):
+        try:
+            return urlopen(request, timeout=float(timeout_seconds))
+        except (URLError, OSError) as exc:
+            reason = exc.reason if isinstance(exc, URLError) else exc
+            if not isinstance(reason, socket.gaierror) or attempt + 1 >= attempts:
+                raise
+            # DNS failed before an HTTP request could be sent. Short bounded backoff
+            # helps transient resolver failures without retrying server-side failures.
+            time.sleep(0.25 * (2 ** attempt))
 
 
 def _read_to_eof(stream: Any) -> tuple[bytes, Exception | None]:
@@ -320,7 +338,7 @@ def capture_public_event_feed(
     raw = b""
     read_error: Exception | None = None
     try:
-        with urlopen(request, timeout=float(timeout_seconds)) as response:
+        with _urlopen_with_transient_dns_retries(request, timeout_seconds) as response:
             status_code = int(getattr(response, "status", 200))
             headers = _safe_headers(getattr(response, "headers", None))
             raw, read_error = _read_to_eof(response)

@@ -1,0 +1,45 @@
+name: Capturar evidencia de políticas oficiales — Issue 132
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - "scripts/market_selection/capture_source_policy_snapshots.py"
+      - ".github/workflows/issue-132-policy-snapshots.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  capture-policy-pages:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Obtener código
+        uses: actions/checkout@v4
+      - name: Configurar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Capturar políticas oficiales sin truncamiento local
+        id: capture
+        continue-on-error: true
+        run: |
+          python scripts/market_selection/capture_source_policy_snapshots.py \
+            --output-dir "$RUNNER_TEMP/issue-132-policy-snapshots" \
+            --user-agent "CryptoIntelligenceIssue132PolicyReview/1.0 (contact: repository maintainer)" \
+            --timeout-seconds 20 \
+            --attempts 3
+      - name: Publicar expediente temporal de captura
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: issue-132-source-policy-snapshots
+          path: ${{ runner.temp }}/issue-132-policy-snapshots/
+          if-no-files-found: error
+          retention-days: 7
+      - name: Fallar si faltó alguna política
+        if: always() && steps.capture.outcome != 'success'
+        run: |
+          echo "No se capturaron todas las políticas oficiales. Revisar el manifiesto del artefacto."
+          exit 1

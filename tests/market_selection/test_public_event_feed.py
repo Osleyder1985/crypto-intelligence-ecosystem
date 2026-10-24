@@ -3,6 +3,8 @@ import copy
 import hashlib
 import json
 import unittest
+import socket
+from urllib.error import URLError
 from unittest.mock import patch
 
 from scripts.market_selection.capture_public_event_feed import (
@@ -358,6 +360,24 @@ class PublicEventFeedCaptureTests(unittest.TestCase):
         ))
 
 
+
+    def test_feed_capture_retries_transient_dns_resolution_failure(self):
+        entry = approved_source()
+        response = FakeResponse(feed_xml())
+        with patch.dict(EVENT_SOURCE_REGISTRY["sources"], {"cftc_general_press_releases": entry}), patch(
+            "scripts.market_selection.capture_public_event_feed.urlopen",
+            side_effect=[URLError(socket.gaierror(-3, "temporary DNS failure")), response],
+        ) as network, patch("scripts.market_selection.capture_public_event_feed.time.sleep") as sleep:
+            result = capture_public_event_feed(
+                "cftc_general_press_releases",
+                authorization_record=authorization_record(entry),
+                user_agent=USER_AGENT,
+                captured_at=self.captured_at,
+            )
+        self.assertEqual(result["capture_status"], "PASS")
+        self.assertTrue(result["network_request_made"])
+        self.assertEqual(network.call_count, 2)
+        sleep.assert_called_once_with(0.25)
 
     def test_article_capture_blocks_terms_pending_source_before_network(self):
         blocked_feed = capture_public_event_feed(
