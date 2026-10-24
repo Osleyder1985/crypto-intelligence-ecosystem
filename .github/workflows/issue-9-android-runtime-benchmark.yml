@@ -1,13 +1,6 @@
 name: Issue 9 comparable Android runtime benchmark
 
 on:
-  pull_request:
-    paths:
-      - 'pocs/issue-9/flutter/**'
-      - 'pocs/issue-9/react-native/**'
-      - 'tests/stack_poc/fixtures/ohlcv_synthetic_v1.json'
-      - 'scripts/stack_poc/measure_issue9_android_runtime.sh'
-      - '.github/workflows/issue-9-android-runtime-benchmark.yml'
   push:
     branches: [main, docs/issue-9-stack-evaluation]
     paths:
@@ -19,8 +12,8 @@ on:
   workflow_dispatch:
 
 concurrency:
-  group: issue-9-android-runtime-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: true
+  group: issue-9-android-runtime-shared
+  cancel-in-progress: false
 
 permissions:
   contents: read
