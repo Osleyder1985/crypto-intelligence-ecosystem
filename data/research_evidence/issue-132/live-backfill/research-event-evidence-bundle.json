@@ -1,0 +1,50 @@
+{
+  "bundle_sha256": "56c15f13aef52a4d342c588696f2a3f8867ab78b9888fba802ebe15d6d6eaedb",
+  "causality_claimed": false,
+  "contextual_unmapped_sources": [
+    {
+      "article_raw_response_sha256": "e8ff4ad2ce794fc6148cf17753d0605fe9fcc58887f7d95804abd5691c28a983",
+      "article_text_evidence_sha256": "d7fbaf5384a0dd097ebf829901039237a3af384bff0b3947664ebda1eb70bb01",
+      "article_url": "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm",
+      "asset_mapping_status": "NOT_MAPPED",
+      "causality_status": "NOT_ASSESSED",
+      "reason": "The release concerns payment-stablecoin regulation generally and does not identify one specific token; no asset identity is inferred.",
+      "source_id": "federal_reserve_press_release_archive",
+      "temporal_association_status": "NOT_EVALUATED_NO_MOVEMENT_WINDOW",
+      "title": "Federal Reserve Board requests public comment on two proposals related to establishing a regulatory framework for Board-supervised payment stablecoin issuers under the GENIUS Act"
+    }
+  ],
+  "created_at": "2026-10-24T02:29:12.472144Z",
+  "events": [
+    {
+      "asset_identifiers": [
+        {
+          "id": "bitcoin",
+          "id_type": "coingecko_id"
+        }
+      ],
+      "causality_status": "NOT_ASSESSED",
+      "event_id": "cftc_press_release_archive:faed8c7ad83768ccdd44657a245cc694c0c8772a93be43be4a5c393642013c65",
+      "event_record_path": "cftc_press_release_archive/event-record.json",
+      "event_record_sha256": "718807dbaacd9ede56b9294234bfb1eb42a546582485584ead6461db4d86aec4",
+      "source_id": "cftc_press_release_archive",
+      "temporal_association_status": "NOT_EVALUATED_NO_MOVEMENT_WINDOW"
+    },
+    {
+      "asset_identifiers": [
+        {
+          "id": "mango-markets",
+          "id_type": "coingecko_id"
+        }
+      ],
+      "causality_status": "NOT_ASSESSED",
+      "event_id": "sec_press_release_archive:e910adbb3fc85291330c35f47d80e2e7fdd640a37b5f68da88cf647bbf1d5f0f",
+      "event_record_path": "sec_press_release_archive/event-record.json",
+      "event_record_sha256": "90da4ada1ace62c66622759764b62d13c89dc7173cd0ab5aa09de170f170a167",
+      "source_id": "sec_press_release_archive",
+      "temporal_association_status": "NOT_EVALUATED_NO_MOVEMENT_WINDOW"
+    }
+  ],
+  "schema_version": "crypto-issue-132-research-event-evidence-bundle-v1",
+  "scope": "Official regulatory event evidence attached for later asset-report correlation; no market movement window or causal conclusion is inferred here."
+}

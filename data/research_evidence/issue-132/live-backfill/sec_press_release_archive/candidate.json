@@ -1,0 +1,14 @@
+{
+  "archive_capture_sha256": "fc4cca2f5e10a3dc1f78400a2434e5e8c7f123f920078f88721254cc00747c42",
+  "archive_url": "https://www.sec.gov/newsroom/press-releases?combine=Mango&page=0",
+  "candidate_id": "6269bb42878b593540443eefae1b6f2ad5b64ed1ad8b0a86406efa8fdb281f68",
+  "candidate_url": "https://www.sec.gov/newsroom/press-releases/2024-154",
+  "publication_time_evidence": "Sept. 27, 2024",
+  "published_at": "2024-09-27T00:00:00Z",
+  "schema_version": "crypto-public-event-archive-candidate-v1",
+  "selected_at": "2026-10-24T02:29:11.933251Z",
+  "selected_by": "AI-assisted technical review; owner-authorized project scope",
+  "selection_rationale": "Selected only because the official archive capture contains the canonical URL, title, and publication-date evidence. Date-only evidence is normalized to 00:00:00Z without asserting time-of-day. This is event identity review, not causal attribution.",
+  "source_id": "sec_press_release_archive",
+  "title": "SEC Charges Entities Operating Crypto Asset Trading Platform Mango Markets for Unregistered Offers and Sales of the Platform’s “MNGO” Governance Tokens"
+}

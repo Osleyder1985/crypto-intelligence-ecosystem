@@ -1,0 +1,143 @@
+{
+  "candidate_id": "6269bb42878b593540443eefae1b6f2ad5b64ed1ad8b0a86406efa8fdb281f68",
+  "capture_status": "PASS",
+  "capture_truncated": false,
+  "captured_at": "2026-10-24T02:29:11.933812Z",
+  "content_type": "text/html; charset=utf-8",
+  "errors": [],
+  "final_url": "https://www.sec.gov/newsroom/press-releases/2024-154",
+  "http_status": 200,
+  "network_request_made": true,
+  "persistent_storage_assessment": {
+    "authorization": {
+      "authorization_record_sha256": "324e7ecf9112a2d3562531e250db4fe9abfecef46d9a7f01c277c9560f3db58c",
+      "authorized_use_cases": [
+        "internal_analysis",
+        "persistent_storage"
+      ],
+      "reviewed_at": "2026-10-24T02:22:00Z",
+      "reviewed_by": "AI-assisted technical review; owner-authorized project scope",
+      "terms_sha256": "65eed3611c0cd41c17e50a5493855c6ac612f5640f95eca19f9bd749c07be620",
+      "terms_url": "https://www.sec.gov/files/about/webmaster-faq.htm"
+    },
+    "authorization_evidence_status": "RECORD_VALIDATED_NOT_LEGAL_ADVICE",
+    "decision": "ALLOW",
+    "policy_version": "1.2.0",
+    "provider_id": "sec_press_release_archive",
+    "reason_codes": [
+      "EXPLICIT_AUTHORIZATION_RECORD_VALIDATED"
+    ],
+    "schema_version": "crypto-provider-use-assessment-v1",
+    "use_case": "persistent_storage"
+  },
+  "provider_id": "sec_press_release_archive",
+  "provider_policy_assessments": [
+    {
+      "authorization": {
+        "authorization_record_sha256": "324e7ecf9112a2d3562531e250db4fe9abfecef46d9a7f01c277c9560f3db58c",
+        "authorized_use_cases": [
+          "internal_analysis",
+          "persistent_storage"
+        ],
+        "reviewed_at": "2026-10-24T02:22:00Z",
+        "reviewed_by": "AI-assisted technical review; owner-authorized project scope",
+        "terms_sha256": "65eed3611c0cd41c17e50a5493855c6ac612f5640f95eca19f9bd749c07be620",
+        "terms_url": "https://www.sec.gov/files/about/webmaster-faq.htm"
+      },
+      "authorization_evidence_status": "RECORD_VALIDATED_NOT_LEGAL_ADVICE",
+      "decision": "ALLOW",
+      "policy_version": "1.2.0",
+      "provider_id": "sec_press_release_archive",
+      "reason_codes": [
+        "EXPLICIT_AUTHORIZATION_RECORD_VALIDATED"
+      ],
+      "schema_version": "crypto-provider-use-assessment-v1",
+      "use_case": "internal_analysis"
+    },
+    {
+      "authorization": {
+        "authorization_record_sha256": "324e7ecf9112a2d3562531e250db4fe9abfecef46d9a7f01c277c9560f3db58c",
+        "authorized_use_cases": [
+          "internal_analysis",
+          "persistent_storage"
+        ],
+        "reviewed_at": "2026-10-24T02:22:00Z",
+        "reviewed_by": "AI-assisted technical review; owner-authorized project scope",
+        "terms_sha256": "65eed3611c0cd41c17e50a5493855c6ac612f5640f95eca19f9bd749c07be620",
+        "terms_url": "https://www.sec.gov/files/about/webmaster-faq.htm"
+      },
+      "authorization_evidence_status": "RECORD_VALIDATED_NOT_LEGAL_ADVICE",
+      "decision": "ALLOW",
+      "policy_version": "1.2.0",
+      "provider_id": "sec_press_release_archive",
+      "reason_codes": [
+        "EXPLICIT_AUTHORIZATION_RECORD_VALIDATED"
+      ],
+      "schema_version": "crypto-provider-use-assessment-v1",
+      "use_case": "persistent_storage"
+    }
+  ],
+  "provider_use_assessment": {
+    "authorization": {
+      "authorization_record_sha256": "324e7ecf9112a2d3562531e250db4fe9abfecef46d9a7f01c277c9560f3db58c",
+      "authorized_use_cases": [
+        "internal_analysis",
+        "persistent_storage"
+      ],
+      "reviewed_at": "2026-10-24T02:22:00Z",
+      "reviewed_by": "AI-assisted technical review; owner-authorized project scope",
+      "terms_sha256": "65eed3611c0cd41c17e50a5493855c6ac612f5640f95eca19f9bd749c07be620",
+      "terms_url": "https://www.sec.gov/files/about/webmaster-faq.htm"
+    },
+    "authorization_evidence_status": "RECORD_VALIDATED_NOT_LEGAL_ADVICE",
+    "decision": "ALLOW",
+    "policy_version": "1.2.0",
+    "provider_id": "sec_press_release_archive",
+    "reason_codes": [
+      "EXPLICIT_AUTHORIZATION_RECORD_VALIDATED"
+    ],
+    "schema_version": "crypto-provider-use-assessment-v1",
+    "use_case": "internal_analysis"
+  },
+  "raw_response_base64": null,
+  "raw_response_bytes": 66496,
+  "raw_response_sha256": "7dfc5bff1b345f832534d066d92e3f92b2f9b619ef9b2e4cce1c93263159edad",
+  "reason_codes": [],
+  "requested_url": "https://www.sec.gov/newsroom/press-releases/2024-154",
+  "response_headers": {
+    "Cache-Control": "max-age=0, no-cache, no-store",
+    "Connection": "Transfer-Encoding",
+    "Content-Language": "en",
+    "Content-Security-Policy": "frame-ancestors 'self' *.sec.gov",
+    "Content-Type": "text/html; charset=utf-8",
+    "Date": "Sat, 24 Oct 2026 02:29:12 GMT",
+    "ETag": "\"1792797546-gzip\"",
+    "Expires": "Sat, 24 Oct 2026 02:29:12 GMT",
+    "Last-Modified": "Fri, 23 Oct 2026 23:19:06 GMT",
+    "Pragma": "no-cache",
+    "Referrer-Policy": "strict-origin-when-cross-origin",
+    "Server": "nginx",
+    "Strict-Transport-Security": "max-age=31536000 ; includeSubDomains ; preload",
+    "Transfer-Encoding": "chunked",
+    "Vary": "Accept-Encoding",
+    "X-AH-Environment": "prod",
+    "X-Age": "443",
+    "X-Akamai-Transformed": "0 - 0 -",
+    "X-Cache-Hits": "4",
+    "X-Content-Type-Options": "nosniff",
+    "X-Drupal-Cache": "HIT",
+    "X-Drupal-Dynamic-Cache": "HIT",
+    "X-Frame-Options": "SAMEORIGIN",
+    "X-Request-ID": "f441b437-ba74-4881-9a7f-52fa4dc34358",
+    "X-Xss-Protection": "1; mode=block"
+  },
+  "schema_version": "crypto-public-event-article-capture-v1",
+  "source_id": "sec_press_release_archive",
+  "source_registry_entry_sha256": "83ded14db3aafa10f95b2b3f17c4555649cecc23bdc749e44869f9f5ea67b770",
+  "source_registry_status": "APPROVED",
+  "source_url": "https://www.sec.gov/newsroom/press-releases",
+  "stored_content_mode": "EXTRACTED_TEXT_EVIDENCE",
+  "text_evidence_base64": "eyJhbmNob3JzIjpbeyJocmVmIjoiI2dsb2JhbC1zZWFyY2gtYm94IiwidGV4dCI6IlNraXAgdG8gc2VhcmNoIGZpZWxkIn0seyJocmVmIjoiI21haW4tY29udGVudCIsInRleHQiOiJTa2lwIHRvIG1haW4gY29udGVudCJ9LHsiaHJlZiI6Imh0dHBzOi8vd3d3LnNlYy5nb3YvZmlsZXMvbGl0aWdhdGlvbi9jb21wbGFpbnRzLzIwMjQvY29tcC1wcjIwMjQtMTU0LnBkZiIsInRleHQiOiJTRUMgQ29tcGxhaW50In1dLCJwYWdlX3RleHQiOlsiU0VDLmdvdiB8IFNFQyBDaGFyZ2VzIEVudGl0aWVzIE9wZXJhdGluZyBDcnlwdG8gQXNzZXQgVHJhZGluZyBQbGF0Zm9ybSBNYW5nbyBNYXJrZXRzIGZvciBVbnJlZ2lzdGVyZWQgT2ZmZXJzIGFuZCBTYWxlcyBvZiB0aGUgUGxhdGZvcm3igJlzIOKAnE1OR0/igJ0gR292ZXJuYW5jZSBUb2tlbnMiLCJTa2lwIHRvIHNlYXJjaCBmaWVsZCIsIlNraXAgdG8gbWFpbiBjb250ZW50IiwiT2ZmaWNpYWwgd2Vic2l0ZXMgdXNlIC5nb3YiLCJBIiwiLmdvdiIsIndlYnNpdGUgYmVsb25ncyB0byBhbiBvZmZpY2lhbCBnb3Zlcm5tZW50IG9yZ2FuaXphdGlvbiBpbiB0aGUgVW5pdGVkIFN0YXRlcy4iLCJTZWN1cmUgLmdvdiB3ZWJzaXRlcyB1c2UgSFRUUFMiLCJBIiwibG9jayIsIigiLCIpIG9yIiwiaHR0cHM6Ly8iLCJtZWFucyB5b3XigJl2ZSBzYWZlbHkgY29ubmVjdGVkIHRvIHRoZSAuZ292IHdlYnNpdGUuIFNoYXJlIHNlbnNpdGl2ZSBpbmZvcm1hdGlvbiBvbmx5IG9uIG9mZmljaWFsLCBzZWN1cmUgd2Vic2l0ZXMuIiwiTW9yZSBpbiB0aGlzIFNlY3Rpb24iLCJQcmVzcyBSZWxlYXNlIiwiU0VDIENoYXJnZXMgRW50aXRpZXMgT3BlcmF0aW5nIENyeXB0byBBc3NldCBUcmFkaW5nIFBsYXRmb3JtIE1hbmdvIE1hcmtldHMgZm9yIFVucmVnaXN0ZXJlZCBPZmZlcnMgYW5kIFNhbGVzIG9mIHRoZSBQbGF0Zm9ybeKAmXMg4oCcTU5HT+KAnSBHb3Zlcm5hbmNlIFRva2VucyIsIlBhaXIgb2YgYWZmaWxpYXRlZCBlbnRpdGllcyBzZXBhcmF0ZWx5IGNoYXJnZWQgZm9yIGFjdGluZyBhcyB1bnJlZ2lzdGVyZWQgYnJva2VycyIsIkZvciBJbW1lZGlhdGUgUmVsZWFzZSIsIjIwMjQtMTU0IiwiV2FzaGluZ3RvbiBELkMuLCBTZXB0LiAyNywgMjAyNCDigJQiLCJUaGUgU2VjdXJpdGllcyBhbmQgRXhjaGFuZ2UgQ29tbWlzc2lvbiB0b2RheSBmaWxlZCBzZXR0bGVkIGNoYXJnZXMgYWdhaW5zdCBNYW5nbyBEQU8gYW5kIEJsb2Nrd29ya3MgRm91bmRhdGlvbiBmb3IgZW5nYWdpbmcgaW4gdGhlIHVucmVnaXN0ZXJlZCBvZmZlciBhbmQgc2FsZSBvZiBjcnlwdG8gYXNzZXRzIGNhbGxlZCDigJxNTkdP4oCdIHRva2Vucy4gVGhlIFNFQyBhbHNvIHNldHRsZWQgY2hhcmdlcyBhZ2FpbnN0IEJsb2Nrd29ya3MgRm91bmRhdGlvbiBhbmQgTWFuZ28gTGFicyBMTEMgZm9yIGVuZ2FnaW5nIGluIHVucmVnaXN0ZXJlZCBicm9rZXIgYWN0aXZpdHkgaW4gY29ubmVjdGlvbiB3aXRoIHZhcmlvdXMgY3J5cHRvIGFzc2V0cyBiZWluZyBvZmZlcmVkIGFuZCBzb2xkIGFzIHNlY3VyaXRpZXMgb24gdGhlIE1hbmdvIE1hcmtldHMgcGxhdGZvcm0uIFRoZSBTRUPigJlzIGNvbXBsYWludCBhbGxlZ2VzIHRoYXQgYnkgc2tpcnRpbmcgdGhlIFNFQ+KAmXMgcmVnaXN0cmF0aW9uIHByb3Zpc2lvbnMsIE1hbmdvIERBTywgQmxvY2t3b3JrcyBGb3VuZGF0aW9uLCBhbmQgTWFuZ28gTGFicyBkZXByaXZlZCBpbnZlc3RvcnMgb2YgY3JpdGljYWwgcHJvdGVjdGlvbnMgYWZmb3JkZWQgYnkgdGhlIGZlZGVyYWwgc2VjdXJpdGllcyBsYXdzLiIsIkFjY29yZGluZyB0byB0aGUgU0VD4oCZcyBjb21wbGFpbnQsIHN0YXJ0aW5nIGluIEF1Z3VzdCAyMDIxLCBNYW5nbyBEQU8sIGEgcHVycG9ydGVkbHkgZGVjZW50cmFsaXplZCBhdXRvbm9tb3VzIG9yZ2FuaXphdGlvbiwgb3IgREFPLCBhbmQgQmxvY2t3b3JrcyBGb3VuZGF0aW9uLCBhIFBhbmFtYW5pYW4gZW50aXR5LCByYWlzZWQgbW9yZSB0aGFuICQ3MCBtaWxsaW9uIGZyb20gdW5yZWdpc3RlcmVkIG9mZmVycyBhbmQgc2FsZXMgb2YgTU5HTyB0b2tlbnMsIHRoZSBzby1jYWxsZWQgZ292ZXJuYW5jZSB0b2tlbnMgb2YgdGhlIE1hbmdvIE1hcmtldHMgcGxhdGZvcm0sIHRvIGh1bmRyZWRzIG9mIGludmVzdG9ycyB3b3JsZHdpZGUsIGluY2x1ZGluZyBpbiB0aGUgVS5TLiBUaGUgU0VDIGFsc28gYWxsZWdlcyB0aGF0LCBzaW5jZSBhdCBsZWFzdCBBdWd1c3QgMjAyMSwgQmxvY2t3b3JrcyBGb3VuZGF0aW9uIGFuZCBNYW5nbyBMYWJzIGVhY2ggb3BlcmF0ZWQgYXMgYW4gdW5yZWdpc3RlcmVkIGJyb2tlciBieSBhY3RpdmVseSBzb2xpY2l0aW5nIGFuZCByZWNydWl0aW5nIHVzZXJzIG9mIE1hbmdvIE1hcmtldHMgdG8gdHJhZGUgc2VjdXJpdGllczsgcHJvdmlkaW5nIGFkdmljZSBhbmQgdmFsdWF0aW9ucyBhcyB0byB0aGUgbWVyaXRzIG9mIGFuIGludmVzdG1lbnQgaW4gc2VjdXJpdGllczsgYW5kIGhlbHBpbmcgdG8gZmFjaWxpdGF0ZSBzZWN1cml0aWVzIHRyYW5zYWN0aW9ucyBvbiB0aGUgTWFuZ28gTWFya2V0cyBwbGF0Zm9ybSBieSBhc3Npc3RpbmcgY3VzdG9tZXJzIGluIG9wZW5pbmcgYWNjb3VudHMgYW5kIHJlZ3VsYXJseSBoYW5kbGluZyBjdXN0b21lciBmdW5kcyBhbmQgc2VjdXJpdGllcy4iLCLigJxTaW5jZSB0aGUgaW5jZXB0aW9uIG9mIG91ciBjcnlwdG8gZW5mb3JjZW1lbnQgcHJvZ3JhbSwgb3VyIHZpZXcgaGFzIGJlZW4gdGhhdCB0aGUgbGFiZWwg4oCYREFP4oCZIGRvZXMgbm90IGNoYW5nZSB0aGUgcmVhbGl0eSBvZiB3aG8gaXMgYmVoaW5kIGEgcHJvamVjdCwgd2hhdCBhY3Rpdml0aWVzIHRoZXkgZW5nYWdlIGluLCBvciB3aGV0aGVyIHRoZWlyIGFjdGl2aXRpZXMgbmVlZCB0byBiZSByZWdpc3RlcmVkLiBOb3IgZG9lcyBlbmdhZ2luZyBpbiBpbnRlcm1lZGlhdGlvbiBvZiBzZWN1cml0aWVzIHdpdGggdGhlIGFpZCBvZiBhdXRvbWF0ZWQgb3Igb3BlbiBzb3VyY2Ugc29mdHdhcmUgY2hhbmdlIHRoZSBuYXR1cmUgb2Ygc3VjaCBhY3Rpdml0aWVzLOKAnSBzYWlkIEpvcmdlIEcuIFRlbnJlaXJvLCBBY3RpbmcgQ2hpZWYgb2YgdGhlIENyeXB0byBBc3NldHMgYW5kIEN5YmVyIFVuaXQuIOKAnElmIHlvdSBlbmdhZ2UgaW4gc2VjdXJpdGllcy1pbnRlcm1lZGlhcnkgZnVuY3Rpb25zLCB5b3UgbXVzdCByZWdpc3RlciBvciBiZSBleGVtcHQgZnJvbSBkb2luZyBzbywgcmVnYXJkbGVzcyBvZiB0aGUgdGVjaG5vbG9neSBlbXBsb3llZCBhbmQgdGhlIHR5cGUgb2YgbGVnYWwgZW50aXR5IHVzZWQu4oCdIiwiVGhlIFNFQ+KAmXMgY29tcGxhaW50LCBmaWxlZCBpbiBVLlMuIERpc3RyaWN0IENvdXJ0IGZvciB0aGUgU291dGhlcm4gRGlzdHJpY3Qgb2YgTmV3IFlvcmssIGNoYXJnZXMgTWFuZ28gREFPIGFuZCBCbG9ja3dvcmtzIEZvdW5kYXRpb24gd2l0aCB2aW9sYXRpb25zIG9mIHRoZSBzZWN1cml0aWVzIG9mZmVyaW5nIHJlZ2lzdHJhdGlvbiBwcm92aXNpb25zIG9mIHRoZSBTZWN1cml0aWVzIEFjdCBvZiAxOTMzLCBhbmQgY2hhcmdlcyBCbG9ja3dvcmtzIEZvdW5kYXRpb24gYW5kIE1hbmdvIExhYnMgd2l0aCB2aW9sYXRpb25zIG9mIHRoZSBicm9rZXIgcmVnaXN0cmF0aW9uIHByb3Zpc2lvbnMgb2YgdGhlIFNlY3VyaXRpZXMgRXhjaGFuZ2UgQWN0IG9mIDE5MzQuIFdpdGhvdXQgYWRtaXR0aW5nIG9yIGRlbnlpbmcgdGhlIGFsbGVnYXRpb25zLCBNYW5nbyBEQU8sIEJsb2Nrd29ya3MgRm91bmRhdGlvbiwgYW5kIE1hbmdvIExhYnMgaGF2ZSBhZ3JlZWQgdG8gc2V0dGxlIHRoZSBTRUMgY2hhcmdlcywgY29uc2VudGluZyB0byBpbmp1bmN0aW9ucyBhbmQgb3JkZXJzIHRvIGNvbGxlY3RpdmVseSBwYXkgbmVhcmx5ICQ3MDAsMDAwIGluIGNpdmlsIHBlbmFsdGllcy4gVGhleSBoYXZlIGFsc28gYWdyZWVkIHRvIGRlc3Ryb3kgdGhlaXIgTU5HTyB0b2tlbnMsIHRvIHJlcXVlc3QgdGhlIHJlbW92YWwgb2YgTU5HTyB0b2tlbnMgZnJvbSB0cmFkaW5nIHBsYXRmb3JtcywgYW5kIHRvIHJlZnJhaW4gZnJvbSBzb2xpY2l0aW5nIGFueSB0cmFkaW5nIHBsYXRmb3JtIHRvIGFsbG93IHRyYWRpbmcgaW4gb3Igb2ZmZXJpbmcgb3Igc2VsbGluZyBNTkdPLiBUaGUgc2V0dGxlbWVudHMgYXJlIHN1YmplY3QgdG8gY291cnQgYXBwcm92YWwuIiwiVGhlIFNFQ+KAmXMgaW52ZXN0aWdhdGlvbiB3YXMgY29uZHVjdGVkIGJ5IEtyaXN0aW4gUGF1bGV5LCB3aXRoIGFzc2lzdGFuY2UgZnJvbSBUaG9tYXMgQmVka293c2tpLCBib3RoIG9mIHRoZSBTRUPigJlzIENyeXB0byBBc3NldHMgYW5kIEN5YmVyIFVuaXQuIFRoZSBTRUPigJlzIGxpdGlnYXRpb24gd2lsbCBiZSBsZWQgYnkgQWx5c3NhIFF1YWxscyBvZiB0aGUgQ2hpY2FnbyBSZWdpb25hbCBPZmZpY2UuIFRoZSBtYXR0ZXIgd2FzIHN1cGVydmlzZWQgYnkgTXIuIFRlbnJlaXJvIGFuZCBBbXkgRmxhaGVydHkgSGFydG1hbiwgYWxzbyBvZiB0aGUgQ3J5cHRvIEFzc2V0cyBhbmQgQ3liZXIgVW5pdC4iLCIjIyMiLCJMYXN0IFJldmlld2VkIG9yIFVwZGF0ZWQ6IiwiU2VwdC4gMjcsIDIwMjQiLCJSZXNvdXJjZXMiLCJTRUMgQ29tcGxhaW50Il0sInNjaGVtYV92ZXJzaW9uIjoib2ZmaWNpYWwtYXJjaGl2ZS10ZXh0LWV2aWRlbmNlLXYxIn0=",
+  "text_evidence_bytes": 4610,
+  "text_evidence_sha256": "8ac9b2a340105ad7065a8b9ec9be15feaee40e1154cf6325cf195306c0e4a1be"
+}

@@ -1,0 +1,13 @@
+{
+  "entities": [
+    {
+      "id": "mango-markets",
+      "id_type": "coingecko_id"
+    }
+  ],
+  "evidence_record_base64": "eyJhc3NldF9uYW1lIjoiTWFuZ28iLCJpZGVudGl0eV9zb3VyY2VfdXJsIjoiaHR0cHM6Ly93d3cuY29pbmdlY2tvLmNvbS9lbi9jb2lucy9tYW5nbyIsInByb3ZpZGVyIjoiQ29pbkdlY2tvIiwicHJvdmlkZXJfYXNzZXRfaWQiOiJtYW5nby1tYXJrZXRzIiwic2NoZW1hX3ZlcnNpb24iOiJjcnlwdG8tc3RhYmxlLWFzc2V0LWlkZW50aXR5LWV2aWRlbmNlLXYxIiwic2NvcGVfbm90ZSI6IlN0YWJsZSBpZGVudGl0eSBtYXBwaW5nIG9ubHk7IGl0IGRvZXMgbm90IGVzdGFibGlzaCB0aGF0IHRoZSBzb3VyY2UgZXZlbnQgY2F1c2VkIGEgcHJpY2UgbW92ZS4iLCJzeW1ib2wiOiJNTkdPIn0=",
+  "evidence_record_sha256": "25f052ce24e1ba7271a816b86294c78c0e247c86a2acb7f235d69e9da22e06fd",
+  "reviewed_at": "2026-10-24T02:29:12.470002Z",
+  "reviewed_by": "AI-assisted technical review; owner-authorized project scope",
+  "status": "APPROVED"
+}

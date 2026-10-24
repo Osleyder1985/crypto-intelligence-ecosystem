@@ -1,0 +1,43 @@
+{
+  "captured_segment_count": 1,
+  "completeness_claim_scope": "DECLARED_SCOPE_ONLY",
+  "coverage_status": "COMPLETE_FOR_DECLARED_SCOPE",
+  "expected_partitions": [
+    {
+      "page_count": 1,
+      "partition_id": "federal-reserve-2026-press-page",
+      "period_end": "2026-12-31",
+      "period_start": "2026-01-01"
+    }
+  ],
+  "expected_segment_count": 1,
+  "global_archive_exhaustiveness_claimed": false,
+  "manifest_sha256": "575a379c2cced26896a46e7d3134c3b95ab0496c2cc0952449d9b046e5dc3d25",
+  "missing_pages": [],
+  "orders_submitted": false,
+  "provider_id": "federal_reserve_press_release_archive",
+  "reviewed_at": "2026-10-24T02:29:11.041258Z",
+  "reviewed_by": "AI-assisted technical review; owner-authorized project scope",
+  "schema_version": "crypto-public-event-archive-coverage-manifest-v1",
+  "scope_definition": "Single Federal Reserve 2026 press-release archive page containing the 2026-09-24 stablecoin proposal; not a claim of exhaustive archive coverage.",
+  "scope_id": "federal-reserve-2026-press-page",
+  "segments": [
+    {
+      "captured_at": "2026-10-24T02:29:09.895468Z",
+      "expected_page_count": 1,
+      "final_url": "https://www.federalreserve.gov/newsevents/pressreleases/2026-press.htm",
+      "http_status": 200,
+      "page_index": 1,
+      "partition_id": "federal-reserve-2026-press-page",
+      "raw_response_bytes": 167560,
+      "raw_response_sha256": "274135eb0c6ede410d6074a7792a5c87a19b7e548e46cd58b00e9539cee51449",
+      "requested_url": "https://www.federalreserve.gov/newsevents/pressreleases/2026-press.htm",
+      "stored_content_mode": "EXTRACTED_TEXT_EVIDENCE",
+      "text_evidence_bytes": 40905,
+      "text_evidence_sha256": "fdd2758c16db967303668efe76386f805d97801dfeda03dc4a73ba431410f538"
+    }
+  ],
+  "source_id": "federal_reserve_press_release_archive",
+  "source_registry_entry_sha256": "c220e3522e36368d9ec9b56f210f37c2ca670d91f928d5e7bed4892a3923cb95",
+  "source_registry_status": "APPROVED"
+}

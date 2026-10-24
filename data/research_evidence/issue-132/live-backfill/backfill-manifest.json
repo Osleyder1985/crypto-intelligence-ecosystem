@@ -1,0 +1,185 @@
+{
+  "causality_claimed": false,
+  "created_at": "2026-10-24T02:29:12.472254Z",
+  "failures": [],
+  "manifest_sha256": "16fe48a34bc5fa3e2074bdf29d25f5770c257a2b9f6d08bb98e47724edc46658",
+  "no_full_html_persisted_for_approved_archive_sources": true,
+  "purpose": "Real source-authorized historical archive/article capture; source-level hashes and extracted-text artifacts are independently verifiable.",
+  "read_to_eof_without_local_size_cap": true,
+  "repository_relative_root": "data/research_evidence/issue-132/live-backfill",
+  "research_event_evidence_bundle": {
+    "bundle_sha256": "56c15f13aef52a4d342c588696f2a3f8867ab78b9888fba802ebe15d6d6eaedb",
+    "bytes": 2515,
+    "path": "research-event-evidence-bundle.json",
+    "sha256": "9b355929f1cc124220ebffcdf3b0b2dc5a95a3362509fc28d91250b7a16c9d0b"
+  },
+  "schema_version": "crypto-issue-132-real-backfill-manifest-v1",
+  "sources": [
+    {
+      "archive_url": "https://www.cftc.gov/PressRoom/PressReleases?c=1172200&page=1",
+      "artifacts": [
+        {
+          "bytes": 20482,
+          "path": "cftc_press_release_archive/archive-capture.json",
+          "sha256": "aad9826d91d2073984649d9dba8a18fd97ac3bbff23b253733b7a9c93fd6729b"
+        },
+        {
+          "bytes": 9199,
+          "path": "cftc_press_release_archive/article-capture.json",
+          "sha256": "b56ffa908b2dc2d7fd5c81a3b32ca1af34a6855014ad6e3dfccf8df195f8c382"
+        },
+        {
+          "bytes": 1016,
+          "path": "cftc_press_release_archive/candidate.json",
+          "sha256": "fa6fa1c458a7e9c0132337e8122066632264427308a04deddf016cbdb88477f5"
+        },
+        {
+          "bytes": 1856,
+          "path": "cftc_press_release_archive/coverage-manifest.json",
+          "sha256": "fb554cfd9b08b34c6dabe39bef39e40740c6849c59aac5bdf0cfc805907e1896"
+        },
+        {
+          "bytes": 812,
+          "path": "cftc_press_release_archive/entity-resolution.json",
+          "sha256": "ec6aedd8e53560c5083953fba1d4c8dba4378e335ad6fb8751439f3a14219859"
+        },
+        {
+          "bytes": 38971,
+          "path": "cftc_press_release_archive/event-record.json",
+          "sha256": "718807dbaacd9ede56b9294234bfb1eb42a546582485584ead6461db4d86aec4"
+        }
+      ],
+      "candidate_id": "3739d88975818b3f0c3e196c7d22be9d20db993e1ae53c82b958bb908f86f496",
+      "candidate_url": "https://www.cftc.gov/PressRoom/PressReleases/9240-26",
+      "coverage_manifest_sha256": "9556b986311e29dc36fab2255564113fcc3a47ae5575f20db44a2cdb88799d67",
+      "coverage_status": "COMPLETE_FOR_DECLARED_SCOPE",
+      "event_causality_status": "NOT_ASSESSED",
+      "event_id": "cftc_press_release_archive:faed8c7ad83768ccdd44657a245cc694c0c8772a93be43be4a5c393642013c65",
+      "original_archive_response": {
+        "bytes": 65597,
+        "sha256": "ec632665dcab3b6869928d425839f07b3c04087e7adc14850d67c2d091cdba4b",
+        "stored_content_mode": "EXTRACTED_TEXT_EVIDENCE",
+        "text_evidence_bytes": 10873,
+        "text_evidence_sha256": "e78bf787770678c9b4dab3be37899c5cb7a1e61786abef3613e89e7bb17437be"
+      },
+      "original_article_response": {
+        "bytes": 35878,
+        "sha256": "ecae94fb679bcc9bb72773d9b4ff203a7f6989504965e5a723b93e4b62854cb8",
+        "stored_content_mode": "EXTRACTED_TEXT_EVIDENCE",
+        "text_evidence_bytes": 2472,
+        "text_evidence_sha256": "929eb36e9218ac71ac54ce434f818ba5caf849bb769748bf71ca51fc5cb51f09"
+      },
+      "source_id": "cftc_press_release_archive",
+      "source_registry_entry_sha256": "3d0d68dab554a1e2bb1ae05f5381753b696527ecd88909e262b1c7d45c84ffe8"
+    },
+    {
+      "archive_url": "https://www.federalreserve.gov/newsevents/pressreleases/2026-press.htm",
+      "artifacts": [
+        {
+          "bytes": 60100,
+          "path": "federal_reserve_press_release_archive/archive-capture.json",
+          "sha256": "248b29b56aa39853904bba94f48fa1e1c7522a7716ddf966bd2bcb7fd05afe45"
+        },
+        {
+          "bytes": 11935,
+          "path": "federal_reserve_press_release_archive/article-capture.json",
+          "sha256": "ade75706019b134dfed66d0048b11273bd0726cc1dad17c7af388e071bcec9ad"
+        },
+        {
+          "bytes": 1178,
+          "path": "federal_reserve_press_release_archive/candidate.json",
+          "sha256": "4ba54aa3bedb0d3df478f580346015e57ecbe6ebe6ac6ed2ce4e52ab379f6dbd"
+        },
+        {
+          "bytes": 1966,
+          "path": "federal_reserve_press_release_archive/coverage-manifest.json",
+          "sha256": "23b6d1d60810f8d210653a4b1749413845580a827ec693ead383b5efa7c84ad9"
+        },
+        {
+          "bytes": 421,
+          "path": "federal_reserve_press_release_archive/entity-resolution-decision.json",
+          "sha256": "1a4001081c4ca3dabd4a1534a7f7e438329f86bac084d2dc3fbcb81ae910aa1a"
+        }
+      ],
+      "candidate_id": "a77726ea78b81a322a3ffd25661d6f1a8b3cc0abe639d2e1c86cd220f5552fc4",
+      "candidate_url": "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm",
+      "coverage_manifest_sha256": "575a379c2cced26896a46e7d3134c3b95ab0496c2cc0952449d9b046e5dc3d25",
+      "coverage_status": "COMPLETE_FOR_DECLARED_SCOPE",
+      "event_causality_status": "NOT_ASSESSED",
+      "event_id": null,
+      "original_archive_response": {
+        "bytes": 167560,
+        "sha256": "274135eb0c6ede410d6074a7792a5c87a19b7e548e46cd58b00e9539cee51449",
+        "stored_content_mode": "EXTRACTED_TEXT_EVIDENCE",
+        "text_evidence_bytes": 40905,
+        "text_evidence_sha256": "fdd2758c16db967303668efe76386f805d97801dfeda03dc4a73ba431410f538"
+      },
+      "original_article_response": {
+        "bytes": 87874,
+        "sha256": "e8ff4ad2ce794fc6148cf17753d0605fe9fcc58887f7d95804abd5691c28a983",
+        "stored_content_mode": "EXTRACTED_TEXT_EVIDENCE",
+        "text_evidence_bytes": 4827,
+        "text_evidence_sha256": "d7fbaf5384a0dd097ebf829901039237a3af384bff0b3947664ebda1eb70bb01"
+      },
+      "source_id": "federal_reserve_press_release_archive",
+      "source_registry_entry_sha256": "c220e3522e36368d9ec9b56f210f37c2ca670d91f928d5e7bed4892a3923cb95"
+    },
+    {
+      "archive_url": "https://www.sec.gov/newsroom/press-releases?combine=Mango&page=0",
+      "artifacts": [
+        {
+          "bytes": 9067,
+          "path": "sec_press_release_archive/archive-capture.json",
+          "sha256": "a09daad6ac3fb52c1f15e622052d66534be9d102d3a8189fa7567a92ca3403f7"
+        },
+        {
+          "bytes": 12137,
+          "path": "sec_press_release_archive/article-capture.json",
+          "sha256": "dab06ec5e906dddddc7f4730119962d1b4169dfca7f37b824ddb92705f19a83d"
+        },
+        {
+          "bytes": 1122,
+          "path": "sec_press_release_archive/candidate.json",
+          "sha256": "6be3413e0ced7d7e2f08fcc28daa4b27d7646b6877e2014cad440e6a1db1c8de"
+        },
+        {
+          "bytes": 1856,
+          "path": "sec_press_release_archive/coverage-manifest.json",
+          "sha256": "569d72d0ee78db88be496857c6e101ed273db3c9316521366be0442704593b94"
+        },
+        {
+          "bytes": 822,
+          "path": "sec_press_release_archive/entity-resolution.json",
+          "sha256": "655c12ff1be186dd4512328b274ff2a345fc9dd104b6a484db92e67a71caaa29"
+        },
+        {
+          "bytes": 30750,
+          "path": "sec_press_release_archive/event-record.json",
+          "sha256": "90da4ada1ace62c66622759764b62d13c89dc7173cd0ab5aa09de170f170a167"
+        }
+      ],
+      "candidate_id": "6269bb42878b593540443eefae1b6f2ad5b64ed1ad8b0a86406efa8fdb281f68",
+      "candidate_url": "https://www.sec.gov/newsroom/press-releases/2024-154",
+      "coverage_manifest_sha256": "7482bf255852fbe18045492368076bd498840f6a580c6afb6db8aa59f6046361",
+      "coverage_status": "COMPLETE_FOR_DECLARED_SCOPE",
+      "event_causality_status": "NOT_ASSESSED",
+      "event_id": "sec_press_release_archive:e910adbb3fc85291330c35f47d80e2e7fdd640a37b5f68da88cf647bbf1d5f0f",
+      "original_archive_response": {
+        "bytes": 68569,
+        "sha256": "fc4cca2f5e10a3dc1f78400a2434e5e8c7f123f920078f88721254cc00747c42",
+        "stored_content_mode": "EXTRACTED_TEXT_EVIDENCE",
+        "text_evidence_bytes": 2221,
+        "text_evidence_sha256": "9481f8fdd1291b997e7bdf474d228669d1870d63ef38a9347043a75c77c0b9c9"
+      },
+      "original_article_response": {
+        "bytes": 66496,
+        "sha256": "7dfc5bff1b345f832534d066d92e3f92b2f9b619ef9b2e4cce1c93263159edad",
+        "stored_content_mode": "EXTRACTED_TEXT_EVIDENCE",
+        "text_evidence_bytes": 4610,
+        "text_evidence_sha256": "8ac9b2a340105ad7065a8b9ec9be15feaee40e1154cf6325cf195306c0e4a1be"
+      },
+      "source_id": "sec_press_release_archive",
+      "source_registry_entry_sha256": "83ded14db3aafa10f95b2b3f17c4555649cecc23bdc749e44869f9f5ea67b770"
+    }
+  ]
+}

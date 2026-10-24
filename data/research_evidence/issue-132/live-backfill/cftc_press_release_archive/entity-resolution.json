@@ -1,0 +1,13 @@
+{
+  "entities": [
+    {
+      "id": "bitcoin",
+      "id_type": "coingecko_id"
+    }
+  ],
+  "evidence_record_base64": "eyJhc3NldF9uYW1lIjoiQml0Y29pbiIsImlkZW50aXR5X3NvdXJjZV91cmwiOiJodHRwczovL3d3dy5jb2luZ2Vja28uY29tL2VuL2NvaW5zL2JpdGNvaW4iLCJwcm92aWRlciI6IkNvaW5HZWNrbyIsInByb3ZpZGVyX2Fzc2V0X2lkIjoiYml0Y29pbiIsInNjaGVtYV92ZXJzaW9uIjoiY3J5cHRvLXN0YWJsZS1hc3NldC1pZGVudGl0eS1ldmlkZW5jZS12MSIsInNjb3BlX25vdGUiOiJTdGFibGUgaWRlbnRpdHkgbWFwcGluZyBvbmx5OyBpdCBkb2VzIG5vdCBlc3RhYmxpc2ggdGhhdCB0aGUgc291cmNlIGV2ZW50IGNhdXNlZCBhIHByaWNlIG1vdmUuIiwic3ltYm9sIjoiQlRDIn0=",
+  "evidence_record_sha256": "cf6b827d966bd2ea6f36597ceead7d8830069a38f06b738e0de2e1e71500a04a",
+  "reviewed_at": "2026-10-24T02:29:09.893123Z",
+  "reviewed_by": "AI-assisted technical review; owner-authorized project scope",
+  "status": "APPROVED"
+}
