@@ -76,6 +76,7 @@ def main() -> int:
     promote.add_argument("--output", required=True, type=Path)
 
     args = parser.parse_args()
+    exit_code = 0
     try:
         if args.command == "coverage-manifest":
             specification = _read_json(args.input)
@@ -150,6 +151,7 @@ def main() -> int:
     except RateLimitCoordinationError:
         if args.command not in {"capture-index", "capture-article"}:
             raise
+        exit_code = 2
         result = {
             "schema_version": "crypto-public-event-capture-error-v1",
             "source_id": getattr(args, "source_id", None),
@@ -172,7 +174,7 @@ def main() -> int:
         "missing_pages": result.get("missing_pages", []),
         "reason_codes": result.get("reason_codes", []),
     }, ensure_ascii=False, indent=2))
-    return 2 if result.get("capture_status") == "BLOCKED_RATE_LIMIT_COORDINATION" else 0
+    return exit_code
 
 
 if __name__ == "__main__":

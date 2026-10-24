@@ -87,7 +87,7 @@ class TestStructuredRateLimitFailure(unittest.TestCase):
                 "--selection-rationale", "offline regression test",
                 "--output", str(output),
             ]
-            with patch.object(sys, "argv", argv), \\
+            with patch.object(sys, "argv", argv), \
                  patch("scripts.market_selection.capture_public_event_archive.select_public_event_archive_candidate",
                        side_effect=RateLimitCoordinationError("synthetic unrelated error")):
                 with self.assertRaises(RateLimitCoordinationError):
