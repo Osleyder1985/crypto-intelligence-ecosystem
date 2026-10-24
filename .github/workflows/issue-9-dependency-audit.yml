@@ -30,4 +30,5 @@ jobs:
       - name: Audit known Python dependency vulnerabilities
         run: python -m pip_audit --requirement requirements-stack-poc.txt
       - name: Emit direct and transitive licence inventory
+        if: always()
         run: python -m piplicenses --format=markdown --with-urls --with-description
