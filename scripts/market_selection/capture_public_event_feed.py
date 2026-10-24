@@ -293,7 +293,6 @@ def _blocked_result(
         "raw_response_bytes": 0,
         "raw_response_sha256": None,
         "raw_response_base64": None,
-        "capture_truncated": False,
         "provider_policy_assessments": assessments,
         "provider_use_assessment": assessments[0],
         "persistent_storage_assessment": assessments[1],
@@ -482,18 +481,50 @@ def _open_allowlisted_url(
 
 
 class _ArchiveHTMLParser(HTMLParser):
+    """Extract archive navigation text while excluding embedded/third-party payloads.
+
+    This parser is for derived evidence only. It does not itself authorize storing the
+    original response; the source authorization gate remains mandatory.
+    """
+    _NON_TEXT_SUBTREES = {
+        "script", "style", "noscript", "iframe", "frame", "frameset", "svg",
+        "canvas", "video", "audio", "picture", "object", "embed", "template",
+        "header", "footer", "nav", "aside",
+    }
+    _NON_TEXT_ELEMENTS = {"img", "source", "track"}
+
     def __init__(self):
         super().__init__(convert_charrefs=True)
         self.anchors = []
         self.page_text = []
         self._anchor = None
+        self._suppressed_depth = 0
 
     def handle_starttag(self, tag, attrs):
-        if tag.casefold() == "a":
+        tag = tag.casefold()
+        if self._suppressed_depth:
+            if tag in self._NON_TEXT_SUBTREES:
+                self._suppressed_depth += 1
+            return
+        if tag in self._NON_TEXT_SUBTREES:
+            self._suppressed_depth = 1
+            return
+        if tag in self._NON_TEXT_ELEMENTS:
+            return
+        if tag == "a":
             attrs_map = dict(attrs)
             self._anchor = {"href": attrs_map.get("href"), "text": []}
 
+    def handle_startendtag(self, tag, attrs):
+        # Void elements carry no textual evidence and must not affect suppression depth.
+        if tag.casefold() in self._NON_TEXT_ELEMENTS:
+            return
+        self.handle_starttag(tag, attrs)
+        self.handle_endtag(tag)
+
     def handle_data(self, data):
+        if self._suppressed_depth:
+            return
         text = re.sub(r"\s+", " ", data).strip()
         if text:
             self.page_text.append(text)
@@ -501,10 +532,98 @@ class _ArchiveHTMLParser(HTMLParser):
                 self._anchor["text"].append(text)
 
     def handle_endtag(self, tag):
-        if tag.casefold() == "a" and self._anchor is not None:
+        tag = tag.casefold()
+        if self._suppressed_depth:
+            if tag in self._NON_TEXT_SUBTREES:
+                self._suppressed_depth -= 1
+            return
+        if tag == "a" and self._anchor is not None:
             self._anchor["text"] = re.sub(r"\s+", " ", " ".join(self._anchor["text"])).strip()
             self.anchors.append(self._anchor)
             self._anchor = None
+
+
+def _archive_text_evidence(raw: bytes) -> dict:
+    """Extract only visible archive text and first-party anchor text/URLs."""
+    parser = _ArchiveHTMLParser()
+    parser.feed(raw.decode("utf-8", errors="replace"))
+    parser.close()
+    return {
+        "schema_version": "official-archive-text-evidence-v1",
+        "anchors": parser.anchors,
+        "page_text": parser.page_text,
+    }
+
+
+def _load_archive_text_evidence(capture: dict) -> dict:
+    """Load and verify derived text evidence, or derive it from a retained full response."""
+    mode = capture.get("stored_content_mode", "FULL_RESPONSE")
+    if mode == "EXTRACTED_TEXT_EVIDENCE":
+        encoded = capture.get("text_evidence_base64")
+        expected_hash = capture.get("text_evidence_sha256")
+        expected_size = capture.get("text_evidence_bytes")
+        if not isinstance(encoded, str):
+            raise PermissionError("archive extracted text evidence is missing")
+        try:
+            payload = base64.b64decode(encoded, validate=True)
+        except (ValueError, base64.binascii.Error) as exc:
+            raise PermissionError("archive extracted text evidence is invalid base64") from exc
+        if hashlib.sha256(payload).hexdigest() != expected_hash or len(payload) != expected_size:
+            raise PermissionError("archive extracted text evidence integrity check failed")
+        try:
+            parsed = json.loads(payload.decode("utf-8"))
+        except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+            raise PermissionError("archive extracted text evidence is not valid JSON") from exc
+        if (
+            not isinstance(parsed, dict)
+            or parsed.get("schema_version") != "official-archive-text-evidence-v1"
+            or not isinstance(parsed.get("anchors"), list)
+            or not isinstance(parsed.get("page_text"), list)
+        ):
+            raise PermissionError("archive extracted text evidence schema is invalid")
+        return parsed
+    raw_b64 = capture.get("raw_response_base64")
+    if not isinstance(raw_b64, str):
+        raise PermissionError("archive capture body is missing")
+    try:
+        raw = base64.b64decode(raw_b64, validate=True)
+    except (ValueError, base64.binascii.Error) as exc:
+        raise PermissionError("archive capture body base64 is invalid") from exc
+    if hashlib.sha256(raw).hexdigest() != capture.get("raw_response_sha256") or len(raw) != capture.get("raw_response_bytes"):
+        raise PermissionError("archive capture body integrity check failed")
+    return _archive_text_evidence(raw)
+
+
+def _store_response_body_fields(source: dict, raw: bytes, *, html: bool) -> dict:
+    """Hash the complete response but persist only derived text when source policy requires it."""
+    fields = {
+        "raw_response_bytes": len(raw),
+        "raw_response_sha256": hashlib.sha256(raw).hexdigest(),
+        "capture_truncated": False,
+    }
+    if source.get("response_storage_mode") == "EXTRACTED_TEXT_EVIDENCE" and html:
+        payload = json.dumps(
+            _archive_text_evidence(raw),
+            sort_keys=True,
+            separators=(",", ":"),
+            ensure_ascii=False,
+        ).encode("utf-8")
+        fields.update({
+            "stored_content_mode": "EXTRACTED_TEXT_EVIDENCE",
+            "raw_response_base64": None,
+            "text_evidence_base64": base64.b64encode(payload).decode("ascii"),
+            "text_evidence_sha256": hashlib.sha256(payload).hexdigest(),
+            "text_evidence_bytes": len(payload),
+        })
+    else:
+        fields.update({
+            "stored_content_mode": "FULL_RESPONSE",
+            "raw_response_base64": base64.b64encode(raw).decode("ascii"),
+            "text_evidence_base64": None,
+            "text_evidence_sha256": None,
+            "text_evidence_bytes": None,
+        })
+    return fields
 
 
 def _path_has_prefix(path: str, prefix: str) -> bool:
@@ -619,9 +738,12 @@ def capture_public_event_archive_index(
         "response_headers": headers,
         "content_type": headers.get("Content-Type") or headers.get("content-type"),
         "final_url": final_url,
-        "raw_response_bytes": len(raw),
-        "raw_response_sha256": hashlib.sha256(raw).hexdigest(),
-        "raw_response_base64": base64.b64encode(raw).decode("ascii"),
+        **_store_response_body_fields(
+            source,
+            raw,
+            html=(headers.get("Content-Type") or headers.get("content-type") or "").split(";", 1)[0].strip().lower()
+            in {"text/html", "application/xhtml+xml"},
+        ),
         "capture_truncated": read_error is not None,
     })
     final_ok = _archive_url_allowed(source, final_url)
@@ -664,15 +786,7 @@ def validate_public_event_archive_candidate(archive_capture: dict, candidate_rec
         or not _archive_url_allowed(source, archive_capture.get("final_url"))
     ):
         raise PermissionError("archive capture is incomplete, stale, or outside the approved archive path")
-    raw_b64 = archive_capture.get("raw_response_base64")
-    if not isinstance(raw_b64, str):
-        raise PermissionError("archive capture body is missing")
-    try:
-        raw = base64.b64decode(raw_b64, validate=True)
-    except (ValueError, base64.binascii.Error) as exc:
-        raise PermissionError("archive capture body base64 is invalid") from exc
-    if hashlib.sha256(raw).hexdigest() != archive_capture.get("raw_response_sha256") or len(raw) != archive_capture.get("raw_response_bytes"):
-        raise PermissionError("archive capture body integrity check failed")
+    text_evidence = _load_archive_text_evidence(archive_capture)
     if not isinstance(candidate_record, dict) or candidate_record.get("schema_version") != ARCHIVE_CANDIDATE_SCHEMA:
         raise ValueError("candidate_record has an invalid schema")
     if (
@@ -704,11 +818,8 @@ def validate_public_event_archive_candidate(archive_capture: dict, candidate_rec
     if published > parse_timestamp(archive_capture["captured_at"], "archive_capture.captured_at"):
         raise ValueError("archive candidate publication timestamp is after archive capture")
     parser = _ArchiveHTMLParser()
-    try:
-        parser.feed(raw.decode("utf-8", errors="replace"))
-        parser.close()
-    except Exception as exc:
-        raise ValueError("archive index HTML could not be parsed") from exc
+    parser.anchors = text_evidence["anchors"]
+    parser.page_text = text_evidence["page_text"]
     archive_url = archive_capture["requested_url"]
     archive_base_url = archive_capture.get("final_url") or archive_url
     candidate_url_canonical = candidate_url.split("#", 1)[0]
@@ -818,18 +929,18 @@ def build_public_event_archive_coverage_manifest(
             or not _archive_url_allowed(source, capture.get("final_url"))
         ):
             raise PermissionError(f"segments[{index}] is not a complete capture from the currently approved archive source")
-        raw_b64 = capture.get("raw_response_base64")
-        if not isinstance(raw_b64, str):
-            raise PermissionError(f"segments[{index}] has no preserved response body")
         try:
-            raw = base64.b64decode(raw_b64, validate=True)
-        except (ValueError, base64.binascii.Error) as exc:
-            raise PermissionError(f"segments[{index}] response body is invalid base64") from exc
+            _load_archive_text_evidence(capture)
+        except PermissionError as exc:
+            raise PermissionError(f"segments[{index}] stored evidence integrity check failed: {exc}") from exc
         if (
-            hashlib.sha256(raw).hexdigest() != capture.get("raw_response_sha256")
-            or len(raw) != capture.get("raw_response_bytes")
+            isinstance(capture.get("raw_response_bytes"), bool)
+            or not isinstance(capture.get("raw_response_bytes"), int)
+            or capture.get("raw_response_bytes") < 0
+            or not isinstance(capture.get("raw_response_sha256"), str)
+            or not re.fullmatch(r"[0-9a-f]{64}", capture.get("raw_response_sha256", ""))
         ):
-            raise PermissionError(f"segments[{index}] response integrity check failed")
+            raise PermissionError(f"segments[{index}] original response hash/byte count is invalid")
         partition_id = segment.get("partition_id")
         page_index = segment.get("page_index")
         expected_page_count = segment.get("expected_page_count")
@@ -860,6 +971,9 @@ def build_public_event_archive_coverage_manifest(
             "http_status": capture.get("http_status"),
             "raw_response_bytes": capture.get("raw_response_bytes"),
             "raw_response_sha256": capture.get("raw_response_sha256"),
+            "stored_content_mode": capture.get("stored_content_mode", "FULL_RESPONSE"),
+            "text_evidence_sha256": capture.get("text_evidence_sha256"),
+            "text_evidence_bytes": capture.get("text_evidence_bytes"),
         })
     normalized_segments.sort(key=lambda item: (item["partition_id"], item["page_index"]))
     missing_pages = []
@@ -1269,9 +1383,12 @@ def capture_public_event_archive_article(
         "http_status": status_code,
         "response_headers": headers,
         "content_type": headers.get("Content-Type") or headers.get("content-type"),
-        "raw_response_bytes": len(raw),
-        "raw_response_sha256": hashlib.sha256(raw).hexdigest(),
-        "raw_response_base64": base64.b64encode(raw).decode("ascii"),
+        **_store_response_body_fields(
+            source,
+            raw,
+            html=(headers.get("Content-Type") or headers.get("content-type") or "").split(";", 1)[0].strip().lower()
+            in {"text/html", "application/xhtml+xml"},
+        ),
         "capture_truncated": read_error is not None,
         "provider_policy_assessments": assessments,
         "provider_use_assessment": assessments[0],
@@ -1333,21 +1450,15 @@ def promote_public_archive_candidate_to_event(
         or final_parts.port not in (None, 443) or final_parts.username is not None or final_parts.password is not None
     ):
         raise PermissionError("article final URL is outside the approved HTTPS host allowlist")
-    article_b64 = article_capture.get("raw_response_base64")
     article_hash = article_capture.get("raw_response_sha256")
     article_size = article_capture.get("raw_response_bytes")
     if (
-        not isinstance(article_b64, str) or not isinstance(article_hash, str)
+        not isinstance(article_hash, str)
         or not re.fullmatch(r"[0-9a-f]{64}", article_hash)
         or isinstance(article_size, bool) or not isinstance(article_size, int) or article_size < 0
     ):
-        raise PermissionError("article body, byte count, or SHA-256 is missing or invalid")
-    try:
-        article_raw = base64.b64decode(article_b64, validate=True)
-    except (ValueError, base64.binascii.Error) as exc:
-        raise PermissionError("article body base64 is invalid") from exc
-    if hashlib.sha256(article_raw).hexdigest() != article_hash or len(article_raw) != article_size:
-        raise PermissionError("article body integrity check failed")
+        raise PermissionError("article original response byte count or SHA-256 is missing or invalid")
+    _load_archive_text_evidence(article_capture)
     content_type = article_capture.get("content_type")
     if not isinstance(content_type, str) or content_type.split(";", 1)[0].strip().lower() not in {"text/html", "application/xhtml+xml"}:
         raise PermissionError("article content type must be HTML or XHTML")

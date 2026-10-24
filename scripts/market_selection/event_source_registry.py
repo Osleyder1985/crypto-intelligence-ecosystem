@@ -173,6 +173,7 @@ EVENT_SOURCE_REGISTRY = {
             "max_requests_per_invocation": 1,
             "parallel_requests": False,
             "response_body_policy": "READ_TO_EOF_NO_LOCAL_SIZE_CAP",
+            "response_storage_mode": "EXTRACTED_TEXT_EVIDENCE",
             "coverage_scope": "One explicitly captured official archive page/year segment per invocation; not exhaustive unless all relevant year segments are recorded.",
             "entity_resolution_policy": "No asset identity is inferred from title, ticker, or description.",
             "notes": "Separate archive source ID preserves the existing RSS source hash. Runtime use remains blocked pending terms and persistent-storage review."
