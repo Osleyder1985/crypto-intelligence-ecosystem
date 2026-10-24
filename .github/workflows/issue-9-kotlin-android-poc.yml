@@ -1,0 +1,83 @@
+name: Issue 9 Kotlin Android chart reference PoC
+
+on:
+  pull_request:
+    paths:
+      - 'pocs/issue-9/kotlin-android/**'
+      - 'tests/stack_poc/fixtures/ohlcv_synthetic_v1.json'
+      - '.github/workflows/issue-9-kotlin-android-poc.yml'
+  push:
+    branches: [main, docs/issue-9-stack-evaluation]
+    paths:
+      - 'pocs/issue-9/kotlin-android/**'
+      - 'tests/stack_poc/fixtures/ohlcv_synthetic_v1.json'
+      - '.github/workflows/issue-9-kotlin-android-poc.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  kotlin-android-reference:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    env:
+      CI: 'true'
+      GRADLE_OPTS: '-Dorg.gradle.daemon=false'
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - name: Set up JDK 17
+        uses: actions/setup-java@dded0888837ed1f317902acf8a20df0ad188d165
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Record runner and Android SDK environment
+        run: |
+          uname -a
+          lscpu
+          free -b
+          java -version
+          gradle --version
+          echo "ANDROID_HOME=$ANDROID_HOME"
+          sdkmanager --list_installed | head -80
+      - name: Verify canonical fixture byte-for-byte
+        run: cmp tests/stack_poc/fixtures/ohlcv_synthetic_v1.json pocs/issue-9/kotlin-android/app/src/main/assets/ohlcv_synthetic_v1.json
+      - name: Generate Gradle wrapper pinned to 8.11.1
+        working-directory: pocs/issue-9/kotlin-android
+        run: gradle wrapper --gradle-version 8.11.1
+      - name: Run three clean Android Debug builds and measure resources
+        working-directory: pocs/issue-9/kotlin-android
+        shell: bash
+        run: |
+          set -euo pipefail
+          : > kotlin-android-build-measurement.log
+          for run in 1 2 3; do
+            ./gradlew clean
+            /usr/bin/time -f "KOTLIN_CLEAN_DEBUG_RUN=$run ELAPSED_SECONDS=%e PEAK_RSS_KB=%M" ./gradlew assembleDebug 2>&1 | tee -a kotlin-android-build-measurement.log
+            stat --printf="KOTLIN_CLEAN_DEBUG_RUN=$run DEBUG_APK_BYTES=%s\n" app/build/outputs/apk/debug/app-debug.apk | tee -a kotlin-android-build-measurement.log
+          done
+          touch app/src/main/java/com/crypto/intelligence/issue9kotlin/MainActivity.kt
+          /usr/bin/time -f 'KOTLIN_INCREMENTAL_DEBUG_AFTER_SOURCE_TOUCH_SECONDS=%e PEAK_RSS_KB=%M' ./gradlew assembleDebug 2>&1 | tee -a kotlin-android-build-measurement.log
+          /usr/bin/time -f 'KOTLIN_ANDROID_RELEASE_BUILD_SECONDS=%e PEAK_RSS_KB=%M' ./gradlew assembleRelease 2>&1 | tee -a kotlin-android-build-measurement.log
+          stat --printf='KOTLIN_ANDROID_RELEASE_APK_BYTES=%s\n' app/build/outputs/apk/release/app-release-unsigned.apk | tee -a kotlin-android-build-measurement.log
+      - name: Capture runtime dependency and build plugin graphs
+        if: always()
+        working-directory: pocs/issue-9/kotlin-android
+        run: |
+          ./gradlew app:dependencies --configuration releaseRuntimeClasspath > kotlin-release-runtime-dependencies.txt
+          ./gradlew buildEnvironment > kotlin-build-environment.txt
+      - name: Preserve Kotlin Android build evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: issue-9-kotlin-android-build-evidence
+          path: |
+            pocs/issue-9/kotlin-android/kotlin-android-build-measurement.log
+            pocs/issue-9/kotlin-android/kotlin-release-runtime-dependencies.txt
+            pocs/issue-9/kotlin-android/kotlin-build-environment.txt
+            pocs/issue-9/kotlin-android/gradle/wrapper/gradle-wrapper.properties
+            pocs/issue-9/kotlin-android/app/build/outputs/apk/debug/app-debug.apk
+            pocs/issue-9/kotlin-android/app/build/outputs/apk/release/app-release-unsigned.apk
+          if-no-files-found: warn
+          retention-days: 30
