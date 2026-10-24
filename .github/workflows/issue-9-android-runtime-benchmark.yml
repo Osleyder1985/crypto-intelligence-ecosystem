@@ -6,8 +6,10 @@ on:
     paths:
       - 'pocs/issue-9/flutter/**'
       - 'pocs/issue-9/react-native/**'
+      - 'pocs/issue-9/kotlin-android/**'
       - 'tests/stack_poc/fixtures/ohlcv_synthetic_v1.json'
       - 'scripts/stack_poc/measure_issue9_android_runtime.sh'
+      - 'scripts/stack_poc/inventory_dart_licenses.py'
       - '.github/workflows/issue-9-android-runtime-benchmark.yml'
   workflow_dispatch:
 
@@ -55,6 +57,7 @@ jobs:
         run: |
           cmp tests/stack_poc/fixtures/ohlcv_synthetic_v1.json pocs/issue-9/flutter/assets/ohlcv_synthetic_v1.json
           cmp tests/stack_poc/fixtures/ohlcv_synthetic_v1.json pocs/issue-9/react-native/assets/ohlcv_synthetic_v1.json
+          cmp tests/stack_poc/fixtures/ohlcv_synthetic_v1.json pocs/issue-9/kotlin-android/app/src/main/assets/ohlcv_synthetic_v1.json
       - name: Validate runtime benchmark shell script
         run: bash -n scripts/stack_poc/measure_issue9_android_runtime.sh
       - name: Install pinned Flutter SDK
@@ -96,6 +99,13 @@ jobs:
           npm audit --audit-level=high
           /usr/bin/time -f 'RN_ANDROID_RELEASE_BUILD_SECONDS=%e PEAK_RSS_KB=%M' sh -c 'cd android && ./gradlew assembleRelease' 2>&1 | tee "$GITHUB_WORKSPACE/artifacts/issue-9-android-runtime/react-native-release-build.log"
           stat --printf='RN_ANDROID_RELEASE_APK_BYTES=%s\n' android/app/build/outputs/apk/release/app-release.apk | tee -a "$GITHUB_WORKSPACE/artifacts/issue-9-android-runtime/react-native-release-build.log"
+      - name: Build Kotlin Android Release APK
+        working-directory: pocs/issue-9/kotlin-android
+        shell: bash
+        run: |
+          gradle wrapper --gradle-version 8.11.1
+          /usr/bin/time -f 'KOTLIN_ANDROID_RELEASE_BUILD_SECONDS=%e PEAK_RSS_KB=%M' ./gradlew assembleRelease 2>&1 | tee "$GITHUB_WORKSPACE/artifacts/issue-9-android-runtime/kotlin-release-build.log"
+          stat --printf='KOTLIN_ANDROID_RELEASE_APK_BYTES=%s\\n' app/build/outputs/apk/release/app-release-unsigned.apk | tee -a "$GITHUB_WORKSPACE/artifacts/issue-9-android-runtime/kotlin-release-build.log"
       - name: Install and measure both apps on the same Android emulator
         uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d
         with:
@@ -109,6 +119,7 @@ jobs:
         env:
           FLUTTER_APK: ${{ github.workspace }}/pocs/issue-9/flutter/build/app/outputs/flutter-apk/app-release.apk
           RN_APK: ${{ github.workspace }}/pocs/issue-9/react-native/build-project/android/app/build/outputs/apk/release/app-release.apk
+          KOTLIN_APK: ${{ github.workspace }}/pocs/issue-9/kotlin-android/app/build/outputs/apk/release/app-release-unsigned.apk
           OUTPUT_DIR: ${{ github.workspace }}/artifacts/issue-9-android-runtime
       - name: Preserve builds and runtime measurements
         if: always()
@@ -119,5 +130,7 @@ jobs:
             artifacts/issue-9-android-runtime/**
             pocs/issue-9/flutter/build/app/outputs/flutter-apk/app-release.apk
             pocs/issue-9/react-native/build-project/android/app/build/outputs/apk/release/app-release.apk
+            pocs/issue-9/kotlin-android/app/build/outputs/apk/release/app-release-unsigned.apk
+            artifacts/issue-9-android-runtime/kotlin-release-build.log
           if-no-files-found: warn
           retention-days: 30
