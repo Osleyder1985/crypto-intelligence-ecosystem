@@ -64,23 +64,23 @@ jobs:
             started=$(date +%s)
             /usr/bin/time -l flutter build ios --simulator --debug --no-codesign 2>&1 | tee -a flutter-ios-build-measurement.log
             elapsed=$(($(date +%s)-started))
-            printf 'CLEAN_IOS_SIMULATOR_DEBUG_RUN=%s ELAPSED_SECONDS=%s\\n' "$run" "$elapsed" | tee -a flutter-ios-build-measurement.log
+            printf 'CLEAN_IOS_SIMULATOR_DEBUG_RUN=%s ELAPSED_SECONDS=%s\n' "$run" "$elapsed" | tee -a flutter-ios-build-measurement.log
             du -sk build/ios/iphonesimulator/Runner.app | tee -a flutter-ios-build-measurement.log
           done
           cp lib/main.dart lib/main.dart.benchmark-original
           trap 'mv lib/main.dart.benchmark-original lib/main.dart 2>/dev/null || true' EXIT
-          printf '\\n// Issue 9 benchmark-only source edit.\\n' >> lib/main.dart
+          printf '\n// Issue 9 benchmark-only source edit.\n' >> lib/main.dart
           started=$(date +%s)
           /usr/bin/time -l flutter build ios --simulator --debug --no-codesign 2>&1 | tee -a flutter-ios-build-measurement.log
           elapsed=$(($(date +%s)-started))
           mv lib/main.dart.benchmark-original lib/main.dart
           trap - EXIT
-          printf 'INCREMENTAL_IOS_SIMULATOR_DEBUG_AFTER_SOURCE_EDIT ELAPSED_SECONDS=%s\\n' "$elapsed" | tee -a flutter-ios-build-measurement.log
+          printf 'INCREMENTAL_IOS_SIMULATOR_DEBUG_AFTER_SOURCE_EDIT ELAPSED_SECONDS=%s\n' "$elapsed" | tee -a flutter-ios-build-measurement.log
           du -sk build/ios/iphonesimulator/Runner.app | tee -a flutter-ios-build-measurement.log
           started=$(date +%s)
           /usr/bin/time -l flutter build ios --release --no-codesign 2>&1 | tee -a flutter-ios-build-measurement.log
           elapsed=$(($(date +%s)-started))
-          printf 'IOS_DEVICE_RELEASE_BUILD_COMPLETE ELAPSED_SECONDS=%s\\n' "$elapsed" | tee -a flutter-ios-build-measurement.log
+          printf 'IOS_DEVICE_RELEASE_BUILD_COMPLETE ELAPSED_SECONDS=%s\n' "$elapsed" | tee -a flutter-ios-build-measurement.log
           du -sk build/ios/iphoneos/Runner.app | tee -a flutter-ios-build-measurement.log
       - name: Record Dart and iOS CocoaPods dependency inventories
         working-directory: pocs/issue-9/flutter
