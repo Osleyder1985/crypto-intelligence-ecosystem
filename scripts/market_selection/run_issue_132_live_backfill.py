@@ -354,6 +354,7 @@ def main() -> int:
         "schema_version": "crypto-issue-132-real-backfill-manifest-v1",
         "created_at": now_utc(),
         "purpose": "Real source-authorized historical archive/article capture; source-level hashes and extracted-text artifacts are independently verifiable.",
+        "repository_relative_root": "data/research_evidence/issue-132/live-backfill",
         "read_to_eof_without_local_size_cap": True,
         "no_full_html_persisted_for_approved_archive_sources": bool(records) and all(
             record["original_archive_response"]["stored_content_mode"] == "EXTRACTED_TEXT_EVIDENCE"
