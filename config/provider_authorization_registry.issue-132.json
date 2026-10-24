@@ -29,4 +29,49 @@
     "reviewed_by": "AI-assisted technical review; owner-authorized project scope",
     "reviewed_at": "2026-10-24T02:22:00Z"
   }
+,
+  "binance_spot_market_data": {
+    "schema_version": "crypto-provider-authorization-v1",
+    "provider_id": "binance_spot_market_data",
+    "status": "APPROVED",
+    "authorized_use_cases": ["internal_analysis", "persistent_storage"],
+    "terms_url": "https://developers.binance.com/en/docs/products/spot/rest-api",
+    "terms_sha256": "7b98e2a2961eceab65592628930600a9c6681651637031ba9fae6dc4604a6cc1",
+    "terms_content_base64": "Rm9yIEFQSXMgdGhhdCBvbmx5IHNlbmQgcHVibGljIG1hcmtldCBkYXRhLCBwbGVhc2UgdXNlIHRoZSBiYXNlIGVuZHBvaW50IGh0dHBzOi8vZGF0YS1hcGkuYmluYW5jZS52aXNpb24u",
+    "terms_evidence_scope": "Exact excerpt from the official Spot REST API documentation identifying data-api.binance.vision as the endpoint for public market-data APIs. This is technical-use evidence, not a blanket license for redistribution.",
+    "reviewed_by": "AI-assisted technical review; owner-authorized internal research scope",
+    "reviewed_at": "2026-10-24T02:40:00Z",
+    "approval_scope": {
+      "allowed_content": {
+        "public_spot_ohlcv": true,
+        "raw_ohlcv_persistent_storage": false,
+        "derived_temporal_analysis_persistent_storage": true,
+        "redistribution": false,
+        "trading_actions": false
+      },
+      "retention": {
+        "stored_fields": ["provider_id", "endpoint", "symbol", "interval", "requested_window", "captured_at_utc", "http_status", "response_bytes", "response_sha256", "derived_movement_episodes", "event_temporal_assessment"],
+        "raw_response_storage": "NOT_PERMITTED_BY_THIS_PROJECT_SCOPE",
+        "duration": "Retain only derived report artifacts and source hashes; do not persist raw OHLCV response payloads.",
+        "recheck_rule": "Re-review official Binance API terms and documentation before changing retention or use scope."
+      },
+      "attribution": {
+        "required": true,
+        "format": "Market data source: Binance Spot public market-data API, https://developers.binance.com/en/docs/products/spot/rest-api"
+      },
+      "automated_access": {
+        "approved_endpoint": "https://data-api.binance.vision/api/v3/klines",
+        "user_agent": "CryptoIntelligenceIssue132TemporalReview/1.0 (repository maintainer)",
+        "max_parallel_requests": 1,
+        "request_window_scope": "Only the explicitly declared historical windows for the event-to-movement review."
+      },
+      "limitations": [
+        "Internal descriptive research only; no public redistribution of raw market data.",
+        "The API documentation establishes the public endpoint but does not itself provide a blanket legal opinion about data ownership.",
+        "Raw OHLCV response bodies may exist transiently in process memory for hashing and analysis but must not be written to disk or artifacts.",
+        "Derived movement episodes are exploratory and inherit the experimental status of configs/technical-descriptive-baseline.json.",
+        "Temporal association is not causality; event capture occurred after the historical movement and therefore cannot be treated as point-in-time knowledge."
+      ]
+    }
+  }
 }
