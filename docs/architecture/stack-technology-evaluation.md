@@ -164,8 +164,14 @@ Este diagrama expresa límites propuestos, no infraestructura desplegada. La ele
 - [x] ADR provisional con alternativas, riesgos y condiciones de revisión.
 - [x] Contrato OpenAPI inicial y diagrama lógico propuestos.
 - [x] Dos workflows existentes observados en PASS, con sus límites documentados.
-- [ ] Validación automatizada del contrato OpenAPI y pruebas de contrato.
-- [ ] PoC comparativas de cliente móvil/gráficos, API, persistencia histórica y tarea asíncrona.
+- [x] Validación automática de sintaxis/estructura OpenAPI 3.1.0 con `openapi-spec-validator` (run 40056998001 PASS).
+- [x] PoC API FastAPI/SQLite: búsqueda, Bearer auth configurable, idempotencia, errores y consulta de historial (run 40056917356 PASS).
+- [x] PoC PostgreSQL 16: orden histórico y bloqueo de UPDATE/DELETE (run 40056885420 PASS).
+- [x] Worker secuencial PoC: procesa una solicitud persistida y devuelve `indeterminate` cuando no hay motor analítico (test incluido en run 40056998071 PASS).
+- [ ] Pruebas de contrato cliente-servidor; el validador OpenAPI por sí solo no las sustituye.
+- [ ] Worker con concurrencia, reintentos y recuperación demostrada tras interrupción.
+- [ ] PoC comparativas de cliente móvil/gráficos (Flutter, React Native y referencia nativa) y web.
+- [ ] Medición representativa de persistencia/consultas, seguridad/licencias y recursos de build.
 - [ ] Matriz puntuada con resultados medidos y análisis de sensibilidad.
 - [ ] ADR definitivo ratificado y revisión del PR.
 
