@@ -38,7 +38,7 @@ The versions above are the versions reported by the run's installed environment.
 ## Direct dependency considerations
 
 - FastAPI, HTTPX and PyYAML are permissive open-source components under their published licences.
-- Psycopg 3 is published under LGPL-3.0-only. Its use and any distribution/bundling implications must be reviewed for the intended deployment and packaging model; do not assume that all dependencies share one licence.
+- Psycopg 3 is published under LGPL-3.0-only. The pinned extra `psycopg[binary]` also brings a binary distribution with bundled native components; review the exact wheel contents, included notices and obligations for the intended deployment and packaging model before distributing it. Do not assume that all dependencies share one licence.
 - This PoC licence review is not legal advice and does not replace review of notices, bundled binaries, fonts, mobile SDKs, chart libraries, or eventual production dependencies.
 - The Python licence inventory does not cover Flutter/Dart, Android Gradle plugins, Kotlin, React/Node dependencies, browser assets, Xcode or Apple platform SDK terms.
 
