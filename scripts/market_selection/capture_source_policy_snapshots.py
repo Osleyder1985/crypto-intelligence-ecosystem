@@ -20,9 +20,11 @@ from urllib.request import Request, urlopen
 POLICY_URLS = {
     "sec_website_dissemination": "https://www.sec.gov/about/privacy-information",
     "sec_developer_resources": "https://www.sec.gov/about/developer-resources",
+    "sec_rss_feeds": "https://www.sec.gov/about/rss-feeds",
     "cftc_web_policy": "https://www.cftc.gov/WebPolicy/index.htm",
     "cftc_rss_status": "https://www.cftc.gov/RSS/index.htm",
     "federal_reserve_disclaimer": "https://www.federalreserve.gov/disclaimer.htm",
+    "federal_reserve_rss_feeds": "https://www.federalreserve.gov/feeds/feeds.htm",
 }
 
 
