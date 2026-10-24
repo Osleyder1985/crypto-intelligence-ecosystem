@@ -65,12 +65,15 @@ class _ChartScreenState extends State<ChartScreen> {
           const SizedBox(height: 12),
           Semantics(
             label: 'Candlestick and volume chart for ${candles.length} synthetic OHLCV candles. Pinch to zoom and drag to pan.',
-            child: InteractiveViewer(
-              minScale: 0.5,
-              maxScale: 4.0,
-              constrained: false,
-              clipBehavior: Clip.hardEdge,
-              child: SizedBox(width: 1000, height: 360, child: CustomPaint(painter: CandleChartPainter(candles))),
+            child: SizedBox(
+              height: 360,
+              child: InteractiveViewer(
+                minScale: 0.5,
+                maxScale: 4.0,
+                constrained: false,
+                clipBehavior: Clip.hardEdge,
+                child: SizedBox(width: 1000, height: 360, child: CustomPaint(painter: CandleChartPainter(candles))),
+              ),
             ),
           ),
           const SizedBox(height: 12),
