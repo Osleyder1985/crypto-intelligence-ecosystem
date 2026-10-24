@@ -25,7 +25,7 @@
 | Release build | 124.23 s | 102,744 KB | 55,447,309 bytes |
 | Debug build after JS timestamp touch | 1.98 s | 109,880 KB | 125,271,411 bytes |
 
-Clean Debug median: **70.62 s**; range: **67.66–147.40 s**. The first build remains in the record. The 1.98 s Debug rebuild is not a valid JavaScript-bundle incremental measure because the Debug configuration may skip JS bundling. Do not compare it to Flutter's incremental Dart rebuild. The updated workflow measures Release rebuild after touching `App.js`.
+Clean Debug median: **70.62 s**; range: **67.66–147.40 s**. The first build remains in the record. The 2.43 s Release rebuild after touching `App.js` is not accepted as a valid JavaScript-bundle incremental measure: Gradle logged `:app:createBundleReleaseJsAndAssets UP-TO-DATE`, so the JS bundle did not rebuild. The updated workflow changes the source content with a temporary comment and measures Release again; that result is pending.
 
 ## Dependency and licence inventory
 
