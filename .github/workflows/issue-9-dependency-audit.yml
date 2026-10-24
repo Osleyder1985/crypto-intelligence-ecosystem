@@ -42,11 +42,14 @@ jobs:
         run: |
           python -m piplicenses --format=json --from=all --with-urls --with-description --with-license-file --with-notice-file > issue-9-python-license-inventory.json
           python -m piplicenses --format=markdown --from=all --with-urls --with-description
+          python scripts/stack_poc/review_license_inventory.py issue-9-python-license-inventory.json issue-9-python-license-review.json
       - name: Preserve licence inventory as a CI artifact
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: issue-9-python-license-inventory
-          path: issue-9-python-license-inventory.json
+          path: |
+            issue-9-python-license-inventory.json
+            issue-9-python-license-review.json
           if-no-files-found: warn
           retention-days: 30
