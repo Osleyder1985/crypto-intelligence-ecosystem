@@ -22,6 +22,7 @@ ALLOWED_HOSTS = {"sec.gov", "www.sec.gov", "cftc.gov", "www.cftc.gov", "federalr
 POLICY_URLS = {
     "sec_website_dissemination": "https://www.sec.gov/about/privacy-information",
     "sec_developer_resources": "https://www.sec.gov/about/developer-resources",
+    "sec_webmaster_faq": "https://www.sec.gov/files/about/webmaster-faq.htm",
     "cftc_web_policy": "https://www.cftc.gov/WebPolicy/index.htm",
     "cftc_rss_status": "https://www.cftc.gov/RSS/index.htm",
     "federal_reserve_disclaimer": "https://www.federalreserve.gov/disclaimer.htm",
