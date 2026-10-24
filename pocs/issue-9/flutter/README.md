@@ -26,3 +26,6 @@ The workflow uses an Ubuntu GitHub-hosted runner, installs Flutter 3.47.5, runs 
 - Accessibility is partial: the chart has a Semantics label and data table, but TalkBack, text scaling, orientation, and physical-device testing remain pending.
 - No browser chart-ready metric or iOS/macOS build evidence is implied.
 - Security/licence review of Flutter SDK and any future chart dependency remains required.
+
+
+The CI workflows pin Flutter 3.47.5 (stable) and record the exact Flutter/Xcode or Android runner context alongside build measurements. See the [official Flutter release archive](https://docs.flutter.dev/release/archive).
