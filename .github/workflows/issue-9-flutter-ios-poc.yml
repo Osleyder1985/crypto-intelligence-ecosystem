@@ -4,6 +4,7 @@ on:
   pull_request:
     paths:
       - 'pocs/issue-9/flutter/**'
+      - 'scripts/stack_poc/inventory_dart_licenses.py'
       - 'tests/stack_poc/fixtures/ohlcv_synthetic_v1.json'
       - '.github/workflows/issue-9-flutter-ios-poc.yml'
   push:
@@ -87,6 +88,7 @@ jobs:
         shell: bash
         run: |
           flutter pub deps --json > flutter-pub-dependencies.json
+          python "$GITHUB_WORKSPACE/scripts/stack_poc/inventory_dart_licenses.py" flutter-pub-dependencies.json flutter-license-inventory.json --copy-dir flutter-license-texts
           if [[ -f ios/Podfile.lock ]]; then cp ios/Podfile.lock flutter-ios-Podfile.lock; fi
           if command -v pod >/dev/null 2>&1; then pod list > flutter-ios-pods.txt; fi
       - name: Preserve iOS build measurements
@@ -98,6 +100,8 @@ jobs:
             pocs/issue-9/flutter/flutter-ios-build-measurement.log
             pocs/issue-9/flutter/pubspec.lock
             pocs/issue-9/flutter/flutter-pub-dependencies.json
+            pocs/issue-9/flutter/flutter-license-inventory.json
+            pocs/issue-9/flutter/flutter-license-texts/**
             pocs/issue-9/flutter/flutter-ios-Podfile.lock
             pocs/issue-9/flutter/flutter-ios-pods.txt
           if-no-files-found: warn
