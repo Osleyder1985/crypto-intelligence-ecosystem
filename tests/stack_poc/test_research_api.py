@@ -6,6 +6,7 @@ from pathlib import Path
 from fastapi.testclient import TestClient
 
 from scripts.stack_poc.research_api import create_app
+from scripts.stack_poc.research_worker import process_next_request
 
 
 class ResearchApiPocTests(unittest.TestCase):
@@ -51,6 +52,22 @@ class ResearchApiPocTests(unittest.TestCase):
             headers=headers,
         )
         self.assertEqual(changed.status_code, 409)
+
+    def test_persisted_worker_abstains_and_is_idempotent(self):
+        queued = self.client.post(
+            "/v1/assets/asset-btc/evaluations",
+            json={"horizons": ["short", "long"], "methodology_version": "poc-0.1"},
+            headers={"Idempotency-Key": "issue9-worker-key-0001"},
+        ).json()
+        self.assertEqual(queued["status"], "queued")
+        self.assertEqual(process_next_request(self.db), queued["request_id"])
+        self.assertIsNone(process_next_request(self.db))
+        result = self.client.get(f"/v1/evaluation-requests/{queued['request_id']}").json()
+        self.assertEqual(result["status"], "indeterminate")
+        self.assertEqual({item["horizon"] for item in result["evaluations"]}, {"short", "long"})
+        self.assertTrue(all(item["status"] == "indeterminate" for item in result["evaluations"]))
+        self.assertTrue(all("analysis_engine_not_integrated" in item["limitations"] for item in result["evaluations"]))
+        self.assertEqual(len(result["evaluations"]), 2)
 
     def test_unknown_asset_and_request_return_404(self):
         self.assertEqual(
