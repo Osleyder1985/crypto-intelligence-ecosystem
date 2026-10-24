@@ -4,11 +4,17 @@ on:
   pull_request:
     paths:
       - 'requirements-stack-poc.txt'
+      - 'scripts/stack_poc/**'
+      - 'tests/stack_poc/**'
+      - 'pocs/issue-9/**'
       - '.github/workflows/issue-9-dependency-audit.yml'
   push:
     branches: [main, docs/issue-9-stack-evaluation]
     paths:
       - 'requirements-stack-poc.txt'
+      - 'scripts/stack_poc/**'
+      - 'tests/stack_poc/**'
+      - 'pocs/issue-9/**'
       - '.github/workflows/issue-9-dependency-audit.yml'
   workflow_dispatch:
 
@@ -27,8 +33,20 @@ jobs:
           python-version: '3.12'
       - name: Install pinned application dependencies and audit tools
         run: python -m pip install --disable-pip-version-check -r requirements-stack-poc.txt pip-audit==2.9.0 pip-licenses==5.0.0
+      - name: Verify dependency consistency
+        run: python -m pip check
       - name: Audit known Python dependency vulnerabilities
         run: python -m pip_audit --requirement requirements-stack-poc.txt
       - name: Emit direct and transitive licence inventory
         if: always()
-        run: python -m piplicenses --format=markdown --with-urls --with-description
+        run: |
+          python -m piplicenses --format=json --with-urls --with-description > issue-9-python-license-inventory.json
+          python -m piplicenses --format=markdown --with-urls --with-description
+      - name: Preserve licence inventory as a CI artifact
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: issue-9-python-license-inventory
+          path: issue-9-python-license-inventory.json
+          if-no-files-found: warn
+          retention-days: 30

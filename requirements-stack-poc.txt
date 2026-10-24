@@ -1,5 +1,5 @@
-# Reproducible dependency set for the Issue #9 API/PostgreSQL PoCs.
-# FastAPI 0.115.12 resolved to vulnerable Starlette 0.46.2 in CI; update and re-audit.
+# Pinned direct dependencies for the Issue #9 API/PostgreSQL proof of concept.
+# The complete resolved environment and audit evidence are preserved by issue-9-dependency-audit.yml.
 fastapi==0.158.1
 httpx==0.28.1
 PyYAML==6.0.2

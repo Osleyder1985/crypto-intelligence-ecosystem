@@ -1,0 +1,50 @@
+{
+  "evidence_id": "issue-9-web-geometry-linux-ci-40058440405",
+  "workflow_run": "https://github.com/Osleyder1985/crypto-intelligence-ecosystem/actions/runs/40058440405",
+  "source_commit": "5554cb2be65cb9b55f663d3234a8bf259616561b",
+  "benchmark": "issue-9-web-chart-geometry-v1",
+  "fixture": {
+    "version": "1.0.0",
+    "sha256": "0265cfa5e4d4e6673476bc7db84ed98d43147409172a00deda958bd82823f63d",
+    "candle_count": 12,
+    "classification": "synthetic-not-market-data"
+  },
+  "environment": {
+    "runtime": "Node.js v22.23.3",
+    "os": "Linux",
+    "kernel": "6.17.0-1022-azure",
+    "architecture": "x64",
+    "cpu": "AMD EPYC 9V74 80-Core Processor",
+    "logical_cpus": 4,
+    "total_memory_bytes": 16766414848,
+    "runner_type": "GitHub-hosted Actions runner"
+  },
+  "conditions": {
+    "chart_width": 1200,
+    "chart_height": 640,
+    "padding": 24,
+    "warmup_iterations": 100,
+    "measured_iterations": 1000
+  },
+  "geometry_duration_ms": {
+    "minimum": 0.001512,
+    "median": 0.002433,
+    "p95": 0.004987,
+    "maximum": 0.419061
+  },
+  "process_rss_bytes": {
+    "before": 51630080,
+    "after": 55463936,
+    "peak_rss_measured": false
+  },
+  "automated_geometry_tests": {
+    "passed": 3,
+    "failed": 0
+  },
+  "limitations": [
+    "Measures JavaScript geometry calculation only; does not measure browser rendering, layout, GPU, network, or end-to-end chart readiness.",
+    "RSS is sampled at two points, not peak memory.",
+    "Single CI run; not a three-run distribution and not comparable to Windows, Android, iOS, or other CI runners.",
+    "Does not represent Flutter, React Native, or a production financial chart library."
+  ]
+}

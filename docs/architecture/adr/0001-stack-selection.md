@@ -59,3 +59,16 @@ Ratificar el ADR solo después de: (a) PoC API/contratos; (b) persistencia hist�
 - [ ] Análisis de sensibilidad completado.
 - [ ] Revisión de licencias, soporte y vulnerabilidades.
 - [ ] Decisión final aprobada por el propietario del producto.
+
+
+## Evidence checkpoint — 2026-10-24 (not final ratification)
+
+New evidence since the initial proposal:
+
+- The web chart geometry reference passed its 3 unit tests and ran three independent Node processes against the shared fixture in [CI run 40058638191](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/actions/runs/40058638191). The median of process medians was 0.001663 ms with a range of 0.001652–0.002985 ms, on one hosted Linux runner. This is geometry computation only; it is not browser-render time or an equivalent Flutter/React Native comparison. See `docs/architecture/evidence/issue-9-web-geometry-linux-ci-40058638191.json`.
+- The Python PoC dependency audit passed `pip check` and reported no known vulnerabilities in its scanned requirements/advisory data in [CI run 40058494463](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/actions/runs/40058494463). The licence inventory and manual review are recorded in `docs/architecture/evidence/issue-9-python-dependency-license-review.md`. Psycopg LGPL-3.0-only and its binary extra still require distribution-specific review.
+- The Flutter Android reference PoC passed fixture identity and widget tests, but its three clean builds had not completed in the latest observation of [CI run 40058442391](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/actions/runs/40058442391). Do not treat the in-progress build step as PASS.
+
+### Decision at this checkpoint
+
+**Do not ratify a final stack yet.** The available measurements are not comparable end-to-end: no completed React Native candidate, no local Windows measurements from the target PC, no browser rendering/accessibility trace, no completed Flutter build report, and no complete cross-stack licence inventory. The matrix remains N/E for any criterion that lacks evidence from the candidate implementations. The next decision review must attach those results, calculate the actual weighted matrix and sensitivity scenarios, then either ratify a candidate or document why the evidence remains insufficient.

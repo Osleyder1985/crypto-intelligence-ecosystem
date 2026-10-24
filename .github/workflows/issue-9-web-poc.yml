@@ -30,5 +30,22 @@ jobs:
       - name: Test deterministic OHLCV chart geometry
         working-directory: pocs/issue-9/web
         run: npm test
+      - name: Run three independent geometry benchmark processes
+        working-directory: pocs/issue-9/web
+        run: |
+          mkdir -p benchmark-measurements
+          for run in 1 2 3; do
+            node benchmark.js > "benchmark-measurements/run-$run.json"
+            cat "benchmark-measurements/run-$run.json"
+          done
+          node aggregate_benchmark.js benchmark-measurements
+      - name: Preserve raw measurements and summary
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: issue-9-web-geometry-benchmark
+          path: pocs/issue-9/web/benchmark-measurements/*.json
+          if-no-files-found: warn
+          retention-days: 30
       - name: Validate shared fixture is present and provenance-labelled
         run: python -c "import json; p=json.load(open('tests/stack_poc/fixtures/ohlcv_synthetic_v1.json')); assert p['kind']=='synthetic-not-market-data'; assert len(p['candles']) >= 10"

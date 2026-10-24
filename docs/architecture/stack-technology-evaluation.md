@@ -253,3 +253,46 @@ No se considera completado el Issue #9 hasta cerrar las condiciones pendientes c
 Se añadió `scripts/stack_poc/sensitivity_analysis.py` y `tests/stack_poc/test_sensitivity_analysis.py`. La herramienta exige que cada alternativa tenga puntuación entera 1–5 y referencia de evidencia no vacía para **cada** criterio, y que los pesos sumen 100. Si falta cualquier dato, devuelve `status=incomplete`, una lista de ausencias y no calcula ranking (código de salida 2). Si la matriz está completa, calcula puntuación ponderada y cambia cada peso individualmente ±20%, renormaliza el total y registra si cambia el orden.
 
 Los tests cubren bloqueo por datos ausentes, ranking/sensibilidad con datos sintéticos de test y validación de pesos. Los candidatos sintéticos del test solo prueban el algoritmo; no son puntuaciones de Flutter, React Native ni de ninguna tecnología real. La matriz real permanece N/E hasta adjuntar evidencia comparativa. El workflow de PoC incluye ahora esta suite.
+
+
+## 18. Medición de geometría web disponible (2026-10-24)
+
+La PoC de referencia ejecutó sus tres tests de geometría y un microbenchmark en el runner GitHub Actions del workflow [40058440405](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/actions/runs/40058440405), commit `5554cb2be65cb9b55f663d3234a8bf259616561b`. Registro durable: `docs/architecture/evidence/issue-9-web-geometry-linux-ci-40058440405.json`.
+
+- Entorno: Linux hosted runner, Node.js v22.23.3, AMD EPYC 9V74, 4 vCPU, RAM reportada 16,766,414,848 bytes.
+- Fixture: 12 velas sintéticas, SHA-256 `0265cfa5e4d4e6673476bc7db84ed98d43147409172a00deda958bd82823f63d`.
+- Geometría JavaScript: 100 iteraciones de calentamiento y 1.000 medidas; mínimo 0.001512 ms, mediana 0.002433 ms, p95 0.004987 ms, máximo 0.419061 ms.
+- RSS: 51,630,080 bytes antes y 55,463,936 bytes después. Son dos muestras de RSS, no memoria pico.
+- Tests: 3 PASS, 0 FAIL.
+
+**Interpretación:** esto solo mide el cálculo geométrico de velas, no renderizado DOM, GPU, memoria pico, arranque ni preparación visible del gráfico. Es una sola ejecución de CI, no un conjunto de tres builds y no debe compararse con Windows local o con Flutter/React Native. Por ello no se asigna aún puntuación de rendimiento al stack web.
+
+## 19. Flutter Android PoC: medición en curso
+
+La rama `feat/issue-9-flutter-chart-reference` contiene una PoC Flutter que dibuja el mismo fixture canónico con `CustomPainter`, volumen y tabla de datos. El workflow [40058442391](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/actions/runs/40058442391) comprobó la igualdad byte a byte del fixture; en la última consulta la instalación de Flutter seguía en curso, por lo que no se declaran todavía tests ni builds PASS. El workflow está diseñado para ejecutar tests de widgets y tres builds Android limpios, registrar tiempo, RSS máximo del proceso y tamaño APK; después deben conservarse los resultados y comparar solo las medidas compatibles.
+
+
+## 20. Python PoC dependency/security/licence review (2026-10-24)
+
+The dependency audit workflow completed successfully in [run 40058494463](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/actions/runs/40058494463): `pip check` passed, `pip-audit` reported no known vulnerabilities for the pinned Python PoC requirements/advisory data available to the run, and the direct/transitive licence inventory was uploaded as [artifact 12546825286](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/actions/runs/40058494463/artifacts/12546825286). Manual checks for rows whose installed metadata said `UNKNOWN` are recorded in `docs/architecture/evidence/issue-9-python-dependency-license-review.md`.
+
+This is a completed review for the current **Python PoC environment**, not for the final product. Psycopg 3 declares LGPL-3.0-only, so packaging/distribution implications require a deployment-specific review. The future Flutter/Dart/Android, React/Node and iOS toolchains/dependency graphs remain unaudited until their candidate implementations and locks exist. A clean advisory scan does not establish absence of all vulnerabilities.
+
+## 21. Matrix scoring and sensitivity status
+
+The sensitivity-analysis implementation exists and is tested to reject any candidate with missing scores or evidence references. However, the real candidate matrix still has critical dimensions without measured Flutter, React Native, web-browser and local-Windows evidence. **Do not produce a winner or mark the matrix complete yet.** A synthetic unit test of the sensitivity algorithm is not a sensitivity result for actual stack candidates. Once comparable evidence is available, score each criterion with an evidence link, run the ±20% one-weight-at-a-time scenarios, and record ranking stability before the ADR is ratified.
+
+
+## 22. Repeticiones independientes del microbenchmark web (2026-10-24)
+
+La segunda ejecución del workflow [40058638191](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/actions/runs/40058638191) completó 3 procesos Node independientes; cada proceso hizo 100 calentamientos y 1.000 observaciones. Registro durable: `docs/architecture/evidence/issue-9-web-geometry-linux-ci-40058638191.json`.
+
+| Proceso | Mediana (ms) | p95 (ms) | RSS antes (bytes) | RSS después (bytes) |
+|---:|---:|---:|---:|---:|
+| 1 | 0.001663 | 0.003435 | 51,240,960 | 55,762,944 |
+| 2 | 0.001652 | 0.003505 | 51,232,768 | 55,754,752 |
+| 3 | 0.002985 | 0.003796 | 51,412,992 | 55,672,832 |
+
+Mediana de las tres medianas: **0.001663 ms**; rango de medianas: **0.001652–0.002985 ms**. Entorno: Linux hosted runner, Node v22.23.3, AMD EPYC 9V45, 4 vCPU, RAM reportada 16,766,414,848 bytes. Fixture SHA-256: `0265cfa5e4d4e6673476bc7db84ed98d43147409172a00deda958bd82823f63d`. Los 3 tests geométricos terminaron PASS.
+
+La repetición independiente mejora la reproducibilidad de la microoperación, pero no equivale a tres builds limpios ni mide la pantalla renderizada. El RSS sigue siendo muestreo antes/después, no pico. No usar esta cifra para clasificar el stack frente a Flutter/React Native ni para inferir experiencia real de usuario.
