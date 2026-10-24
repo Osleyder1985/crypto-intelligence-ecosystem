@@ -137,8 +137,19 @@ jobs:
           arch: x86_64
           profile: pixel_2
           disable-animations: true
-          emulator-options: -no-window -no-audio -no-boot-anim -no-snapshot -gpu swiftshader_indirect
-          script: bash scripts/stack_poc/measure_issue9_android_runtime.sh
+          emulator-boot-timeout: 900
+          emulator-options: -no-window -no-audio -no-boot-anim -no-snapshot -gpu swiftshader
+          script: |
+            set -euo pipefail
+            timeout 90s adb wait-for-device
+            for attempt in $(seq 1 90); do
+              state="$(adb shell getprop sys.boot_completed 2>/dev/null | tr -d '\\r' || true)"
+              if [[ "$state" == "1" ]]; then break; fi
+              sleep 2
+            done
+            test "$(adb shell getprop sys.boot_completed | tr -d '\\r')" = "1"
+            adb shell getprop ro.build.version.sdk
+            bash scripts/stack_poc/measure_issue9_android_runtime.sh
         env:
           FLUTTER_APK: ${{ github.workspace }}/pocs/issue-9/flutter/build/app/outputs/flutter-apk/app-release.apk
           RN_APK: ${{ github.workspace }}/pocs/issue-9/react-native/build-project/android/app/build/outputs/apk/release/app-release.apk
