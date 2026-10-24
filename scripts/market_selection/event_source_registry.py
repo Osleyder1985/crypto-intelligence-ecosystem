@@ -217,21 +217,9 @@ def validate_source_entry(entry: dict) -> dict:
     source_url = _https_url(entry.get("source_url"), "source_url")
     terms_url = _https_url(entry.get("terms_url"), "terms_url")
     expected_source_terms = {
-        "sec_press_releases": (
-            "REGULATORY",
-            "https://www.sec.gov/news/pressreleases.rss",
-            "https://www.sec.gov/about/developer-resources",
-        ),
-        "cftc_general_press_releases": (
-            "REGULATORY",
-            "https://www.cftc.gov/RSS/RSSGP/rssgp.xml",
-            "https://www.cftc.gov/WebPolicy/index.htm",
-        ),
-        "federal_reserve_press_releases": (
-            "PRIMARY_OFFICIAL",
-            "https://www.federalreserve.gov/feeds/press_all.xml",
-            "https://www.federalreserve.gov/disclaimer.htm",
-        ),
+        "sec_press_releases": ("REGULATORY", "https://www.sec.gov/news/pressreleases.rss", "https://www.sec.gov/about/developer-resources"),
+        "cftc_general_press_releases": ("REGULATORY", "https://www.cftc.gov/RSS/RSSGP/rssgp.xml", "https://www.cftc.gov/WebPolicy/index.htm"),
+        "federal_reserve_press_releases": ("PRIMARY_OFFICIAL", "https://www.federalreserve.gov/feeds/press_all.xml", "https://www.federalreserve.gov/disclaimer.htm"),
     }
     expected = expected_source_terms.get(source_id)
     if expected is not None:
