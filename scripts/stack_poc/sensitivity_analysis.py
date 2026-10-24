@@ -9,13 +9,18 @@ def analyze(payload):
     candidates = payload.get('candidates', [])
     if not weights or not candidates:
         raise ValueError('weights and candidates are required')
-    if any(not isinstance(v, (int, float)) or v <= 0 for v in weights.values()):
+    if any(isinstance(v, bool) or not isinstance(v, (int, float)) or v <= 0 for v in weights.values()):
         raise ValueError('weights must be positive numbers')
     if abs(sum(weights.values()) - 100.0) > 1e-6:
         raise ValueError('weights must sum to 100')
 
     missing = []
     normalized = {}
+    candidate_names = [candidate.get('name') for candidate in candidates]
+    if any(not isinstance(name, str) or not name.strip() for name in candidate_names):
+        raise ValueError('each candidate needs a non-empty name')
+    if len(candidate_names) != len(set(candidate_names)):
+        raise ValueError('candidate names must be unique')
     for candidate in candidates:
         name = candidate.get('name')
         scores = candidate.get('scores', {})
@@ -25,7 +30,7 @@ def analyze(payload):
         for criterion in weights:
             score = scores.get(criterion)
             ref = evidence.get(criterion)
-            if not isinstance(score, int) or score < 1 or score > 5 or not isinstance(ref, str) or not ref.strip():
+            if isinstance(score, bool) or not isinstance(score, int) or score < 1 or score > 5 or not isinstance(ref, str) or not ref.strip():
                 missing.append({'candidate': name, 'criterion': criterion, 'score': score, 'evidence': ref})
         normalized[name] = {'scores': scores, 'evidence': evidence}
 
