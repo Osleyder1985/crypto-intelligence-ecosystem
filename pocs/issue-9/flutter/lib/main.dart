@@ -63,7 +63,16 @@ class _ChartScreenState extends State<ChartScreen> {
         return ListView(padding: const EdgeInsets.all(16), children: [
           const Text('Synthetic test data only. This screen is not market data and does not generate investment signals.'),
           const SizedBox(height: 12),
-          Semantics(label: 'Candlestick and volume chart for ${candles.length} synthetic OHLCV candles', child: SizedBox(height: 360, child: CustomPaint(painter: CandleChartPainter(candles)))),
+          Semantics(
+            label: 'Candlestick and volume chart for ${candles.length} synthetic OHLCV candles. Pinch to zoom and drag to pan.',
+            child: InteractiveViewer(
+              minScale: 0.5,
+              maxScale: 4.0,
+              constrained: false,
+              clipBehavior: Clip.hardEdge,
+              child: SizedBox(width: 1000, height: 360, child: CustomPaint(painter: CandleChartPainter(candles))),
+            ),
+          ),
           const SizedBox(height: 12),
           Text('UTC range: ${candles.first.timestamp} — ${candles.last.timestamp}'),
           const SizedBox(height: 8),
