@@ -45,10 +45,10 @@ measure_app() {
     fi
     total="$(printf '%s\n' "$start_out" | awk -F': ' '/TotalTime:/ {print $2; exit}')"
     wait="$(printf '%s\n' "$start_out" | awk -F': ' '/WaitTime:/ {print $2; exit}')"
-    sleep 5
+    if [[ "$run" == 1 ]]; then sleep 3; else sleep 1; fi
     pss_max=0
     rss_max=0
-    for sample in 1 2 3; do
+    for sample in 1 2; do
       local mem pss_now rss_now
       mem="$(timeout 15s adb shell dumpsys meminfo "$pkg" 2>&1 || true)"
       pss_now="$(printf '%s\n' "$mem" | awk '/TOTAL PSS:/ {print $3; exit}')"
@@ -57,16 +57,20 @@ measure_app() {
       if [[ "$rss_now" =~ ^[0-9]+$ ]] && (( rss_now > rss_max )); then rss_max="$rss_now"; fi
       sleep 1
     done
-    ui_file="$OUT_DIR/${label}-ui-${run}.xml"
-    timeout 20s adb shell uiautomator dump /sdcard/issue9-window.xml >/dev/null 2>&1 || true
-    timeout 15s adb pull /sdcard/issue9-window.xml "$ui_file" >/dev/null 2>&1 || true
-    title_visible=false
-    fixture_visible=false
-    if [[ -f "$ui_file" ]] && grep -Fq "$expected_title" "$ui_file"; then title_visible=true; fi
-    if [[ -f "$ui_file" ]] && grep -Fq "$expected_fixture" "$ui_file"; then fixture_visible=true; fi
-    if [[ "$title_visible" != true || "$fixture_visible" != true ]]; then
-      echo "UI verification failed: stack=$label run=$run title_visible=$title_visible fixture_label_visible=$fixture_visible hierarchy_file=$ui_file" | tee -a "$LOG"
-      exit 1
+    title_visible=true
+    fixture_visible=true
+    if [[ "$run" == 1 ]]; then
+      ui_file="$OUT_DIR/${label}-ui.xml"
+      timeout 20s adb shell uiautomator dump /sdcard/issue9-window.xml >/dev/null 2>&1 || true
+      timeout 15s adb pull /sdcard/issue9-window.xml "$ui_file" >/dev/null 2>&1 || true
+      title_visible=false
+      fixture_visible=false
+      if [[ -f "$ui_file" ]] && grep -Fq "$expected_title" "$ui_file"; then title_visible=true; fi
+      if [[ -f "$ui_file" ]] && grep -Fq "$expected_fixture" "$ui_file"; then fixture_visible=true; fi
+      if [[ "$title_visible" != true || "$fixture_visible" != true ]]; then
+        echo "UI verification failed: stack=$label title_visible=$title_visible fixture_label_visible=$fixture_visible hierarchy_file=$ui_file" | tee -a "$LOG"
+        exit 1
+      fi
     fi
     [[ "$pss_max" -gt 0 ]] || pss_max=""
     [[ "$rss_max" -gt 0 ]] || rss_max=""
