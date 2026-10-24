@@ -1,0 +1,33 @@
+name: Issue 9 PoC dependency security and licence inventory
+
+on:
+  pull_request:
+    paths:
+      - 'requirements-stack-poc.txt'
+      - '.github/workflows/issue-9-dependency-audit.yml'
+  push:
+    branches: [main, docs/issue-9-stack-evaluation]
+    paths:
+      - 'requirements-stack-poc.txt'
+      - '.github/workflows/issue-9-dependency-audit.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  dependency-audit:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - name: Set up Python
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: '3.12'
+      - name: Install pinned application dependencies and audit tools
+        run: python -m pip install --disable-pip-version-check -r requirements-stack-poc.txt pip-audit==2.9.0 pip-licenses==5.0.0
+      - name: Audit known Python dependency vulnerabilities
+        run: python -m pip_audit --requirement requirements-stack-poc.txt
+      - name: Emit direct and transitive licence inventory
+        run: python -m piplicenses --format=markdown --with-urls --with-description
