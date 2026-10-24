@@ -4,10 +4,11 @@ This app is a dependency-free Flutter reference for Android chart rendering. It 
 
 ## Local commands
 
-Requires Flutter SDK 3.35.7 or a compatible SDK and Android build tooling for APK generation:
+Requires Flutter SDK 3.35.7 or a compatible SDK and Android build tooling for APK generation. The repository intentionally stores the Dart app and generates the platform-specific Android scaffold during setup:
 
 ```bash
 cd pocs/issue-9/flutter
+flutter create --platforms=android --project-name issue_9_flutter_chart_reference --org com.crypto.intelligence --no-pub .
 flutter pub get
 flutter test
 flutter build apk --debug
