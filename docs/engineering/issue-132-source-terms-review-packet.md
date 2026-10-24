@@ -17,16 +17,13 @@ El acceso público a una página o feed **no demuestra por sí solo** que todos 
 
 ## Fuentes registradas y estado
 
-| ID de fuente | Endpoint registrado | Página de condiciones/políticas registrada | Estado |
+| ID de fuente | Endpoint de feed | Página de condiciones/políticas registrada | Estado |
 | --- | --- | --- | --- |
 | `sec_press_releases` | https://www.sec.gov/news/pressreleases.rss | https://www.sec.gov/about/developer-resources | `TERMS_PENDING` |
-| `sec_press_release_archive` | https://www.sec.gov/newsroom/press-releases | https://www.sec.gov/about/developer-resources | `TERMS_PENDING` |
-| `cftc_general_press_releases` | https://www.cftc.gov/RSS/RSSGP/rssgp.xml | https://www.cftc.gov/WebPolicy/index.htm | `TERMS_PENDING` |
-| `cftc_press_release_archive` | https://www.cftc.gov/PressRoom/PressReleases | https://www.cftc.gov/WebPolicy/index.htm | `TERMS_PENDING` |
-| `federal_reserve_press_releases` | https://www.federalreserve.gov/feeds/press_all.xml | https://www.federalreserve.gov/disclaimer.htm | `TERMS_PENDING` |
-| `federal_reserve_press_release_archive` | https://www.federalreserve.gov/newsevents/pressreleases.htm | https://www.federalreserve.gov/disclaimer.htm | `TERMS_PENDING` |
+| `cftc_general_press_releases` | https://www.cftc.gov/RSS/RSSGP/rssgp.xml | https://www.cftc.gov/sites/default/files/cftc/cftcprivacy.htm | `TERMS_PENDING` |
+| `federal_reserve_press_releases` | https://www.federalreserve.gov/feeds/press_all.xml | https://www.federalreserve.gov/policies.htm | `TERMS_PENDING` |
 
-Los endpoints y políticas anteriores corresponden a los seis `source_id` actualmente declarados en `scripts/market_selection/event_source_registry.py`. Si la autoridad publica una política específica para RSS, APIs o reutilización de contenido, inclúyase como evidencia adicional; no se debe asumir que una página genérica resuelve todas las cuestiones.
+Los enlaces son los actualmente declarados en `scripts/market_selection/event_source_registry.py`. Si la autoridad publica una política específica para RSS, APIs o reutilización de contenido, inclúyase como evidencia adicional; no se debe asumir que la página genérica registrada resuelve todas las cuestiones.
 
 ## Paquete de evidencia requerido por fuente
 
@@ -144,316 +141,36 @@ Esta sección complementa la revisión preliminar. No cambia automáticamente lo
 La evidencia pública reduce la incertidumbre sobre copyright del contenido oficial, pero no es autorización general para almacenar indiscriminadamente todos los bytes HTML de páginas que puedan incluir contenido de terceros. El revisor debe documentar el alcance por fuente, definir si se almacenará HTML completo o contenido textual oficial extraído, revisar las condiciones de acceso automatizado y aprobar por separado los casos de uso. Hasta entonces, no cambiar el estado ni los casos de uso permitidos en el registro.
 
 
-## 11. Propuesta de alcance mínimo para la primera prueba autorizada — 2026-10-23
+## 11. Captura real de páginas oficiales de política — 2026-10-24
 
-Esta propuesta reduce el riesgo y el número de decisiones simultáneas. **No es una aprobación del propietario ni cambia el estado de ninguna fuente.** El registro de ejecución debe continuar en `TERMS_PENDING` hasta que una persona autorizada apruebe explícitamente el alcance y el paquete de evidencia cumpla el contrato del validador.
+El workflow [run 40045854045](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/actions/runs/40045854045) capturó siete páginas oficiales con HTTP 200. El artefacto `issue-132-source-policy-snapshots` se descargó y se verificó localmente: el tamaño y SHA-256 de cada cuerpo coinciden con `manifest.json`. Los SHA-256 y tamaños están registrados en `issue-132-source-approval-matrix.md`.
 
-### Orden recomendado de evaluación
+### Hallazgos observables en los bytes capturados
 
-| Prioridad | Fuente | Evidencia oficial actual | Propuesta técnica | Bloqueo que permanece |
-| --- | --- | --- | --- | --- |
-| 1 | SEC — comunicados oficiales | La SEC declara que la información de sec.gov es pública y puede copiarse o redistribuirse, pide atribución y limita el uso de sellos/logos; también controla la frecuencia de acceso y no permite bots no clasificados. [Política de privacidad y difusión](https://www.sec.gov/about/privacy-information). | Evaluar primero una prueba de una sola página/comunicado oficial, con User-Agent identificable, una solicitud por invocación, contenido oficial pertinente, atribución y captura íntegra solo si se aprueba expresamente esa persistencia. | El operador debe aprobar endpoint, método de captura, tratamiento de contenido de terceros, persistencia/retención y caso de uso. No activar por defecto. |
-| 2 | Federal Reserve Board — comunicados oficiales | Su disclaimer permite copiar/distribuir la información del Board salvo indicación contraria, con atribución; el contenido de terceros puede requerir permiso separado. [Disclaimer](https://www.federalreserve.gov/disclaimer.htm). | Evaluar después de SEC, para eventos macroeconómicos con fecha/hora publicada, conservando por separado publicación y captura y sin convertir la coincidencia temporal en causalidad. | Falta decisión humana específica sobre feed/archivo, contenido guardado, retención y condiciones operativas del acceso automatizado. |
-| 3 | CFTC — comunicados oficiales | La Web Policy declara que la información gubernamental es de dominio público con atribución y advierte de contenido de terceros. [Web Policy](https://www.cftc.gov/WebPolicy/index.htm). El índice RSS fue reportado como temporalmente deshabilitado en octubre de 2026 en la revisión del repositorio. | No usar el RSS como primera ruta. Revalidar el estado oficial en el momento de la futura prueba; si continúa no disponible, no reintentar en bucle ni cambiar silenciosamente de endpoint. | Disponibilidad del feed/archivo y alcance autorizado por el operador. |
+1. **SEC:** la página Website Dissemination declara que la información presentada en sec.gov es pública y puede copiarse o distribuirse sin permiso de SEC, con cita apropiada. Developer Resources solicita moderar el tráfico, establece un límite total de 10 solicitudes por segundo para SEC.gov y dice que no permite bots o herramientas automatizadas no clasificadas. La implementación deberá identificar el agente, aplicar límites agregados conservadores y validar las reglas aplicables al endpoint concreto.
+2. **CFTC:** Web Policy indica que la información gubernamental del sitio es de dominio público y puede copiarse/distribuirse con reconocimiento apropiado; advierte que algunos materiales son de terceros. RSS status declara que todos los feeds enumerados están temporalmente deshabilitados en octubre de 2026. No hacer polling de esos feeds mientras siga vigente el aviso. Un archivo HTML sería otro origen con su propia revisión y estado de disponibilidad.
+3. **Federal Reserve Board:** el disclaimer indica que la información del Board, salvo indicación contraria, es de dominio público y puede copiarse/distribuirse con atribución; recursos de terceros identificados requieren permiso separado. La página RSS explica cómo utilizar agregadores, pero no constituye por sí sola un permiso explícito para conservar indefinidamente HTML y adjuntos completos.
 
-### Alcance mínimo propuesto para una prueba piloto
+### Decisión técnica recomendada, aún no activada
 
-La decisión de aprobación debería declarar cada punto de forma explícita; no se deben inferir permisos no seleccionados:
+- Considerar por separado para cada fuente el uso de metadatos y texto oficial, con atribución y enlace a la fuente; excluir recursos de terceros no autorizados.
+- Mantener deshabilitados HTML completo, adjuntos y retención indefinida hasta registrar una justificación y duración de retención para cada modalidad.
+- Aplicar un User-Agent identificable, límites agregados, reintentos acotados, validación de redirecciones y captura íntegra de bytes cuando la modalidad esté habilitada.
+- No consultar el RSS CFTC mientras el aviso oficial indique que está deshabilitado; mantener separado el archivo HTML si se estudia como alternativa.
+- Mantener los tres registros en `TERMS_PENDING` hasta completar `approval_scope` por origen y obtener una decisión registrada del revisor autorizado. La captura de políticas no es una captura de noticias/eventos y no constituye aprobación jurídica.
 
-- **Fuente inicial:** solo `sec_press_releases` o, si el operador prefiere otra, identificarla por su `source_id` exacto.
-- **Finalidad:** `internal_analysis` para investigación de eventos de mercado; no redistribución pública ni republicación de artículos.
-- **Material persistido:** declarar si se permite guardar respuesta completa, texto oficial extraído, metadatos y hashes. No tratar un hash como sustituto del contenido cuando la prueba E2E necesite verificar el artículo.
-- **Retención y eliminación:** definir el periodo o regla de retención aprobada, qué se elimina y qué metadatos no textuales pueden conservarse.
-- **Atribución y enlaces:** guardar fuente, URL canónica y metadatos de publicación; mostrar atribución requerida en el informe.
-- **Acceso automatizado:** endpoint exacto, User-Agent revisado, frecuencia/cuota, timeout, política de redirecciones y respuesta ante errores.
-- **Prueba E2E:** ejecutar solo tras aprobar la fuente; capturar índice o feed, seleccionar un candidato, obtener el artículo autorizado, verificar entidad con identificador estable, evaluar el corte temporal y producir salida factual/correlacional/causal conservadora.
-- **Cobertura:** generar manifiesto de páginas/segmentos esperados, capturados, ausentes, fallidos y fuera de alcance. Nunca declarar cobertura global completa a partir de una muestra.
+El artefacto de Actions tiene retención de siete días. Si se requiere evidencia duradera para auditoría, debe archivarse de forma aprobada o recapturarse en un mecanismo de retención aprobado; no declarar permanente el artefacto temporal.
 
-### Decisión pendiente del propietario
 
-Para pasar de documentación a captura real se requiere una decisión humana explícita con esta información mínima:
+## Regla de decisión por fuente y modalidad
 
-1. `source_id` que se autoriza.
-2. Casos de uso aprobados (`internal_analysis`, `persistent_storage` y cualquier otro que el esquema admita).
-3. Tipos de contenido que pueden persistirse y su regla de retención/eliminación.
-4. Confirmación de atribución, restricciones de terceros y política de acceso automatizado.
-5. Identidad del revisor autorizado y fecha de decisión.
+La evaluación debe conservar el alcance final multifuente sin habilitar fuentes automáticamente. Para cada `source_id` se documentarán por separado: endpoint exacto, método (feed o archivo), disponibilidad actual, condiciones de automatización, atribución, tratamiento de terceros, datos que se conservarán, regla de retención y controles de tasa/redirección.
 
-Si algún punto queda indeterminado, mantener `TERMS_PENDING` para el uso afectado. No rellenar campos de aprobación con identidades, fechas, hashes ni decisiones inventadas. La propuesta prioriza una prueba pequeña y reversible; no autoriza por sí misma la ejecución.
+La revisión de políticas oficiales ya capturada y verificada constituye evidencia documental; no es autorización operativa general. La autorización funcional del proyecto tampoco sustituye las condiciones publicadas por cada proveedor. No se inventarán plazos de retención ni límites distintos de los documentados por una fuente oficial o de un control interno claramente identificado como tal.
 
-### Fuentes oficiales revisadas
-
-- SEC, [Privacy and Security Policy / Website Dissemination](https://www.sec.gov/about/privacy-information): difusión pública, atribución, control de frecuencia y bots no clasificados.
-- Federal Reserve Board, [Disclaimer](https://www.federalreserve.gov/disclaimer.htm): información pública del Board y excepción de materiales de terceros.
-- CFTC, [Web Policy](https://www.cftc.gov/WebPolicy/index.htm): información gubernamental de dominio público con atribución y excepciones de terceros.
-- CFTC, [RSS](https://www.cftc.gov/RSS/index.htm): página oficial para comprobar disponibilidad actual de feeds antes de cualquier ejecución.
-
-La consulta de páginas oficiales sirve como evidencia documental, no como dictamen jurídico ni aprobación automática del alcance de captura y almacenamiento.
-
-## 12. Aclaración de alcance: el piloto es una fase de validación, no el alcance final — 2026-10-23
-
-La recomendación de comenzar por una fuente oficial **no reduce el alcance funcional del Issue #132 ni limita el producto final a SEC**. El objetivo funcional se mantiene: identificar acontecimientos potencialmente relacionados con el inicio y el fin de movimientos alcistas y bajistas de los activos investigados, contrastar evidencias de distintas clases de fuentes y preservar la distinción entre hechos, coincidencia temporal, hipótesis y causalidad respaldada.
-
-### Alcance objetivo del ecosistema
-
-La cobertura debe crecer por categorías pertinentes y fuentes autorizadas, según la relevancia para el activo y el periodo investigado:
-
-- **Regulación y medidas públicas:** comunicados, resoluciones y actuaciones oficiales de organismos pertinentes.
-- **Macroeconomía y política monetaria:** decisiones de bancos centrales, inflación, empleo, liquidez y publicaciones económicas con marcas temporales verificables.
-- **Mercados y derivados:** datos oficiales o autorizados sobre negociación, liquidaciones, financiación, interés abierto y estructura de mercado.
-- **Protocolos y redes:** anuncios de equipos oficiales, actualizaciones, incidentes, interrupciones, cambios de tokenómica, gobernanza y actividad on-chain verificable.
-- **Seguridad y operación:** exploits, vulnerabilidades, interrupciones, incidentes de puentes y respuestas oficiales de los proyectos.
-- **Adopción y actividad empresarial:** anuncios verificables de emisores, custodios, proveedores, integraciones y productos financieros.
-- **Prensa y fuentes secundarias:** medios identificables que aporten pistas o contexto, sujetos a sus propios términos, atribución y restricciones de almacenamiento; una noticia secundaria no sustituye la verificación de la fuente primaria cuando esta exista.
-
-Esta lista define categorías de investigación, no concede permisos de captura ni afirma que todas las fuentes ya estén integradas. Cada adaptador deberá registrar origen, hora de publicación, hora de captura, identificador estable, integridad, cobertura, condiciones aplicables y calidad de evidencia.
-
-### Secuencia de incorporación sin convertirla en límite permanente
-
-1. **Validación técnica inicial:** una sola fuente aprobada, para demostrar el recorrido de captura autorizado, integridad, persistencia permitida, manifiesto, deduplicación e integración con los episodios de mercado.
-2. **Ampliación de fuentes oficiales:** incorporar otras fuentes pertinentes tras revisar sus condiciones, disponibilidad, límites operativos y usos autorizados.
-3. **Ampliación por activo y clase de evento:** añadir fuentes primarias de proyectos, redes, mercados y seguridad según el universo de activos soportado.
-4. **Cobertura secundaria y contraste cruzado:** integrar fuentes adicionales autorizadas y exigir evidencia independiente cuando la afirmación lo requiera.
-5. **Evaluación continua de cobertura y calidad:** informar qué fuentes y periodos se revisaron, qué faltó, qué falló y qué conclusiones siguen siendo inciertas. No presentar una muestra como cobertura exhaustiva.
-
-Cada fase tiene que producir criterios verificables y trazabilidad; no se debe declarar completada por calendario ni por tener CI verde únicamente.
-
-### Separación obligatoria entre amplitud funcional y autorización
-
-- El objetivo de producto es amplio y multifuente.
-- El piloto inicial es deliberadamente pequeño para validar el recorrido técnico y operativo.
-- La aprobación de una fuente no autoriza automáticamente otras fuentes ni otros usos.
-- No se activa tráfico externo ni se cambia `TERMS_PENDING` sin la decisión explícita exigida por el registro.
-- No se aplican límites arbitrarios de tamaño de respuesta: la captura debe preservar la respuesta completa cuando esté permitida, o declarar y documentar claramente cualquier restricción técnica u operativa real; nunca truncar silenciosamente.
-- Ninguna asociación temporal basta para afirmar que una noticia causó un movimiento. El sistema debe registrar evidencia a favor, evidencia contraria, alternativas y nivel de incertidumbre.
-
-**Conclusión:** el piloto valida una primera ruta; no redefine el objetivo del Issue #132. El criterio de éxito final es una cobertura multifuente ampliable, reproducible y auditable, dentro de las autorizaciones aplicables y con conclusiones proporcionales a la evidencia.
-
-
-## 13. Política de conservación basada en normas y documentación oficial — 2026-10-23
-
-### Regla de decisión
-
-No se fija un número arbitrario de días para conservar el contenido. La página oficial de ISO para **ISO 15489-1:2016** describe un marco de gestión de documentos basado, entre otros elementos, en requisitos documentales identificados a partir del contexto de negocio, políticas, responsabilidades, controles y procesos de gestión. La ficha pública de ISO no establece un plazo universal de conservación aplicable a cualquier noticia o feed. Por tanto, no atribuir a ISO un plazo que no aparece en su documentación pública.
-
-Referencias oficiales:
-- ISO, [ISO 15489-1:2016 — Records management: Concepts and principles](https://www.iso.org/standard/62542.html). La ficha oficial indica que esta edición sigue vigente tras su revisión/confirmación en 2021.
-- ISO/TC 46/SC 11, [Disposition of records](https://committee.iso.org/sites/tc46sc11/home/projects/published/disposition.html), que identifica ISO/TS 7538:2024 como guía sobre disposición de documentos, incluidos periodos de conservación, autoridades y destrucción.
-- SEC, [Privacy and Security Policy / Website Dissemination](https://www.sec.gov/about/privacy-information), que permite copiar y redistribuir información presentada en sec.gov con las salvedades indicadas y advierte que el acceso automatizado se somete a control de frecuencia y que no se permiten bots no clasificados.
-- SEC, [Developer Resources](https://www.sec.gov/about/developer-resources), que requiere acceso eficiente y descargar solo lo necesario. Estas páginas no fijan un plazo general de conservación de artículos completos para este proyecto.
-
-### Política operativa mientras falte una regla específica aprobada
-
-1. **No persistir contenido íntegro de una fuente externa** hasta documentar una base aplicable para esa fuente y ese tipo de contenido, las restricciones de terceros y la finalidad de conservación.
-2. **No ejecutar tampoco una captura externa transitoria** mientras la fuente siga en estado TERMS_PENDING; la ausencia de persistencia no equivale a permiso para solicitar el contenido.
-3. Antes de aprobar persistencia, identificar requisitos legales y contractuales aplicables, necesidad funcional, contenido mínimo necesario, propietario del dato, evento que inicia el plazo, regla de revisión, método de eliminación y excepciones de conservación justificadas.
-4. Separar las reglas para contenido íntegro, texto oficial extraído, metadatos operativos, hashes y resultados derivados. No asumir que un hash permite conservar el texto ni que queda automáticamente exento de todas las obligaciones.
-5. No usar “indefinido” como valor por defecto. La conservación de metadatos o hashes también debe tener una finalidad documentada y una regla de revisión/disposición.
-6. Cuando la revisión oficial no determine una duración, registrar “plazo no especificado por la fuente; pendiente de análisis de requisitos aplicables”. Resolverlo mediante el análisis documentado de requisitos y la política de registros del proyecto, no inventando una cifra ni atribuyéndosela a ISO.
-7. Registrar evidencia, versión/fecha de la política consultada, decisión y responsable autorizado. Revalidar la decisión si cambian los términos, la finalidad, el contenido capturado o el modo de acceso.
-
-### Aplicación al Issue #132
-
-- SEC, CFTC, Federal Reserve y sus entradas de archivo permanecen en estado TERMS_PENDING hasta completar la revisión por fuente.
-- Para SEC, la política pública respalda la reutilización de información de sec.gov con las salvedades publicadas, pero no especifica por sí sola un plazo de conservación para este caso de uso ni autoriza automáticamente cada tipo de contenido enlazado o de terceros.
-- La primera prueba E2E y el backfill real solo podrán ejecutarse cuando estén aprobados el acceso externo y los usos necesarios. No se crea una excepción para pruebas.
-- La meta de producto sigue siendo multifuente. Esta regla controla la autorización y el ciclo de vida de los datos; no reduce la cobertura funcional deseada.
-
-**Decisión resultante:** no imponer un plazo ficticio. Aplicar las condiciones oficiales de cada fuente y el proceso de gestión de registros de ISO como marco de análisis; mientras falte una decisión respaldada para una fuente/caso de uso, mantener bloqueada su captura y persistencia.
-
-
-## 14. Verificación de páginas oficiales después de la autorización del propietario — 2026-10-23
-
-Esta actualización registra únicamente lo que muestran las páginas oficiales consultadas. La autorización del propietario del proyecto permite avanzar con la revisión; no sustituye condiciones del proveedor ni permite convertir una inferencia en permiso. No se realizaron solicitudes a feeds de datos ni capturas de artículos.
-
-### SEC — reutilización y acceso automatizado
-
-- La FAQ oficial de SEC Webmaster declara que el contenido creado por el Gobierno en sec.gov y el contenido público de presentaciones EDGAR pueden reutilizarse; advierte que algunos elementos, como imágenes de archivo, pueden no estar libres de restricciones. Fuente: https://www.sec.gov/files/about/webmaster-faq.htm
-- La misma FAQ describe un máximo de 10 solicitudes por segundo para acceso programático a EDGAR. No se extrapola ese máximo como regla específica de todos los feeds RSS: el endpoint concreto y las instrucciones aplicables deben confirmarse antes de activarlo.
-- La página oficial de privacidad/diseminación de SEC debe leerse junto con los recursos para desarrolladores y las restricciones sobre contenido de terceros. Fuentes: https://www.sec.gov/about/privacy-information y https://www.sec.gov/about/developer-resources
-- Resultado: existe evidencia oficial favorable a reutilizar contenido gubernamental SEC, pero todavía deben documentarse el alcance exacto por endpoint, el agente de usuario, el control agregado de solicitudes y el tratamiento de contenido de terceros y persistencia.
-
-### CFTC — feeds temporalmente deshabilitados
-
-- La página oficial RSS indica explícitamente que, a octubre de 2026, la CFTC ha deshabilitado temporalmente los feeds RSS enumerados y que se volverán a habilitar más adelante. Fuente: https://www.cftc.gov/RSS/index.htm
-- La Web Policy oficial indica que la información gubernamental del sitio es de dominio público y puede copiarse/distribuirse con reconocimiento adecuado a la CFTC; también advierte que documentos, ilustraciones, fotografías y otros recursos aportados o licenciados por terceros pueden estar protegidos. Fuente: https://www.cftc.gov/WebPolicy/index.htm
-- Resultado: no intentar el RSS deshabilitado ni hacer reintentos para sortear su indisponibilidad. El archivo HTML oficial es un origen distinto y necesita su propia validación de endpoint, alcance, acceso automatizado y persistencia. La política de copyright por sí sola no resuelve esos controles operativos.
-
-### Federal Reserve Board — contenido propio y terceros
-
-- El disclaimer oficial indica que, salvo indicación contraria, la información del sitio del Board es de dominio público y puede copiarse/distribuirse sin permiso, citando al Board. También establece que fotografías, gráficos u otros materiales identificados como pertenecientes a fuentes no-Board pueden requerir permiso del titular original. Fuente: https://www.federalreserve.gov/disclaimer.htm
-- El índice RSS oficial describe los feeds como un mecanismo para que lectores o agregadores muestren enlaces, titulares y breves resúmenes. Fuente: https://www.federalreserve.gov/feeds/feeds.htm
-- Resultado: la reutilización del contenido oficial del Board tiene soporte documental general, pero el registro debe distinguir el texto oficial de recursos de terceros, conservar la atribución y documentar endpoint, agente, límite operativo y la necesidad de persistencia antes de activar cada fuente.
-
-### Decisiones comunes a las seis entradas
-
-1. La evidencia de dominio público/reutilización no significa que cada elemento incrustado sea contenido gubernamental ni resuelve automáticamente la captura automatizada, la retención o la persistencia de HTML completo.
-2. No se encontró en estas páginas una duración universal de retención aplicable a este proyecto. No se fija un plazo inventado: el plazo o regla debe basarse en requisitos aplicables identificados y documentados. Mientras no pueda determinarse una regla para un tipo de contenido, no se persiste ese contenido.
-3. La revisión del propietario autoriza preparar y verificar el flujo de trabajo; no representa una aprobación del proveedor, una licencia de terceros ni una opinión legal.
-4. Los seis source_id permanecen TERMS_PENDING; no se ha modificado el registro operativo ni se ha ejecutado captura externa o backfill.
-5. Antes de un E2E real se debe preservar evidencia verificable de las páginas de política consultadas, calcular sus hashes sobre los bytes realmente preservados, completar las decisiones de uso/contenido/retención/atribución/acceso por source_id y verificar la disponibilidad actual del endpoint. No declarar exhaustividad histórica sin manifiesto de segmentos y cobertura.
-
-
-## 15. Verificación de disponibilidad y alcance visible de los endpoints oficiales — 2026-10-23
-
-Esta revisión consultó páginas públicas oficiales mediante navegación para comprobar los enlaces publicados, el estado comunicado y el alcance visible. **No equivale a una captura del adaptador del proyecto, no preserva una copia de respuesta para el registro técnico y no autoriza cambiar el estado operativo.** Los seis orígenes siguen `TERMS_PENDING`.
-
-### SEC — feed anunciado oficialmente
-
-- El índice oficial de RSS de SEC enumera los comunicados como uno de los feeds de materiales recientes y fue actualizado el 24 de junio de 2026: https://www.sec.gov/about/rss-feeds
-- El enlace oficial de comunicados apunta a `https://www.sec.gov/news/pressreleases.rss`. El navegador de consulta no pudo representar el tipo MIME RSS (`application/rss+xml`); esto **no** demuestra que el feed esté caído ni sustituye una prueba de disponibilidad del adaptador.
-- El archivo oficial de comunicados se publica por separado en https://www.sec.gov/newsroom/press-releases. El feed actual y el archivo histórico son coberturas distintas; no se puede inferir cobertura histórica completa desde el feed.
-- Decisión pendiente: confirmar endpoint y acceso automatizado aplicables, agente identificable, control agregado de solicitudes, contenido de terceros, alcance de persistencia y regla de retención antes de cualquier ejecución real.
-
-### CFTC — RSS no disponible, archivo HTML con publicaciones actuales
-
-- La página oficial RSS mantiene el aviso: en octubre de 2026 todos los feeds RSS enumerados están temporalmente deshabilitados y se reactivarán más adelante: https://www.cftc.gov/RSS/index.htm
-- La página oficial del archivo HTML sí muestra entradas recientes, incluida una publicación del 21 de octubre de 2026, y ofrece filtros por palabras clave, tipo, número de comunicado, etiqueta y año: https://www.cftc.gov/PressRoom/PressReleases
-- La lista visible en la página consultada no prueba por sí sola cobertura histórica exhaustiva; los segmentos/años y los resultados de filtros deben inventariarse explícitamente. No usar el RSS deshabilitado ni intentar sortear su indisponibilidad.
-- La disponibilidad visible del archivo no concede permiso automático para captura automatizada o persistencia. La entrada `cftc_press_release_archive` necesita una revisión independiente de rutas, páginas/segmentos, frecuencia, contenido guardado y retención.
-
-### Federal Reserve Board — feed oficial y archivo por años
-
-- El índice oficial de feeds enumera un feed de todos los comunicados y feeds por categorías: https://www.federalreserve.gov/feeds/feeds.htm
-- El enlace oficial “All Press Releases” apunta a `https://www.federalreserve.gov/feeds/press_all.xml`. El navegador de consulta no pudo representar el tipo MIME XML (`text/xml`); esto no demuestra indisponibilidad. La disponibilidad real debe verificarse mediante una ejecución controlada únicamente después de completar las autorizaciones requeridas.
-- El archivo oficial muestra enlaces por año desde 2006 y un enlace adicional “Archive”; la página indica que los comunicados anteriores a 2006 se encuentran en el archivo: https://www.federalreserve.gov/newsevents/pressreleases.htm
-- Por tanto, el manifiesto histórico debe representar separadamente los segmentos anuales disponibles y el archivo anterior a 2006. La página principal no constituye por sí sola evidencia de que todos los comunicados históricos estén capturados.
-- Decisión pendiente: distinguir el feed actual del archivo, delimitar los segmentos, documentar acceso automatizado, contenido de terceros, persistencia y retención.
-
-### Consecuencias para la matriz
-
-| `source_id` | Hallazgo actual | Siguiente evidencia necesaria | Estado |
-|---|---|---|---|
-| `sec_press_releases` | Feed anunciado por la SEC; el navegador no representó el MIME RSS | Política preservada con hash y validación autorizada del endpoint/adaptador | `TERMS_PENDING` |
-| `sec_press_release_archive` | Archivo oficial separado del feed | Decisión de acceso/persistencia y manifiesto de segmentos | `TERMS_PENDING` |
-| `cftc_general_press_releases` | RSS oficialmente deshabilitado temporalmente | Revalidar el aviso antes de cualquier posible activación; no solicitar el feed mientras esté deshabilitado | `TERMS_PENDING` |
-| `cftc_press_release_archive` | Índice HTML oficial muestra publicaciones recientes y filtros | Revisión de alcance por segmento, acceso automatizado, persistencia y retención | `TERMS_PENDING` |
-| `federal_reserve_press_releases` | Feed oficial listado; navegador no representó el MIME XML | Política preservada con hash y validación autorizada del endpoint/adaptador | `TERMS_PENDING` |
-| `federal_reserve_press_release_archive` | Archivo oficial enlaza segmentos anuales y archivo anterior a 2006 | Manifiesto de cobertura por año/segmento y decisión de persistencia | `TERMS_PENDING` |
-
-### Límite de esta revisión
-
-No se cambió `event_source_registry.py`, no se habilitó ninguna fuente, no se ejecutó el adaptador de captura, no se persistieron artículos y no se generó un backfill. Las páginas consultadas son evidencia de descubrimiento y alcance visible; antes de aprobar un origen se deben preservar los bytes reales de las políticas pertinentes, calcular el hash sobre esos bytes, completar la decisión individual y verificar el endpoint bajo el control de acceso aprobado.
-
-## 15. Comprobación actual de índices oficiales y disponibilidad visible — 2026-10-23
-
-Esta comprobación se limita a páginas HTML públicas de índices y páginas de información. No se solicitaron los endpoints RSS/XML, no se descargaron comunicados y no se ejecutó el adaptador del proyecto. La disponibilidad visible de un índice HTML no equivale a aprobación de acceso automatizado ni de persistencia.
-
-### SEC — índice de comunicados y RSS anunciado
-
-- El índice oficial https://www.sec.gov/newsroom/press-releases mostró comunicados recientes, identificadores de publicación y paginación (1 a 25 de 6.897 elementos en la vista consultada). Esto acredita que el índice HTML está publicado y ofrece un alcance visible; no demuestra que todo el archivo histórico esté capturado ni valida el endpoint RSS.
-- La página oficial https://www.sec.gov/about/rss-feeds enumera “Press Releases” entre los feeds de materiales recientes, pero esa página informativa por sí sola no valida el MIME, la respuesta actual, las redirecciones ni los límites aplicables al endpoint exacto.
-- Decisión por separado: `sec_press_releases` requiere validar el feed oficial exacto; `sec_press_release_archive` requiere definir y registrar segmentos/páginas históricas. Ambos siguen `TERMS_PENDING`.
-
-### CFTC — feed temporalmente deshabilitado; índice HTML distinto
-
-- La página oficial RSS https://www.cftc.gov/RSS/index.htm dice expresamente: “As of October 2026, the CFTC has temporarily disabled all RSS feeds”. No intentar los feeds ni sortear la indisponibilidad mientras el aviso permanezca publicado.
-- La página oficial de comunicados está enlazada desde el sitio CFTC, pero no se usa la página RSS como prueba de que el archivo HTML esté autorizado o tenga una estructura estable para captura. El archivo HTML necesita evaluación propia de endpoint, robots/política aplicable, paginación, contenido, acceso automatizado y persistencia.
-- Decisión por separado: `cftc_general_press_releases` queda bloqueado por la indisponibilidad declarada del RSS; `cftc_press_release_archive` requiere revisión específica del índice HTML. Ambos siguen `TERMS_PENDING`.
-
-### Federal Reserve Board — índice actual y segmentos históricos
-
-- El índice oficial https://www.federalreserve.gov/newsevents/pressreleases.htm mostró comunicados de 2026 y enlaces de archivo por año desde 2006, además de un enlace “Archive”. La página indica que los comunicados anteriores a 2006 están disponibles en el archivo.
-- La página oficial https://www.federalreserve.gov/feeds/feeds.htm enumera feeds de comunicados y describe RSS como enlaces, titulares y resúmenes. Esta documentación no sustituye la verificación autorizada de la respuesta XML del endpoint exacto.
-- Decisión por separado: `federal_reserve_press_releases` requiere validar el feed específico; `federal_reserve_press_release_archive` debe modelar cada año/segmento y el archivo anterior a 2006 como cobertura separada. Ambos siguen `TERMS_PENDING`.
-
-### Decisiones operativas derivadas
-
-| `source_id` | Evidencia visible actual | Bloqueo/acción pendiente | Estado |
-|---|---|---|---|
-| `sec_press_releases` | Índice oficial con comunicados recientes; página oficial anuncia RSS | Verificar endpoint RSS exacto, condiciones de acceso, agente, límite agregado y alcance persistible | `TERMS_PENDING` |
-| `sec_press_release_archive` | Índice HTML con paginación y años/filtros | Delimitar segmentos y generar manifiesto esperado antes de backfill autorizado | `TERMS_PENDING` |
-| `cftc_general_press_releases` | Aviso oficial de feeds RSS deshabilitados temporalmente | No solicitar feed; revalidar aviso en una revisión futura antes de cualquier activación | `TERMS_PENDING` |
-| `cftc_press_release_archive` | Índice HTML distinto del RSS | Revisar la página de archivo y sus condiciones de acceso como fuente independiente | `TERMS_PENDING` |
-| `federal_reserve_press_releases` | Índice actual y catálogo oficial de feeds | Validar el endpoint XML exacto solo tras aprobación de alcance | `TERMS_PENDING` |
-| `federal_reserve_press_release_archive` | Índice con segmentos por año y archivo anterior a 2006 | Especificar cobertura por año/segmento y verificar páginas ausentes sin afirmar exhaustividad global | `TERMS_PENDING` |
-
-### Límite y conclusión
-
-La consulta web de páginas públicas no constituye captura de datos de las fuentes ni reemplaza la preservación de evidencia de política exigida por la matriz. No se calcularon hashes de páginas de políticas porque no se preservaron sus bytes como artefactos; no inventar hashes a partir de resultados de búsqueda o texto extraído. No se cambió el registro operativo, no se ejecutó E2E ni backfill y no se cambió ningún estado `TERMS_PENDING`.
-
-
-## 16. Verificación de límites y acceso automatizado SEC — 2026-10-23
-
-La revisión cruzada de las páginas oficiales precisa la interpretación del límite de solicitudes SEC:
-
-- La página oficial [SEC Web Site Privacy and Security Policy](https://www.sec.gov/about/privacy-information) indica que SEC.gov limita el acceso automatizado a un total de no más de 10 solicitudes por segundo, independientemente del número de máquinas que las generen, y advierte que las herramientas automatizadas no clasificadas no están permitidas.
-- La FAQ de SEC Webmaster menciona también un máximo de 10 solicitudes por segundo para acceso programático a EDGAR. Esa referencia de EDGAR no debe ser la única justificación del límite del RSS; la política general de SEC.gov es la referencia más amplia para el control agregado del sitio.
-- Por tanto, el valor `max_requests_per_second: 10` del registro tiene apoyo en la política general publicada de SEC.gov como techo agregado, pero no demuestra por sí solo que el adaptador cumpla el requisito de clasificación de bot, el User-Agent ni cualquier instrucción específica adicional aplicable al feed.
-- Antes de activar `sec_press_releases` o `sec_press_release_archive`, el despliegue debe usar un User-Agent identificable/revisado, coordinar el límite global entre procesos y máquinas que compartan la salida de red y revisar cualquier instrucción específica del endpoint. El control debe fallar de forma segura si no puede demostrar el límite agregado.
-- El límite de 10 solicitudes por segundo es un máximo publicado, no una frecuencia objetivo ni una recomendación para emitir solicitudes continuamente. El proyecto puede adoptar un límite interno inferior, etiquetado como política propia y con su justificación.
-
-Fuentes oficiales:
-- https://www.sec.gov/about/privacy-information
-- https://www.sec.gov/about/developer-resources
-- https://www.sec.gov/files/about/webmaster-faq.htm
-
-Este ajuste corrige la trazabilidad documental; no cambia estados, no habilita captura y no constituye una captura preservada de las páginas de políticas. Los seis orígenes continúan `TERMS_PENDING` hasta completar sus expedientes verificables y la configuración operativa requerida.
-
-## 17. Estado de la autorización funcional y decisiones de proveedor
-
-El propietario del proyecto ya autorizó expresamente avanzar con las seis fuentes y no debe volver a solicitarse esa misma autorización. La autorización está registrada en el [Issue #132](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/issues/132).
-
-Esta decisión permite continuar la implementación y la validación técnica dentro del alcance funcional del proyecto. No debe confundirse con una licencia de terceros, una aprobación emitida por los organismos fuente o evidencia de que cualquier modalidad de acceso automatizado y persistencia esté permitida.
-
-- **SEC (feed y archivo):** la política general de SEC.gov publica un límite agregado de 10 solicitudes/segundo y prohíbe herramientas automatizadas no clasificadas; antes de habilitar, debe demostrarse User-Agent identificable y limitador agregado compartido.
-- **CFTC RSS:** no solicitar mientras el aviso oficial indique que los feeds están temporalmente deshabilitados. El archivo HTML es una fuente distinta, con su propia revisión de rutas, frecuencia y cobertura.
-- **Federal Reserve (feed y archivo):** conservar atribución al Board y excluir/aislar recursos identificados como material de terceros sin evidencia específica de permiso.
-- **Las seis fuentes:** mantener separadas las decisiones sobre metadatos, texto oficial, HTML completo, adjuntos, persistencia, retención y redistribución. No inventar un plazo de retención cuando las políticas consultadas no establezcan uno.
-- **Evidencia técnica pendiente:** preservar los bytes reales de las páginas de políticas revisadas, calcular sus SHA-256 sobre esos bytes, registrar metadatos de captura y actualizar el registro únicamente con evidencia verificable.
-
-La autorización del propietario no vuelve disponibles los endpoints ni elimina restricciones de terceros. No se ha ejecutado captura de feeds, descarga de artículos ni backfill como parte de esta revisión.
-
-## 18. Aclaración de alcance: autorización funcional completa del propietario — 2026-10-23
-
-Esta sección prevalece sobre cualquier redacción anterior del paquete que describa la decisión del propietario como limitada a preparar una revisión o que indique que el propietario no autorizó HTML completo o adjuntos. El propietario ha autorizado avanzar con las seis fuentes y ha indicado expresamente que no se le vuelva a preguntar por esa misma autorización.
-
-El alcance funcional autorizado para desarrollar y evaluar comprende:
-- metadatos y texto oficial;
-- HTML completo;
-- adjuntos y contenido de terceros, que deben identificarse y tratarse según las condiciones aplicables a cada recurso;
-- acceso automatizado y validación de disponibilidad;
-- almacenamiento, atribución, conservación y disposición de los datos;
-- análisis interno, ejecución E2E y backfill histórico;
-- integración de las seis fuentes al flujo de investigación de eventos del producto.
-
-Esta autorización es una decisión del propietario del proyecto y permite continuar con el trabajo técnico sin pedirle que repita la decisión. No se convierte en una licencia de terceros ni modifica por sí sola el estado técnico del registro. La implementación debe seguir las condiciones publicadas aplicables, identificar materiales de terceros y demostrar los controles de acceso, frecuencia, atribución y ciclo de vida de los datos.
-
-Por tanto:
-- no volver a solicitar al propietario autorización funcional para las seis fuentes ni para las modalidades enumeradas;
-- no confundir una autorización ya concedida con una evidencia técnica todavía pendiente;
-- no cambiar `TERMS_PENDING`, rellenar hashes ni registrar una revisión de políticas hasta que exista evidencia verificable para esos campos;
-- no consultar un endpoint anunciado como deshabilitado ni eludir controles de acceso;
-- avanzar en paralelo con preparación offline, adaptación de código, pruebas sintéticas y recopilación documental verificable; reservar las pruebas externas y el backfill para cuando la disponibilidad y las condiciones aplicables hayan sido comprobadas.
-
-Fuentes de la decisión del propietario: comentario registrado en el [Issue #132](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/issues/132) y aclaración de la conversación del 2026-10-23.
-
-## 19. Revalidación de las páginas oficiales — 2026-10-23
-
-Se revisaron de nuevo las páginas oficiales accesibles en esta fecha. Esta sección registra el contenido visible en la página; no representa una descarga preservada de sus bytes, por lo que no asigna hashes ni rellena `terms_content_base64`, `terms_sha256`, `reviewed_by` o `reviewed_at` en el registro operativo.
-
-### SEC
-
-- La política de seguridad general de SEC.gov establece un límite de no más de 10 solicitudes por segundo en total, sin importar cuántas máquinas se utilicen, y declara que no permite bots o herramientas automatizadas no clasificadas. Referencia: https://www.sec.gov/about/privacy-information
-- El límite es un máximo agregado publicado, no una frecuencia objetivo. La implementación debe tener agente identificable, control agregado efectivo y política de errores/backoff; si no puede demostrar ese límite, debe fallar de forma segura.
-- La página de Developer Resources también menciona el máximo de 10 solicitudes por segundo en el contexto de acceso a contenido EDGAR: https://www.sec.gov/about/developer-resources. Para la justificación general del sitio, usar la política de seguridad y no extrapolar exclusivamente desde EDGAR.
-
-### CFTC
-
-- La página oficial RSS actualmente declara expresamente que, a octubre de 2026, todos los feeds RSS enumerados están temporalmente deshabilitados y se reactivarán en una fecha posterior: https://www.cftc.gov/RSS/index.htm
-- En consecuencia, `cftc_general_press_releases` no debe realizar solicitudes a ese feed mientras se mantenga el aviso. No usar reintentos repetitivos ni cambiar automáticamente a otro endpoint. `cftc_press_release_archive` es un origen separado y requiere validación propia de disponibilidad, frecuencia y cobertura.
-- La política web oficial sigue siendo la referencia para atribución y tratamiento de contenido de terceros: https://www.cftc.gov/WebPolicy/index.htm. La existencia de un índice público no demuestra que un feed deshabilitado esté disponible.
-
-### Federal Reserve Board
-
-- El disclaimer del Board indica que, salvo indicación contraria, la información del sitio es de dominio público y puede copiarse y distribuirse citando al Board; fotografías, gráficos u otros materiales identificados como procedentes de terceros pueden requerir permiso independiente: https://www.federalreserve.gov/disclaimer.htm
-- El archivo de comunicados muestra años y publicaciones, y señala que los comunicados anteriores a 2006 están disponibles en su archivo: https://www.federalreserve.gov/newsevents/pressreleases.htm. Esto demuestra una ruta visible de archivo, no que el proyecto haya recorrido o verificado cobertura histórica exhaustiva.
-- La página de feeds enumera el feed de todos los comunicados: https://www.federalreserve.gov/feeds/feeds.htm. La presencia en el índice no sustituye una prueba técnica controlada del endpoint.
-
-### Efecto sobre el estado del proyecto
-
-- La autorización funcional del propietario para las seis fuentes ya está registrada y no debe solicitarse otra vez.
-- Esta revisión pública actualiza las observaciones documentales; no es una captura preservada de las páginas de políticas ni una decisión jurídica. No se han descargado feeds o artículos, no se ha ejecutado backfill y no se ha comprobado E2E con evidencia histórica real.
-- Los seis orígenes permanecen `TERMS_PENDING` porque faltan artefactos verificables y controles operativos demostrados, no porque falte autorización funcional del propietario.
-- Para completar el expediente: preservar los bytes exactos de cada política revisada, calcular SHA-256 sobre esos bytes, registrar URL/fecha/estado/código HTTP/tipo de contenido cuando se obtengan mediante una consulta permitida, y verificar los controles de acceso y almacenamiento. No sustituir evidencia ausente con hashes inventados.
-- La investigación de eventos debe distinguir entre evento publicado, hora de publicación, hora de captura, ventana de movimiento y evidencia de mecanismo causal. Una coincidencia temporal se registra como hipótesis candidata, no como causa demostrada.
+Las decisiones de activación deberán:
+- dejar la fuente en `TERMS_PENDING` si falta una condición material o la evidencia no es concluyente;
+- impedir solicitudes a un endpoint que esté oficialmente deshabilitado;
+- impedir que fallos DNS, HTTP, timeout, limitación o coordinación se conviertan en una captura válida;
+- mantener separados el evento observado, la evidencia de publicación y la evaluación causal, que requiere evidencia adicional;
+- no activar backfill hasta disponer de alcance aprobado, cobertura medible y manifiesto reproducible.

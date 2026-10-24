@@ -110,40 +110,38 @@ Las pruebas usan únicamente una decisión sintética marcada como fixture. No m
 La matriz documental puede considerarse preparada cuando está versionada. **Issue #132 no se considera terminado** hasta que exista una decisión de uso por cada fuente que se vaya a activar, una prueba E2E con evidencia real autorizada y un manifiesto de backfill reproducible. Las fuentes que no tengan autorización permanecen deshabilitadas; no es necesario activarlas todas para cerrar el trabajo funcional si se delimita y verifica un alcance autorizado suficiente.
 
 
-## Autorización de alcance del propietario del proyecto — 2026-10-23
+## 2026-10-24 — resultado verificable de captura de páginas de política
 
-El propietario confirmó explícitamente en la conversación de trabajo que acepta el siguiente alcance propuesto para preparar la validación multifuente:
+El workflow [Capturar evidencia de políticas oficiales — Issue 132](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/actions/runs/40045854045) terminó correctamente. El artefacto `issue-132-source-policy-snapshots` contiene los siete cuerpos de respuesta y `manifest.json`; el ZIP fue descargado y se recalculó SHA-256 sobre cada cuerpo, coincidiendo en los siete casos con el manifiesto.
 
-- **Fuentes solicitadas para evaluación individual:** `sec_press_releases`, `sec_press_release_archive`, `cftc_general_press_releases`, `cftc_press_release_archive`, `federal_reserve_press_releases` y `federal_reserve_press_release_archive`.
-- **Finalidad del proyecto:** análisis interno de noticias/eventos como evidencia candidata para investigar movimientos de criptomonedas.
-- **Autorización funcional del propietario:** el propietario autorizó avanzar con las seis fuentes y no debe volver a preguntársele por esa misma decisión. El alcance funcional solicitado incluye evaluar y usar metadatos, texto oficial y HTML completo; evaluar adjuntos y contenido de terceros; y desarrollar acceso automatizado, almacenamiento, atribución, conservación, análisis interno y backfill.
-- **Aplicación por modalidad:** esa autorización permite continuar el trabajo de ingeniería y las validaciones, pero cada modalidad se habilita en ejecución solo cuando la evidencia oficial aplicable demuestra que el método de acceso y el tratamiento de datos son admisibles. No se interpretará el silencio de una política como permiso ilimitado, ni se redistribuirá contenido de terceros sin base documentada.
-- **Retención:** aplicar requisitos identificados y documentados por fuente y tipo de dato; no inventar plazos ni conservar indefinidamente por defecto. Si no puede determinarse una regla aplicable, mantener bloqueada la persistencia del contenido afectado hasta resolverla.
-- **Acceso automatizado:** verificar endpoint, disponibilidad, condiciones publicadas, agente identificable, límites aplicables y control agregado de solicitudes antes de habilitar tráfico. La autorización del propietario no obliga a consultar un endpoint que esté deshabilitado ni permite eludir restricciones técnicas.
-- **Identidad/fecha de aprobación:** la decisión queda registrada en el comentario del Issue #132 y en el historial de esta conversación. No se atribuye una identidad legal, firma digital ni aprobación del proveedor que no haya sido verificada.
+| ID de evidencia | HTTP | Bytes | SHA-256 |
+|---|---:|---:|---|
+| `sec_website_dissemination` | 200 | 90776 | `56d226ad907d9b431ed17d353cd03b709d324daa2040a19fe34503deeb0a8b74` |
+| `sec_developer_resources` | 200 | 68809 | `dd9db5c0ae91a46cb72d79e36c7a6317fc03aacabf4a2d27a54da62bfd5432f6` |
+| `sec_rss_feeds` | 200 | 65725 | `0e8f0348f2f138442121db635a6111f1074d748663dbbbc0a8620eea7c95df7f` |
+| `cftc_web_policy` | 200 | 47429 | `a0a6faaeeac3ecfb7a81dfe83f145231966454590bede365d5873d64292d5f6d` |
+| `cftc_rss_status` | 200 | 32770 | `2cdf6b74d28b883962b94cf0d0009c7b8b929075874c79ff87ced72231586a6d` |
+| `federal_reserve_disclaimer` | 200 | 87235 | `8c60de635af28464eeed9bd339313502f1da29b9f3376d9739426ee5351c2f86` |
+| `federal_reserve_rss_feeds` | 200 | 92134 | `4f0aa870b1d6837fba1a2d8beb8bf493fb7386b7eed7dbf5dfa618aa8d5579a8` |
 
-### Qué autoriza y qué no autoriza esta confirmación
+El artefacto es temporal y tiene retención de siete días; esta tabla permite comprobar integridad, pero no sustituye la preservación durable que se exija para el expediente final. No se ha cambiado ningún estado de autorización.
 
-Esta es una **autorización funcional expresa del propietario para avanzar con el alcance completo de las seis fuentes**, y no debe solicitarse de nuevo. No equivale a permiso concedido por SEC, CFTC o Federal Reserve, no constituye dictamen jurídico y no demuestra que cada método de acceso, persistencia o reutilización esté permitido para cada endpoint. Por ello, **no cambia por sí sola el estado operativo** de ningún origen: los seis permanecen `TERMS_PENDING` hasta documentar evidencia específica, disponibilidad y controles técnicos aplicables. La decisión del propietario está tomada; los pendientes restantes son de evidencia, disponibilidad y cumplimiento de condiciones por fuente, no una nueva solicitud de autorización al propietario.
+### Lectura operativa preliminar de la evidencia
 
-| Fuente | Autorización funcional del propietario | Estado operativo |
-|---|---|---|
-| `sec_press_releases` | Autorizado avanzar con todos los usos funcionales previstos, sujetos a verificación de condiciones por modalidad | `TERMS_PENDING` |
-| `sec_press_release_archive` | Autorizado avanzar con todos los usos funcionales previstos, sujetos a verificación de condiciones por modalidad | `TERMS_PENDING` |
-| `cftc_general_press_releases` | Autorizado avanzar con todos los usos funcionales previstos; no consultar mientras el RSS esté deshabilitado | `TERMS_PENDING` |
-| `cftc_press_release_archive` | Autorizado avanzar con todos los usos funcionales previstos, sujetos a verificación de condiciones por modalidad | `TERMS_PENDING` |
-| `federal_reserve_press_releases` | Autorizado avanzar con todos los usos funcionales previstos, sujetos a verificación de condiciones por modalidad | `TERMS_PENDING` |
-| `federal_reserve_press_release_archive` | Autorizado avanzar con todos los usos funcionales previstos, sujetos a verificación de condiciones por modalidad | `TERMS_PENDING` |
+- **SEC:** la página de diseminación declara que la información presentada en sec.gov es pública y puede copiarse/distribuirse sin permiso de SEC, con cita apropiada. La documentación para desarrolladores fija un máximo total de 10 solicitudes por segundo para acceso a SEC.gov y advierte que no permite bots no clasificados. El registro debe exigir User-Agent identificable y un limitador conservador compartido; no extrapolar sin revisión adicional el límite a servicios o dominios distintos.
+- **CFTC:** la Web Policy declara que la información gubernamental es de dominio público y puede copiarse con atribución, y advierte sobre recursos protegidos de terceros. La página RSS capturada dice que todos los feeds están temporalmente deshabilitados en octubre de 2026. No intentar el feed deshabilitado; evaluar el archivo HTML como origen separado y confirmar sus condiciones antes de capturarlo.
+- **Federal Reserve Board:** el disclaimer indica que la información del Board, salvo indicación contraria, es de dominio público y puede copiarse/distribuirse con atribución; fotos, gráficos y materiales identificados como pertenecientes a terceros requieren tratamiento separado. La página RSS explica el uso de lectores/agregadores, pero eso por sí solo no resuelve retención automatizada ilimitada ni el tratamiento de todos los recursos enlazados.
 
-**Próximo paso:** ejecutar la revisión y preparación técnica por fuente sin volver a solicitar la autorización funcional ya concedida. La captura real y el backfill se habilitarán cuando la evidencia verificable confirme disponibilidad, condiciones de acceso y controles operativos para la modalidad concreta.
-## Control SEC: límite publicado y clasificación del agente — 2026-10-23
+**Conclusión de esta revisión técnica:** la evidencia observada apoya la reutilización de contenido oficial en términos generales en las tres instituciones, con condiciones específicas de acceso y atribución. No equivale a aprobación global de HTML completo, adjuntos, contenido de terceros, retención indefinida o backfill ilimitado. Esas decisiones deben quedar acotadas en `approval_scope` por cada `source_id` antes de activar la modalidad correspondiente. Los estados permanecen `TERMS_PENDING`.
 
-La política oficial de seguridad de SEC.gov establece un máximo agregado de 10 solicitudes por segundo, sin importar cuántas máquinas originan las solicitudes, y advierte que no permite bots o herramientas automatizadas no clasificadas. Fuente: https://www.sec.gov/about/privacy-information
 
-Consecuencias para `sec_press_releases` y `sec_press_release_archive`:
-- El valor de 10 solicitudes/segundo del registro puede trazarse al techo general publicado de SEC.gov, no únicamente a la FAQ de EDGAR.
-- Ese techo es un máximo, no una frecuencia objetivo. El proyecto puede usar un límite menor como control interno si queda identificado como tal.
-- Antes de habilitar tráfico, debe utilizarse un User-Agent identificable y revisado, y el límite debe aplicarse de forma agregada entre procesos y máquinas que compartan la salida de red. El control local por host no basta para demostrar el límite global.
-- No se modifica el estado de ninguna fuente ni se habilita tráfico con este ajuste documental. Las políticas deben preservarse en bytes verificables y calcularse su hash sobre esos bytes antes de completar el expediente técnico.
+## Alcance funcional multifuente y estado operativo
 
-Esta precisión no modifica la autorización funcional del propietario, ya registrada arriba, y no se le volverá a solicitar para las seis fuentes enumeradas.
+El objetivo funcional es evaluar las seis fuentes registradas como candidatas para investigar noticias y eventos relacionados con movimientos del mercado cripto. Ese alcance no debe reducirse a un piloto único por defecto. La priorización de implementación puede organizar el trabajo, pero no limita el alcance final solicitado.
+
+La autorización para continuar el desarrollo no debe confundirse con una autorización específica para acceder, capturar, persistir o redistribuir contenido de una fuente concreta. No se atribuirá al propietario una aprobación individual de SEC, CFTC o Federal Reserve que no haya declarado expresamente. La decisión de activar cada modalidad se documenta por fuente con evidencia oficial, disponibilidad y controles técnicos verificables.
+
+- Mantener cada origen en `TERMS_PENDING` mientras falten las condiciones operativas documentadas para su modalidad.
+- No consultar los feeds de CFTC mientras el aviso oficial indique que están deshabilitados; el archivo HTML es un origen separado.
+- No inferir permiso para conservar indefinidamente HTML, adjuntos o contenido de terceros a partir de una política general de reutilización.
+- No inferir causalidad entre un evento y un movimiento de precio solo por proximidad temporal.
