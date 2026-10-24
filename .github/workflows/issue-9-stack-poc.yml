@@ -56,7 +56,7 @@ jobs:
       - name: Run diagnostic sensitivity on common evidenced criteria
         run: |
           python scripts/stack_poc/sensitivity_analysis.py docs/architecture/evidence/issue-9-subset-sensitivity-input.json --output artifacts/issue-9-subset-sensitivity-output.json
-          python -c "import json; d=json.load(open('artifacts/issue-9-subset-sensitivity-output.json')); assert d['status']=='complete'; assert {x['candidate'] for x in d['ranking'][:2]}=={'Web React/Vite + shared API','Flutter + shared API'}; assert d['ranking'][0]['score_out_of_100']==d['ranking'][1]['score_out_of_100']; assert d['ranking'][2]['candidate']=='React Native bare + shared API'; assert [x['score_out_of_100'] for x in d['ranking']]==[74.2857,74.2857,60.0]; assert all(not x['ranking_changed'] for x in d['sensitivity']); assert len(d['sensitivity'])==6"
+          python -c "import json; d=json.load(open('artifacts/issue-9-subset-sensitivity-output.json')); assert d['status']=='complete'; assert {x['candidate'] for x in d['ranking'][:2]}=={'Web React/Vite + shared API','Flutter + shared API'}; assert d['ranking'][0]['score_out_of_100']==d['ranking'][1]['score_out_of_100']; assert d['ranking'][2]['candidate']=='Kotlin native Android reference (iOS N/E)'; assert d['ranking'][3]['candidate']=='React Native bare + shared API'; assert [x['score_out_of_100'] for x in d['ranking']]==[74.2857,74.2857,60.0,60.0]; assert all(not x['ranking_changed'] for x in d['sensitivity']); assert len(d['sensitivity'])==6"
       - name: Preserve partial scoring output
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
