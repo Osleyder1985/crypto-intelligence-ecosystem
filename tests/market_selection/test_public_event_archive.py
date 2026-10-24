@@ -89,6 +89,56 @@ class PublicEventArchiveTests(unittest.TestCase):
         )
         self.assertIn("Federal Reserve Board requests public comment", extracted)
 
+    def test_federal_reserve_archive_persists_only_extracted_text_and_hashes_full_response(self):
+        source_id = "federal_reserve_press_release_archive"
+        archive_url = "https://www.federalreserve.gov/newsevents/pressreleases.htm"
+        article_url = "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm"
+        original = (
+            b'<html><body><script>THIRD_PARTY_SCRIPT_SECRET</script>'
+            b'<a href="/newsevents/pressreleases/bcreg20260924a.htm">'
+            b'Federal Reserve Board requests public comment on two proposals</a>'
+            b'<p>September 24, 2026</p></body></html>'
+        )
+        entry = approved_source(source_id)
+        with patch.dict(EVENT_SOURCE_REGISTRY["sources"], {source_id: entry}), patch(
+            "scripts.market_selection.capture_public_event_feed._open_allowlisted_url",
+            return_value=FakeResponse(
+                original,
+                headers={"Content-Type": "text/html; charset=utf-8"},
+                final_url=archive_url,
+            ),
+        ):
+            capture = capture_public_event_archive_index(
+                source_id,
+                archive_url,
+                authorization_record(entry),
+                USER_AGENT,
+                captured_at="2026-10-24T02:00:00Z",
+            )
+        self.assertEqual(capture["capture_status"], "PASS")
+        self.assertEqual(capture["stored_content_mode"], "EXTRACTED_TEXT_EVIDENCE")
+        self.assertIsNone(capture["raw_response_base64"])
+        self.assertEqual(capture["raw_response_bytes"], len(original))
+        self.assertEqual(capture["raw_response_sha256"], hashlib.sha256(original).hexdigest())
+        encoded_evidence = base64.b64decode(capture["text_evidence_base64"])
+        self.assertEqual(
+            capture["text_evidence_sha256"],
+            hashlib.sha256(encoded_evidence).hexdigest(),
+        )
+        evidence = encoded_evidence.decode("utf-8")
+        self.assertNotIn("THIRD_PARTY_SCRIPT_SECRET", evidence)
+        candidate = select_public_event_archive_candidate(
+            capture,
+            candidate_url=article_url,
+            title="Federal Reserve Board requests public comment on two proposals",
+            published_at="2026-09-24T16:00:00Z",
+            publication_time_evidence="September 24, 2026",
+            selected_by="offline-regression-reviewer",
+            selected_at="2026-10-24T02:01:00Z",
+            selection_rationale="Synthetic fixture verifies text-only archive evidence handling.",
+        )
+        self.assertEqual(candidate["archive_capture_sha256"], capture["raw_response_sha256"])
+
     def test_archive_capture_blocks_terms_pending_source_before_network(self):
         with patch("scripts.market_selection.capture_public_event_feed._open_allowlisted_url") as network:
             result = capture_public_event_archive_index(
