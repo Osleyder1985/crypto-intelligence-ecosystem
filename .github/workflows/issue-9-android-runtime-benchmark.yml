@@ -15,7 +15,7 @@ on:
 
 concurrency:
   group: issue-9-android-runtime-shared
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 permissions:
   contents: read
@@ -132,22 +132,30 @@ jobs:
       - name: Install and measure all three apps on the same Android emulator
         uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d
         with:
-          api-level: 36
+          api-level: 35
           target: google_apis
           arch: x86_64
           profile: pixel_2
           disable-animations: true
-          emulator-boot-timeout: 900
+          emulator-boot-timeout: 1200
           emulator-options: -no-window -no-audio -no-boot-anim -no-snapshot -gpu swiftshader
           script: |
             set -euo pipefail
-            timeout 90s adb wait-for-device
-            for attempt in $(seq 1 90); do
-              state="$(adb shell getprop sys.boot_completed 2>/dev/null | tr -d '\\r' || true)"
-              if [[ "$state" == "1" ]]; then break; fi
-              sleep 2
+            # The emulator action waits for boot, but ADB can briefly report the device as offline.
+            # Retry only the device handshake; fail with diagnostics rather than recording invalid data.
+            ready=0
+            for attempt in $(seq 1 120); do
+              state="$(adb get-state 2>/dev/null || true)"
+              boot="$(adb shell getprop sys.boot_completed 2>/dev/null | tr -d '\\r' || true)"
+              if [[ "$state" == "device" && "$boot" == "1" ]]; then ready=1; break; fi
+              sleep 5
             done
-            test "$(adb shell getprop sys.boot_completed | tr -d '\\r')" = "1"
+            if [[ "$ready" != "1" ]]; then
+              adb devices -l || true
+              adb logcat -d -t 300 || true
+              echo "Android emulator did not reach device/boot_completed=1 within 10 minutes" >&2
+              exit 1
+            fi
             adb shell getprop ro.build.version.sdk
             bash scripts/stack_poc/measure_issue9_android_runtime.sh
         env:
