@@ -60,19 +60,19 @@ jobs:
           for run in 1 2 3; do
             flutter clean
             flutter pub get
-            /usr/bin/time -l flutter build ios --debug --no-codesign 2>&1 | tee -a flutter-ios-build-measurement.log
+            /usr/bin/time -l flutter build ios --simulator --debug --no-codesign 2>&1 | tee -a flutter-ios-build-measurement.log
             printf 'CLEAN_IOS_BUILD_RUN=%s\n' "$run" | tee -a flutter-ios-build-measurement.log
-            du -sk build/ios/iphoneos/Runner.app | tee -a flutter-ios-build-measurement.log
+            du -sk build/ios/iphonesimulator/Runner.app | tee -a flutter-ios-build-measurement.log
           done
           cp lib/main.dart lib/main.dart.benchmark-original
           printf '\n// Issue 9 benchmark-only source edit.\n' >> lib/main.dart
-          /usr/bin/time -l flutter build ios --debug --no-codesign 2>&1 | tee -a flutter-ios-build-measurement.log
+          /usr/bin/time -l flutter build ios --simulator --debug --no-codesign 2>&1 | tee -a flutter-ios-build-measurement.log
           mv lib/main.dart.benchmark-original lib/main.dart
           printf 'INCREMENTAL_DEBUG_IOS_BUILD_AFTER_SOURCE_TOUCH\n' | tee -a flutter-ios-build-measurement.log
-          du -sk build/ios/iphoneos/Runner.app | tee -a flutter-ios-build-measurement.log
-          /usr/bin/time -l flutter build ios --release --no-codesign 2>&1 | tee -a flutter-ios-build-measurement.log
+          du -sk build/ios/iphonesimulator/Runner.app | tee -a flutter-ios-build-measurement.log
+          /usr/bin/time -l flutter build ios --simulator --release --no-codesign 2>&1 | tee -a flutter-ios-build-measurement.log
           printf 'IOS_RELEASE_BUILD_COMPLETE\n' | tee -a flutter-ios-build-measurement.log
-          du -sk build/ios/iphoneos/Runner.app | tee -a flutter-ios-build-measurement.log
+          du -sk build/ios/iphonesimulator/Runner.app | tee -a flutter-ios-build-measurement.log
       - name: Record Dart and iOS CocoaPods dependency inventories
         working-directory: pocs/issue-9/flutter
         shell: bash
