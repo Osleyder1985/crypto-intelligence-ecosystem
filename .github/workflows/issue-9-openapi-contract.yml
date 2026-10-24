@@ -21,64 +21,11 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
-      - name: Parse YAML and validate essential OpenAPI invariants
-        shell: ruby {0}
-        run: |
-          require "yaml"
-          require "json"
-
-          path = "docs/architecture/stack-poc-openapi.yaml"
-          document = YAML.safe_load_file(path, permitted_classes: [], permitted_symbols: [], aliases: false)
-
-          abort "Expected OpenAPI 3.1.0" unless document["openapi"] == "3.1.0"
-          abort "Missing info.title or info.version" unless document.dig("info", "title") && document.dig("info", "version")
-          paths = document["paths"]
-          abort "paths must be a non-empty mapping" unless paths.is_a?(Hash) && !paths.empty?
-
-          operation_ids = []
-          paths.each do |route, path_item|
-            abort "Path must begin with /: #{route}" unless route.start_with?("/")
-            abort "Path item must be a mapping: #{route}" unless path_item.is_a?(Hash)
-            path_item.each do |method, operation|
-              next if %w[parameters summary description servers].include?(method)
-              abort "Unsupported HTTP operation #{method} at #{route}" unless %w[get post put patch delete options head trace].include?(method)
-              abort "Operation must be a mapping at #{method} #{route}" unless operation.is_a?(Hash)
-              operation_id = operation["operationId"]
-              abort "Missing operationId at #{method} #{route}" unless operation_id.is_a?(String) && !operation_id.empty?
-              abort "Duplicate operationId: #{operation_id}" if operation_ids.include?(operation_id)
-              operation_ids << operation_id
-              abort "Operation responses missing at #{method} #{route}" unless operation["responses"].is_a?(Hash) && !operation["responses"].empty?
-            end
-          end
-
-          refs = []
-          walk = lambda do |node|
-            case node
-            when Hash
-              node.each do |key, value|
-                refs << value if key == "$ref" && value.is_a?(String)
-                walk.call(value)
-              end
-            when Array
-              node.each { |value| walk.call(value) }
-            end
-          end
-          walk.call(document)
-
-          refs.each do |ref|
-            next unless ref.start_with?("#/")
-            target = document
-            ref.delete_prefix("#/").split("/").each do |part|
-              key = part.gsub("~1", "/").gsub("~0", "~")
-              target = target.is_a?(Hash) ? target[key] : nil
-            end
-            abort "Unresolved local reference: #{ref}" if target.nil?
-          end
-
-          puts JSON.pretty_generate({
-            status: "PASS",
-            openapi: document["openapi"],
-            path_count: paths.length,
-            operation_count: operation_ids.length,
-            local_reference_count: refs.count { |ref| ref.start_with?("#/") }
-          })
+      - name: Set up Python
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: '3.12'
+      - name: Install pinned OpenAPI validator
+        run: python -m pip install --disable-pip-version-check openapi-spec-validator==0.7.2
+      - name: Validate the OpenAPI 3.1 contract
+        run: openapi-spec-validator docs/architecture/stack-poc-openapi.yaml
