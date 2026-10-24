@@ -1,0 +1,35 @@
+import unittest
+
+from scripts.stack_poc.sensitivity_analysis import analyze
+
+
+class SensitivityAnalysisTests(unittest.TestCase):
+    def test_missing_score_or_evidence_blocks_ranking(self):
+        result = analyze({
+            'weights': {'contracts': 50, 'charts': 50},
+            'candidates': [{'name': 'Flutter', 'scores': {'contracts': 4, 'charts': None}, 'evidence': {'contracts': 'run-1'}}],
+        })
+        self.assertEqual(result['status'], 'incomplete')
+        self.assertEqual(result['ranking'], [])
+        self.assertEqual(len(result['missing']), 1)
+
+    def test_complete_evidence_computes_baseline_and_all_sensitivity_scenarios(self):
+        result = analyze({
+            'weights': {'contracts': 50, 'charts': 50},
+            'candidates': [
+                {'name': 'A', 'scores': {'contracts': 5, 'charts': 2}, 'evidence': {'contracts': 'run-a', 'charts': 'run-b'}},
+                {'name': 'B', 'scores': {'contracts': 3, 'charts': 4}, 'evidence': {'contracts': 'run-c', 'charts': 'run-d'}},
+            ],
+        })
+        self.assertEqual(result['status'], 'complete')
+        self.assertEqual([row['candidate'] for row in result['ranking']], ['A', 'B'])
+        self.assertEqual(len(result['sensitivity']), 4)
+        self.assertTrue(all('ranking_changed' in row for row in result['sensitivity']))
+
+    def test_weights_must_sum_to_one_hundred(self):
+        with self.assertRaisesRegex(ValueError, 'sum to 100'):
+            analyze({'weights': {'contracts': 40}, 'candidates': [{'name': 'A'}]})
+
+
+if __name__ == '__main__':
+    unittest.main()
