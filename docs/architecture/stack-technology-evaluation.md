@@ -393,3 +393,20 @@ Flutter iOS Debug: mediana 23.43 s, rango 22.49–40.14 s, app 97,276 KB; Releas
 ## 30. Corrección de escala de puntuación en sensibilidad (2026-10-24)
 
 La primera salida del subconjunto de sensibilidad reveló que `score_out_of_100` estaba serializando valores normalizados entre 0 y 1, pese al nombre del campo. Se corrigió el cálculo para devolver la escala 0–100, se añadió una aserción unitaria (`70/100` para el caso de prueba) y el workflow ahora valida explícitamente `74.2857, 74.2857, 60.0` en el subconjunto diagnóstico. El artefacto previo de [run 40061223306](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/actions/runs/40061223306) queda supersedido; usar únicamente el nuevo artefacto tras esta corrección. La clasificación sigue siendo parcial y no ratifica ADR-0001.
+
+## 31. Repeticiones móviles y auditoría de dependencias — actualización 2026-10-24
+
+Los registros detallados más recientes están en [evidencia móvil y dependencias](evidence/issue-9-mobile-build-and-dependency-evidence-400616.md). Sustituyen como observaciones de build a las ejecuciones anteriores para los commits indicados, sin convertir la muestra CI en una clasificación final.
+
+| PoC | Tres builds Debug (s) | Incremental (s) | Release build (s) | Release artifact | Seguridad/licencias |
+|---|---|---:|---:|---|---|
+| Flutter 3.47.5 Android | 161.49 / 19.18 / 18.28 | 7.75 | 55.85 | APK 45,445,816 bytes | Widget tests y fixture PASS; inventario Dart/Gradle generado, revisión completa de licencias/avisos aún pendiente |
+| React Native bare 0.88.0 Android | 152.53 / 70.36 / 67.85 | 15.65 (Release tras editar JS) | 123.33 | APK 55,447,313 bytes | `npm audit` 0 vulnerabilidades reportadas; inventario 803 entradas sin `UNKNOWN`; revisar CC-BY-4.0, BlueOak-1.0.0 y avisos de paquetes deprecados |
+
+Los tiempos reflejan el efecto de cachés entre ejecuciones y no deben leerse como una prueba A/B controlada; se conservan todas las observaciones y no solo la mediana. El workflow de comparación en el mismo emulador Android debe terminar para aportar arranque, visibilidad de UI y PSS/RSS de las aplicaciones en ejecución.
+
+La primera auditoría Python sí pasó `pip-audit` y `pip check`, pero 16 de 42 etiquetas de licencia fueron `UNKNOWN`. Se actualizó el workflow para combinar metadata/clasificadores y preservar ficheros de licencia/aviso; esa nueva salida debe revisarse antes de declarar completa la revisión legal.
+
+**iOS:** las medidas anteriores se excluyen de la comparación directa porque Flutter construía para `iphoneos` y React Native para Simulator. Los workflows se corrigieron para usar iOS Simulator ARM64 en ambos; el nuevo par de ejecuciones debe terminar y sus logs confirmarse antes de puntuar build, memoria o tamaño iOS.
+
+**Decisión:** todavía no se ratifica ADR-0001 ni se cierra Issue #9. Las celdas de ejecución en el Windows 11 del usuario, UI en dispositivo físico, accesibilidad móvil, revisión legal de todos los avisos, API/persistencia bajo carga representativa y sensibilidad de la matriz completa permanecen N/E o pendientes de evidencia.
