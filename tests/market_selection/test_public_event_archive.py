@@ -139,6 +139,75 @@ class PublicEventArchiveTests(unittest.TestCase):
                 selection_rationale="Synthetic fixture verifies text-only archive evidence handling.",
             )
         self.assertEqual(candidate["archive_capture_sha256"], capture["raw_response_sha256"])
+        article_raw = (
+            b'<html><body><script>THIRD_PARTY_ARTICLE_SCRIPT</script>'
+            b'<article><h1>Federal Reserve Board requests public comment</h1>'
+            b'<p>Official text about payment stablecoin proposals.</p></article></body></html>'
+        )
+        with patch.dict(EVENT_SOURCE_REGISTRY["sources"], {source_id: entry}), patch(
+            "scripts.market_selection.capture_public_event_feed._open_allowlisted_url",
+            return_value=FakeResponse(
+                article_raw,
+                headers={"Content-Type": "text/html; charset=utf-8"},
+                final_url=article_url,
+            ),
+        ):
+            article_capture = capture_public_event_archive_article(
+                capture,
+                candidate,
+                authorization_record(entry),
+                USER_AGENT,
+                captured_at="2026-10-24T02:02:00Z",
+            )
+        self.assertEqual(article_capture["capture_status"], "PASS")
+        self.assertEqual(article_capture["stored_content_mode"], "EXTRACTED_TEXT_EVIDENCE")
+        self.assertIsNone(article_capture["raw_response_base64"])
+        article_evidence = base64.b64decode(article_capture["text_evidence_base64"]).decode("utf-8")
+        self.assertNotIn("THIRD_PARTY_ARTICLE_SCRIPT", article_evidence)
+
+        mapping_bytes = b'{"asset":"stablecoin-regulatory-framework","review":"synthetic text-only test"}'
+        resolution = {
+            "status": "APPROVED",
+            "reviewed_by": "offline-regression-reviewer",
+            "reviewed_at": "2026-10-24T02:03:00Z",
+            "evidence_record_base64": base64.b64encode(mapping_bytes).decode("ascii"),
+            "evidence_record_sha256": hashlib.sha256(mapping_bytes).hexdigest(),
+            "entities": [{"id_type": "project_id", "id": "stablecoin-regulatory-framework"}],
+        }
+        with patch.dict(EVENT_SOURCE_REGISTRY["sources"], {source_id: entry}):
+            event_record = promote_public_archive_candidate_to_event(
+                capture,
+                candidate,
+                article_capture,
+                "REGULATORY_POLICY_PROPOSAL",
+                "The official release describes proposed rules; market causality has not been assessed.",
+                resolution,
+            )
+            manifest = build_public_event_archive_coverage_manifest(
+                source_id,
+                "federal-reserve-2026",
+                "Single synthetic archive page for the 2026-09-24 historical candidate test.",
+                [{
+                    "partition_id": "2026",
+                    "page_count": 1,
+                    "period_start": "2026-01-01",
+                    "period_end": "2026-12-31",
+                }],
+                [{
+                    "archive_capture": capture,
+                    "partition_id": "2026",
+                    "page_index": 1,
+                    "expected_page_count": 1,
+                }],
+                "offline-regression-reviewer",
+                "2026-10-24T02:04:00Z",
+            )
+        self.assertEqual(event_record["metadata"]["causality_status"], "NOT_ASSESSED")
+        self.assertEqual(manifest["coverage_status"], "COMPLETE_FOR_DECLARED_SCOPE")
+        self.assertEqual(
+            manifest["segments"][0]["stored_content_mode"],
+            "EXTRACTED_TEXT_EVIDENCE",
+        )
 
     def test_archive_capture_blocks_terms_pending_source_before_network(self):
         with patch("scripts.market_selection.capture_public_event_feed._open_allowlisted_url") as network:
