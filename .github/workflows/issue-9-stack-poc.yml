@@ -5,12 +5,14 @@ on:
     paths:
       - 'scripts/stack_poc/**'
       - 'tests/stack_poc/**'
+      - 'requirements-stack-poc.txt'
       - '.github/workflows/issue-9-stack-poc.yml'
   push:
     branches: [main, docs/issue-9-stack-evaluation]
     paths:
       - 'scripts/stack_poc/**'
       - 'tests/stack_poc/**'
+      - 'requirements-stack-poc.txt'
       - '.github/workflows/issue-9-stack-poc.yml'
   workflow_dispatch:
 
@@ -28,7 +30,9 @@ jobs:
         with:
           python-version: '3.12'
       - name: Install pinned PoC dependencies
-        run: python -m pip install --disable-pip-version-check fastapi==0.115.12 httpx==0.28.1 PyYAML==6.0.2
+        run: python -m pip install --disable-pip-version-check -r requirements-stack-poc.txt
+      - name: Validate shared synthetic OHLCV benchmark fixture
+        run: python -m unittest discover -s tests/stack_poc -p 'test_shared_ohlcv_fixture.py' -v
       - name: Run API, history and idempotency PoC tests
         run: python -m unittest discover -s tests/stack_poc -p 'test_research_api.py' -v
       - name: Run worker concurrency and transaction-recovery tests
