@@ -35,7 +35,50 @@ def analyze(payload):
         normalized[name] = {'scores': scores, 'evidence': evidence}
 
     if missing:
-        return {'status': 'incomplete', 'reason': 'Scores require a 1–5 value and a non-empty evidence reference for every criterion.', 'missing': missing, 'ranking': [], 'sensitivity': []}
+        partial_scores = []
+        for candidate in candidates:
+            name = candidate['name']
+            scores = candidate.get('scores', {})
+            evidence = candidate.get('evidence', {})
+            scored = []
+            missing_criteria = []
+            for criterion, weight in weights.items():
+                score = scores.get(criterion)
+                ref = evidence.get(criterion)
+                valid = (
+                    not isinstance(score, bool)
+                    and isinstance(score, int)
+                    and 1 <= score <= 5
+                    and isinstance(ref, str)
+                    and bool(ref.strip())
+                )
+                if valid:
+                    scored.append(criterion)
+                else:
+                    missing_criteria.append(criterion)
+            covered_weight = sum(weights[k] for k in scored)
+            partial_score = None
+            if covered_weight:
+                partial_score = round(
+                    sum(weights[k] * scores[k] / 5 for k in scored) / covered_weight * 100,
+                    4,
+                )
+            partial_scores.append({
+                'candidate': name,
+                'scored_criteria': scored,
+                'missing_criteria': missing_criteria,
+                'weight_coverage_percent': round(covered_weight, 4),
+                'partial_score_out_of_100': partial_score,
+            })
+        return {
+            'status': 'incomplete',
+            'reason': 'Scores require a 1–5 value and a non-empty evidence reference for every criterion.',
+            'missing': missing,
+            'partial_scores': partial_scores,
+            'partial_score_warning': 'Partial scores are diagnostic only. Do not rank or compare candidates with different evidence coverage; no sensitivity analysis is calculated until every criterion is evidenced.',
+            'ranking': [],
+            'sensitivity': [],
+        }
 
     def totals(active_weights):
         denom = sum(active_weights.values())
