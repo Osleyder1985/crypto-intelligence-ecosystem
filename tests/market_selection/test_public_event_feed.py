@@ -469,6 +469,25 @@ class PublicEventFeedCaptureTests(unittest.TestCase):
             source_entry_sha256(entry)
 
 
+    def test_all_six_official_source_endpoints_and_terms_match_review_packet(self):
+        sources = EVENT_SOURCE_REGISTRY["sources"]
+        expected_sources = {
+            "sec_press_releases": ("https://www.sec.gov/news/pressreleases.rss", "https://www.sec.gov/about/developer-resources"),
+            "sec_press_release_archive": ("https://www.sec.gov/newsroom/press-releases", "https://www.sec.gov/about/developer-resources"),
+            "cftc_general_press_releases": ("https://www.cftc.gov/RSS/RSSGP/rssgp.xml", "https://www.cftc.gov/WebPolicy/index.htm"),
+            "cftc_press_release_archive": ("https://www.cftc.gov/PressRoom/PressReleases", "https://www.cftc.gov/WebPolicy/index.htm"),
+            "federal_reserve_press_releases": ("https://www.federalreserve.gov/feeds/press_all.xml", "https://www.federalreserve.gov/disclaimer.htm"),
+            "federal_reserve_press_release_archive": ("https://www.federalreserve.gov/newsevents/pressreleases.htm", "https://www.federalreserve.gov/disclaimer.htm"),
+        }
+        self.assertEqual(set(sources), set(expected_sources))
+        for source_id, (expected_endpoint, expected_terms_url) in expected_sources.items():
+            with self.subTest(source_id=source_id):
+                self.assertEqual(sources[source_id]["source_url"], expected_endpoint)
+                self.assertEqual(sources[source_id]["terms_url"], expected_terms_url)
+                self.assertEqual(sources[source_id]["status"], "TERMS_PENDING")
+                self.assertEqual(sources[source_id]["allowed_use_cases"], [])
+
+
     def test_non_finite_and_non_positive_timeouts_block_before_network(self):
         entry = approved_source()
         for timeout in (float("nan"), float("inf"), float("-inf"), 0, -1):
