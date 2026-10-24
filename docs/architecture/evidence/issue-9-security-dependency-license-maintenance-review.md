@@ -31,3 +31,17 @@
 ## Closure gate
 
 This review cannot be marked complete until the Flutter native dependency artifacts and Playwright 1.64.1 audit are inspected, React Native Release/incremental builds finish, all third-party licence obligations are reviewed, and the matrix records remaining unknowns. Do not describe the system as ISO-certified or fully secure on the basis of these checks.
+
+
+## React Native licence exceptions requiring disposition
+
+The generated inventory and lockfile identify these non-standard labels; they are not `UNKNOWN`, but they still require explicit treatment:
+
+| Package | Version | Licence label | Observed dependency context | Required action |
+|---|---|---|---|---|
+| `caniuse-lite` | `1.0.30001819` | CC-BY-4.0 | Browser compatibility data dependency; lockfile does not mark it exclusively dev-only | Confirm whether any data is included in the distributed app bundle. If redistributed, preserve attribution and licence notice; record the bundle inspection. |
+| `minimatch` | `10.2.6` | BlueOak-1.0.0 | Marked dev dependency in the generated lockfile | Review the actual licence text and confirm it is not bundled in the end-user app; retain notice in the development dependency inventory. |
+| nested `argparse` | `2.0.1` | Python-2.0 | Nested under ESLint tooling and marked dev-only in the lockfile | Review licence/notice text and confirm it is not shipped in the app bundle. |
+| `Issue9RnReference` | `0.0.1` | UNLICENSED | The private PoC application itself, not a third-party package | Keep private and do not redistribute as an open-source package until an explicit project licence is chosen. |
+
+The lockfile also contains a separate `argparse@1.0.10` MIT entry; do not conflate it with the nested `argparse@2.0.1` entry. The inventory's zero-UNKNOWN result is useful but does not itself settle these obligations. Bundle inclusion and attribution review remain open.
