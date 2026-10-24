@@ -40,8 +40,8 @@ jobs:
       - name: Emit direct and transitive licence inventory
         if: always()
         run: |
-          python -m piplicenses --format=json --with-urls --with-description > issue-9-python-license-inventory.json
-          python -m piplicenses --format=markdown --with-urls --with-description
+          python -m piplicenses --format=json --from=all --with-urls --with-description --with-license-file --with-notice-file > issue-9-python-license-inventory.json
+          python -m piplicenses --format=markdown --from=all --with-urls --with-description
       - name: Preserve licence inventory as a CI artifact
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
