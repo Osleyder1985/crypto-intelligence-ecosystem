@@ -60,7 +60,7 @@ jobs:
           touch app/src/main/java/com/crypto/intelligence/issue9kotlin/MainActivity.kt
           /usr/bin/time -f 'KOTLIN_INCREMENTAL_DEBUG_AFTER_SOURCE_TOUCH_SECONDS=%e PEAK_RSS_KB=%M' ./gradlew assembleDebug 2>&1 | tee -a kotlin-android-build-measurement.log
           /usr/bin/time -f 'KOTLIN_ANDROID_RELEASE_BUILD_SECONDS=%e PEAK_RSS_KB=%M' ./gradlew assembleRelease 2>&1 | tee -a kotlin-android-build-measurement.log
-          stat --printf='KOTLIN_ANDROID_RELEASE_APK_BYTES=%s\n' app/build/outputs/apk/release/app-release-unsigned.apk | tee -a kotlin-android-build-measurement.log
+          stat --printf='KOTLIN_ANDROID_RELEASE_APK_BYTES=%s\n' app/build/outputs/apk/release/app-release.apk | tee -a kotlin-android-build-measurement.log
       - name: Capture runtime dependency and build plugin graphs
         if: always()
         working-directory: pocs/issue-9/kotlin-android
@@ -78,6 +78,6 @@ jobs:
             pocs/issue-9/kotlin-android/kotlin-build-environment.txt
             pocs/issue-9/kotlin-android/gradle/wrapper/gradle-wrapper.properties
             pocs/issue-9/kotlin-android/app/build/outputs/apk/debug/app-debug.apk
-            pocs/issue-9/kotlin-android/app/build/outputs/apk/release/app-release-unsigned.apk
+            pocs/issue-9/kotlin-android/app/build/outputs/apk/release/app-release.apk
           if-no-files-found: warn
           retention-days: 30
