@@ -110,3 +110,10 @@ The native Kotlin Android reference now compiles and packages successfully in [r
 The Kotlin Release build uses debug-key signing solely for emulator installation, not production. The build graph has no third-party chart library; runtime dependencies are Kotlin stdlib and JetBrains annotations, while the Android Gradle/Kotlin build-plugin graph remains subject to licence review. Gradle emitted a deprecation warning for `kotlinOptions` and a future Gradle 10 compatibility warning.
 
 ADR-0001 remains **provisional**: no overall winner is ratified until the common-emulator comparison passes, the four Python licence items and special npm/Dart/build-tool obligations are reviewed, the Windows 11 target-machine report exists, and the complete sensitivity analysis uses approved scoring weights and documented uncertainty.
+
+
+## Scoring governance addendum — 2026-10-24
+
+The required score anchors, N/E handling, full-matrix requirement and sensitivity scenarios are defined in `docs/architecture/issue-9-scoring-and-sensitivity-protocol.md`. A partial score or diagnostic subset cannot ratify the architecture. Before approval, the complete matrix must cite exact run/artifact/source evidence for every candidate/criterion, and the owner must approve the selected trade-offs after CI and residual-risk review.
+
+At this checkpoint the ADR remains **Proposed**. The common Android runtime comparison, final platform workflows, local Windows 11 report, and full dependency/licence obligation disposition have not all passed review. No final winner is declared.
