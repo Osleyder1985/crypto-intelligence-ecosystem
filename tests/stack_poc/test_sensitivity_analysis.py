@@ -13,6 +13,23 @@ class SensitivityAnalysisTests(unittest.TestCase):
         self.assertEqual(result['ranking'], [])
         self.assertEqual(len(result['missing']), 1)
 
+    def test_incomplete_evidence_reports_partial_scores_without_ranking(self):
+        result = analyze({
+            'weights': {'contracts': 70, 'charts': 30},
+            'candidates': [
+                {'name': 'A', 'scores': {'contracts': 4, 'charts': None}, 'evidence': {'contracts': 'run-a'}},
+                {'name': 'B', 'scores': {'contracts': None, 'charts': 5}, 'evidence': {'charts': 'run-b'}},
+            ],
+        })
+        self.assertEqual(result['status'], 'incomplete')
+        self.assertEqual(result['ranking'], [])
+        self.assertEqual(result['sensitivity'], [])
+        self.assertEqual(result['partial_scores'][0]['weight_coverage_percent'], 70)
+        self.assertEqual(result['partial_scores'][0]['partial_score_out_of_100'], 80)
+        self.assertEqual(result['partial_scores'][1]['weight_coverage_percent'], 30)
+        self.assertEqual(result['partial_scores'][1]['partial_score_out_of_100'], 100)
+        self.assertIn('different evidence coverage', result['partial_score_warning'])
+
     def test_complete_evidence_computes_baseline_and_all_sensitivity_scenarios(self):
         result = analyze({
             'weights': {'contracts': 50, 'charts': 50},
