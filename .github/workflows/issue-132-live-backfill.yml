@@ -15,7 +15,7 @@ permissions:
 
 jobs:
   live-backfill:
-    if: github.head_ref == 'feat/issue-132-source-scoped-archive-authorization'
+    if: github.head_ref == 'feat/issue-132-source-scoped-archive-authorization' && github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
