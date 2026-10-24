@@ -172,6 +172,13 @@ Este diagrama expresa límites propuestos, no infraestructura desplegada. La ele
 
 ## 12. CI específico del contrato OpenAPI
 
-Se añadió `.github/workflows/issue-9-openapi-contract.yml`, que valida el parseo YAML, versión OpenAPI, estructura de rutas, `operationId` únicos, respuestas por operación y referencias locales resolubles. El workflow se configura para ejecutarse en la rama de evaluación y en PRs/cambios relevantes de `main`.
+Se añadió `.github/workflows/issue-9-openapi-contract.yml`. En el commit `b64ce55e49c4271ad7702697e43a08c0b599c5c8` se sustituyó la validación artesanal por el validador de especificaciones OpenAPI `openapi-spec-validator==0.7.2`, con Python 3.12 y las acciones de checkout/setup-python fijadas a SHA completos.
 
-**Estado de ejecución:** pendiente de resultado para el último commit de esta rama. El workflow comprueba invariantes estructurales esenciales; no sustituye un validador completo de conformidad OpenAPI ni pruebas de contrato cliente-servidor.
+Comando configurado en CI:
+
+```bash
+python -m pip install --disable-pip-version-check openapi-spec-validator==0.7.2
+openapi-spec-validator docs/architecture/stack-poc-openapi.yaml
+```
+
+**Estado de ejecución:** no confirmado. La consulta de ejecuciones asociadas a ese commit y los estados combinados no devolvió resultados; por tanto, no se registra PASS hasta que GitHub Actions publique un resultado verificable. Incluso con el validador OpenAPI en PASS, seguirán pendientes las pruebas de contrato cliente-servidor y las PoC comparativas de API, persistencia histórica, cliente/gráficos y tareas asíncronas.
