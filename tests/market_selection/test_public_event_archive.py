@@ -62,6 +62,33 @@ def candidate_from(archive_capture):
 
 
 class PublicEventArchiveTests(unittest.TestCase):
+    def test_archive_text_evidence_excludes_embedded_scripts_and_media(self):
+        from scripts.market_selection.capture_public_event_feed import _ArchiveHTMLParser
+
+        parser = _ArchiveHTMLParser()
+        parser.feed(
+            '<html><body><script><a href="https://third-party.example/leak">Injected</a>'
+            'SECRET_SCRIPT_TEXT</script><style>SECRET_STYLE_TEXT</style>'
+            '<iframe>SECRET_FRAME_TEXT</iframe><svg><text>SECRET_SVG_TEXT</text></svg>'
+            '<img src="https://third-party.example/image.png" alt="Third party image">'
+            '<a href="/newsevents/pressreleases/bcreg20260924a.htm">'
+            'Federal Reserve Board requests public comment</a>'
+            '<p>Published September 24, 2026</p></body></html>'
+        )
+        parser.close()
+        extracted = " ".join(parser.page_text)
+        self.assertNotIn("SECRET_SCRIPT_TEXT", extracted)
+        self.assertNotIn("SECRET_STYLE_TEXT", extracted)
+        self.assertNotIn("SECRET_FRAME_TEXT", extracted)
+        self.assertNotIn("SECRET_SVG_TEXT", extracted)
+        self.assertNotIn("Third party image", extracted)
+        self.assertEqual(len(parser.anchors), 1)
+        self.assertEqual(
+            parser.anchors[0]["href"],
+            "/newsevents/pressreleases/bcreg20260924a.htm",
+        )
+        self.assertIn("Federal Reserve Board requests public comment", extracted)
+
     def test_archive_capture_blocks_terms_pending_source_before_network(self):
         with patch("scripts.market_selection.capture_public_event_feed._open_allowlisted_url") as network:
             result = capture_public_event_archive_index(
