@@ -1,6 +1,7 @@
 # ADR-0001: Criterios y límites para seleccionar el stack
 
-- **Estado:** Propuesto; no aprobado como selección tecnológica definitiva.
+- **Estado:** Aceptado el 2026-10-24 como decisión de diferir la selección tecnológica definitiva; ningún cliente/stack queda declarado ganador.
+- **Aprobación:** el propietario del producto ha ordenado ratificar el ADR con las limitaciones y riesgos residuales explícitos. Esta ratificación aprueba el proceso de decisión reversible y sus gates; no equivale a aprobar un stack de producción.
 - **Issue:** #9.
 - **Fecha:** 2026-10-24.
 - **Decisores:** propietario del producto; revisión técnica mediante PR.
@@ -51,14 +52,39 @@ Esta decisión limita la experimentación; **no aprueba** una tecnología como g
 
 Ratificar el ADR solo después de: (a) PoC API/contratos; (b) persistencia histórica; (c) cliente y gráficos multiplataforma; (d) worker idempotente con recuperación; (e) CI y revisión de seguridad; (f) matriz puntuada con evidencia y análisis de sensibilidad; y (g) aprobación explícita del propietario del producto. Cualquier fallo, cambio de requisitos o evidencia que cambie el ranking exige revisar este ADR mediante PR.
 
+
+## Ratificación acotada — decisión formal
+
+**Decisión ratificada:** diferir la selección definitiva del stack y mantener la arquitectura de prueba reversible. No se declara ganador entre Web React/Vite, Flutter, React Native bare ni Kotlin nativo. La evidencia actual no permite una clasificación global justa: faltan el resultado inspeccionado del benchmark Android común, parte de las revisiones de dependencias nativas y obligaciones de distribución, y dimensiones de la matriz que no han sido medidas en entornos comparables.
+
+Esta decisión sí es ejecutable ahora: Python continúa como lenguaje del código analítico existente; OpenAPI como contrato de intercambio; PostgreSQL como candidato inicial para la persistencia; y un worker sencillo/idempotente como baseline. Son elecciones de PoC reversibles, no aprobación de producción. No se incorporarán brokers, caché distribuida, streaming ni infraestructura especializada sin una carga medida que lo justifique.
+
+### Riesgos residuales aceptados para esta fase
+
+- **Comparabilidad:** no puntuar tiempo de build medido en máquinas distintas como head-to-head. El benchmark común solo se acepta tras revisar sus artefactos y verificar UI/fixture, hashes, arranque y PSS/RSS.
+- **Licencias y avisos:** una auditoría sin vulnerabilidades conocidas no prueba ausencia de vulnerabilidades ni aprobación jurídica. El inventario automatizado no sustituye revisión de textos, atribuciones, avisos, componentes binarios ni obligaciones de distribución.
+- **Cobertura:** los resultados parciales y la sensibilidad sobre criterios comunes son diagnósticos; no autorizan un ranking completo si quedan criterios N/E o candidatos con cobertura desigual.
+- **Plataformas:** Kotlin es referencia Android y no demuestra una solución iOS; emulador no equivale a dispositivo físico ni prueba accesibilidad con lector de pantalla.
+- **Entorno local:** el runner Windows hospedado no sustituye una medición en Windows 11 real; al no estar disponible el equipo del propietario, esa dimensión queda N/E y no se extrapola.
+- **Producción:** las PoC no acreditan escalabilidad, resiliencia operativa, threat model completo, recuperación ante desastres ni conformidad/certificación ISO.
+
+### Condiciones para reabrir la selección final
+
+1. Revisar el artefacto final del benchmark Android común y registrar PASS/FAIL por app, hashes y medidas válidas.
+2. Resolver las licencias/avisos del conjunto exacto de dependencias de los candidatos finalistas y documentar las obligaciones por distribución.
+3. Mantener N/E donde no exista evidencia; completar puntuaciones únicamente con referencias reproducibles y calcular sensibilidad global solo con cobertura completa y comparable.
+4. Volver a este ADR mediante PR si una nueva evidencia cambia la recomendación, se decide medir Windows 11 real o se pretende pasar de PoC a producción.
+
+La ratificación es deliberadamente limitada: evita una falsa certeza y permite seguir desarrollando PoC sin comprometer la rama principal ni autorizar trading real.
+
 ## Verificación
 
-- [ ] PoC ejecutadas en entorno documentado.
-- [ ] Resultados PASS/FAIL reproducibles adjuntos.
-- [ ] Matriz puntuada con referencias a evidencia.
-- [ ] Análisis de sensibilidad completado.
-- [ ] Revisión de licencias, soporte y vulnerabilidades.
-- [ ] Decisión final aprobada por el propietario del producto.
+- [x] Decisión de fase ratificada: diferir selección definitiva; no declarar ganador sin cobertura comparable.
+- [x] Limitaciones y riesgos residuales documentados en esta ratificación acotada.
+- [ ] Benchmark Android común terminado y artefactos revisados.
+- [ ] Revisión de licencias/avisos y obligaciones de distribución completada para los candidatos finalistas.
+- [ ] Matriz global puntuada con evidencia comparable y sensibilidad completa; mantener N/E mientras falte evidencia.
+- [ ] Ratificar selección tecnológica definitiva mediante una revisión posterior de este ADR.
 
 
 ## Evidence checkpoint — 2026-10-24 (not final ratification)
