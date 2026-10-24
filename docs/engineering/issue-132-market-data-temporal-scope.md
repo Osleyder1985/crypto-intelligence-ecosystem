@@ -10,7 +10,8 @@ Vincular un evento regulatorio real con episodios técnicos observados en velas 
 - **Endpoint documentado:** `https://data-api.binance.vision/api/v3/klines`.
 - **Documentación oficial:** https://developers.binance.com/en/docs/products/spot/rest-api
 - **Evidencia exacta registrada:** “For APIs that only send public market data, please use the base endpoint https://data-api.binance.vision.”
-- **SHA-256 del extracto UTF-8:** `7b98e2a2961eceab65592628930600a9c6681651637031ba9fae6dc4604a6cc1`.
+- **SHA-256 del extracto UTF-8:** `7b98e2a2961eceab65592628930600a9c6681651637031ba9fae6dc4604a6cc1` (hash del extracto almacenado, no de la página completa).
+- **Captura automatizada de la documentación:** el endpoint devolvió HTTP 202 en el runner; el manifiesto registra `AUTOMATION_CHALLENGE` y revisión manual pendiente. El cuerpo del desafío no se acepta ni se conserva como texto de política. No se afirma que exista un snapshot íntegro de la página Binance.
 - **Casos de uso del proyecto:** análisis interno y persistencia de informes derivados. No se autoriza redistribución de datos OHLCV sin procesar ni ejecución de operaciones.
 - **Persistencia:** el payload de velas y las respuestas HTTP permanecen solo en memoria durante el análisis. El informe derivado conserva endpoint, ventana solicitada, timestamps, códigos HTTP, tamaños y hashes de respuesta, configuración, episodios y evaluación temporal; no guarda las filas de velas ni sus cuerpos base64.
 - **Límite jurídico:** la documentación identifica el endpoint público; no se interpreta como una licencia general de redistribución ni como dictamen jurídico. El registro es una decisión técnica del proyecto, con alcance restringido.
