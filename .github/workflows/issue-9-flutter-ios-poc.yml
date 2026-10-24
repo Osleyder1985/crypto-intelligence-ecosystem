@@ -60,13 +60,16 @@ jobs:
           for run in 1 2 3; do
             flutter clean
             flutter pub get
-            /usr/bin/time -l flutter build ios --no-codesign 2>&1 | tee -a flutter-ios-build-measurement.log
+            /usr/bin/time -l flutter build ios --debug --no-codesign 2>&1 | tee -a flutter-ios-build-measurement.log
             printf 'CLEAN_IOS_BUILD_RUN=%s\n' "$run" | tee -a flutter-ios-build-measurement.log
             du -sk build/ios/iphoneos/Runner.app | tee -a flutter-ios-build-measurement.log
           done
           touch lib/main.dart
-          /usr/bin/time -l flutter build ios --no-codesign 2>&1 | tee -a flutter-ios-build-measurement.log
-          printf 'INCREMENTAL_IOS_BUILD_AFTER_SOURCE_TOUCH\n' | tee -a flutter-ios-build-measurement.log
+          /usr/bin/time -l flutter build ios --debug --no-codesign 2>&1 | tee -a flutter-ios-build-measurement.log
+          printf 'INCREMENTAL_DEBUG_IOS_BUILD_AFTER_SOURCE_TOUCH\n' | tee -a flutter-ios-build-measurement.log
+          du -sk build/ios/iphoneos/Runner.app | tee -a flutter-ios-build-measurement.log
+          /usr/bin/time -l flutter build ios --release --no-codesign 2>&1 | tee -a flutter-ios-build-measurement.log
+          printf 'IOS_RELEASE_BUILD_COMPLETE\n' | tee -a flutter-ios-build-measurement.log
           du -sk build/ios/iphoneos/Runner.app | tee -a flutter-ios-build-measurement.log
       - name: Preserve iOS build measurements
         if: always()
