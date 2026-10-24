@@ -18,14 +18,14 @@ The canonical fixture is `tests/stack_poc/fixtures/ohlcv_synthetic_v1.json`; the
 
 ## CI evidence
 
-The workflow uses an Ubuntu GitHub-hosted runner, installs Flutter 3.47.5, runs widget tests and builds a debug APK. `/usr/bin/time -v` records the runner's build duration and peak resident memory, and `stat` reports APK bytes. These numbers are Linux hosted-runner observations, not measurements of the user's Windows PC, and must not be mixed with web or future React Native measurements. The workflow currently records one build observation; three clean repetitions and incremental-build measurements are still required by the benchmark protocol.
+The workflows use GitHub-hosted Ubuntu and macOS runners, install Flutter 3.47.5, run widget tests, record three clean Debug builds, an incremental build, and a Release build, and preserve time/memory/artifact measurements. These are hosted-runner observations, not measurements of the user's Windows PC, and must not be mixed with results from different hardware as if they were a controlled head-to-head comparison.
 
 ## Limitations
 
 - CustomPainter chart is a minimal reference, not a production financial chart library.
 - Accessibility is partial: the chart has a Semantics label and data table, but TalkBack, text scaling, orientation, and physical-device testing remain pending.
 - No browser chart-ready metric or iOS/macOS build evidence is implied.
-- Security/licence review of Flutter SDK and any future chart dependency remains required.
+- CI inventories the resolved Dart package graph, copies available licence/notice texts with SHA-256 hashes, and flags missing text for manual review. For SDK packages without a package-local licence file, the inventory falls back to the Flutter SDK root licence. This is evidence collection, not SPDX classification or legal approval; build-tool and platform licence obligations still require review.
 
 
 The CI workflows pin Flutter 3.47.5 (stable) and record the exact Flutter/Xcode or Android runner context alongside build measurements. See the [official Flutter release archive](https://docs.flutter.dev/release/archive).
