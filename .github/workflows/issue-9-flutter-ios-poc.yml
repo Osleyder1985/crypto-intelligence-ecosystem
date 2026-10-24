@@ -21,7 +21,6 @@ jobs:
   flutter-ios-reference:
     runs-on: macos-latest
     timeout-minutes: 45
-    timeout-minutes: 45
     env:
       CI: 'true'
       FLUTTER_SUPPRESS_ANALYTICS: 'true'
