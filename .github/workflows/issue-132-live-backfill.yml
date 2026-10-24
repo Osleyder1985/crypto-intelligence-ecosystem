@@ -1,0 +1,40 @@
+name: Captura histórica real y manifiesto reproducible — Issue 132
+
+on:
+  pull_request:
+    paths:
+      - "scripts/market_selection/event_source_registry.py"
+      - "scripts/market_selection/capture_public_event_feed.py"
+      - "scripts/market_selection/capture_public_event_archive.py"
+      - "scripts/market_selection/run_issue_132_live_backfill.py"
+      - "config/provider_authorization_registry.issue-132.json"
+      - ".github/workflows/issue-132-live-backfill.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  live-backfill:
+    if: github.head_ref == 'feat/issue-132-source-scoped-archive-authorization'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Obtener código
+        uses: actions/checkout@v4
+      - name: Configurar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Ejecutar capturas reales secuenciales con autorización por fuente
+        run: |
+          python scripts/market_selection/run_issue_132_live_backfill.py \
+            --authorization-registry config/provider_authorization_registry.issue-132.json \
+            --output-dir "$RUNNER_TEMP/issue-132-live-backfill"
+      - name: Publicar capturas derivadas y manifiesto verificable
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: issue-132-live-backfill
+          path: ${{ runner.temp }}/issue-132-live-backfill/
+          if-no-files-found: warn
+          retention-days: 30
