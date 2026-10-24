@@ -927,6 +927,10 @@ def _verify_promoted_public_archive_event(
         metadata.get("archive_candidate_id") != candidate["candidate_id"]
         or metadata.get("archive_raw_response_sha256") != archive_capture.get("raw_response_sha256")
         or metadata.get("archive_publication_time_evidence") != candidate["publication_time_evidence"]
+        or (
+            archive_capture.get("stored_content_mode") == "EXTRACTED_TEXT_EVIDENCE"
+            and metadata.get("archive_text_evidence_sha256") != archive_capture.get("text_evidence_sha256")
+        )
     ):
         raise PermissionError("event archive candidate metadata does not match the preserved archive")
     event_source = _object(event_record.get("source"), "event.source")
