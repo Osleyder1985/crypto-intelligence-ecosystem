@@ -27,7 +27,7 @@ jobs:
           python-version: "3.12"
       - name: Ejecutar capturas reales secuenciales con autorización por fuente
         run: |
-          python scripts/market_selection/run_issue_132_live_backfill.py \
+          PYTHONPATH=. python scripts/market_selection/run_issue_132_live_backfill.py \
             --authorization-registry config/provider_authorization_registry.issue-132.json \
             --output-dir "$RUNNER_TEMP/issue-132-live-backfill"
       - name: Publicar capturas derivadas y manifiesto verificable
