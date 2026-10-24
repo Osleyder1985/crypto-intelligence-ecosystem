@@ -18,7 +18,7 @@ Open `http://localhost:8000/pocs/issue-9/web/`. The app loads `/tests/stack_poc/
 
 ## Automated checks
 
-The GitHub Actions workflow runs Node.js tests for geometry bounds, rising/falling candles, flat-price input and invalid dimensions. It verifies the fixture provenance marker and runs a repeatable geometry microbenchmark with 100 warm-up iterations and 1,000 measured iterations. The JSON output includes Node version, OS, CPU model, logical CPU count, installed RAM, fixture SHA-256, duration distribution, and RSS observations before/after.
+The GitHub Actions workflow runs Node.js tests for geometry bounds, rising/falling candles, flat-price input and invalid dimensions. It verifies the fixture provenance marker and runs the geometry microbenchmark in three fresh Node processes. Each process performs 100 warm-up iterations and 1,000 measured iterations. Raw JSON outputs and an aggregate summary (median of process medians and range) are uploaded as a CI artifact. The reports include Node version, OS, CPU model, logical CPU count, installed RAM, fixture SHA-256, duration distribution, and RSS observations before/after.
 
 ## Benchmark interpretation
 
