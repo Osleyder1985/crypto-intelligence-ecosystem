@@ -3,6 +3,7 @@ name: Issue 9 Windows measurement script validation
 on:
   pull_request:
     paths:
+      - '.gitattributes'
       - 'scripts/stack_poc/measure_issue9_windows.ps1'
       - 'pocs/issue-9/web/**'
       - 'docs/architecture/issue-9-windows-local-measurement.md'
