@@ -10,7 +10,7 @@ The app uses React Native core components only, with no third-party charting pac
 - The chart is a lightweight native-View reference, not a production chart library.
 - Horizontal scrolling pans; accessible zoom buttons change candle spacing. Physical-device screen-reader checks remain pending.
 - It does not connect to exchanges, submit orders or provide investment advice.
-- CI runs `npm audit` and generates dependency and licence inventories. The generated lockfile and reports are retained as artifacts for review. Commit a reviewed lockfile before production use.
+- CI runs `npm audit` and generates dependency and licence inventories. The generated lockfile is checked against `package-lock.sha256` before `npm ci`, and the exact lockfile plus reports are retained as artifacts for review. The lockfile itself must be committed and reviewed before production use.
 
 ## Run locally
 
