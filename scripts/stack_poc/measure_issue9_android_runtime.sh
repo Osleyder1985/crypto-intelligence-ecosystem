@@ -59,6 +59,8 @@ measure_app() {
     fixture_visible=false
     if [[ -f "$ui_file" ]] && grep -Fq "$expected_title" "$ui_file"; then title_visible=true; fi
     if [[ -f "$ui_file" ]] && grep -Fq "$expected_fixture" "$ui_file"; then fixture_visible=true; fi
+    [[ "$pss_max" -gt 0 ]] || pss_max=""
+    [[ "$rss_max" -gt 0 ]] || rss_max=""
     printf '%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s\n' "$label" "$run" "$pkg" "$activity" "${wait:-}" "${total:-}" "$pss_max" "$rss_max" "$title_visible" "$fixture_visible" "$API" >> "$CSV"
     echo "RESULT stack=$label run=$run wait_ms=${wait:-N/E} total_ms=${total:-N/E} max_pss_kb=$pss_max max_rss_kb=$rss_max title_visible=$title_visible fixture_label_visible=$fixture_visible" | tee -a "$LOG"
     adb shell am force-stop "$pkg" || true
