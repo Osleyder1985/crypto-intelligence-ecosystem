@@ -113,6 +113,9 @@ jobs:
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: issue-9-comparable-android-runtime
-          path: artifacts/issue-9-android-runtime/**
+          path: |
+            artifacts/issue-9-android-runtime/**
+            pocs/issue-9/flutter/build/app/outputs/flutter-apk/app-release.apk
+            pocs/issue-9/react-native/build-project/android/app/build/outputs/apk/release/app-release.apk
           if-no-files-found: warn
           retention-days: 30
