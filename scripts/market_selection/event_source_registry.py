@@ -110,22 +110,44 @@ EVENT_SOURCE_REGISTRY = {
             "source_url": "https://www.sec.gov/newsroom/press-releases",
             "allowed_article_hosts": ["www.sec.gov", "sec.gov"],
             "allowed_archive_path_prefixes": ["/newsroom/press-releases"],
-            "terms_url": "https://www.sec.gov/about/developer-resources",
-            "status": "TERMS_PENDING",
-            "terms_sha256": None,
-            "terms_content_base64": None,
-            "reviewed_by": None,
-            "reviewed_at": None,
-            "allowed_use_cases": [],
+            "terms_url": "https://www.sec.gov/files/about/webmaster-faq.htm",
+            "access_policy_url": "https://www.sec.gov/about/developer-resources",
+            "status": "APPROVED",
+            "terms_sha256": "65eed3611c0cd41c17e50a5493855c6ac612f5640f95eca19f9bd749c07be620",
+            "terms_content_base64": "PHA+QWxsIEdvdmVybm1lbnQtY3JlYXRlZCBjb250ZW50IG9uIHNlYy5nb3YgYW5kIEVER0FSIHB1YmxpYyBmaWxpbmcgY29udGVudCBhcmUgZnJlZSB0byBhY2Nlc3MgYW5kIHJldXNlLiBTZWUgPGEgaHJlZj0iL3ByaXZhY3kuaHRtI2Rpc3NlbWluYXRpb24iPldlYnNpdGUgRGlzc2VtaW5hdGlvbjwvYT4gZm9yIG91ciBwZXJtaXNzaW9ucyBwb2xpY3kuPC9wPg==",
+            "terms_evidence_scope": "Exact HTML paragraph excerpt from the official Webmaster FAQ; full page bytes and SHA-256 are preserved in the Issue 132 policy snapshot artifact.",
+            "reviewed_by": "AI-assisted technical review; owner-authorized project scope",
+            "reviewed_at": "2026-10-24T02:22:00Z",
+            "allowed_use_cases": ["internal_analysis", "persistent_storage"],
             "user_agent_required": True,
-            "user_agent_policy": "Caller must supply an operator-reviewed User-Agent; archive capture remains blocked pending source approval.",
+            "user_agent_policy": "Use the identifiable project User-Agent recorded in approval_scope; respect SEC fair-access requirements and never crawl unclassified endpoints.",
             "max_requests_per_second": 1,
             "max_requests_per_invocation": 1,
             "parallel_requests": False,
             "response_body_policy": "READ_TO_EOF_NO_LOCAL_SIZE_CAP",
+            "response_storage_mode": "EXTRACTED_TEXT_EVIDENCE",
+            "approval_scope": {
+                "allowed_content": {"metadata": True, "official_text": True, "full_html": False, "attachments": False},
+                "third_party_content": {"handling": "EXCLUDED", "evidence": "SEC Webmaster FAQ states government-created sec.gov content and EDGAR public filing content are free to access and reuse, while examples of excluded material include stock-art photos. The extractor omits media, embedded payloads, page chrome, and labels of external links; it never follows those external links."},
+                "retention": {
+                    "stored_fields": ["source_id", "requested_url", "final_url", "captured_at", "http_status", "raw_response_bytes", "raw_response_sha256", "text_evidence_base64", "text_evidence_sha256", "text_evidence_bytes", "provider_policy_assessments"],
+                    "duration": "Until the official policy or approved scope changes, or the project owner revokes approval.",
+                    "deletion_or_recheck_rule": "Re-check the official policy snapshot and registry hash before a new capture batch; suspend capture and remove stored text evidence if the source scope is no longer supported."
+                },
+                "attribution": {"required": True, "format": "Source: U.S. Securities and Exchange Commission (SEC), with the canonical press-release URL."},
+                "automated_access": {
+                    "approved_endpoint": "https://www.sec.gov/newsroom/press-releases",
+                    "user_agent": "CryptoIntelligenceIssue132PolicyReview/1.0 (contact: repository maintainer)",
+                    "max_aggregate_requests_per_second": 1,
+                    "timeout_seconds": 20,
+                    "redirect_policy": "HTTPS redirects only to allowlisted SEC hosts and approved press-release paths."
+                },
+                "limitations": ["No RSS authorization is inherited from this archive record.", "Do not persist full HTML, attachments, images, graphics, logos, or external-link labels.", "Do not infer an asset identity from ticker or title alone.", "Temporal association does not establish causality.", "One request per invocation; no parallel requests."],
+                "decision_rationale": "The SEC Webmaster FAQ explicitly permits reuse of government-created SEC content and EDGAR public filing content. Approval is restricted to official text and metadata, with external/embedded content excluded and SEC fair-access controls applied."
+            },
             "coverage_scope": "One explicitly captured official archive page/query segment per invocation; not exhaustive unless all relevant pagination/year segments are recorded.",
             "entity_resolution_policy": "No asset identity is inferred from title, ticker, or description.",
-            "notes": "Separate archive source ID so adding archive paths does not invalidate existing RSS source hashes. Runtime use remains blocked pending terms and persistent-storage review."
+            "notes": "Archive-only authorization. Full HTML and attachments are not persisted; RSS remains separately gated."
         },
         "cftc_press_release_archive": {
             "source_id": "cftc_press_release_archive",
@@ -136,21 +158,42 @@ EVENT_SOURCE_REGISTRY = {
             "allowed_article_hosts": ["www.cftc.gov", "cftc.gov"],
             "allowed_archive_path_prefixes": ["/PressRoom/PressReleases"],
             "terms_url": "https://www.cftc.gov/WebPolicy/index.htm",
-            "status": "TERMS_PENDING",
-            "terms_sha256": None,
-            "terms_content_base64": None,
-            "reviewed_by": None,
-            "reviewed_at": None,
-            "allowed_use_cases": [],
+            "status": "APPROVED",
+            "terms_sha256": "22d2072bca694e4b67820ccd72544ef03b00acf1229a6c58f25b1d72d0eb5448",
+            "terms_content_base64": "PHA+R292ZXJubWVudCBpbmZvcm1hdGlvbiBhdCB0aGUgQ0ZUQyB3ZWJzaXRlIGlzIGluIHRoZSBwdWJsaWMgZG9tYWluLiBQdWJsaWMgZG9tYWluIGluZm9ybWF0aW9uIG1heSBiZSBmcmVlbHkgZGlzdHJpYnV0ZWQgYW5kIGNvcGllZCwgYnV0IGl0IGlzIHJlcXVlc3RlZCB0aGF0IGluIGFueSBzdWJzZXF1ZW50IHVzZSB0aGUgQ0ZUQyBiZSBnaXZlbiBhcHByb3ByaWF0ZSBhY2tub3dsZWRnZW1lbnQuIFdoZW4gdXNpbmcgdGhlIENGVEMgd2Vic2l0ZSwgeW91IG1heSBlbmNvdW50ZXIgZG9jdW1lbnRzLCBpbGx1c3RyYXRpb25zLCBwaG90b2dyYXBocywgb3Igb3RoZXIgaW5mb3JtYXRpb24gcmVzb3VyY2VzIGNvbnRyaWJ1dGVkIG9yIGxpY2Vuc2VkIGJ5IHByaXZhdGUgaW5kaXZpZHVhbHMsIGNvbXBhbmllcywgb3Igb3JnYW5pemF0aW9ucyB0aGF0IG1heSBiZSBwcm90ZWN0ZWQgYnkgVS5TLiBhbmQgZm9yZWlnbiBjb3B5cmlnaHQgbGF3cy4gVHJhbnNtaXNzaW9uIG9yIHJlcHJvZHVjdGlvbiBvZiBwcm90ZWN0ZWQgaXRlbXMgYmV5b25kIHRoYXQgYWxsb3dlZCBieSBmYWlyIHVzZSBhcyBkZWZpbmVkIGluIHRoZSBjb3B5cmlnaHQgbGF3cyByZXF1aXJlcyB0aGUgd3JpdHRlbiBwZXJtaXNzaW9uIG9mIHRoZSBjb3B5cmlnaHQgb3duZXJzLjwvcD4=",
+            "terms_evidence_scope": "Exact HTML paragraph excerpt from the official CFTC Web Policy; full page bytes and SHA-256 are preserved in the Issue 132 policy snapshot artifact.",
+            "reviewed_by": "AI-assisted technical review; owner-authorized project scope",
+            "reviewed_at": "2026-10-24T02:22:00Z",
+            "allowed_use_cases": ["internal_analysis", "persistent_storage"],
             "user_agent_required": True,
-            "user_agent_policy": "Use an identifiable operator-reviewed User-Agent; archive capture remains blocked pending source approval.",
+            "user_agent_policy": "Use the identifiable project User-Agent recorded in approval_scope; do not request the CFTC RSS endpoint while its official status page says disabled.",
             "max_requests_per_second": 1,
             "max_requests_per_invocation": 1,
             "parallel_requests": False,
             "response_body_policy": "READ_TO_EOF_NO_LOCAL_SIZE_CAP",
+            "response_storage_mode": "EXTRACTED_TEXT_EVIDENCE",
+            "approval_scope": {
+                "allowed_content": {"metadata": True, "official_text": True, "full_html": False, "attachments": False},
+                "third_party_content": {"handling": "EXCLUDED", "evidence": "CFTC Web Policy states government information is public domain with attribution and warns that contributed/licensed third-party documents, illustrations, photographs, and other resources may be protected. The extractor omits media, embedded payloads, page chrome, and labels of external links; it never follows external links."},
+                "retention": {
+                    "stored_fields": ["source_id", "requested_url", "final_url", "captured_at", "http_status", "raw_response_bytes", "raw_response_sha256", "text_evidence_base64", "text_evidence_sha256", "text_evidence_bytes", "provider_policy_assessments"],
+                    "duration": "Until the official policy or approved scope changes, or the project owner revokes approval.",
+                    "deletion_or_recheck_rule": "Re-check the official policy snapshot and registry hash before a new capture batch; suspend capture and remove stored text evidence if the source scope is no longer supported."
+                },
+                "attribution": {"required": True, "format": "Source: U.S. Commodity Futures Trading Commission (CFTC), with the canonical press-release URL."},
+                "automated_access": {
+                    "approved_endpoint": "https://www.cftc.gov/PressRoom/PressReleases",
+                    "user_agent": "CryptoIntelligenceIssue132PolicyReview/1.0 (contact: repository maintainer)",
+                    "max_aggregate_requests_per_second": 1,
+                    "timeout_seconds": 20,
+                    "redirect_policy": "HTTPS redirects only to allowlisted CFTC hosts and approved press-release paths."
+                },
+                "limitations": ["CFTC RSS remains disabled and is not polled.", "Do not persist full HTML, attachments, images, graphics, logos, or external-link labels.", "Do not infer an asset identity from ticker or title alone.", "Temporal association does not establish causality.", "One request per invocation; no parallel requests."],
+                "decision_rationale": "The CFTC Web Policy permits copying public-domain government information with attribution. Approval is restricted to official text and metadata, with contributed/licensed third-party content excluded and RSS disabled."
+            },
             "coverage_scope": "One explicitly captured official archive page/query segment per invocation; not exhaustive unless all relevant pagination/year segments are recorded.",
             "entity_resolution_policy": "No asset identity is inferred from title, ticker, or description.",
-            "notes": "HTML archive is a separate source from the RSS endpoint, which may be disabled. Runtime use remains blocked pending terms and persistent-storage review."
+            "notes": "Archive-only authorization. CFTC RSS is a separate source and remains unrequested while disabled."
         },
         "federal_reserve_press_release_archive": {
             "source_id": "federal_reserve_press_release_archive",
@@ -161,22 +204,42 @@ EVENT_SOURCE_REGISTRY = {
             "allowed_article_hosts": ["www.federalreserve.gov", "federalreserve.gov"],
             "allowed_archive_path_prefixes": ["/newsevents/pressreleases", "/newsevents/pressreleases.htm"],
             "terms_url": "https://www.federalreserve.gov/disclaimer.htm",
-            "status": "TERMS_PENDING",
-            "terms_sha256": None,
-            "terms_content_base64": None,
-            "reviewed_by": None,
-            "reviewed_at": None,
-            "allowed_use_cases": [],
+            "status": "APPROVED",
+            "terms_sha256": "7069bc3163ce548b4f2f5e837f78dd4b3427c491a93cd867735baeb6f653a04d",
+            "terms_content_base64": "PHA+VW5sZXNzIG90aGVyd2lzZSBpbmRpY2F0ZWQsIGluZm9ybWF0aW9uIG9uIEJvYXJkJ3Mgd2Vic2l0ZSBpcyBpbiB0aGUgcHVibGljIGRvbWFpbiBhbmQgbWF5IGJlIGNvcGllZCBhbmQgZGlzdHJpYnV0ZWQgd2l0aG91dCBwZXJtaXNzaW9uLiBQbGVhc2UgY2l0ZSB0byB0aGUgQm9hcmQgYXMgdGhlIHNvdXJjZSBvZiB0aGUgaW5mb3JtYXRpb24uIEZvciBhbnkgcGhvdG8sIGdyYXBoaWMsIG9yIG90aGVyIG1hdGVyaWFsIHRoYXQgaXMgaWRlbnRpZmllZCBhcyBiZWluZyBhc3NvY2lhdGVkIHdpdGggYSBub24tQm9hcmQgKHN1Y2ggYXMgbWF0ZXJpYWxzIHdpdGggYSBjb3B5cmlnaHQgb3IgdHJhZGVtYXJrKSBwZXJtaXNzaW9uIHRvIGNvcHkgYW5kIGRpc3RyaWJ1dGUgc3VjaCBwaG90bywgZ3JhcGhpYywgb3IgbWF0ZXJpYWwgbXVzdCBiZSBvYnRhaW5lZCBmcm9tIHRoZSBub24tQm9hcmQgc291cmNlLjwvcD4=",
+            "terms_evidence_scope": "Exact HTML paragraph excerpt from the official Federal Reserve disclaimer; full page bytes and SHA-256 are preserved in the Issue 132 policy snapshot artifact.",
+            "reviewed_by": "AI-assisted technical review; owner-authorized project scope",
+            "reviewed_at": "2026-10-24T02:22:00Z",
+            "allowed_use_cases": ["internal_analysis", "persistent_storage"],
             "user_agent_required": True,
-            "user_agent_policy": "Use an identifiable operator-reviewed User-Agent; archive capture remains blocked pending source approval.",
+            "user_agent_policy": "Use the identifiable project User-Agent recorded in approval_scope; one request per invocation and no parallel requests.",
             "max_requests_per_second": 1,
             "max_requests_per_invocation": 1,
             "parallel_requests": False,
             "response_body_policy": "READ_TO_EOF_NO_LOCAL_SIZE_CAP",
             "response_storage_mode": "EXTRACTED_TEXT_EVIDENCE",
+            "approval_scope": {
+                "allowed_content": {"metadata": True, "official_text": True, "full_html": False, "attachments": False},
+                "third_party_content": {"handling": "EXCLUDED", "evidence": "The Federal Reserve disclaimer permits copying public-domain Board information with attribution and requires permission for identified non-Board material. The extractor omits media, embedded payloads, page chrome, and labels of external links; it never follows external links."},
+                "retention": {
+                    "stored_fields": ["source_id", "requested_url", "final_url", "captured_at", "http_status", "raw_response_bytes", "raw_response_sha256", "text_evidence_base64", "text_evidence_sha256", "text_evidence_bytes", "provider_policy_assessments"],
+                    "duration": "Until the official policy or approved scope changes, or the project owner revokes approval.",
+                    "deletion_or_recheck_rule": "Re-check the official policy snapshot and registry hash before a new capture batch; suspend capture and remove stored text evidence if the source scope is no longer supported."
+                },
+                "attribution": {"required": True, "format": "Source: Board of Governors of the Federal Reserve System, with the canonical press-release URL."},
+                "automated_access": {
+                    "approved_endpoint": "https://www.federalreserve.gov/newsevents/pressreleases.htm",
+                    "user_agent": "CryptoIntelligenceIssue132PolicyReview/1.0 (contact: repository maintainer)",
+                    "max_aggregate_requests_per_second": 1,
+                    "timeout_seconds": 20,
+                    "redirect_policy": "HTTPS redirects only to allowlisted Federal Reserve hosts and approved press-release paths."
+                },
+                "limitations": ["RSS authorization is separate and not inherited from this archive record.", "Do not persist full HTML, attachments, images, graphics, logos, or external-link labels.", "Do not infer an asset identity from ticker or title alone.", "Temporal association does not establish causality.", "One request per invocation; no parallel requests."],
+                "decision_rationale": "The Federal Reserve disclaimer permits copying Board public-domain information with attribution, subject to third-party material exceptions. Approval is restricted to official text and metadata, with non-Board content excluded."
+            },
             "coverage_scope": "One explicitly captured official archive page/year segment per invocation; not exhaustive unless all relevant year segments are recorded.",
             "entity_resolution_policy": "No asset identity is inferred from title, ticker, or description.",
-            "notes": "Separate archive source ID preserves the existing RSS source hash. Runtime use remains blocked pending terms and persistent-storage review."
+            "notes": "Archive-only authorization. Full HTML and attachments are not persisted; RSS remains separately gated."
         }
     },
 }

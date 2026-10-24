@@ -1,0 +1,32 @@
+{
+  "sec_press_release_archive": {
+    "schema_version": "crypto-provider-authorization-v1",
+    "provider_id": "sec_press_release_archive",
+    "status": "APPROVED",
+    "authorized_use_cases": ["internal_analysis", "persistent_storage"],
+    "terms_url": "https://www.sec.gov/files/about/webmaster-faq.htm",
+    "terms_sha256": "65eed3611c0cd41c17e50a5493855c6ac612f5640f95eca19f9bd749c07be620",
+    "reviewed_by": "AI-assisted technical review; owner-authorized project scope",
+    "reviewed_at": "2026-10-24T02:22:00Z"
+  },
+  "cftc_press_release_archive": {
+    "schema_version": "crypto-provider-authorization-v1",
+    "provider_id": "cftc_press_release_archive",
+    "status": "APPROVED",
+    "authorized_use_cases": ["internal_analysis", "persistent_storage"],
+    "terms_url": "https://www.cftc.gov/WebPolicy/index.htm",
+    "terms_sha256": "22d2072bca694e4b67820ccd72544ef03b00acf1229a6c58f25b1d72d0eb5448",
+    "reviewed_by": "AI-assisted technical review; owner-authorized project scope",
+    "reviewed_at": "2026-10-24T02:22:00Z"
+  },
+  "federal_reserve_press_release_archive": {
+    "schema_version": "crypto-provider-authorization-v1",
+    "provider_id": "federal_reserve_press_release_archive",
+    "status": "APPROVED",
+    "authorized_use_cases": ["internal_analysis", "persistent_storage"],
+    "terms_url": "https://www.federalreserve.gov/disclaimer.htm",
+    "terms_sha256": "7069bc3163ce548b4f2f5e837f78dd4b3427c491a93cd867735baeb6f653a04d",
+    "reviewed_by": "AI-assisted technical review; owner-authorized project scope",
+    "reviewed_at": "2026-10-24T02:22:00Z"
+  }
+}

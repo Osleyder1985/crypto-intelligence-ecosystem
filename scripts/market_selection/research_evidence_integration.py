@@ -191,6 +191,36 @@ def _verify_source_capture(
         assessment = _object(capture.get(key), f"{field}.{key}")
         if assessment.get("provider_id") != source_entry["provider_id"] or assessment.get("decision") != "ALLOW":
             raise PermissionError(f"{field} does not authorize {use_case}")
+    digest = capture.get("raw_response_sha256")
+    size = capture.get("raw_response_bytes")
+    if not isinstance(digest, str) or not _SHA256_RE.fullmatch(digest):
+        raise PermissionError(f"{field} raw response SHA-256 is invalid")
+    if isinstance(size, bool) or not isinstance(size, int) or size < 0:
+        raise PermissionError(f"{field} raw response byte count is invalid")
+    if capture.get("stored_content_mode") == "EXTRACTED_TEXT_EVIDENCE":
+        if source_entry.get("response_storage_mode") != "EXTRACTED_TEXT_EVIDENCE":
+            raise PermissionError(f"{field} uses extracted text without a matching source storage policy")
+        encoded_evidence = capture.get("text_evidence_base64")
+        evidence_hash = capture.get("text_evidence_sha256")
+        evidence_size = capture.get("text_evidence_bytes")
+        if not isinstance(encoded_evidence, str):
+            raise PermissionError(f"{field} extracted text evidence is missing")
+        try:
+            evidence_bytes = base64.b64decode(encoded_evidence, validate=True)
+        except (ValueError, base64.binascii.Error) as exc:
+            raise PermissionError(f"{field} extracted text evidence base64 is invalid") from exc
+        if (
+            not isinstance(evidence_hash, str)
+            or not _SHA256_RE.fullmatch(evidence_hash)
+            or hashlib.sha256(evidence_bytes).hexdigest() != evidence_hash
+            or isinstance(evidence_size, bool)
+            or not isinstance(evidence_size, int)
+            or len(evidence_bytes) != evidence_size
+        ):
+            raise PermissionError(f"{field} extracted text evidence integrity check failed")
+        return evidence_bytes
+    if capture.get("stored_content_mode") == "UNSUPPORTED_CONTENT_NOT_PERSISTED":
+        raise PermissionError(f"{field} response content type was not eligible for persistence")
     encoded = capture.get("raw_response_base64")
     if not isinstance(encoded, str):
         raise PermissionError(f"{field} raw response bytes are missing")
@@ -198,13 +228,9 @@ def _verify_source_capture(
         raw = base64.b64decode(encoded, validate=True)
     except (ValueError, base64.binascii.Error) as exc:
         raise PermissionError(f"{field} raw response base64 is invalid") from exc
-    digest = capture.get("raw_response_sha256")
-    size = capture.get("raw_response_bytes")
-    if not isinstance(digest, str) or not _SHA256_RE.fullmatch(digest):
-        raise PermissionError(f"{field} raw response SHA-256 is invalid")
     if hashlib.sha256(raw).hexdigest() != digest:
         raise PermissionError(f"{field} raw response SHA-256 mismatch")
-    if isinstance(size, bool) or not isinstance(size, int) or len(raw) != size:
+    if len(raw) != size:
         raise PermissionError(f"{field} raw response byte count mismatch")
     return raw
 
@@ -901,6 +927,10 @@ def _verify_promoted_public_archive_event(
         metadata.get("archive_candidate_id") != candidate["candidate_id"]
         or metadata.get("archive_raw_response_sha256") != archive_capture.get("raw_response_sha256")
         or metadata.get("archive_publication_time_evidence") != candidate["publication_time_evidence"]
+        or (
+            archive_capture.get("stored_content_mode") == "EXTRACTED_TEXT_EVIDENCE"
+            and metadata.get("archive_text_evidence_sha256") != archive_capture.get("text_evidence_sha256")
+        )
     ):
         raise PermissionError("event archive candidate metadata does not match the preserved archive")
     event_source = _object(event_record.get("source"), "event.source")
@@ -946,7 +976,17 @@ def _verify_promoted_public_archive_event(
         or event_url != candidate["candidate_url"]
         or metadata.get("article_raw_response_sha256") != article_capture.get("raw_response_sha256")
         or event_record.get("content_sha256") != article_capture.get("raw_response_sha256")
-        or hashlib.sha256(article_raw).hexdigest() != event_record.get("content_sha256")
+        or (
+            article_capture.get("stored_content_mode") == "EXTRACTED_TEXT_EVIDENCE"
+            and (
+                metadata.get("article_text_evidence_sha256") != article_capture.get("text_evidence_sha256")
+                or hashlib.sha256(article_raw).hexdigest() != article_capture.get("text_evidence_sha256")
+            )
+        )
+        or (
+            article_capture.get("stored_content_mode") != "EXTRACTED_TEXT_EVIDENCE"
+            and hashlib.sha256(article_raw).hexdigest() != event_record.get("content_sha256")
+        )
     ):
         raise PermissionError("event title, publication time, URL or article hash is not grounded in archive evidence")
     expected_event_id = f"{candidate['source_id']}:" + hashlib.sha256(candidate["candidate_id"].encode("utf-8")).hexdigest()

@@ -1542,6 +1542,7 @@ def promote_public_archive_candidate_to_event(
             "archive_candidate_id": candidate["candidate_id"],
             "archive_candidate_record": candidate,
             "archive_raw_response_sha256": archive_capture["raw_response_sha256"],
+            "archive_text_evidence_sha256": archive_capture.get("text_evidence_sha256"),
             "archive_publication_time_evidence": candidate["publication_time_evidence"],
             "entity_resolution_reviewed_by": reviewer.strip(),
             "entity_resolution_reviewed_at": reviewed_at.isoformat().replace("+00:00", "Z"),
@@ -1549,6 +1550,7 @@ def promote_public_archive_candidate_to_event(
             "entity_resolution_evidence_record_base64": evidence_b64,
             "causality_status": "NOT_ASSESSED",
             "article_raw_response_sha256": article_hash,
+            "article_text_evidence_sha256": article_capture.get("text_evidence_sha256"),
             "article_content_type": content_type,
         },
     }

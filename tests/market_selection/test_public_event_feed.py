@@ -472,20 +472,24 @@ class PublicEventFeedCaptureTests(unittest.TestCase):
     def test_all_six_official_source_endpoints_and_terms_match_review_packet(self):
         sources = EVENT_SOURCE_REGISTRY["sources"]
         expected_sources = {
-            "sec_press_releases": ("https://www.sec.gov/news/pressreleases.rss", "https://www.sec.gov/about/developer-resources"),
-            "sec_press_release_archive": ("https://www.sec.gov/newsroom/press-releases", "https://www.sec.gov/about/developer-resources"),
-            "cftc_general_press_releases": ("https://www.cftc.gov/RSS/RSSGP/rssgp.xml", "https://www.cftc.gov/WebPolicy/index.htm"),
-            "cftc_press_release_archive": ("https://www.cftc.gov/PressRoom/PressReleases", "https://www.cftc.gov/WebPolicy/index.htm"),
-            "federal_reserve_press_releases": ("https://www.federalreserve.gov/feeds/press_all.xml", "https://www.federalreserve.gov/disclaimer.htm"),
-            "federal_reserve_press_release_archive": ("https://www.federalreserve.gov/newsevents/pressreleases.htm", "https://www.federalreserve.gov/disclaimer.htm"),
+            "sec_press_releases": ("https://www.sec.gov/news/pressreleases.rss", "https://www.sec.gov/about/developer-resources", "TERMS_PENDING", []),
+            "sec_press_release_archive": ("https://www.sec.gov/newsroom/press-releases", "https://www.sec.gov/files/about/webmaster-faq.htm", "APPROVED", ["internal_analysis", "persistent_storage"]),
+            "cftc_general_press_releases": ("https://www.cftc.gov/RSS/RSSGP/rssgp.xml", "https://www.cftc.gov/WebPolicy/index.htm", "TERMS_PENDING", []),
+            "cftc_press_release_archive": ("https://www.cftc.gov/PressRoom/PressReleases", "https://www.cftc.gov/WebPolicy/index.htm", "APPROVED", ["internal_analysis", "persistent_storage"]),
+            "federal_reserve_press_releases": ("https://www.federalreserve.gov/feeds/press_all.xml", "https://www.federalreserve.gov/disclaimer.htm", "TERMS_PENDING", []),
+            "federal_reserve_press_release_archive": ("https://www.federalreserve.gov/newsevents/pressreleases.htm", "https://www.federalreserve.gov/disclaimer.htm", "APPROVED", ["internal_analysis", "persistent_storage"]),
         }
         self.assertEqual(set(sources), set(expected_sources))
-        for source_id, (expected_endpoint, expected_terms_url) in expected_sources.items():
+        for source_id, (expected_endpoint, expected_terms_url, expected_status, expected_use_cases) in expected_sources.items():
             with self.subTest(source_id=source_id):
                 self.assertEqual(sources[source_id]["source_url"], expected_endpoint)
                 self.assertEqual(sources[source_id]["terms_url"], expected_terms_url)
-                self.assertEqual(sources[source_id]["status"], "TERMS_PENDING")
-                self.assertEqual(sources[source_id]["allowed_use_cases"], [])
+                self.assertEqual(sources[source_id]["status"], expected_status)
+                self.assertEqual(sources[source_id]["allowed_use_cases"], expected_use_cases)
+                if expected_status == "APPROVED":
+                    self.assertEqual(sources[source_id]["response_storage_mode"], "EXTRACTED_TEXT_EVIDENCE")
+                    self.assertFalse(sources[source_id]["approval_scope"]["allowed_content"]["full_html"])
+                    self.assertFalse(sources[source_id]["approval_scope"]["allowed_content"]["attachments"])
 
 
     def test_non_finite_and_non_positive_timeouts_block_before_network(self):
