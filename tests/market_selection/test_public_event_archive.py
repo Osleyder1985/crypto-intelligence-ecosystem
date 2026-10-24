@@ -127,16 +127,17 @@ class PublicEventArchiveTests(unittest.TestCase):
         )
         evidence = encoded_evidence.decode("utf-8")
         self.assertNotIn("THIRD_PARTY_SCRIPT_SECRET", evidence)
-        candidate = select_public_event_archive_candidate(
-            capture,
-            candidate_url=article_url,
-            title="Federal Reserve Board requests public comment on two proposals",
-            published_at="2026-09-24T16:00:00Z",
-            publication_time_evidence="September 24, 2026",
-            selected_by="offline-regression-reviewer",
-            selected_at="2026-10-24T02:01:00Z",
-            selection_rationale="Synthetic fixture verifies text-only archive evidence handling.",
-        )
+        with patch.dict(EVENT_SOURCE_REGISTRY["sources"], {source_id: entry}):
+            candidate = select_public_event_archive_candidate(
+                capture,
+                candidate_url=article_url,
+                title="Federal Reserve Board requests public comment on two proposals",
+                published_at="2026-09-24T16:00:00Z",
+                publication_time_evidence="September 24, 2026",
+                selected_by="offline-regression-reviewer",
+                selected_at="2026-10-24T02:01:00Z",
+                selection_rationale="Synthetic fixture verifies text-only archive evidence handling.",
+            )
         self.assertEqual(candidate["archive_capture_sha256"], capture["raw_response_sha256"])
 
     def test_archive_capture_blocks_terms_pending_source_before_network(self):
