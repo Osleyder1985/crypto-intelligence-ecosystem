@@ -160,3 +160,17 @@ El workflow [run 40045854045](https://github.com/Osleyder1985/crypto-intelligenc
 - Mantener los tres registros en `TERMS_PENDING` hasta completar `approval_scope` por origen y obtener una decisión registrada del revisor autorizado. La captura de políticas no es una captura de noticias/eventos y no constituye aprobación jurídica.
 
 El artefacto de Actions tiene retención de siete días. Si se requiere evidencia duradera para auditoría, debe archivarse de forma aprobada o recapturarse en un mecanismo de retención aprobado; no declarar permanente el artefacto temporal.
+
+
+## Regla de decisión por fuente y modalidad
+
+La evaluación debe conservar el alcance final multifuente sin habilitar fuentes automáticamente. Para cada `source_id` se documentarán por separado: endpoint exacto, método (feed o archivo), disponibilidad actual, condiciones de automatización, atribución, tratamiento de terceros, datos que se conservarán, regla de retención y controles de tasa/redirección.
+
+La revisión de políticas oficiales ya capturada y verificada constituye evidencia documental; no es autorización operativa general. La autorización funcional del proyecto tampoco sustituye las condiciones publicadas por cada proveedor. No se inventarán plazos de retención ni límites distintos de los documentados por una fuente oficial o de un control interno claramente identificado como tal.
+
+Las decisiones de activación deberán:
+- dejar la fuente en `TERMS_PENDING` si falta una condición material o la evidencia no es concluyente;
+- impedir solicitudes a un endpoint que esté oficialmente deshabilitado;
+- impedir que fallos DNS, HTTP, timeout, limitación o coordinación se conviertan en una captura válida;
+- mantener separados el evento observado, la evidencia de publicación y la evaluación causal, que requiere evidencia adicional;
+- no activar backfill hasta disponer de alcance aprobado, cobertura medible y manifiesto reproducible.
