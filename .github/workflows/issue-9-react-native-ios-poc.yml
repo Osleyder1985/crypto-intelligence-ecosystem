@@ -96,21 +96,21 @@ jobs:
           derived="$PWD/ios/DerivedData"
           : > ios-build-measurement.log
           for run in 1 2 3; do
-            xcodebuild -workspace "$workspace" -scheme "$scheme" -configuration Debug -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' -derivedDataPath "$derived" CODE_SIGNING_ALLOWED=NO clean 2>&1 | tee -a ios-build-measurement.log
-            /usr/bin/time -l xcodebuild -workspace "$workspace" -scheme "$scheme" -configuration Debug -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' -derivedDataPath "$derived" CODE_SIGNING_ALLOWED=NO build 2>&1 | tee -a ios-build-measurement.log
+            xcodebuild -workspace "$workspace" -scheme "$scheme" -configuration Debug -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' ARCHS=arm64 ONLY_ACTIVE_ARCH=YES -derivedDataPath "$derived" CODE_SIGNING_ALLOWED=NO clean 2>&1 | tee -a ios-build-measurement.log
+            /usr/bin/time -l xcodebuild -workspace "$workspace" -scheme "$scheme" -configuration Debug -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' ARCHS=arm64 ONLY_ACTIVE_ARCH=YES -derivedDataPath "$derived" CODE_SIGNING_ALLOWED=NO build 2>&1 | tee -a ios-build-measurement.log
             printf 'CLEAN_IOS_BUILD_RUN=%s\n' "$run" | tee -a ios-build-measurement.log
             app=$(find "$derived/Build/Products/Debug-iphonesimulator" -maxdepth 1 -name '*.app' -type d | head -n 1)
             test -n "$app"
             du -sk "$app" | tee -a ios-build-measurement.log
           done
-          /usr/bin/time -l xcodebuild -workspace "$workspace" -scheme "$scheme" -configuration Release -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' -derivedDataPath "$derived" CODE_SIGNING_ALLOWED=NO build 2>&1 | tee -a ios-build-measurement.log
+          /usr/bin/time -l xcodebuild -workspace "$workspace" -scheme "$scheme" -configuration Release -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' ARCHS=arm64 ONLY_ACTIVE_ARCH=YES -derivedDataPath "$derived" CODE_SIGNING_ALLOWED=NO build 2>&1 | tee -a ios-build-measurement.log
           printf 'IOS_RELEASE_BUILD_COMPLETE\\n' | tee -a ios-build-measurement.log
           release_app=$(find "$derived/Build/Products/Release-iphonesimulator" -maxdepth 1 -name '*.app' -type d | head -n 1)
           test -n "$release_app"
           du -sk "$release_app" | tee -a ios-build-measurement.log
           cp App.js App.js.benchmark-original
           printf '\n// Issue 9 benchmark-only source edit.\n' >> App.js
-          /usr/bin/time -l xcodebuild -workspace "$workspace" -scheme "$scheme" -configuration Release -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' -derivedDataPath "$derived" CODE_SIGNING_ALLOWED=NO build 2>&1 | tee -a ios-build-measurement.log
+          /usr/bin/time -l xcodebuild -workspace "$workspace" -scheme "$scheme" -configuration Release -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' ARCHS=arm64 ONLY_ACTIVE_ARCH=YES -derivedDataPath "$derived" CODE_SIGNING_ALLOWED=NO build 2>&1 | tee -a ios-build-measurement.log
           printf 'INCREMENTAL_IOS_RELEASE_BUILD_AFTER_JS_EDIT\\n' | tee -a ios-build-measurement.log
           release_app=$(find "$derived/Build/Products/Release-iphonesimulator" -maxdepth 1 -name '*.app' -type d | head -n 1)
           du -sk "$release_app" | tee -a ios-build-measurement.log
