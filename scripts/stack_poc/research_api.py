@@ -14,7 +14,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Literal
 
-from fastapi import FastAPI, Header, HTTPException, Query
+from fastapi import Depends, FastAPI, Header, HTTPException, Query
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel, Field
 
 Horizon = Literal["short", "medium", "long"]
@@ -30,9 +31,21 @@ class EvaluationRequest(BaseModel):
     methodology_version: str = Field(default="poc-0.1", min_length=1, max_length=100)
 
 
-def create_app(database_path: str | Path | None = None) -> FastAPI:
+def create_app(database_path: str | Path | None = None, bearer_token: str | None = None) -> FastAPI:
     db_path = str(database_path or os.environ.get("STACK_POC_DB", "stack-poc.sqlite3"))
+    expected_token = bearer_token if bearer_token is not None else os.environ.get("STACK_POC_BEARER_TOKEN")
     app = FastAPI(title="Crypto Intelligence Research API PoC", version="0.1.0")
+    bearer = HTTPBearer(auto_error=False)
+
+    def require_bearer(credentials: HTTPAuthorizationCredentials | None = Depends(bearer)) -> None:
+        # Fail closed when no secret is configured; never ship a default credential.
+        if not expected_token:
+            raise HTTPException(status_code=503, detail="PoC bearer token is not configured")
+        if credentials is None or credentials.scheme.lower() != "bearer":
+            raise HTTPException(status_code=401, detail="bearer token required")
+        import hmac
+        if not hmac.compare_digest(credentials.credentials, expected_token):
+            raise HTTPException(status_code=401, detail="invalid bearer token")
 
     def connect() -> sqlite3.Connection:
         conn = sqlite3.connect(db_path, timeout=5)
@@ -83,7 +96,8 @@ def create_app(database_path: str | Path | None = None) -> FastAPI:
 
     @app.get("/v1/assets")
     def search_assets(query: str = Query(min_length=1, max_length=100),
-                      limit: int = Query(default=20, ge=1, le=100)):
+                      limit: int = Query(default=20, ge=1, le=100),
+                      _principal: None = Depends(require_bearer)):
         with closing(connect()) as conn:
             rows = conn.execute(
                 """SELECT asset_id, canonical_symbol, display_name FROM assets
@@ -95,7 +109,8 @@ def create_app(database_path: str | Path | None = None) -> FastAPI:
 
     @app.get("/v1/assets/{asset_id}/evaluations")
     def list_evaluations(asset_id: str, horizon: Horizon | None = None,
-                         limit: int = Query(default=20, ge=1, le=100)):
+                         limit: int = Query(default=20, ge=1, le=100),
+                         _principal: None = Depends(require_bearer)):
         with closing(connect()) as conn:
             if not conn.execute("SELECT 1 FROM assets WHERE asset_id=?", (asset_id,)).fetchone():
                 raise HTTPException(status_code=404, detail="asset not found")
@@ -120,7 +135,8 @@ def create_app(database_path: str | Path | None = None) -> FastAPI:
 
     @app.post("/v1/assets/{asset_id}/evaluations", status_code=202)
     def request_evaluation(asset_id: str, body: EvaluationRequest,
-                           idempotency_key: str = Header(alias="Idempotency-Key", min_length=16, max_length=200)):
+                           idempotency_key: str = Header(alias="Idempotency-Key", min_length=16, max_length=200),
+                           _principal: None = Depends(require_bearer)):
         # Keep semantic identity stable regardless of JSON object key ordering.
         request_json = json.dumps(body.model_dump(), sort_keys=True, separators=(",", ":"))
         with closing(connect()) as conn:
@@ -145,7 +161,7 @@ def create_app(database_path: str | Path | None = None) -> FastAPI:
         return {"request_id": request_id, "status": "queued"}
 
     @app.get("/v1/evaluation-requests/{request_id}")
-    def get_evaluation_request(request_id: str):
+    def get_evaluation_request(request_id: str, _principal: None = Depends(require_bearer)):
         with closing(connect()) as conn:
             row = conn.execute(
                 "SELECT request_id, status FROM evaluation_requests WHERE request_id=?", (request_id,)
