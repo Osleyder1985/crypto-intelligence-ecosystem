@@ -43,6 +43,8 @@ jobs:
             git fetch origin feat/issue-9-react-native-chart-reference
             git checkout FETCH_HEAD -- pocs/issue-9/react-native
           fi
+      - name: Prepare measurement output directory
+        run: mkdir -p artifacts/issue-9-android-runtime
       - name: Record shared runner environment
         run: |
           uname -a
