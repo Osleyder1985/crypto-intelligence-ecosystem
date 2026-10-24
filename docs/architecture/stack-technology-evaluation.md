@@ -327,3 +327,10 @@ La matriz y el protocolo se alinean con estos modelos oficiales como referencia 
 2. Los tiempos, memoria, tamaño de artefactos y resultados de seguridad se reportan como observaciones reproducibles, no como “cumple/no cumple ISO” por un número inventado.
 3. Los pesos de la matriz son decisiones del producto, no pesos prescritos por ISO. La escala 1–5 requiere evidencia y justificación explícita.
 4. Una auditoría de dependencias o una compilación verde no equivale a conformidad normativa ni certificación.
+
+
+## 25. Web chart browser smoke test (2026-10-24)
+
+The web PoC now exposes accessible buttons for zoom in/out and pan left/right, while retaining the textual OHLCV table. Chromium smoke test passed in [run 40060309796](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/actions/runs/40060309796): it loaded the 12-candle canonical fixture, verified 12 table rows, exercised zoom to 125%, panned right and left, returned to 100%, and observed no page errors. The three-process Node geometry microbenchmark in the same run reported per-process medians 0.003307, 0.003266 and 0.003327 ms; median-of-medians 0.003307 ms. p95 observations were 0.007203, 0.007133 and 0.007163 ms.
+
+This is a browser smoke test and geometry microbenchmark, not a full performance profile: it does not measure real-device rendering, frame time, GPU, memory peak, network latency or chart-ready time. Playwright is CI-only tooling and is not a web-client runtime dependency.
