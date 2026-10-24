@@ -293,7 +293,6 @@ def _blocked_result(
         "raw_response_bytes": 0,
         "raw_response_sha256": None,
         "raw_response_base64": None,
-        "capture_truncated": False,
         "provider_policy_assessments": assessments,
         "provider_use_assessment": assessments[0],
         "persistent_storage_assessment": assessments[1],
@@ -738,9 +737,12 @@ def capture_public_event_archive_index(
         "response_headers": headers,
         "content_type": headers.get("Content-Type") or headers.get("content-type"),
         "final_url": final_url,
-        "raw_response_bytes": len(raw),
-        "raw_response_sha256": hashlib.sha256(raw).hexdigest(),
-        "raw_response_base64": base64.b64encode(raw).decode("ascii"),
+        **_store_response_body_fields(
+            source,
+            raw,
+            html=(headers.get("Content-Type") or headers.get("content-type") or "").split(";", 1)[0].strip().lower()
+            in {"text/html", "application/xhtml+xml"},
+        ),
         "capture_truncated": read_error is not None,
     })
     final_ok = _archive_url_allowed(source, final_url)
