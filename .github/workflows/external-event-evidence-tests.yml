@@ -8,6 +8,9 @@ on:
       - "scripts/market_selection/event_source_registry.py"
       - "scripts/market_selection/capture_sec_press_releases_rss.py"
       - "scripts/market_selection/capture_public_event_feed.py"
+      - "scripts/market_selection/capture_public_event_archive.py"
+      - "tests/market_selection/test_public_event_archive.py"
+      - "tests/market_selection/test_issue_132_archive_e2e.py"
       - "scripts/market_selection/provider_license_gate.py"
       - "scripts/market_selection/research_evidence_integration.py"
       - "tests/market_selection/test_research_evidence_integration.py"
@@ -22,10 +25,15 @@ on:
       - "tests/market_selection/test_external_event_evidence.py"
       - "scripts/market_selection/event_source_registry.py"
       - "scripts/market_selection/capture_sec_press_releases_rss.py"
+      - "scripts/market_selection/capture_public_event_feed.py"
+      - "scripts/market_selection/capture_public_event_archive.py"
       - "scripts/market_selection/provider_license_gate.py"
       - "scripts/market_selection/research_evidence_integration.py"
       - "tests/market_selection/test_research_evidence_integration.py"
       - "tests/market_selection/test_sec_press_releases_rss.py"
+      - "tests/market_selection/test_public_event_feed.py"
+      - "tests/market_selection/test_public_event_archive.py"
+      - "tests/market_selection/test_issue_132_archive_e2e.py"
       - ".github/workflows/external-event-evidence-tests.yml"
   workflow_dispatch:
 
@@ -47,4 +55,6 @@ jobs:
           python -m unittest discover -s tests/market_selection -p "test_external_event_evidence.py" -v
           python -m unittest discover -s tests/market_selection -p "test_sec_press_releases_rss.py" -v
           python -m unittest discover -s tests/market_selection -p "test_public_event_feed.py" -v
+          python -m unittest discover -s tests/market_selection -p "test_public_event_archive.py" -v
+          python -m unittest discover -s tests/market_selection -p "test_issue_132_archive_e2e.py" -v
           python -m unittest discover -s tests/market_selection -p "test_research_evidence_integration.py" -v
