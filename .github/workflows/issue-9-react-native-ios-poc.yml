@@ -20,7 +20,7 @@ permissions:
 jobs:
   react-native-ios:
     runs-on: macos-latest
-    timeout-minutes: 45
+    timeout-minutes: 60
     steps:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
@@ -38,35 +38,54 @@ jobs:
           npm --version
       - name: Verify app fixture matches canonical fixture byte-for-byte
         run: cmp tests/stack_poc/fixtures/ohlcv_synthetic_v1.json pocs/issue-9/react-native/assets/ohlcv_synthetic_v1.json
-      - name: Generate package lock from exact direct pins
+      - name: Scaffold pinned bare React Native project
         working-directory: pocs/issue-9/react-native
-        run: npm install --package-lock-only --ignore-scripts
-      - name: Install locked dependencies
-        working-directory: pocs/issue-9/react-native
-        run: npm ci
-      - name: Validate OHLCV fixture
-        working-directory: pocs/issue-9/react-native
-        run: npm run test:fixture
-      - name: Generate iOS project
-        working-directory: pocs/issue-9/react-native
-        run: npx expo prebuild --platform ios --no-install
-      - name: Build iOS simulator app without code signing
+        run: npx --yes @react-native-community/cli@20.0.0 init Issue9RnReference --version 0.88.0 --directory .build --skip-install
+      - name: Inject reference screen and shared fixture
         working-directory: pocs/issue-9/react-native
         run: |
+          cp App.js .build/App.js
+          cp index.js .build/index.js
+          cp app.json .build/app.json
+          mkdir -p .build/assets
+          cp assets/ohlcv_synthetic_v1.json .build/assets/ohlcv_synthetic_v1.json
+      - name: Generate and install dependency lock
+        working-directory: pocs/issue-9/react-native/.build
+        run: |
+          npm install --package-lock-only --ignore-scripts
+          npm ci
+      - name: Audit npm dependency advisories
+        working-directory: pocs/issue-9/react-native/.build
+        run: npm audit --audit-level=high
+      - name: Record dependency tree and licence inventory
+        working-directory: pocs/issue-9/react-native/.build
+        run: |
+          npm ls --all --json > issue-9-rn-dependency-tree.json
+          npx --yes license-checker-rseidelsohn@5.0.1 --json > issue-9-rn-license-inventory.json
+      - name: Validate OHLCV fixture
+        working-directory: pocs/issue-9/react-native
+        run: node scripts/validate_fixture.mjs
+      - name: Generate iOS build
+        working-directory: pocs/issue-9/react-native/.build
+        run: |
+          cd ios
+          pod install
+          cd ..
           workspace=$(find ios -maxdepth 2 -name '*.xcworkspace' | head -n 1)
           scheme_file=$(find ios -path '*/xcshareddata/xcschemes/*.xcscheme' | head -n 1)
           test -n "$workspace"
           test -n "$scheme_file"
           scheme=$(basename "$scheme_file" .xcscheme)
           /usr/bin/time -l xcodebuild -workspace "$workspace" -scheme "$scheme" -configuration Debug -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' CODE_SIGNING_ALLOWED=NO build 2>&1 | tee ios-build-measurement.log
-          du -sk ios/build/Build/Products/Debug-iphonesimulator/*.app | tee -a ios-build-measurement.log
-      - name: Preserve iOS build measurements and dependency lock
+      - name: Preserve lockfile and dependency/licence inventory
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
-          name: issue-9-react-native-ios-measurements
+          name: issue-9-react-native-ios-evidence
           path: |
-            pocs/issue-9/react-native/ios-build-measurement.log
-            pocs/issue-9/react-native/package-lock.json
+            pocs/issue-9/react-native/.build/package-lock.json
+            pocs/issue-9/react-native/.build/issue-9-rn-dependency-tree.json
+            pocs/issue-9/react-native/.build/issue-9-rn-license-inventory.json
+            pocs/issue-9/react-native/.build/ios-build-measurement.log
           if-no-files-found: warn
           retention-days: 30
