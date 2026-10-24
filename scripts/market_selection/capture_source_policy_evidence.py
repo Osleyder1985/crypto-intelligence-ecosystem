@@ -196,7 +196,7 @@ def capture_policy_page(
         }
     _atomic_write(
         metadata_path,
-        (json.dumps(result, ensure_ascii=False, indent=2, sort_keys=True) + "\\n").encode("utf-8"),
+        (json.dumps(result, ensure_ascii=False, indent=2, sort_keys=True) + "\n").encode("utf-8"),
     )
     return result
 
