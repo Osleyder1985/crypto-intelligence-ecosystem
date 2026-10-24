@@ -70,11 +70,22 @@ jobs:
           stat --printf='FINAL_DEBUG_APK_BYTES=%s\n' build/app/outputs/flutter-apk/app-debug.apk | tee -a flutter-build-measurement.log
           /usr/bin/time -f 'ANDROID_RELEASE_BUILD_SECONDS=%e PEAK_RSS_KB=%M' flutter build apk --release 2>&1 | tee -a flutter-build-measurement.log
           stat --printf='ANDROID_RELEASE_APK_BYTES=%s\n' build/app/outputs/flutter-apk/app-release.apk | tee -a flutter-build-measurement.log
+      - name: Record Dart and Android dependency inventories
+        working-directory: pocs/issue-9/flutter
+        run: |
+          flutter pub deps --json > flutter-pub-dependencies.json
+          (cd android && ./gradlew app:dependencies --configuration releaseRuntimeClasspath > ../gradle-release-runtime-dependencies.txt)
+          (cd android && ./gradlew buildEnvironment > ../gradle-build-environment.txt)
       - name: Preserve Android build measurements
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: issue-9-flutter-android-build-measurements
-          path: pocs/issue-9/flutter/flutter-build-measurement.log
+          path: |
+            pocs/issue-9/flutter/flutter-build-measurement.log
+            pocs/issue-9/flutter/pubspec.lock
+            pocs/issue-9/flutter/flutter-pub-dependencies.json
+            pocs/issue-9/flutter/gradle-release-runtime-dependencies.txt
+            pocs/issue-9/flutter/gradle-build-environment.txt
           if-no-files-found: warn
           retention-days: 30
