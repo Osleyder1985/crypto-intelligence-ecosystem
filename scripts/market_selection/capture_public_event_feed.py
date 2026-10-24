@@ -482,30 +482,65 @@ def _open_allowlisted_url(
 
 
 class _ArchiveHTMLParser(HTMLParser):
+    """Extract archive navigation text while excluding embedded/third-party payloads.
+
+    This parser is for derived evidence only. It does not itself authorize storing the
+    original response; the source authorization gate remains mandatory.
+    """
+    _NON_TEXT_SUBTREES = {
+        "script", "style", "noscript", "iframe", "frame", "frameset", "svg",
+        "canvas", "video", "audio", "picture", "object", "embed", "template",
+    }
+    _NON_TEXT_ELEMENTS = {"img", "source", "track"}
+
     def __init__(self):
         super().__init__(convert_charrefs=True)
         self.anchors = []
         self.page_text = []
         self._anchor = None
+        self._suppressed_depth = 0
 
     def handle_starttag(self, tag, attrs):
-        if tag.casefold() == "a":
+        tag = tag.casefold()
+        if self._suppressed_depth:
+            if tag in self._NON_TEXT_SUBTREES:
+                self._suppressed_depth += 1
+            return
+        if tag in self._NON_TEXT_SUBTREES:
+            self._suppressed_depth = 1
+            return
+        if tag in self._NON_TEXT_ELEMENTS:
+            return
+        if tag == "a":
             attrs_map = dict(attrs)
             self._anchor = {"href": attrs_map.get("href"), "text": []}
 
+    def handle_startendtag(self, tag, attrs):
+        # Void elements carry no textual evidence and must not affect suppression depth.
+        if tag.casefold() in self._NON_TEXT_ELEMENTS:
+            return
+        self.handle_starttag(tag, attrs)
+        self.handle_endtag(tag)
+
     def handle_data(self, data):
-        text = re.sub(r"\s+", " ", data).strip()
+        if self._suppressed_depth:
+            return
+        text = re.sub(r"\\s+", " ", data).strip()
         if text:
             self.page_text.append(text)
             if self._anchor is not None:
                 self._anchor["text"].append(text)
 
     def handle_endtag(self, tag):
-        if tag.casefold() == "a" and self._anchor is not None:
-            self._anchor["text"] = re.sub(r"\s+", " ", " ".join(self._anchor["text"])).strip()
+        tag = tag.casefold()
+        if self._suppressed_depth:
+            if tag in self._NON_TEXT_SUBTREES:
+                self._suppressed_depth -= 1
+            return
+        if tag == "a" and self._anchor is not None:
+            self._anchor["text"] = re.sub(r"\\s+", " ", " ".join(self._anchor["text"])).strip()
             self.anchors.append(self._anchor)
             self._anchor = None
-
 
 def _path_has_prefix(path: str, prefix: str) -> bool:
     normalized = prefix.rstrip("/")
