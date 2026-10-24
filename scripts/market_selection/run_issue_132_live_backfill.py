@@ -307,6 +307,49 @@ def main() -> int:
             write_json(args.output_dir / f"{source_id}-failure.json", failure)
             print(json.dumps(failure, ensure_ascii=False, indent=2))
 
+    event_bundle_records = []
+    contextual_records = []
+    for record in records:
+        source_id = record["source_id"]
+        if record.get("event_id"):
+            event_path = args.output_dir / source_id / "event-record.json"
+            event_record = json.loads(event_path.read_text(encoding="utf-8"))
+            event_bundle_records.append({
+                "source_id": source_id,
+                "event_id": record["event_id"],
+                "event_record_path": str(event_path.relative_to(args.output_dir)),
+                "event_record_sha256": hashlib.sha256(event_path.read_bytes()).hexdigest(),
+                "asset_identifiers": event_record.get("entities", []),
+                "temporal_association_status": "NOT_EVALUATED_NO_MOVEMENT_WINDOW",
+                "causality_status": "NOT_ASSESSED",
+            })
+        else:
+            source_dir = args.output_dir / source_id
+            article = json.loads((source_dir / "article-capture.json").read_text(encoding="utf-8"))
+            candidate = json.loads((source_dir / "candidate.json").read_text(encoding="utf-8"))
+            contextual_records.append({
+                "source_id": source_id,
+                "title": candidate["title"],
+                "article_url": candidate["candidate_url"],
+                "article_raw_response_sha256": article["raw_response_sha256"],
+                "article_text_evidence_sha256": article["text_evidence_sha256"],
+                "asset_mapping_status": "NOT_MAPPED",
+                "reason": "The release concerns payment-stablecoin regulation generally and does not identify one specific token; no asset identity is inferred.",
+                "temporal_association_status": "NOT_EVALUATED_NO_MOVEMENT_WINDOW",
+                "causality_status": "NOT_ASSESSED",
+            })
+    research_bundle = {
+        "schema_version": "crypto-issue-132-research-event-evidence-bundle-v1",
+        "created_at": now_utc(),
+        "scope": "Official regulatory event evidence attached for later asset-report correlation; no market movement window or causal conclusion is inferred here.",
+        "events": event_bundle_records,
+        "contextual_unmapped_sources": contextual_records,
+        "causality_claimed": False,
+    }
+    research_bundle["bundle_sha256"] = digest_json(research_bundle)
+    bundle_path = args.output_dir / "research-event-evidence-bundle.json"
+    write_json(bundle_path, research_bundle)
+
     backfill = {
         "schema_version": "crypto-issue-132-real-backfill-manifest-v1",
         "created_at": now_utc(),
@@ -318,6 +361,12 @@ def main() -> int:
             for record in records
         ),
         "causality_claimed": False,
+        "research_event_evidence_bundle": {
+            "path": str(bundle_path.relative_to(args.output_dir)),
+            "bytes": len(bundle_path.read_bytes()),
+            "sha256": hashlib.sha256(bundle_path.read_bytes()).hexdigest(),
+            "bundle_sha256": research_bundle["bundle_sha256"],
+        },
         "sources": records,
         "failures": failures,
     }
