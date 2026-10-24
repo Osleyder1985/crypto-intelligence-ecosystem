@@ -12,8 +12,8 @@ class ResearchApiPocTests(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
         self.db = Path(self.tmp.name) / "research.sqlite3"
-        self.app = create_app(self.db)
-        self.client = TestClient(self.app)
+        self.app = create_app(self.db, bearer_token="test-token")
+        self.client = TestClient(self.app, headers={"Authorization": "Bearer test-token"})
         with self.app.state.poc_connect() as conn:
             conn.execute(
                 "INSERT INTO assets(asset_id, canonical_symbol, display_name) VALUES (?, ?, ?)",
@@ -24,6 +24,13 @@ class ResearchApiPocTests(unittest.TestCase):
     def tearDown(self):
         self.client.close()
         self.tmp.cleanup()
+
+    def test_bearer_authentication_is_required(self):
+        unauthenticated = TestClient(self.app)
+        try:
+            self.assertEqual(unauthenticated.get("/v1/assets", params={"query": "BTC"}).status_code, 401)
+        finally:
+            unauthenticated.close()
 
     def test_search_asset_and_empty_result_shape(self):
         response = self.client.get("/v1/assets", params={"query": "BTC"})
