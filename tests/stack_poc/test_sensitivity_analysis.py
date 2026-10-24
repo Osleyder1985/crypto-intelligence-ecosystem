@@ -41,6 +41,7 @@ class SensitivityAnalysisTests(unittest.TestCase):
         self.assertEqual(result['status'], 'complete')
         self.assertEqual([row['candidate'] for row in result['ranking']], ['A', 'B'])
         self.assertEqual(len(result['sensitivity']), 4)
+        self.assertEqual([row['score_out_of_100'] for row in result['ranking']], [70.0, 70.0])
         self.assertTrue(all('ranking_changed' in row for row in result['sensitivity']))
 
     def test_weights_must_sum_to_one_hundred(self):
