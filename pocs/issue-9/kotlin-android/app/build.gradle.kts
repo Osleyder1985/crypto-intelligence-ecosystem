@@ -27,6 +27,8 @@ android {
     buildTypes {
         release {
             isMinifyEnabled = false
+            // Debug-key signing is for CI emulator installation only, never production distribution.
+            signingConfig = signingConfigs.getByName("debug")
         }
     }
 }
