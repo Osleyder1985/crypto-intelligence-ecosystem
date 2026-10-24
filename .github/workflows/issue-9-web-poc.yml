@@ -1,0 +1,34 @@
+name: Issue 9 web chart reference PoC
+
+on:
+  pull_request:
+    paths:
+      - 'pocs/issue-9/web/**'
+      - 'tests/stack_poc/fixtures/ohlcv_synthetic_v1.json'
+      - '.github/workflows/issue-9-web-poc.yml'
+  push:
+    branches: [main, docs/issue-9-stack-evaluation]
+    paths:
+      - 'pocs/issue-9/web/**'
+      - 'tests/stack_poc/fixtures/ohlcv_synthetic_v1.json'
+      - '.github/workflows/issue-9-web-poc.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  web-chart-reference:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - name: Set up Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22'
+      - name: Test deterministic OHLCV chart geometry
+        working-directory: pocs/issue-9/web
+        run: npm test
+      - name: Validate shared fixture is present and provenance-labelled
+        run: python -c "import json; p=json.load(open('tests/stack_poc/fixtures/ohlcv_synthetic_v1.json')); assert p['kind']=='synthetic-not-market-data'; assert len(p['candles']) >= 10"
