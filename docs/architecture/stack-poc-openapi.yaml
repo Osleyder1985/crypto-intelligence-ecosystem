@@ -161,12 +161,12 @@ paths:
             format: uuid
       responses:
         '200':
-          description: Current request state
+          description: Current request state and zero or more per-horizon evaluations; indeterminate means the evaluator abstained
           content:
             application/json:
               schema:
                 type: object
-                required: [request_id, status]
+                required: [request_id, status, evaluations]
                 properties:
                   request_id:
                     type: string
