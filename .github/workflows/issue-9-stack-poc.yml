@@ -20,6 +20,10 @@ on:
       - '.github/workflows/issue-9-stack-poc.yml'
   workflow_dispatch:
 
+concurrency:
+  group: issue-9-stack-poc-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
 
