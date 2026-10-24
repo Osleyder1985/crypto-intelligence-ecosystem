@@ -14,6 +14,7 @@
     #status { min-height:1.5em; }
     .legend { display:flex; gap:1rem; flex-wrap:wrap; }
     button { min-height:2.5rem; padding:.4rem .8rem; }
+    .chart-controls { display:flex; flex-wrap:wrap; gap:.5rem; margin:.5rem 0; }
   </style>
 </head>
 <body>
@@ -21,7 +22,13 @@
   <p class="notice">Synthetic test data only. This screen is not market data and does not generate investment signals.</p>
   <p id="status" role="status" aria-live="polite">Loading fixture…</p>
   <div class="legend"><span>🟩 Close ≥ open</span><span>🟥 Close &lt; open</span><span>Bars below show volume</span></div>
-  <canvas id="chart" width="1100" height="440" role="img" aria-label="Candlestick chart and volume bars for the synthetic fixture. A textual data table follows."></canvas>
+  <div class="chart-controls" role="group" aria-label="Chart navigation">
+    <button id="zoom-out" type="button" aria-label="Zoom out chart">Zoom out −</button>
+    <button id="zoom-in" type="button" aria-label="Zoom in chart">Zoom in +</button>
+    <button id="pan-left" type="button" aria-label="Pan chart left">Pan left ←</button>
+    <button id="pan-right" type="button" aria-label="Pan chart right">Pan right →</button>
+  </div>
+  <canvas id="chart" width="1100" height="440" role="img" aria-label="Candlestick chart and volume bars for the synthetic fixture. Use chart navigation buttons; a textual data table follows."></canvas>
   <h2>Underlying candle data</h2>
   <div style="overflow-x:auto"><table id="data"><thead><tr><th scope="col">UTC timestamp</th><th scope="col">Open</th><th scope="col">High</th><th scope="col">Low</th><th scope="col">Close</th><th scope="col">Volume</th></tr></thead><tbody></tbody></table></div>
   <script type="module" src="./chart.js"></script>
