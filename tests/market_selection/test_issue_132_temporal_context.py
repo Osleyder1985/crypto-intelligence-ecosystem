@@ -87,7 +87,11 @@ class Issue132TemporalContextTests(unittest.TestCase):
                 "causality_status": "NOT_ASSESSED",
             }],
         }
-        auth = {"provider_id": "binance_spot_market_data", "status": "APPROVED"}
+        auth = {
+            "provider_id": "binance_spot_market_data",
+            "status": "APPROVED",
+            "approval_scope": {"automated_access": {"user_agent": "Issue132Test/1.0"}},
+        }
         with tempfile.TemporaryDirectory() as tmp, \
              patch("scripts.market_selection.run_issue_132_live_backfill.capture_history", return_value=capture), \
              patch("scripts.market_selection.run_issue_132_live_backfill.analyze_support_resistance", return_value=sr), \
@@ -104,6 +108,7 @@ class Issue132TemporalContextTests(unittest.TestCase):
         self.assertEqual(result["status"], "PASS")
         self.assertFalse(result["raw_ohlcv_persisted"])
         self.assertEqual(report["market_data"]["captured_candle_count"], 696)
+        self.assertEqual(report["market_data"]["user_agent"], "Issue132Test/1.0")
         self.assertNotIn("candles", report["market_data"])
         self.assertNotIn("response_base64", json.dumps(report))
         self.assertNotIn("parsed_json", json.dumps(report))
