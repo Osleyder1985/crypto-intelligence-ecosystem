@@ -243,7 +243,7 @@ def main() -> int:
     records.append(capture_one(
         output_dir=args.output_dir, auth_registry=auth_registry,
         source_id="sec_press_release_archive",
-        archive_url="https://www.sec.gov/newsroom/press-releases?combine=crypto&year=2024",
+        archive_url="https://www.sec.gov/newsroom/press-releases?combine=crypto&page=1",
         candidate_url=SEC_MANGO_URL,
         title="SEC Charges Entities Operating Crypto Asset Trading Platform Mango Markets for Unregistered Offers and Sales of the Platform’s “MNGO” Governance Tokens",
         published_at="2024-09-27T00:00:00Z", date_evidence="Sept. 27, 2024",
