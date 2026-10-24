@@ -54,6 +54,11 @@ measure_app() {
     printf 'START stack=%s run=%s\\n%s\\n' "$label" "$run" "$start_out" | tee -a "$LOG"
     if ! printf '%s\\n' "$start_out" | grep -q 'Status: ok'; then
       echo "Activity failed to start: stack=$label run=$run package=$pkg activity=$activity" | tee -a "$LOG"
+      echo "START_FAILURE_DIAGNOSTICS stack=$label run=$run" | tee -a "$LOG"
+      timeout 15s adb shell dumpsys activity activities 2>&1 | tail -n 160 | tee -a "$LOG" || true
+      timeout 15s adb shell dumpsys activity processes 2>&1 | tail -n 120 | tee -a "$LOG" || true
+      timeout 15s adb shell pidof "$pkg" 2>&1 | tee -a "$LOG" || true
+      timeout 30s adb logcat -d -t 500 2>&1 | tail -n 500 | tee -a "$LOG" || true
       exit 1
     fi
     total="$(printf '%s\n' "$start_out" | awk -F': ' '/TotalTime:/ {print $2; exit}')"
