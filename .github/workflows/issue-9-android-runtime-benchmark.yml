@@ -53,7 +53,7 @@ jobs:
           node --version
           npm --version
           git rev-parse HEAD
-      - name: Verify both clients use the canonical fixture byte-for-byte
+      - name: Verify all three clients use the canonical fixture byte-for-byte
         run: |
           cmp tests/stack_poc/fixtures/ohlcv_synthetic_v1.json pocs/issue-9/flutter/assets/ohlcv_synthetic_v1.json
           cmp tests/stack_poc/fixtures/ohlcv_synthetic_v1.json pocs/issue-9/react-native/assets/ohlcv_synthetic_v1.json
@@ -105,8 +105,8 @@ jobs:
         run: |
           gradle wrapper --gradle-version 8.11.1
           /usr/bin/time -f 'KOTLIN_ANDROID_RELEASE_BUILD_SECONDS=%e PEAK_RSS_KB=%M' ./gradlew assembleRelease 2>&1 | tee "$GITHUB_WORKSPACE/artifacts/issue-9-android-runtime/kotlin-release-build.log"
-          stat --printf='KOTLIN_ANDROID_RELEASE_APK_BYTES=%s\\n' app/build/outputs/apk/release/app-release-unsigned.apk | tee -a "$GITHUB_WORKSPACE/artifacts/issue-9-android-runtime/kotlin-release-build.log"
-      - name: Install and measure both apps on the same Android emulator
+          stat --printf='KOTLIN_ANDROID_RELEASE_APK_BYTES=%s\n' app/build/outputs/apk/release/app-release-unsigned.apk | tee -a "$GITHUB_WORKSPACE/artifacts/issue-9-android-runtime/kotlin-release-build.log"
+      - name: Install and measure all three apps on the same Android emulator
         uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d
         with:
           api-level: 36
