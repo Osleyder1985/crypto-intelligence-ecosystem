@@ -60,7 +60,7 @@ function render(data) {
 
 async function load() {
   try {
-    const response = await fetch('../../../tests/stack_poc/fixtures/ohlcv_synthetic_v1.json');
+    const response = await fetch('/tests/stack_poc/fixtures/ohlcv_synthetic_v1.json');
     if (!response.ok) throw new Error(`Fixture request failed: HTTP ${response.status}`);
     const data = await response.json();
     if (data.kind !== 'synthetic-not-market-data' || !Array.isArray(data.candles)) throw new Error('Fixture schema or provenance marker is invalid');
