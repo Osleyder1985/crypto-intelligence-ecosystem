@@ -35,6 +35,22 @@ class LicenceInventoryReviewTests(unittest.TestCase):
         self.assertEqual(package["status"], "identified-from-versioned-license-text")
         self.assertEqual(report["manual_review_required"], 0)
 
+    def test_version_pinned_upstream_license_text_resolves_missing_installed_text(self):
+        report, _ = self.run_review([{
+            "Name": "packageurl-python", "Version": "0.17.6",
+            "License-Metadata": "MIT", "License-Classifier": "MIT License",
+            "LicenseText": "UNKNOWN", "LicenseFile": "UNKNOWN",
+            "NoticeFile": "UNKNOWN", "NoticeText": "UNKNOWN",
+            "URL": "https://github.com/package-url/packageurl-python",
+        }])
+        package = report["packages"][0]
+        self.assertEqual(package["license_expression"], "MIT")
+        self.assertEqual(package["status"], "identified-from-versioned-upstream-license-text")
+        self.assertTrue(package["license_text_present"])
+        self.assertEqual(package["license_source_url"], "https://raw.githubusercontent.com/package-url/packageurl-python/v0.17.6/mit.LICENSE")
+        self.assertEqual(report["identified_from_versioned_upstream_license_text"], 1)
+        self.assertEqual(report["manual_review_required"], 0)
+
     def test_override_does_not_carry_forward_to_unreviewed_version(self):
         report, _ = self.run_review([{
             "Name": "CacheControl", "Version": "99.0.0",
