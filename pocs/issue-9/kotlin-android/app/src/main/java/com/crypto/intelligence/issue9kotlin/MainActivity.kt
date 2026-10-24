@@ -121,7 +121,7 @@ class MainActivity : Activity() {
         setTextColor(Color.rgb(23, 33, 43))
         if (bold) setTypeface(typeface, android.graphics.Typeface.BOLD)
         setPadding(0, dp(6), 0, dp(6))
-        contentDescription = value
+        if (value.length < 100) contentDescription = value
     }
 
     private fun dp(value: Int): Int = (value * density).toInt()
@@ -185,7 +185,7 @@ private class CandleChartView(
             val bodyTop = min(y(candle.open), y(candle.close))
             val bodyHeight = max(abs(y(candle.open) - y(candle.close)), 2f * density)
             canvas.drawRect(x - slot * 0.28f, bodyTop, x + slot * 0.28f, bodyTop + bodyHeight, paint)
-            val volumeHeight = ((candle.volume / maxVolume) * (volumeBottom - volumeTop)).toFloat()
+            val volumeHeight = (candle.volume / maxVolume).toFloat() * (volumeBottom - volumeTop)
             paint.alpha = 150
             canvas.drawRect(x - slot * 0.28f, volumeBottom - volumeHeight, x + slot * 0.28f, volumeBottom, paint)
             paint.alpha = 255
