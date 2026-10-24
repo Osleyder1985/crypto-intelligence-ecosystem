@@ -7,6 +7,7 @@ on:
       - 'tests/stack_poc/**'
       - 'requirements-stack-poc.txt'
       - 'docs/architecture/evidence/issue-9-partial-score-input.json'
+      - 'docs/architecture/evidence/issue-9-partial-score-input.json'
       - '.github/workflows/issue-9-stack-poc.yml'
   push:
     branches: [main, docs/issue-9-stack-evaluation]
