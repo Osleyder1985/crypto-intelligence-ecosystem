@@ -65,8 +65,10 @@ jobs:
             /usr/bin/time -f "CLEAN_BUILD_RUN=$run ELAPSED_SECONDS=%e PEAK_RSS_KB=%M" flutter build apk --debug 2>&1 | tee -a flutter-build-measurement.log
             stat --printf="CLEAN_BUILD_RUN=$run APK_BYTES=%s\n" build/app/outputs/flutter-apk/app-debug.apk | tee -a flutter-build-measurement.log
           done
-          touch lib/main.dart
-          /usr/bin/time -f 'INCREMENTAL_DEBUG_BUILD_AFTER_SOURCE_TOUCH_SECONDS=%e PEAK_RSS_KB=%M' flutter build apk --debug 2>&1 | tee -a flutter-build-measurement.log
+          cp lib/main.dart lib/main.dart.benchmark-original
+          printf '\n// Issue 9 benchmark-only source edit.\n' >> lib/main.dart
+          /usr/bin/time -f 'INCREMENTAL_DEBUG_BUILD_AFTER_SOURCE_EDIT_SECONDS=%e PEAK_RSS_KB=%M' flutter build apk --debug 2>&1 | tee -a flutter-build-measurement.log
+          mv lib/main.dart.benchmark-original lib/main.dart
           stat --printf='FINAL_DEBUG_APK_BYTES=%s\n' build/app/outputs/flutter-apk/app-debug.apk | tee -a flutter-build-measurement.log
           /usr/bin/time -f 'ANDROID_RELEASE_BUILD_SECONDS=%e PEAK_RSS_KB=%M' flutter build apk --release 2>&1 | tee -a flutter-build-measurement.log
           stat --printf='ANDROID_RELEASE_APK_BYTES=%s\n' build/app/outputs/flutter-apk/app-release.apk | tee -a flutter-build-measurement.log
