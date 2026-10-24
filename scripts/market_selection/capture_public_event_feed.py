@@ -525,7 +525,7 @@ class _ArchiveHTMLParser(HTMLParser):
     def handle_data(self, data):
         if self._suppressed_depth:
             return
-        text = re.sub(r"\\s+", " ", data).strip()
+        text = re.sub(r"\s+", " ", data).strip()
         if text:
             self.page_text.append(text)
             if self._anchor is not None:
@@ -538,7 +538,7 @@ class _ArchiveHTMLParser(HTMLParser):
                 self._suppressed_depth -= 1
             return
         if tag == "a" and self._anchor is not None:
-            self._anchor["text"] = re.sub(r"\\s+", " ", " ".join(self._anchor["text"])).strip()
+            self._anchor["text"] = re.sub(r"\s+", " ", " ".join(self._anchor["text"])).strip()
             self.anchors.append(self._anchor)
             self._anchor = None
 
