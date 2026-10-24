@@ -9,6 +9,7 @@ on:
       - 'pocs/issue-9/kotlin-android/**'
       - 'tests/stack_poc/fixtures/ohlcv_synthetic_v1.json'
       - 'scripts/stack_poc/measure_issue9_android_runtime.sh'
+      - 'scripts/stack_poc/run_issue9_android_runtime.sh'
       - 'scripts/stack_poc/inventory_dart_licenses.py'
       - '.github/workflows/issue-9-android-runtime-benchmark.yml'
   workflow_dispatch:
