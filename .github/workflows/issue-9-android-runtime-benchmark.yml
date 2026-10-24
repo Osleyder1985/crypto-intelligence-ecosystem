@@ -105,7 +105,7 @@ jobs:
         run: |
           gradle wrapper --gradle-version 8.11.1
           /usr/bin/time -f 'KOTLIN_ANDROID_RELEASE_BUILD_SECONDS=%e PEAK_RSS_KB=%M' ./gradlew assembleRelease 2>&1 | tee "$GITHUB_WORKSPACE/artifacts/issue-9-android-runtime/kotlin-release-build.log"
-          stat --printf='KOTLIN_ANDROID_RELEASE_APK_BYTES=%s\n' app/build/outputs/apk/release/app-release-unsigned.apk | tee -a "$GITHUB_WORKSPACE/artifacts/issue-9-android-runtime/kotlin-release-build.log"
+          stat --printf='KOTLIN_ANDROID_RELEASE_APK_BYTES=%s\n' app/build/outputs/apk/release/app-release.apk | tee -a "$GITHUB_WORKSPACE/artifacts/issue-9-android-runtime/kotlin-release-build.log"
       - name: Install and measure all three apps on the same Android emulator
         uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d
         with:
@@ -119,7 +119,7 @@ jobs:
         env:
           FLUTTER_APK: ${{ github.workspace }}/pocs/issue-9/flutter/build/app/outputs/flutter-apk/app-release.apk
           RN_APK: ${{ github.workspace }}/pocs/issue-9/react-native/build-project/android/app/build/outputs/apk/release/app-release.apk
-          KOTLIN_APK: ${{ github.workspace }}/pocs/issue-9/kotlin-android/app/build/outputs/apk/release/app-release-unsigned.apk
+          KOTLIN_APK: ${{ github.workspace }}/pocs/issue-9/kotlin-android/app/build/outputs/apk/release/app-release.apk
           OUTPUT_DIR: ${{ github.workspace }}/artifacts/issue-9-android-runtime
       - name: Preserve builds and runtime measurements
         if: always()
@@ -130,7 +130,7 @@ jobs:
             artifacts/issue-9-android-runtime/**
             pocs/issue-9/flutter/build/app/outputs/flutter-apk/app-release.apk
             pocs/issue-9/react-native/build-project/android/app/build/outputs/apk/release/app-release.apk
-            pocs/issue-9/kotlin-android/app/build/outputs/apk/release/app-release-unsigned.apk
+            pocs/issue-9/kotlin-android/app/build/outputs/apk/release/app-release.apk
             artifacts/issue-9-android-runtime/kotlin-release-build.log
           if-no-files-found: warn
           retention-days: 30
