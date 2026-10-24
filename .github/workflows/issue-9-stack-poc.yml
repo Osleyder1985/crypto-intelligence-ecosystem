@@ -6,6 +6,7 @@ on:
       - 'scripts/stack_poc/**'
       - 'tests/stack_poc/**'
       - 'requirements-stack-poc.txt'
+      - 'docs/architecture/evidence/issue-9-partial-score-input.json'
       - '.github/workflows/issue-9-stack-poc.yml'
   push:
     branches: [main, docs/issue-9-stack-evaluation]
@@ -35,6 +36,24 @@ jobs:
         run: python -m unittest discover -s tests/stack_poc -p 'test_shared_ohlcv_fixture.py' -v
       - name: Test evidence-gated scoring and sensitivity analysis
         run: python -m unittest discover -s tests/stack_poc -p 'test_sensitivity_analysis.py' -v
+      - name: Generate evidence-backed partial score report without ranking
+        shell: bash
+        run: |
+          mkdir -p artifacts
+          set +e
+          python scripts/stack_poc/sensitivity_analysis.py docs/architecture/evidence/issue-9-partial-score-input.json --output artifacts/issue-9-partial-score-output.json
+          result=$?
+          set -e
+          test "$result" -eq 2
+          python -c "import json; d=json.load(open('artifacts/issue-9-partial-score-output.json')); assert d['status']=='incomplete'; assert d['ranking']==[] and d['sensitivity']==[]; assert [x['weight_coverage_percent'] for x in d['partial_scores']]==[35,35,50,10]; assert [x['partial_score_out_of_100'] for x in d['partial_scores']]==[74.2857,74.2857,60.0,60.0]"
+      - name: Preserve partial scoring output
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: issue-9-partial-scoring-report
+          path: artifacts/issue-9-partial-score-output.json
+          if-no-files-found: warn
+          retention-days: 30
       - name: Run API, history and idempotency PoC tests
         run: python -m unittest discover -s tests/stack_poc -p 'test_research_api.py' -v
       - name: Run worker concurrency and transaction-recovery tests
