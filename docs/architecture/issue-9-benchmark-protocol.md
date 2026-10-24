@@ -121,3 +121,10 @@ After measurements exist, perform the documented sensitivity analysis (vary each
 Already verified in the Issue #9 branch: OpenAPI contract validation; API/history/idempotency PoC; SQLite worker concurrency/transaction recovery tests; PostgreSQL history PoC; and contract conformance tests on GitHub Actions run [40057411699](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/actions/runs/40057411699). These demonstrate only the tested behaviours in those workflows.
 
 Still not evidenced by this protocol alone: Flutter/React Native/native/web comparative builds, chart performance, local Windows resource measurements, iOS build, licence/security review results, operational cost comparison, sensitivity analysis, and final ADR approval. Do not close Issue #9 until the applicable acceptance criteria have evidence and the PR has been reviewed.
+
+
+## 10. Same-emulator Android runtime comparison
+
+The workflow `.github/workflows/issue-9-android-runtime-benchmark.yml` builds the Flutter and bare React Native Release APKs in one Ubuntu job, verifies both assets against the same canonical fixture, and installs both on the same Android Emulator image (API 36, Google APIs, x86_64, Pixel 2 profile). The script `scripts/stack_poc/measure_issue9_android_runtime.sh` records three process-cold launches per app (`am force-stop` before launch), ActivityManager `WaitTime`/`TotalTime`, maximum of three post-launch PSS/RSS snapshots, and whether the app title and fixture label appear in the accessibility hierarchy. Build logs, APK sizes and runtime CSV are retained as a workflow artifact.
+
+This improves comparability versus separate CI runners but remains an emulator result, not a physical device or the user's Windows PC. PSS/RSS are sampled snapshots, not continuous peak memory. UI hierarchy visibility is a coarse fixture-ready proxy, not a frame-time/GPU trace or a complete screen-reader audit. Keep the raw CSV and logs; do not turn three launches into an unsupported universal performance threshold.
