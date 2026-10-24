@@ -351,3 +351,8 @@ This is a browser smoke test and geometry microbenchmark, not a full performance
 These Android and iOS measurements are not compared against one another. Android Release/Debug can be compared only with React Native Android Release/Debug measured on the same runner image; iOS Debug/Release can be compared only with React Native iOS Debug/Release on the same macOS image. The current repeated React Native Android build/release workflow and the current Flutter iOS Debug/Release workflow are still pending. The earlier React Native Android result is one build only and cannot substitute for its three-run summary.
 
 The measurements support the feasibility of both Flutter and bare React Native, but do not yet justify a weighted winner. Real-device chart readiness, interaction latency, memory under a running chart, physical-device accessibility, and the target Windows PC report remain N/E. Do not ratify ADR-0001 or close Issue #9 at this checkpoint.
+
+
+## 27. Parciales con cobertura de evidencia (2026-10-24)
+
+El script `scripts/stack_poc/sensitivity_analysis.py` ahora devuelve `partial_scores` cuando faltan datos: criterios puntuados, criterios ausentes, porcentaje de peso cubierto y un subtotal normalizado sobre los criterios con evidencia. En estado `incomplete`, la salida sigue teniendo `ranking=[]` y `sensitivity=[]`. Los subtotales parciales son diagnósticos y no se pueden comparar entre candidatos con distinta cobertura; no sustituyen la matriz completa ni autorizan ratificar ADR-0001. Se añadió un test que verifica este comportamiento.
