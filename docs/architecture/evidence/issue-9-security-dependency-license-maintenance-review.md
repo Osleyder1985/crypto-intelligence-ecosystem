@@ -45,3 +45,17 @@ The generated inventory and lockfile identify these non-standard labels; they ar
 | `Issue9RnReference` | `0.0.1` | UNLICENSED | The private PoC application itself, not a third-party package | Keep private and do not redistribute as an open-source package until an explicit project licence is chosen. |
 
 The lockfile also contains a separate `argparse@1.0.10` MIT entry; do not conflate it with the nested `argparse@2.0.1` entry. The inventory's zero-UNKNOWN result is useful but does not itself settle these obligations. Bundle inclusion and attribution review remain open.
+
+
+## Version-pinned upstream licence-text remediation — 2026-10-24
+
+The previous Python inventory report identified four manual-review entries because the installed distribution metadata did not include a licence file. Version-pinned upstream licence texts have now been preserved in the repository for:
+
+- `license-expression 30.4.4` — Apache-2.0, upstream release-tag file.
+- `packageurl-python 0.17.6` — MIT, upstream release-tag file.
+- `pip-requirements-parser 32.0.1` — MIT, upstream release-tag file.
+- `typing_extensions 4.16.0` — PSF-2.0 declared by the versioned package metadata; the exact release LICENSE includes historical Python licence sections, so do not interpret the whole history file as a single licence applying to every historical component.
+
+The evidence snapshots are under `docs/architecture/evidence/licenses/`. The triage script now requires the snapshot file to exist and emits the exact upstream URL and repository evidence path. The dependency-audit workflow computes SHA-256 hashes of all four snapshots and preserves the hash manifest as an artifact. The new run must pass before these entries are considered text-identified; this does **not** equal legal approval of distribution obligations.
+
+The prior run's four manual-review count is a historical observation, not the final result for the updated branch. After the new workflow completes, update this report with its exact run ID, counts and artifact hash. Full notice/attribution obligations across all 42 Python distributions, and native mobile dependency licences, remain subject to review.
