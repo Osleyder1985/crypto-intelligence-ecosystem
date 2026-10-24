@@ -238,63 +238,88 @@ def main() -> int:
         raise ValueError("authorization registry must be an object")
     args.output_dir.mkdir(parents=True, exist_ok=True)
 
+    specs = [
+        {
+            "source_id": "cftc_press_release_archive",
+            "archive_url": "https://www.cftc.gov/PressRoom/PressReleases?c=1172200&page=1",
+            "candidate_url": CFTC_BTC_URL,
+            "title": "CFTC Approves BTCPERP Contract Submitted by KalshiEX, LLC",
+            "published_at": "2026-05-29T00:00:00Z",
+            "date_evidence": "05/29/2026",
+            "scope_id": "cftc-2026-may-page-1",
+            "scope_definition": "Single CFTC press-release archive page 1 containing release 9240-26; not a claim of exhaustive 2026 coverage.",
+            "period_start": "2026-05-29",
+            "period_end": "2026-05-29",
+            "entity": ("bitcoin", "Bitcoin", "BTC", "https://www.coingecko.com/en/coins/bitcoin"),
+            "event_type": "CFTC_BITCOIN_DERIVATIVE_APPROVAL",
+            "claim": "The CFTC announced approval of a KalshiEX perpetual contract referencing spot Bitcoin. This is an official regulatory/product event, not proof of price causality.",
+        },
+        {
+            "source_id": "federal_reserve_press_release_archive",
+            "archive_url": "https://www.federalreserve.gov/newsevents/pressreleases/2026-press.htm",
+            "candidate_url": FED_STABLECOIN_URL,
+            "title": "Federal Reserve Board requests public comment on two proposals related to establishing a regulatory framework for Board-supervised payment stablecoin issuers under the GENIUS Act",
+            "published_at": "2026-09-24T00:00:00Z",
+            "date_evidence": "9/24/2026",
+            "scope_id": "federal-reserve-2026-press-page",
+            "scope_definition": "Single Federal Reserve 2026 press-release archive page containing the 2026-09-24 stablecoin proposal; not a claim of exhaustive archive coverage.",
+            "period_start": "2026-01-01",
+            "period_end": "2026-12-31",
+            "entity": None,
+            "event_type": None,
+            "claim": None,
+        },
+        {
+            "source_id": "sec_press_release_archive",
+            "archive_url": "https://www.sec.gov/newsroom/press-releases?combine=crypto&page=1",
+            "candidate_url": SEC_MANGO_URL,
+            "title": "SEC Charges Entities Operating Crypto Asset Trading Platform Mango Markets for Unregistered Offers and Sales of the Platform’s “MNGO” Governance Tokens",
+            "published_at": "2024-09-27T00:00:00Z",
+            "date_evidence": "Sept. 27, 2024",
+            "scope_id": "sec-crypto-page-1",
+            "scope_definition": "Single SEC press-release archive page 1 filtered to crypto; not a claim of exhaustive coverage of all SEC releases.",
+            "period_start": "2024-01-01",
+            "period_end": "2024-12-31",
+            "entity": ("mango-markets", "Mango", "MNGO", "https://www.coingecko.com/en/coins/mango"),
+            "event_type": "SEC_ENFORCEMENT_SETTLEMENT",
+            "claim": "The SEC reported settled charges concerning unregistered offers and sales of MNGO tokens. This records the official event only and does not assert it caused a market move.",
+        },
+    ]
     records = []
-    # Each source has its own authorization, endpoint, and declared one-page scope.
-    records.append(capture_one(
-        output_dir=args.output_dir, auth_registry=auth_registry,
-        source_id="sec_press_release_archive",
-        archive_url="https://www.sec.gov/newsroom/press-releases?combine=crypto&page=1",
-        candidate_url=SEC_MANGO_URL,
-        title="SEC Charges Entities Operating Crypto Asset Trading Platform Mango Markets for Unregistered Offers and Sales of the Platform’s “MNGO” Governance Tokens",
-        published_at="2024-09-27T00:00:00Z", date_evidence="Sept. 27, 2024",
-        scope_id="sec-crypto-2024-query-page",
-        scope_definition="Single SEC press-release archive query page filtered to crypto and year 2024; not a claim of exhaustive 2024 coverage.",
-        period_start="2024-01-01", period_end="2024-12-31",
-        entity=("mango-markets", "Mango", "MNGO", "https://www.coingecko.com/en/coins/mango"),
-        event_type="SEC_ENFORCEMENT_SETTLEMENT",
-        claim="The SEC reported settled charges concerning unregistered offers and sales of MNGO tokens. This records the official event only and does not assert it caused a market move.",
-    ))
-    records.append(capture_one(
-        output_dir=args.output_dir, auth_registry=auth_registry,
-        source_id="cftc_press_release_archive",
-        archive_url="https://www.cftc.gov/PressRoom/PressReleases?c=1172200&page=1",
-        candidate_url=CFTC_BTC_URL,
-        title="CFTC Approves BTCPERP Contract Submitted by KalshiEX, LLC",
-        published_at="2026-05-29T00:00:00Z", date_evidence="05/29/2026",
-        scope_id="cftc-2026-may-page-1",
-        scope_definition="Single CFTC press-release archive page 1 containing release 9240-26; not a claim of exhaustive 2026 coverage.",
-        period_start="2026-05-29", period_end="2026-05-29",
-        entity=("bitcoin", "Bitcoin", "BTC", "https://www.coingecko.com/en/coins/bitcoin"),
-        event_type="CFTC_BITCOIN_DERIVATIVE_APPROVAL",
-        claim="The CFTC announced approval of a KalshiEX perpetual contract referencing spot Bitcoin. This is an official regulatory/product event, not proof of price causality.",
-    ))
-    records.append(capture_one(
-        output_dir=args.output_dir, auth_registry=auth_registry,
-        source_id="federal_reserve_press_release_archive",
-        archive_url="https://www.federalreserve.gov/newsevents/pressreleases/2026-press.htm",
-        candidate_url=FED_STABLECOIN_URL,
-        title="Federal Reserve Board requests public comment on two proposals related to establishing a regulatory framework for Board-supervised payment stablecoin issuers under the GENIUS Act",
-        published_at="2026-09-24T00:00:00Z", date_evidence="9/24/2026",
-        scope_id="federal-reserve-2026-press-page",
-        scope_definition="Single Federal Reserve 2026 press-release archive page containing the 2026-09-24 stablecoin proposal; not a claim of exhaustive archive coverage.",
-        period_start="2026-01-01", period_end="2026-12-31",
-        entity=None,
-        event_type=None,
-        claim=None,
-    ))
+    failures = []
+    for spec in specs:
+        source_id = spec["source_id"]
+        try:
+            records.append(capture_one(
+                output_dir=args.output_dir,
+                auth_registry=auth_registry,
+                **spec,
+            ))
+        except Exception as exc:
+            failure = {
+                "source_id": source_id,
+                "status": "FAILED",
+                "error_type": type(exc).__name__,
+                "error": str(exc),
+                "recorded_at": now_utc(),
+            }
+            failures.append(failure)
+            write_json(args.output_dir / f"{source_id}-failure.json", failure)
+            print(json.dumps(failure, ensure_ascii=False, indent=2))
 
     backfill = {
         "schema_version": "crypto-issue-132-real-backfill-manifest-v1",
         "created_at": now_utc(),
         "purpose": "Real source-authorized historical archive/article capture; source-level hashes and extracted-text artifacts are independently verifiable.",
         "read_to_eof_without_local_size_cap": True,
-        "no_full_html_persisted_for_approved_archive_sources": all(
+        "no_full_html_persisted_for_approved_archive_sources": bool(records) and all(
             record["original_archive_response"]["stored_content_mode"] == "EXTRACTED_TEXT_EVIDENCE"
             and record["original_article_response"]["stored_content_mode"] == "EXTRACTED_TEXT_EVIDENCE"
             for record in records
         ),
         "causality_claimed": False,
         "sources": records,
+        "failures": failures,
     }
     backfill["manifest_sha256"] = digest_json(backfill)
     write_json(args.output_dir / "backfill-manifest.json", backfill)
@@ -307,8 +332,9 @@ def main() -> int:
             "event_id": record["event_id"],
             "causality_status": record["event_causality_status"],
         } for record in records],
+        "failures": failures,
     }, ensure_ascii=False, indent=2))
-    return 0
+    return 1 if failures else 0
 
 
 if __name__ == "__main__":
