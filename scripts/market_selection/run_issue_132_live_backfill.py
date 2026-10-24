@@ -30,7 +30,7 @@ FED_STABLECOIN_URL = "https://www.federalreserve.gov/newsevents/pressreleases/bc
 
 
 def now_utc() -> str:
-    return datetime.now(timezone.utc).isoformat(timespec="seconds").replace("+00:00", "Z")
+    return datetime.now(timezone.utc).isoformat(timespec="microseconds").replace("+00:00", "Z")
 
 
 def canonical_bytes(value: object) -> bytes:
@@ -271,7 +271,7 @@ def main() -> int:
         },
         {
             "source_id": "sec_press_release_archive",
-            "archive_url": "https://www.sec.gov/newsroom/press-releases?combine=crypto&page=1",
+            "archive_url": "https://www.sec.gov/newsroom/press-releases?combine=Mango&page=0",
             "candidate_url": SEC_MANGO_URL,
             "title": "SEC Charges Entities Operating Crypto Asset Trading Platform Mango Markets for Unregistered Offers and Sales of the Platform’s “MNGO” Governance Tokens",
             "published_at": "2024-09-27T00:00:00Z",
