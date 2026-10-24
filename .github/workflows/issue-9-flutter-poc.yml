@@ -4,6 +4,7 @@ on:
   pull_request:
     paths:
       - 'pocs/issue-9/flutter/**'
+      - 'scripts/stack_poc/inventory_dart_licenses.py'
       - 'tests/stack_poc/fixtures/ohlcv_synthetic_v1.json'
       - '.github/workflows/issue-9-flutter-poc.yml'
   push:
@@ -76,6 +77,7 @@ jobs:
         working-directory: pocs/issue-9/flutter
         run: |
           flutter pub deps --json > flutter-pub-dependencies.json
+          python "$GITHUB_WORKSPACE/scripts/stack_poc/inventory_dart_licenses.py" flutter-pub-dependencies.json flutter-license-inventory.json --copy-dir flutter-license-texts
           (cd android && ./gradlew app:dependencies --configuration releaseRuntimeClasspath > ../gradle-release-runtime-dependencies.txt)
           (cd android && ./gradlew buildEnvironment > ../gradle-build-environment.txt)
       - name: Preserve Android build measurements
@@ -87,6 +89,8 @@ jobs:
             pocs/issue-9/flutter/flutter-build-measurement.log
             pocs/issue-9/flutter/pubspec.lock
             pocs/issue-9/flutter/flutter-pub-dependencies.json
+            pocs/issue-9/flutter/flutter-license-inventory.json
+            pocs/issue-9/flutter/flutter-license-texts/**
             pocs/issue-9/flutter/gradle-release-runtime-dependencies.txt
             pocs/issue-9/flutter/gradle-build-environment.txt
           if-no-files-found: warn
