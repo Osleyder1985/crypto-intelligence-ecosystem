@@ -58,6 +58,8 @@ jobs:
         run: |
           cmp tests/stack_poc/fixtures/ohlcv_synthetic_v1.json pocs/issue-9/flutter/assets/ohlcv_synthetic_v1.json
           cmp tests/stack_poc/fixtures/ohlcv_synthetic_v1.json pocs/issue-9/react-native/assets/ohlcv_synthetic_v1.json
+      - name: Validate runtime benchmark shell script
+        run: bash -n scripts/stack_poc/measure_issue9_android_runtime.sh
       - name: Install pinned Flutter SDK
         uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2
         with:
