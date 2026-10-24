@@ -211,6 +211,24 @@ class PublicEventArchiveTests(unittest.TestCase):
             "EXTRACTED_TEXT_EVIDENCE",
         )
 
+    def test_text_only_source_never_persists_unsupported_response_body(self):
+        from scripts.market_selection.capture_public_event_feed import _store_response_body_fields
+
+        entry = approved_source("federal_reserve_press_release_archive")
+        fields = _store_response_body_fields(
+            entry,
+            b"unexpected non-HTML payload",
+            html=False,
+        )
+        self.assertEqual(fields["stored_content_mode"], "UNSUPPORTED_CONTENT_NOT_PERSISTED")
+        self.assertIsNone(fields["raw_response_base64"])
+        self.assertIsNone(fields["text_evidence_base64"])
+        self.assertEqual(fields["raw_response_bytes"], len(b"unexpected non-HTML payload"))
+        self.assertEqual(
+            fields["raw_response_sha256"],
+            hashlib.sha256(b"unexpected non-HTML payload").hexdigest(),
+        )
+
     def test_archive_capture_blocks_terms_pending_source_before_network(self):
         with patch("scripts.market_selection.capture_public_event_feed._open_allowlisted_url") as network:
             result = capture_public_event_archive_index(
