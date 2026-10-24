@@ -87,7 +87,6 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '404':
           $ref: '#/components/responses/NotFound'
-  /v1/assets/{asset_id}/evaluations:
     post:
       operationId: requestAssetEvaluation
       summary: Request an on-demand research evaluation
