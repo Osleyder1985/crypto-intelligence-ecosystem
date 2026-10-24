@@ -388,3 +388,8 @@ En estas observaciones, Flutter Release compiló aproximadamente un 54.0% más r
 ### iOS — Debug disponible, Release todavía no comparable
 
 Flutter iOS Debug: mediana 23.43 s, rango 22.49–40.14 s, app 97,276 KB; Release 29.56 s / 14,560 KB (code signing disabled). React Native iOS Debug: mediana 40.60 s, rango 39.76–64.51 s, app 163,404 KB. La Release de React Native y su recompilación incremental después de editar `App.js` siguen pendientes; por ello no se declara un ganador iOS todavía.
+
+
+## 30. Corrección de escala de puntuación en sensibilidad (2026-10-24)
+
+La primera salida del subconjunto de sensibilidad reveló que `score_out_of_100` estaba serializando valores normalizados entre 0 y 1, pese al nombre del campo. Se corrigió el cálculo para devolver la escala 0–100, se añadió una aserción unitaria (`70/100` para el caso de prueba) y el workflow ahora valida explícitamente `74.2857, 74.2857, 60.0` en el subconjunto diagnóstico. El artefacto previo de [run 40061223306](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/actions/runs/40061223306) queda supersedido; usar únicamente el nuevo artefacto tras esta corrección. La clasificación sigue siendo parcial y no ratifica ADR-0001.
