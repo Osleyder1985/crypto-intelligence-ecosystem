@@ -15,7 +15,7 @@ on:
 
 concurrency:
   group: issue-9-android-runtime-shared
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 permissions:
   contents: read
