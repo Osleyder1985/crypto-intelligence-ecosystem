@@ -1,0 +1,51 @@
+name: Issue 9 Windows measurement script validation
+
+on:
+  pull_request:
+    paths:
+      - '.gitattributes'
+      - 'scripts/stack_poc/measure_issue9_windows.ps1'
+      - 'pocs/issue-9/web/**'
+      - 'docs/architecture/issue-9-windows-local-measurement.md'
+      - '.github/workflows/issue-9-windows-measurement-script.yml'
+  push:
+    branches: [main, docs/issue-9-stack-evaluation]
+    paths:
+      - 'scripts/stack_poc/measure_issue9_windows.ps1'
+      - 'pocs/issue-9/web/**'
+      - 'docs/architecture/issue-9-windows-local-measurement.md'
+      - '.github/workflows/issue-9-windows-measurement-script.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate-windows-script:
+    runs-on: windows-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - name: Set up Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22'
+      - name: Parse PowerShell script
+        shell: pwsh
+        run: |
+          $tokens = $null
+          $errors = $null
+          [System.Management.Automation.Language.Parser]::ParseFile((Resolve-Path 'scripts/stack_poc/measure_issue9_windows.ps1'), [ref]$tokens, [ref]$errors) | Out-Null
+          if ($errors.Count -gt 0) { $errors | Format-List | Out-String | Write-Error }
+      - name: Run environment and web-geometry capture without local builds
+        shell: pwsh
+        run: .\scripts\stack_poc\measure_issue9_windows.ps1 -SkipFlutterBuild
+      - name: Preserve Windows-hosted reference report
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: issue-9-windows-hosted-script-validation
+          path: artifacts/issue-9-windows/**
+          if-no-files-found: warn
+          retention-days: 30

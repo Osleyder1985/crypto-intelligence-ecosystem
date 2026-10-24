@@ -1,0 +1,292 @@
+openapi: 3.1.0
+info:
+  title: Crypto Intelligence Research API (PoC contract)
+  version: 0.1.0
+  description: >-
+    Provisional, non-production contract for evaluating a shared API boundary.
+    This contract does not enable trading or expose provider credentials.
+servers:
+  - url: https://example.invalid/api
+    description: Placeholder only; replace for a real deployment.
+security:
+  - bearerAuth: []
+paths:
+  /v1/assets:
+    get:
+      operationId: searchAssets
+      summary: Search the canonical asset catalogue
+      parameters:
+        - name: query
+          in: query
+          required: true
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 100
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+      responses:
+        '200':
+          description: Matching canonical assets
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Asset'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /v1/assets/{asset_id}/evaluations:
+    get:
+      operationId: listAssetEvaluations
+      summary: Retrieve immutable historical evaluations for one asset
+      parameters:
+        - $ref: '#/components/parameters/AssetId'
+        - name: horizon
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [short, medium, long]
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+      responses:
+        '200':
+          description: Historical evaluations, newest first
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Evaluation'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    post:
+      operationId: requestAssetEvaluation
+      summary: Request an on-demand research evaluation
+      description: >-
+        Idempotent request; this operation does not place or prepare real orders.
+        A successful response records the request state, not an investment guarantee.
+      parameters:
+        - $ref: '#/components/parameters/AssetId'
+        - name: Idempotency-Key
+          in: header
+          required: true
+          schema:
+            type: string
+            minLength: 16
+            maxLength: 200
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [horizons]
+              properties:
+                horizons:
+                  type: array
+                  minItems: 1
+                  uniqueItems: true
+                  items:
+                    type: string
+                    enum: [short, medium, long]
+                methodology_version:
+                  type: string
+                  minLength: 1
+                  maxLength: 100
+      responses:
+        '202':
+          description: Request accepted for asynchronous processing
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [request_id, status]
+                properties:
+                  request_id:
+                    type: string
+                    format: uuid
+                  status:
+                    type: string
+                    enum: [queued, running, completed, failed, indeterminate]
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: Idempotency key reused with a different request payload
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+  /v1/evaluation-requests/{request_id}:
+    get:
+      operationId: getEvaluationRequest
+      summary: Retrieve processing status and any completed evaluation
+      parameters:
+        - name: request_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Current request state and zero or more per-horizon evaluations; indeterminate means the evaluator abstained
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [request_id, status, evaluations]
+                properties:
+                  request_id:
+                    type: string
+                    format: uuid
+                  status:
+                    type: string
+                    enum: [queued, running, completed, failed, indeterminate]
+                  evaluations:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Evaluation'
+                  error:
+                    oneOf:
+                      - $ref: '#/components/schemas/ApiError'
+                      - type: 'null'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  parameters:
+    AssetId:
+      name: asset_id
+      in: path
+      required: true
+      schema:
+        type: string
+        minLength: 1
+        maxLength: 100
+  schemas:
+    Asset:
+      type: object
+      required: [asset_id, canonical_symbol, display_name]
+      properties:
+        asset_id:
+          type: string
+          description: Stable canonical identifier; not exchange-specific symbol alone.
+        canonical_symbol:
+          type: string
+        display_name:
+          type: string
+        status:
+          type: string
+          enum: [active, inactive, unresolved]
+    Evaluation:
+      type: object
+      required:
+        - evaluation_id
+        - asset_id
+        - created_at
+        - horizon
+        - methodology_version
+        - status
+        - evidence_refs
+      properties:
+        evaluation_id:
+          type: string
+          format: uuid
+        asset_id:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+          description: UTC timestamp encoded as RFC 3339.
+        horizon:
+          type: string
+          enum: [short, medium, long]
+        methodology_version:
+          type: string
+        status:
+          type: string
+          enum: [complete, partial, indeterminate]
+        conclusion:
+          type: string
+          description: Evidence-based conclusion; may be indeterminate.
+        evidence_refs:
+          type: array
+          items:
+            type: string
+        limitations:
+          type: array
+          items:
+            type: string
+        risk_notes:
+          type: array
+          items:
+            type: string
+    ApiError:
+      type: object
+      required: [code, message, retryable]
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+        retryable:
+          type: boolean
+        correlation_id:
+          type: string
+  responses:
+    BadRequest:
+      description: Invalid request or schema
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+    Unauthorized:
+      description: Missing or invalid credentials
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'

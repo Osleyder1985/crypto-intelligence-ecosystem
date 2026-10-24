@@ -1,0 +1,90 @@
+# Issue 9 — security, dependency, licence and maintenance review
+
+**Status: PARTIAL — final review remains open.** This record distinguishes completed automated checks from unresolved manual obligations. A green audit is time-bounded evidence, not a guarantee of future vulnerability-free dependencies or ISO conformity.
+
+## Findings by component
+
+| Component | Evidence completed | Current disposition | Remaining work |
+|---|---|---|---|
+| Python API/worker PoC | `pip check` passed; `pip-audit` reported no known vulnerabilities in the tested pinned environment; dependency/license inventory preserved in `docs/architecture/evidence/issue-9-python-dependency-license-review.md` | No known advisory reported by that scan at its timestamp | Re-run against current pinned requirements; review notices/obligations and the production dependency set before deployment |
+| Bare React Native 0.88.0 / React 19.3.0 | Android/iOS lockfiles match SHA-256 `7f0714a346fdc692685b06dbcb77d2368b0d71bf9e4ca94733f5ab7b8371ef3d`; `npm audit --audit-level=high` reported 0 vulnerabilities; inventory reported 0 UNKNOWN labels | Expo-based candidate with five high-severity transitive findings was rejected in favour of bare Community CLI; no destructive downgrade applied | Review legal obligations and notice requirements for MIT, ISC, BSD-3-Clause, Apache-2.0, CC-BY-4.0, BlueOak-1.0.0 and Python-2.0 entries; finish current Android Release/incremental and iOS Release runs |
+| Flutter 3.47.5 | `pubspec.yaml` declares only Flutter SDK and flutter_test SDK dependencies; no third-party Dart chart library. New workflows preserve `pubspec.lock`, `flutter pub deps --json`, Gradle runtime/build-environment trees and CocoaPods lock/list | No third-party Dart package surface in the PoC; native dependency graph must still be reviewed | Inspect captured Gradle, AndroidX, Kotlin, Flutter engine and CocoaPods/Xcode dependency versions; classify licences and advisories from the actual artifacts |
+| Web reference | No external runtime package dependency; Chromium smoke test passed on the earlier pinned Playwright run; the current Playwright 1.64.1 lock/audit/repeated-readiness workflow is pending | Static HTML/JS client is small in dependency surface; CI test tooling is separate from runtime | Confirm the current Playwright audit and preserve its generated lock/audit artifact; record static asset size and browser readiness measurements |
+| Shared API/history contract | OpenAPI contract, idempotency, worker recovery and PostgreSQL history PoCs passed their documented workflows | The proof covers tested paths only; client PoCs do not yet consume the real API | Threat-model production auth, authorization, rate limits, provider credentials, persistence, migrations, backups, retention and observability before production use |
+
+## Licence review rules
+
+1. The generated React Native app itself is private PoC code and is labelled `UNLICENSED`; this is not an assertion that third-party packages are unlicensed.
+2. A licence inventory label is not a legal conclusion. Review full licence texts, attribution/notice obligations, bundled assets/fonts and transitive dependencies; preserve the review date and reviewer.
+3. An absent or ambiguous licence remains unresolved. Do not infer permission from repository visibility or package-manager installation success.
+4. Generated native dependency inventories must be retained with the exact toolchain versions; a Dart-only dependency list is insufficient for Android/iOS.
+5. Re-run vulnerability scans at the point of release and whenever lockfiles or toolchains change. Preserve scanner/database version, timestamp, findings and disposition.
+6. CI build minutes and maintenance effort have not been converted to a monetary cost; repository evidence does not establish account billing rates. Cost remains N/E.
+
+## Maintenance and operational risk
+
+- Flutter has the smallest Dart-level dependency surface in this PoC, but requires Flutter/Dart, Gradle/Android SDK and Xcode/CocoaPods toolchains for platform builds.
+- Bare React Native requires Node/npm, React Native Community CLI, Metro/Gradle and Xcode/CocoaPods. Its lockfile is guarded by SHA-256; the initial Expo candidate was dropped due to high-severity findings.
+- Web avoids mobile SDKs for the browser client but still requires browser compatibility/accessibility testing, static hosting, API versioning and dependency updates for CI tooling.
+- All candidates use the same API/history backend PoC; that common service still needs production threat modelling, monitoring, backup/recovery and operational ownership.
+
+## Closure gate
+
+This review cannot be marked complete until the Flutter native dependency artifacts and Playwright 1.64.1 audit are inspected, React Native Release/incremental builds finish, all third-party licence obligations are reviewed, and the matrix records remaining unknowns. Do not describe the system as ISO-certified or fully secure on the basis of these checks.
+
+
+## React Native licence exceptions requiring disposition
+
+The generated inventory and lockfile identify these non-standard labels; they are not `UNKNOWN`, but they still require explicit treatment:
+
+| Package | Version | Licence label | Observed dependency context | Required action |
+|---|---|---|---|---|
+| `caniuse-lite` | `1.0.30001819` | CC-BY-4.0 | Browser compatibility data dependency; lockfile does not mark it exclusively dev-only | Confirm whether any data is included in the distributed app bundle. If redistributed, preserve attribution and licence notice; record the bundle inspection. |
+| `minimatch` | `10.2.6` | BlueOak-1.0.0 | Marked dev dependency in the generated lockfile | Review the actual licence text and confirm it is not bundled in the end-user app; retain notice in the development dependency inventory. |
+| nested `argparse` | `2.0.1` | Python-2.0 | Nested under ESLint tooling and marked dev-only in the lockfile | Review licence/notice text and confirm it is not shipped in the app bundle. |
+| `Issue9RnReference` | `0.0.1` | UNLICENSED | The private PoC application itself, not a third-party package | Keep private and do not redistribute as an open-source package until an explicit project licence is chosen. |
+
+The lockfile also contains a separate `argparse@1.0.10` MIT entry; do not conflate it with the nested `argparse@2.0.1` entry. The inventory's zero-UNKNOWN result is useful but does not itself settle these obligations. Bundle inclusion and attribution review remain open.
+
+
+## Version-pinned upstream licence-text remediation — 2026-10-24
+
+The previous Python inventory report identified four manual-review entries because the installed distribution metadata did not include a licence file. Version-pinned upstream licence texts have now been preserved in the repository for:
+
+- `license-expression 30.4.4` — Apache-2.0, upstream release-tag file.
+- `packageurl-python 0.17.6` — MIT, upstream release-tag file.
+- `pip-requirements-parser 32.0.1` — MIT, upstream release-tag file.
+- `typing_extensions 4.16.0` — PSF-2.0 declared by the versioned package metadata; the exact release LICENSE includes historical Python licence sections, so do not interpret the whole history file as a single licence applying to every historical component.
+
+The evidence snapshots are under `docs/architecture/evidence/licenses/`. The triage script now requires the snapshot file to exist and emits the exact upstream URL and repository evidence path. The dependency-audit workflow computes SHA-256 hashes of all four snapshots and preserves the hash manifest as an artifact. The new run must pass before these entries are considered text-identified; this does **not** equal legal approval of distribution obligations.
+
+The prior run's four manual-review count is a historical observation, not the final result for the updated branch. After the new workflow completes, update this report with its exact run ID, counts and artifact hash. Full notice/attribution obligations across all 42 Python distributions, and native mobile dependency licences, remain subject to review.
+
+
+## Updated Python triage — 2026-10-24, run 40118549698
+
+The current pinned Python PoC scan passed `pip check` and `pip-audit`; the scanner reported no known advisories for the audited requirements at scan time. The inventory contained 42 distributions. The version-bound upstream licence snapshots were hashed and preserved in CI.
+
+| Automated triage outcome | Count | Interpretation |
+|---|---:|---|
+| Licence identified from captured versioned licence text | 14 | Text-based identification; attribution obligations still need distribution review |
+| Licence identified from exact upstream release text | 4 | Release-tagged text is preserved and SHA-256 recorded |
+| Metadata and classifier aligned | 14 | Useful metadata, not a legal approval |
+| Metadata only | 2 | Must validate against the exact distribution/licence text |
+| Classifier only | 7 | Must validate against the exact distribution/licence text |
+| Manual review required | 1 | Starlette 1.10.0; the source release's BSD-3-Clause text has been verified at https://github.com/Kludex/starlette/blob/1.10.0/LICENSE.md and a version-pinned rule plus regression test are being added |
+| Missing captured licence text | 0 | All packages had a text source available to the triage |
+| Separate NOTICE absent | 39 | Absence alone is not a violation; determine obligations from each licence and the actual distribution method |
+
+The run is evidence for the pinned Python PoC environment only, not for the complete product SBOM. A separate notice file is not universally required by every licence; the review must check copyright retention, source/binary redistribution conditions, attribution, patent clauses, bundled native components and any required NOTICE text per dependency. The `psycopg[binary]` wheel and its bundled native components remain a separate review item. No formal legal opinion has been obtained.
+
+The Starlette rule is pinned to version 1.10.0; any version change must trigger fresh review. The test initially exposed that a metadata-only synthetic test fixture cannot pass a rule requiring captured text. The fixture has been corrected to include representative captured BSD licence text, and the audit workflow is being rerun. Do not treat the correction as verified until the rerun passes.
+
+**Disposition:** automated known-vulnerability check PASS for this run; licence inventory PASS as an inventory; manual legal/distribution review remains open for the intended product distribution and bundled components.
+
+
+### Follow-up verified — run 40118746772 (2026-10-24)
+
+The corrected audit workflow completed successfully: [run 40118746772](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/actions/runs/40118746772). All 7 licence-triage regression tests passed; `pip check` passed; `pip-audit` reported no known vulnerabilities for the pinned Python PoC requirements at scan time. The generated inventory reports 42 distributions, 15 versioned captured-text identifications, 4 exact upstream release-text identifications, 14 metadata/classifier-aligned rows, 2 metadata-only rows, 7 classifier-only rows, **0 manual-review-required rows**, and **0 missing licence-text rows**. Thirty-nine distributions did not provide a separate NOTICE file/text in the inventory; this is not by itself a violation and still requires obligation-by-obligation review.
+
+The Starlette 1.10.0 BSD-3-Clause classification is now covered by a regression test and the tagged upstream LICENSE.md basis. The audit inventory's automated triage is now complete for these 42 Python distributions. This does **not** close the legal/distribution review: the intended distribution model, required copyright/attribution notices, bundled Psycopg binary/native components, and the full mobile/native dependency graphs must still be reviewed. The exact version-pinned inventory and scan are evidence for this PoC environment only.

@@ -1,0 +1,69 @@
+name: Issue 9 PoC dependency security and licence inventory
+
+on:
+  pull_request:
+    paths:
+      - 'requirements-stack-poc.txt'
+      - 'scripts/stack_poc/**'
+      - 'tests/stack_poc/**'
+      - 'pocs/issue-9/**'
+      - '.github/workflows/issue-9-dependency-audit.yml'
+  push:
+    branches: [main, docs/issue-9-stack-evaluation]
+    paths:
+      - 'requirements-stack-poc.txt'
+      - 'scripts/stack_poc/**'
+      - 'tests/stack_poc/**'
+      - 'pocs/issue-9/**'
+      - '.github/workflows/issue-9-dependency-audit.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  dependency-audit:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - name: Set up Python
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: '3.12'
+      - name: Test conservative licence triage and version-bound overrides
+        run: python -m unittest discover -s tests/stack_poc -p 'test_*license*.py' -v
+      - name: Install pinned application dependencies and audit tools
+        run: python -m pip install --disable-pip-version-check -r requirements-stack-poc.txt pip-audit==2.9.0 pip-licenses==5.0.0
+      - name: Verify dependency consistency
+        run: python -m pip check
+      - name: Audit known Python dependency vulnerabilities
+        run: python -m pip_audit --requirement requirements-stack-poc.txt
+      - name: Emit direct and transitive licence inventory
+        if: always()
+        run: |
+          python -m piplicenses --format=json --from=all --with-urls --with-description --with-license-file --with-notice-file > issue-9-python-license-inventory.json
+          python -m piplicenses --format=markdown --from=all --with-urls --with-description
+          python scripts/stack_poc/review_license_inventory.py issue-9-python-license-inventory.json issue-9-python-license-review.json
+      - name: Verify version-pinned upstream licence snapshots and record hashes
+        if: always()
+        run: |
+          set -euo pipefail
+          sha256sum \
+            docs/architecture/evidence/licenses/license-expression-30.4.4-Apache-2.0.LICENSE \
+            docs/architecture/evidence/licenses/packageurl-python-0.17.6-MIT.LICENSE \
+            docs/architecture/evidence/licenses/pip-requirements-parser-32.0.1-MIT.LICENSE \
+            docs/architecture/evidence/licenses/typing_extensions-4.16.0-PYTHON-LICENSE \
+            > issue-9-upstream-license-text-sha256.txt
+          cat issue-9-upstream-license-text-sha256.txt
+      - name: Preserve licence inventory as a CI artifact
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: issue-9-python-license-inventory
+          path: |
+            issue-9-python-license-inventory.json
+            issue-9-python-license-review.json
+            issue-9-upstream-license-text-sha256.txt
+          if-no-files-found: warn
+          retention-days: 30

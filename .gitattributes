@@ -1,0 +1,5 @@
+# Keep canonical benchmark inputs byte-identical across Linux, macOS and Windows.
+tests/stack_poc/fixtures/*.json text eol=lf
+pocs/issue-9/**/assets/*.json text eol=lf
+pocs/issue-9/web/*.js text eol=lf
+pocs/issue-9/web/*.json text eol=lf

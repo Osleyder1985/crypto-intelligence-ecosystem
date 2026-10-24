@@ -1,0 +1,108 @@
+name: Issue 9 React Native chart reference PoC
+
+on:
+  pull_request:
+    paths:
+      - 'pocs/issue-9/react-native/**'
+      - 'tests/stack_poc/fixtures/ohlcv_synthetic_v1.json'
+      - '.github/workflows/issue-9-react-native-poc.yml'
+  push:
+    branches: [main, docs/issue-9-stack-evaluation]
+    paths:
+      - 'pocs/issue-9/react-native/**'
+      - 'tests/stack_poc/fixtures/ohlcv_synthetic_v1.json'
+      - '.github/workflows/issue-9-react-native-poc.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  react-native-android:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - name: Set up Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22'
+      - name: Record runner environment
+        run: |
+          uname -a
+          lscpu
+          free -b
+          java -version
+          node --version
+          npm --version
+      - name: Verify app fixture matches canonical fixture byte-for-byte
+        run: cmp tests/stack_poc/fixtures/ohlcv_synthetic_v1.json pocs/issue-9/react-native/assets/ohlcv_synthetic_v1.json
+      - name: Scaffold pinned bare React Native project
+        working-directory: pocs/issue-9/react-native
+        run: npx --yes @react-native-community/cli@20.0.0 init Issue9RnReference --version 0.88.0 --directory build-project --skip-install
+      - name: Inject reference screen and shared fixture
+        working-directory: pocs/issue-9/react-native
+        run: |
+          cp App.js build-project/App.js
+          cp index.js build-project/index.js
+          cp app.json build-project/app.json
+          mkdir -p build-project/assets
+          cp assets/ohlcv_synthetic_v1.json build-project/assets/ohlcv_synthetic_v1.json
+      - name: Generate and install dependency lock
+        working-directory: pocs/issue-9/react-native/build-project
+        run: |
+          npm install --package-lock-only --ignore-scripts
+          actual=$(node -e "const fs=require('fs'),c=require('crypto');process.stdout.write(c.createHash('sha256').update(fs.readFileSync('package-lock.json')).digest('hex'))")
+          expected=$(cat ../package-lock.sha256)
+          test "$actual" = "$expected" || { echo "package-lock SHA-256 mismatch: $actual"; exit 1; }
+          npm ci
+      - name: Audit npm dependency advisories
+        working-directory: pocs/issue-9/react-native/build-project
+        run: npm audit --audit-level=high
+      - name: Record resolved dependency tree
+        working-directory: pocs/issue-9/react-native/build-project
+        run: npm ls --all --json > issue-9-rn-dependency-tree.json
+      - name: Set up Node.js 24 for the current licence inventory tool
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '24'
+      - name: Generate third-party licence inventory
+        working-directory: pocs/issue-9/react-native/build-project
+        run: npx --yes license-checker-rseidelsohn@5.0.1 --json > issue-9-rn-license-inventory.json
+      - name: Restore Node.js 22 for the React Native toolchain
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22'
+      - name: Validate OHLCV fixture
+        working-directory: pocs/issue-9/react-native
+        run: node scripts/validate_fixture.mjs
+      - name: Run three clean Android builds and record measurements
+        working-directory: pocs/issue-9/react-native/build-project
+        run: |
+          set -o pipefail
+          : > android-build-measurement.log
+          for run in 1 2 3; do
+            (cd android && ./gradlew clean)
+            /usr/bin/time -f "CLEAN_ANDROID_BUILD_RUN=$run ELAPSED_SECONDS=%e PEAK_RSS_KB=%M" sh -c 'cd android && ./gradlew assembleDebug' 2>&1 | tee -a android-build-measurement.log
+            stat --printf="CLEAN_ANDROID_BUILD_RUN=$run DEBUG_APK_BYTES=%s\\n" android/app/build/outputs/apk/debug/app-debug.apk | tee -a android-build-measurement.log
+          done
+          /usr/bin/time -f 'ANDROID_RELEASE_BUILD_SECONDS=%e PEAK_RSS_KB=%M' sh -c 'cd android && ./gradlew assembleRelease' 2>&1 | tee -a android-build-measurement.log
+          stat --printf='ANDROID_RELEASE_APK_BYTES=%s\n' android/app/build/outputs/apk/release/app-release.apk | tee -a android-build-measurement.log
+          cp App.js App.js.benchmark-original
+          printf '\n// Issue 9 benchmark-only source edit.\n' >> App.js
+          /usr/bin/time -f 'INCREMENTAL_ANDROID_RELEASE_BUILD_AFTER_JS_EDIT_SECONDS=%e PEAK_RSS_KB=%M' sh -c 'cd android && ./gradlew assembleRelease' 2>&1 | tee -a android-build-measurement.log
+          stat --printf='INCREMENTAL_ANDROID_RELEASE_APK_BYTES=%s\n' android/app/build/outputs/apk/release/app-release.apk | tee -a android-build-measurement.log
+          mv App.js.benchmark-original App.js
+      - name: Preserve lockfile and dependency/licence inventory
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: issue-9-react-native-android-evidence
+          path: |
+            pocs/issue-9/react-native/build-project/package-lock.json
+            pocs/issue-9/react-native/build-project/issue-9-rn-dependency-tree.json
+            pocs/issue-9/react-native/build-project/issue-9-rn-license-inventory.json
+            pocs/issue-9/react-native/build-project/android-build-measurement.log
+          if-no-files-found: warn
+          retention-days: 30

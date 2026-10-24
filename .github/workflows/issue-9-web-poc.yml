@@ -1,0 +1,81 @@
+name: Issue 9 web chart reference PoC
+
+on:
+  pull_request:
+    paths:
+      - 'pocs/issue-9/web/**'
+      - 'tests/stack_poc/fixtures/ohlcv_synthetic_v1.json'
+      - '.github/workflows/issue-9-web-poc.yml'
+  push:
+    branches: [main, docs/issue-9-stack-evaluation]
+    paths:
+      - 'pocs/issue-9/web/**'
+      - 'tests/stack_poc/fixtures/ohlcv_synthetic_v1.json'
+      - '.github/workflows/issue-9-web-poc.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: issue-9-web-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  web-chart-reference:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - name: Set up Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22'
+      - name: Test deterministic OHLCV chart geometry
+        working-directory: pocs/issue-9/web
+        run: npm test
+      - name: Resolve and install pinned Playwright test dependencies
+        working-directory: pocs/issue-9/web
+        run: |
+          npm install --package-lock-only --ignore-scripts --save-dev @playwright/test@1.64.1
+          npm ci --ignore-scripts
+      - name: Audit browser test tooling dependencies
+        working-directory: pocs/issue-9/web
+        run: npm audit --audit-level=high --json > npm-audit.json
+      - name: Install Chromium
+        working-directory: pocs/issue-9/web
+        run: npx playwright install --with-deps chromium
+      - name: Test real browser rendering and zoom/pan
+        working-directory: pocs/issue-9/web
+        shell: bash
+        run: |
+          (cd "$GITHUB_WORKSPACE" && python -m http.server 8000 --bind 127.0.0.1) > /tmp/issue9-web-server.log 2>&1 &
+          server_pid=$!
+          trap 'kill "$server_pid" 2>/dev/null || true' EXIT
+          for attempt in $(seq 1 30); do
+            if curl --fail --silent http://127.0.0.1:8000/pocs/issue-9/web/index.html >/dev/null; then break; fi
+            sleep 1
+          done
+          npx playwright test browser_smoke.spec.js --repeat-each=3 --reporter=list
+      - name: Run three independent geometry benchmark processes
+        working-directory: pocs/issue-9/web
+        run: |
+          mkdir -p benchmark-measurements
+          for run in 1 2 3; do
+            node benchmark.js > "benchmark-measurements/run-$run.json"
+            cat "benchmark-measurements/run-$run.json"
+          done
+          node aggregate_benchmark.js benchmark-measurements
+      - name: Preserve raw measurements and summary
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: issue-9-web-geometry-benchmark
+          path: |
+            pocs/issue-9/web/benchmark-measurements/*.json
+            pocs/issue-9/web/package-lock.json
+            pocs/issue-9/web/npm-audit.json
+          if-no-files-found: warn
+          retention-days: 30
+      - name: Validate shared fixture is present and provenance-labelled
+        run: python -c "import json; p=json.load(open('tests/stack_poc/fixtures/ohlcv_synthetic_v1.json')); assert p['kind']=='synthetic-not-market-data'; assert len(p['candles']) >= 10"

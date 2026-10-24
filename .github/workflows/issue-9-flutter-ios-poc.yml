@@ -1,0 +1,108 @@
+name: Issue 9 Flutter iOS chart reference PoC
+
+on:
+  pull_request:
+    paths:
+      - 'pocs/issue-9/flutter/**'
+      - 'scripts/stack_poc/inventory_dart_licenses.py'
+      - 'tests/stack_poc/fixtures/ohlcv_synthetic_v1.json'
+      - '.github/workflows/issue-9-flutter-ios-poc.yml'
+  push:
+    branches: [main, docs/issue-9-stack-evaluation]
+    paths:
+      - 'pocs/issue-9/flutter/**'
+      - 'tests/stack_poc/fixtures/ohlcv_synthetic_v1.json'
+      - '.github/workflows/issue-9-flutter-ios-poc.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  flutter-ios-reference:
+    runs-on: macos-latest
+    timeout-minutes: 45
+    env:
+      CI: 'true'
+      FLUTTER_SUPPRESS_ANALYTICS: 'true'
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - name: Verify app fixture matches canonical fixture byte-for-byte
+        run: cmp tests/stack_poc/fixtures/ohlcv_synthetic_v1.json pocs/issue-9/flutter/assets/ohlcv_synthetic_v1.json
+      - name: Install pinned Flutter SDK
+        uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2
+        with:
+          channel: stable
+          flutter-version: 3.47.5
+          cache: true
+      - name: Record macOS and Flutter toolchain
+        run: |
+          sw_vers
+          uname -a
+          system_profiler SPHardwareDataType
+          flutter config --no-analytics
+          flutter --version
+          xcodebuild -version
+      - name: Generate iOS platform project
+        working-directory: pocs/issue-9/flutter
+        run: flutter create --platforms=ios --project-name issue_9_flutter_chart_reference --org com.crypto.intelligence --no-pub .
+      - name: Resolve Flutter packages
+        working-directory: pocs/issue-9/flutter
+        run: flutter pub get
+      - name: Run Flutter widget tests
+        working-directory: pocs/issue-9/flutter
+        run: flutter test
+      - name: Run three clean iOS simulator builds and record resource data
+        working-directory: pocs/issue-9/flutter
+        shell: bash
+        run: |
+          set -euo pipefail
+          : > flutter-ios-build-measurement.log
+          for run in 1 2 3; do
+            flutter clean
+            flutter pub get
+            started=$(date +%s)
+            /usr/bin/time -l flutter build ios --simulator --debug --no-codesign 2>&1 | tee -a flutter-ios-build-measurement.log
+            elapsed=$(($(date +%s)-started))
+            printf 'CLEAN_IOS_SIMULATOR_DEBUG_RUN=%s ELAPSED_SECONDS=%s\n' "$run" "$elapsed" | tee -a flutter-ios-build-measurement.log
+            du -sk build/ios/iphonesimulator/Runner.app | tee -a flutter-ios-build-measurement.log
+          done
+          cp lib/main.dart lib/main.dart.benchmark-original
+          trap 'mv lib/main.dart.benchmark-original lib/main.dart 2>/dev/null || true' EXIT
+          printf '\n// Issue 9 benchmark-only source edit.\n' >> lib/main.dart
+          started=$(date +%s)
+          /usr/bin/time -l flutter build ios --simulator --debug --no-codesign 2>&1 | tee -a flutter-ios-build-measurement.log
+          elapsed=$(($(date +%s)-started))
+          mv lib/main.dart.benchmark-original lib/main.dart
+          trap - EXIT
+          printf 'INCREMENTAL_IOS_SIMULATOR_DEBUG_AFTER_SOURCE_EDIT ELAPSED_SECONDS=%s\n' "$elapsed" | tee -a flutter-ios-build-measurement.log
+          du -sk build/ios/iphonesimulator/Runner.app | tee -a flutter-ios-build-measurement.log
+          started=$(date +%s)
+          /usr/bin/time -l flutter build ios --release --no-codesign 2>&1 | tee -a flutter-ios-build-measurement.log
+          elapsed=$(($(date +%s)-started))
+          printf 'IOS_DEVICE_RELEASE_BUILD_COMPLETE ELAPSED_SECONDS=%s\n' "$elapsed" | tee -a flutter-ios-build-measurement.log
+          du -sk build/ios/iphoneos/Runner.app | tee -a flutter-ios-build-measurement.log
+      - name: Record Dart and iOS CocoaPods dependency inventories
+        working-directory: pocs/issue-9/flutter
+        shell: bash
+        run: |
+          flutter pub deps --json > flutter-pub-dependencies.json
+          python "$GITHUB_WORKSPACE/scripts/stack_poc/inventory_dart_licenses.py" flutter-pub-dependencies.json flutter-license-inventory.json --copy-dir flutter-license-texts
+          if [[ -f ios/Podfile.lock ]]; then cp ios/Podfile.lock flutter-ios-Podfile.lock; fi
+          if command -v pod >/dev/null 2>&1; then pod list > flutter-ios-pods.txt; fi
+      - name: Preserve iOS build measurements
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: issue-9-flutter-ios-build-measurements
+          path: |
+            pocs/issue-9/flutter/flutter-ios-build-measurement.log
+            pocs/issue-9/flutter/pubspec.lock
+            pocs/issue-9/flutter/flutter-pub-dependencies.json
+            pocs/issue-9/flutter/flutter-license-inventory.json
+            pocs/issue-9/flutter/flutter-license-texts/**
+            pocs/issue-9/flutter/flutter-ios-Podfile.lock
+            pocs/issue-9/flutter/flutter-ios-pods.txt
+          if-no-files-found: warn
+          retention-days: 30

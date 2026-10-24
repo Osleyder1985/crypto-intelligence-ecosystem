@@ -1,0 +1,97 @@
+name: Issue 9 Flutter chart reference PoC
+
+on:
+  pull_request:
+    paths:
+      - 'pocs/issue-9/flutter/**'
+      - 'scripts/stack_poc/inventory_dart_licenses.py'
+      - 'tests/stack_poc/fixtures/ohlcv_synthetic_v1.json'
+      - '.github/workflows/issue-9-flutter-poc.yml'
+  push:
+    branches: [main, docs/issue-9-stack-evaluation]
+    paths:
+      - 'pocs/issue-9/flutter/**'
+      - 'tests/stack_poc/fixtures/ohlcv_synthetic_v1.json'
+      - '.github/workflows/issue-9-flutter-poc.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  flutter-chart-reference:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      CI: 'true'
+      FLUTTER_SUPPRESS_ANALYTICS: 'true'
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - name: Verify app fixture matches canonical fixture byte-for-byte
+        run: cmp tests/stack_poc/fixtures/ohlcv_synthetic_v1.json pocs/issue-9/flutter/assets/ohlcv_synthetic_v1.json
+      - name: Install pinned Flutter SDK
+        uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2
+        with:
+          channel: stable
+          flutter-version: 3.47.5
+          cache: true
+      - name: Record Flutter and Android runner environment
+        run: |
+          uname -a
+          lscpu
+          free -b
+          df -h .
+          java -version
+          flutter config --no-analytics
+          flutter --version
+          flutter doctor -v
+      - name: Generate the missing Android platform project
+        working-directory: pocs/issue-9/flutter
+        run: flutter create --platforms=android --project-name issue_9_flutter_chart_reference --org com.crypto.intelligence --no-pub .
+      - name: Resolve Flutter packages
+        working-directory: pocs/issue-9/flutter
+        run: flutter pub get
+      - name: Run Flutter widget tests
+        working-directory: pocs/issue-9/flutter
+        run: flutter test
+      - name: Run three clean Android builds and record runner measurements
+        working-directory: pocs/issue-9/flutter
+        run: |
+          set -o pipefail
+          : > flutter-build-measurement.log
+          for run in 1 2 3; do
+            flutter clean
+            flutter pub get
+            /usr/bin/time -f "CLEAN_BUILD_RUN=$run ELAPSED_SECONDS=%e PEAK_RSS_KB=%M" flutter build apk --debug 2>&1 | tee -a flutter-build-measurement.log
+            stat --printf="CLEAN_BUILD_RUN=$run APK_BYTES=%s\n" build/app/outputs/flutter-apk/app-debug.apk | tee -a flutter-build-measurement.log
+          done
+          cp lib/main.dart lib/main.dart.benchmark-original
+          printf '\n// Issue 9 benchmark-only source edit.\n' >> lib/main.dart
+          /usr/bin/time -f 'INCREMENTAL_DEBUG_BUILD_AFTER_SOURCE_EDIT_SECONDS=%e PEAK_RSS_KB=%M' flutter build apk --debug 2>&1 | tee -a flutter-build-measurement.log
+          mv lib/main.dart.benchmark-original lib/main.dart
+          stat --printf='FINAL_DEBUG_APK_BYTES=%s\n' build/app/outputs/flutter-apk/app-debug.apk | tee -a flutter-build-measurement.log
+          /usr/bin/time -f 'ANDROID_RELEASE_BUILD_SECONDS=%e PEAK_RSS_KB=%M' flutter build apk --release 2>&1 | tee -a flutter-build-measurement.log
+          stat --printf='ANDROID_RELEASE_APK_BYTES=%s\n' build/app/outputs/flutter-apk/app-release.apk | tee -a flutter-build-measurement.log
+      - name: Record Dart and Android dependency inventories
+        working-directory: pocs/issue-9/flutter
+        run: |
+          flutter pub deps --json > flutter-pub-dependencies.json
+          python "$GITHUB_WORKSPACE/scripts/stack_poc/inventory_dart_licenses.py" flutter-pub-dependencies.json flutter-license-inventory.json --copy-dir flutter-license-texts
+          (cd android && ./gradlew app:dependencies --configuration releaseRuntimeClasspath > ../gradle-release-runtime-dependencies.txt)
+          (cd android && ./gradlew buildEnvironment > ../gradle-build-environment.txt)
+      - name: Preserve Android build measurements
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: issue-9-flutter-android-build-measurements
+          path: |
+            pocs/issue-9/flutter/flutter-build-measurement.log
+            pocs/issue-9/flutter/pubspec.lock
+            pocs/issue-9/flutter/flutter-pub-dependencies.json
+            pocs/issue-9/flutter/flutter-license-inventory.json
+            pocs/issue-9/flutter/flutter-license-texts/**
+            pocs/issue-9/flutter/gradle-release-runtime-dependencies.txt
+            pocs/issue-9/flutter/gradle-build-environment.txt
+          if-no-files-found: warn
+          retention-days: 30

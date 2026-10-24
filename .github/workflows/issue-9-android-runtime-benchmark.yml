@@ -1,0 +1,182 @@
+name: Issue 9 comparable Android runtime benchmark
+
+on:
+  push:
+    branches: [main, docs/issue-9-stack-evaluation]
+    paths:
+      - 'pocs/issue-9/flutter/**'
+      - 'pocs/issue-9/react-native/**'
+      - 'pocs/issue-9/kotlin-android/**'
+      - 'tests/stack_poc/fixtures/ohlcv_synthetic_v1.json'
+      - 'scripts/stack_poc/measure_issue9_android_runtime.sh'
+      - 'scripts/stack_poc/run_issue9_android_runtime.sh'
+      - 'scripts/stack_poc/inventory_dart_licenses.py'
+      - '.github/workflows/issue-9-android-runtime-benchmark.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: issue-9-android-runtime-shared
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  comparable-android-runtime:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    env:
+      CI: 'true'
+      FLUTTER_SUPPRESS_ANALYTICS: 'true'
+      OUTPUT_DIR: artifacts/issue-9-android-runtime
+    steps:
+      - name: Checkout current PR or branch
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - name: Fetch the other client PoC when this PR only contains one
+        shell: bash
+        run: |
+          if [[ ! -f pocs/issue-9/flutter/lib/main.dart ]]; then
+            git fetch origin feat/issue-9-flutter-chart-reference-v2
+            git checkout FETCH_HEAD -- pocs/issue-9/flutter
+          fi
+          if [[ ! -f pocs/issue-9/react-native/App.js ]]; then
+            git fetch origin feat/issue-9-react-native-chart-reference
+            git checkout FETCH_HEAD -- pocs/issue-9/react-native
+          fi
+      - name: Prepare measurement output directory
+        run: mkdir -p artifacts/issue-9-android-runtime
+      - name: Record shared runner environment
+        shell: bash
+        run: |
+          set -o pipefail
+          {
+            echo "GITHUB_RUN_ID=$GITHUB_RUN_ID"
+            echo "GITHUB_RUN_ATTEMPT=$GITHUB_RUN_ATTEMPT"
+            echo "GITHUB_SHA=$GITHUB_SHA"
+            echo "GITHUB_REF=$GITHUB_REF"
+            echo "UTC_STARTED_AT=$(date -u +%FT%TZ)"
+            echo "RUNNER_OS=$RUNNER_OS"
+            echo "RUNNER_ARCH=$RUNNER_ARCH"
+            echo "ANDROID_API_TARGET=34"
+            uname -a
+            lscpu
+            free -b
+            java -version
+            node --version
+            npm --version
+            git rev-parse HEAD
+          } 2>&1 | tee "$OUTPUT_DIR/environment-manifest.txt"
+      - name: Verify all three clients use the canonical fixture byte-for-byte
+        run: |
+          cmp tests/stack_poc/fixtures/ohlcv_synthetic_v1.json pocs/issue-9/flutter/assets/ohlcv_synthetic_v1.json
+          cmp tests/stack_poc/fixtures/ohlcv_synthetic_v1.json pocs/issue-9/react-native/assets/ohlcv_synthetic_v1.json
+          cmp tests/stack_poc/fixtures/ohlcv_synthetic_v1.json pocs/issue-9/kotlin-android/app/src/main/assets/ohlcv_synthetic_v1.json
+      - name: Validate runtime benchmark shell script
+        run: bash -n scripts/stack_poc/measure_issue9_android_runtime.sh
+      - name: Install pinned Flutter SDK
+        uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2
+        with:
+          channel: stable
+          flutter-version: 3.47.5
+          cache: true
+      - name: Generate missing Flutter Android platform project
+        working-directory: pocs/issue-9/flutter
+        run: flutter create --platforms=android --project-name issue_9_flutter_chart_reference --org com.crypto.intelligence --no-pub .
+      - name: Run three clean Flutter Release builds and an incremental build
+        working-directory: pocs/issue-9/flutter
+        shell: bash
+        run: |
+          set -euo pipefail
+          : > "$GITHUB_WORKSPACE/artifacts/issue-9-android-runtime/flutter-release-build.log"
+          for run in 1 2 3; do
+            flutter clean
+            flutter pub get
+            /usr/bin/time -f "FLUTTER_CLEAN_RELEASE_RUN=$run ELAPSED_SECONDS=%e PEAK_RSS_KB=%M" flutter build apk --release 2>&1 | tee -a "$GITHUB_WORKSPACE/artifacts/issue-9-android-runtime/flutter-release-build.log"
+            stat --printf="FLUTTER_CLEAN_RELEASE_RUN=$run APK_BYTES=%s\n" build/app/outputs/flutter-apk/app-release.apk | tee -a "$GITHUB_WORKSPACE/artifacts/issue-9-android-runtime/flutter-release-build.log"
+            mkdir -p "$GITHUB_WORKSPACE/artifacts/issue-9-android-runtime/apks/flutter"
+            cp build/app/outputs/flutter-apk/app-release.apk "$GITHUB_WORKSPACE/artifacts/issue-9-android-runtime/apks/flutter/flutter-release-run-$run.apk"
+            sha256sum "$GITHUB_WORKSPACE/artifacts/issue-9-android-runtime/apks/flutter/flutter-release-run-$run.apk" >> "$GITHUB_WORKSPACE/artifacts/issue-9-android-runtime/apk-sha256.txt"
+          done
+          touch lib/main.dart
+          /usr/bin/time -f 'FLUTTER_INCREMENTAL_RELEASE_AFTER_SOURCE_TOUCH_SECONDS=%e PEAK_RSS_KB=%M' flutter build apk --release 2>&1 | tee -a "$GITHUB_WORKSPACE/artifacts/issue-9-android-runtime/flutter-release-build.log"
+          stat --printf='FLUTTER_INCREMENTAL_RELEASE_APK_BYTES=%s\n' build/app/outputs/flutter-apk/app-release.apk | tee -a "$GITHUB_WORKSPACE/artifacts/issue-9-android-runtime/flutter-release-build.log"
+      - name: Set up Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22'
+      - name: Scaffold bare React Native Release APK
+        working-directory: pocs/issue-9/react-native
+        shell: bash
+        run: |
+          npx --yes @react-native-community/cli@20.0.0 init Issue9RnReference --version 0.88.0 --directory build-project --skip-install
+          cp App.js build-project/App.js
+          cp index.js build-project/index.js
+          cp app.json build-project/app.json
+          mkdir -p build-project/assets
+          cp assets/ohlcv_synthetic_v1.json build-project/assets/ohlcv_synthetic_v1.json
+          cd build-project
+          npm install --package-lock-only --ignore-scripts
+          actual=$(node -e "const fs=require('fs'),c=require('crypto');process.stdout.write(c.createHash('sha256').update(fs.readFileSync('package-lock.json')).digest('hex'))")
+          expected=$(cat ../package-lock.sha256)
+          test "$actual" = "$expected" || { echo "package-lock SHA-256 mismatch: $actual"; exit 1; }
+          npm ci
+          npm audit --audit-level=high
+          : > "$GITHUB_WORKSPACE/artifacts/issue-9-android-runtime/react-native-release-build.log"
+          for run in 1 2 3; do
+            (cd android && ./gradlew clean)
+            /usr/bin/time -f "RN_CLEAN_RELEASE_RUN=$run ELAPSED_SECONDS=%e PEAK_RSS_KB=%M" sh -c 'cd android && ./gradlew assembleRelease' 2>&1 | tee -a "$GITHUB_WORKSPACE/artifacts/issue-9-android-runtime/react-native-release-build.log"
+            stat --printf="RN_CLEAN_RELEASE_RUN=$run APK_BYTES=%s\n" android/app/build/outputs/apk/release/app-release.apk | tee -a "$GITHUB_WORKSPACE/artifacts/issue-9-android-runtime/react-native-release-build.log"
+            mkdir -p "$GITHUB_WORKSPACE/artifacts/issue-9-android-runtime/apks/react-native"
+            cp android/app/build/outputs/apk/release/app-release.apk "$GITHUB_WORKSPACE/artifacts/issue-9-android-runtime/apks/react-native/react-native-release-run-$run.apk"
+            sha256sum "$GITHUB_WORKSPACE/artifacts/issue-9-android-runtime/apks/react-native/react-native-release-run-$run.apk" >> "$GITHUB_WORKSPACE/artifacts/issue-9-android-runtime/apk-sha256.txt"
+          done
+          touch App.js
+          /usr/bin/time -f 'RN_INCREMENTAL_RELEASE_AFTER_SOURCE_TOUCH_SECONDS=%e PEAK_RSS_KB=%M' sh -c 'cd android && ./gradlew assembleRelease' 2>&1 | tee -a "$GITHUB_WORKSPACE/artifacts/issue-9-android-runtime/react-native-release-build.log"
+          stat --printf='RN_INCREMENTAL_RELEASE_APK_BYTES=%s\n' android/app/build/outputs/apk/release/app-release.apk | tee -a "$GITHUB_WORKSPACE/artifacts/issue-9-android-runtime/react-native-release-build.log"
+      - name: Run three clean Kotlin Android Release builds and an incremental build
+        working-directory: pocs/issue-9/kotlin-android
+        shell: bash
+        run: |
+          set -euo pipefail
+          gradle wrapper --gradle-version 8.11.1
+          : > "$GITHUB_WORKSPACE/artifacts/issue-9-android-runtime/kotlin-release-build.log"
+          for run in 1 2 3; do
+            ./gradlew clean
+            /usr/bin/time -f "KOTLIN_CLEAN_RELEASE_RUN=$run ELAPSED_SECONDS=%e PEAK_RSS_KB=%M" ./gradlew assembleRelease 2>&1 | tee -a "$GITHUB_WORKSPACE/artifacts/issue-9-android-runtime/kotlin-release-build.log"
+            stat --printf="KOTLIN_CLEAN_RELEASE_RUN=$run APK_BYTES=%s\n" app/build/outputs/apk/release/app-release.apk | tee -a "$GITHUB_WORKSPACE/artifacts/issue-9-android-runtime/kotlin-release-build.log"
+            mkdir -p "$GITHUB_WORKSPACE/artifacts/issue-9-android-runtime/apks/kotlin"
+            cp app/build/outputs/apk/release/app-release.apk "$GITHUB_WORKSPACE/artifacts/issue-9-android-runtime/apks/kotlin/kotlin-release-run-$run.apk"
+            sha256sum "$GITHUB_WORKSPACE/artifacts/issue-9-android-runtime/apks/kotlin/kotlin-release-run-$run.apk" >> "$GITHUB_WORKSPACE/artifacts/issue-9-android-runtime/apk-sha256.txt"
+          done
+          touch app/src/main/java/com/crypto/intelligence/issue9kotlin/MainActivity.kt
+          /usr/bin/time -f 'KOTLIN_INCREMENTAL_RELEASE_AFTER_SOURCE_TOUCH_SECONDS=%e PEAK_RSS_KB=%M' ./gradlew assembleRelease 2>&1 | tee -a "$GITHUB_WORKSPACE/artifacts/issue-9-android-runtime/kotlin-release-build.log"
+          stat --printf='KOTLIN_INCREMENTAL_RELEASE_APK_BYTES=%s\n' app/build/outputs/apk/release/app-release.apk | tee -a "$GITHUB_WORKSPACE/artifacts/issue-9-android-runtime/kotlin-release-build.log"
+      - name: Install and measure all three apps on the same Android emulator
+        uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d
+        with:
+          api-level: 34
+          target: google_apis
+          arch: x86_64
+          profile: pixel_2
+          disable-animations: true
+          emulator-boot-timeout: 1800
+          emulator-options: -no-window -no-audio -no-boot-anim -no-snapshot -gpu swiftshader_indirect
+          script: bash scripts/stack_poc/run_issue9_android_runtime.sh
+        env:
+          FLUTTER_APK: ${{ github.workspace }}/pocs/issue-9/flutter/build/app/outputs/flutter-apk/app-release.apk
+          RN_APK: ${{ github.workspace }}/pocs/issue-9/react-native/build-project/android/app/build/outputs/apk/release/app-release.apk
+          KOTLIN_APK: ${{ github.workspace }}/pocs/issue-9/kotlin-android/app/build/outputs/apk/release/app-release.apk
+          OUTPUT_DIR: ${{ github.workspace }}/artifacts/issue-9-android-runtime
+      - name: Preserve builds and runtime measurements
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: issue-9-comparable-android-runtime-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            artifacts/issue-9-android-runtime/**
+            pocs/issue-9/flutter/build/app/outputs/flutter-apk/app-release.apk
+            pocs/issue-9/react-native/build-project/android/app/build/outputs/apk/release/app-release.apk
+            pocs/issue-9/kotlin-android/app/build/outputs/apk/release/app-release.apk
+            artifacts/issue-9-android-runtime/kotlin-release-build.log
+          if-no-files-found: warn
+          retention-days: 30
