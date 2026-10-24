@@ -84,5 +84,25 @@ class SourcePolicyEvidenceCaptureTests(unittest.TestCase):
         self.assertIsNone(result["body_sha256"])
 
 
+    def test_persistence_failure_does_not_repeat_network_request(self):
+        client = Mock()
+        client.open.return_value = FakeResponse()
+        with tempfile.TemporaryDirectory() as tmp, unittest.mock.patch(
+            "scripts.market_selection.capture_source_policy_evidence._atomic_write",
+            side_effect=OSError("disk full"),
+        ):
+            with self.assertRaisesRegex(OSError, "disk full"):
+                capture_policy_page(
+                    "https://www.sec.gov/about/privacy-information",
+                    Path(tmp),
+                    "CryptoIntelligenceResearch/1.0 (contact: operator)",
+                    retries=3,
+                    backoff_seconds=0,
+                    opener=client,
+                    sleep=lambda _: None,
+                )
+        client.open.assert_called_once()
+
+
 if __name__ == "__main__":
     unittest.main()
