@@ -65,6 +65,9 @@ class OpenAPIClientServerContractTests(unittest.TestCase):
         ]["application/json"]["schema"]
         self.assertTrue(set(schema["required"]).issubset(payload))
         asset_schema = schema["properties"]["items"]["items"]
+        if "$ref" in asset_schema:
+            schema_name = asset_schema["$ref"].rsplit("/", 1)[-1]
+            asset_schema = self.contract["components"]["schemas"][schema_name]
         for asset in payload["items"]:
             self.assertTrue(set(asset_schema["required"]).issubset(asset))
 
