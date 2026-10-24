@@ -489,6 +489,7 @@ class _ArchiveHTMLParser(HTMLParser):
     _NON_TEXT_SUBTREES = {
         "script", "style", "noscript", "iframe", "frame", "frameset", "svg",
         "canvas", "video", "audio", "picture", "object", "embed", "template",
+        "header", "footer", "nav", "aside",
     }
     _NON_TEXT_ELEMENTS = {"img", "source", "track"}
 
