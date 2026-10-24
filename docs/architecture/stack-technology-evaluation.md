@@ -270,3 +270,14 @@ La PoC de referencia ejecutó sus tres tests de geometría y un microbenchmark e
 ## 19. Flutter Android PoC: medición en curso
 
 La rama `feat/issue-9-flutter-chart-reference` contiene una PoC Flutter que dibuja el mismo fixture canónico con `CustomPainter`, volumen y tabla de datos. El workflow [40058442391](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/actions/runs/40058442391) comprobó la igualdad byte a byte del fixture; en la última consulta la instalación de Flutter seguía en curso, por lo que no se declaran todavía tests ni builds PASS. El workflow está diseñado para ejecutar tests de widgets y tres builds Android limpios, registrar tiempo, RSS máximo del proceso y tamaño APK; después deben conservarse los resultados y comparar solo las medidas compatibles.
+
+
+## 20. Python PoC dependency/security/licence review (2026-10-24)
+
+The dependency audit workflow completed successfully in [run 40058494463](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/actions/runs/40058494463): `pip check` passed, `pip-audit` reported no known vulnerabilities for the pinned Python PoC requirements/advisory data available to the run, and the direct/transitive licence inventory was uploaded as [artifact 12546825286](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/actions/runs/40058494463/artifacts/12546825286). Manual checks for rows whose installed metadata said `UNKNOWN` are recorded in `docs/architecture/evidence/issue-9-python-dependency-license-review.md`.
+
+This is a completed review for the current **Python PoC environment**, not for the final product. Psycopg 3 declares LGPL-3.0-only, so packaging/distribution implications require a deployment-specific review. The future Flutter/Dart/Android, React/Node and iOS toolchains/dependency graphs remain unaudited until their candidate implementations and locks exist. A clean advisory scan does not establish absence of all vulnerabilities.
+
+## 21. Matrix scoring and sensitivity status
+
+The sensitivity-analysis implementation exists and is tested to reject any candidate with missing scores or evidence references. However, the real candidate matrix still has critical dimensions without measured Flutter, React Native, web-browser and local-Windows evidence. **Do not produce a winner or mark the matrix complete yet.** A synthetic unit test of the sensitivity algorithm is not a sensitivity result for actual stack candidates. Once comparable evidence is available, score each criterion with an evidence link, run the ±20% one-weight-at-a-time scenarios, and record ranking stability before the ADR is ratified.
