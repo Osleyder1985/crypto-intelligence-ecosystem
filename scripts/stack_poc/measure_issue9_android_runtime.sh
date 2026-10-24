@@ -3,6 +3,7 @@ set -euo pipefail
 
 : "${FLUTTER_APK:?FLUTTER_APK must point to the Flutter Release APK}"
 : "${RN_APK:?RN_APK must point to the React Native Release APK}"
+: "${KOTLIN_APK:?KOTLIN_APK must point to the Kotlin Android Release APK}"
 OUT_DIR="${OUTPUT_DIR:-artifacts/issue-9-android-runtime}"
 mkdir -p "$OUT_DIR"
 CSV="$OUT_DIR/runtime-measurements.csv"
@@ -77,3 +78,4 @@ measure_app() {
 
 measure_app "flutter" "$FLUTTER_APK" "Market chart reference PoC" "12 synthetic OHLCV candles"
 measure_app "react-native" "$RN_APK" "Crypto Intelligence" "12 candles"
+measure_app "kotlin" "$KOTLIN_APK" "Kotlin chart reference" "12 synthetic OHLCV candles"
