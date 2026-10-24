@@ -59,3 +59,25 @@ The previous Python inventory report identified four manual-review entries becau
 The evidence snapshots are under `docs/architecture/evidence/licenses/`. The triage script now requires the snapshot file to exist and emits the exact upstream URL and repository evidence path. The dependency-audit workflow computes SHA-256 hashes of all four snapshots and preserves the hash manifest as an artifact. The new run must pass before these entries are considered text-identified; this does **not** equal legal approval of distribution obligations.
 
 The prior run's four manual-review count is a historical observation, not the final result for the updated branch. After the new workflow completes, update this report with its exact run ID, counts and artifact hash. Full notice/attribution obligations across all 42 Python distributions, and native mobile dependency licences, remain subject to review.
+
+
+## Updated Python triage — 2026-10-24, run 40118549698
+
+The current pinned Python PoC scan passed `pip check` and `pip-audit`; the scanner reported no known advisories for the audited requirements at scan time. The inventory contained 42 distributions. The version-bound upstream licence snapshots were hashed and preserved in CI.
+
+| Automated triage outcome | Count | Interpretation |
+|---|---:|---|
+| Licence identified from captured versioned licence text | 14 | Text-based identification; attribution obligations still need distribution review |
+| Licence identified from exact upstream release text | 4 | Release-tagged text is preserved and SHA-256 recorded |
+| Metadata and classifier aligned | 14 | Useful metadata, not a legal approval |
+| Metadata only | 2 | Must validate against the exact distribution/licence text |
+| Classifier only | 7 | Must validate against the exact distribution/licence text |
+| Manual review required | 1 | Starlette 1.10.0; the source release's BSD-3-Clause text has been verified at https://github.com/Kludex/starlette/blob/1.10.0/LICENSE.md and a version-pinned rule plus regression test are being added |
+| Missing captured licence text | 0 | All packages had a text source available to the triage |
+| Separate NOTICE absent | 39 | Absence alone is not a violation; determine obligations from each licence and the actual distribution method |
+
+The run is evidence for the pinned Python PoC environment only, not for the complete product SBOM. A separate notice file is not universally required by every licence; the review must check copyright retention, source/binary redistribution conditions, attribution, patent clauses, bundled native components and any required NOTICE text per dependency. The `psycopg[binary]` wheel and its bundled native components remain a separate review item. No formal legal opinion has been obtained.
+
+The Starlette rule is pinned to version 1.10.0; any version change must trigger fresh review. The test initially exposed that a metadata-only synthetic test fixture cannot pass a rule requiring captured text. The fixture has been corrected to include representative captured BSD licence text, and the audit workflow is being rerun. Do not treat the correction as verified until the rerun passes.
+
+**Disposition:** automated known-vulnerability check PASS for this run; licence inventory PASS as an inventory; manual legal/distribution review remains open for the intended product distribution and bundled components.
