@@ -220,3 +220,29 @@ Se añadió `scripts/stack_poc/research_worker.py` y una prueba que solicita dos
 La respuesta de `GET /v1/evaluation-requests/{request_id}` y el contrato OpenAPI se ajustaron para devolver una lista de evaluaciones por horizonte. El workflow API run [40056998071](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/actions/runs/40056998071) ejecutó el paso de tests con conclusión `success`; el job estaba terminando la limpieza cuando se verificó. El workflow OpenAPI run [40056998001](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/actions/runs/40056998001) completó el paso de validación con `success`.
 
 **Límite restante:** este worker PoC procesa una tarea en una transacción SQLite y demuestra persistencia/idempotencia secuencial. No acredita concurrencia entre múltiples workers, recuperación tras caída a mitad de ejecución, reintentos temporizados ni integración con fuentes/analizador real. Esos casos requieren pruebas específicas antes de considerar completa la PoC asíncrona.
+
+
+## 16. Verificación adicional del worker: concurrencia y rollback transaccional
+
+Se añadieron `tests/stack_poc/test_worker_reliability.py` y un paso dedicado en `.github/workflows/issue-9-stack-poc.yml`. El run [40057212197](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/actions/runs/40057212197) completó con `success` los pasos `Run API, history and idempotency PoC tests` y `Run worker concurrency and transaction-recovery tests`. La validación OpenAPI del mismo HEAD también pasó en el run [40057212129](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/actions/runs/40057212129).
+
+Casos añadidos:
+- ocho workers concurrentes compiten por doce solicitudes persistidas; cada solicitud se procesa una vez, quedan 24 evaluaciones para dos horizontes por solicitud y no aparecen duplicados por clave `(request_id, horizon)`;
+- una transacción que cambia temporalmente una solicitud a `running` se revierte antes del commit; se comprueba que la solicitud sigue `queued`, un worker la procesa después y una segunda ejecución no crea resultados adicionales.
+
+**Alcance preciso:** esto prueba concurrencia de procesos/hilos contra la misma base SQLite y recuperación tras rollback de transacción. No equivale a matar un proceso en medio de operaciones externas, recuperación distribuida, reintentos con backoff, leasing/visibilidad de cola ni garantía de entrega exactamente-una-vez entre sistemas. Como el worker no llama a proveedores ni al motor analítico, no prueba reintentos de red ni recuperación de una evaluación real. El run PostgreSQL del mismo commit debe verificarse por separado antes de registrar PASS actualizado.
+
+## 17. Estado de cierre actualizado
+
+- [x] PoC de concurrencia local con múltiples workers y solicitudes persistidas.
+- [x] Prueba de rollback transaccional y reprocesamiento secuencial sin duplicar resultados.
+- [x] CI del worker reliability: run 40057212197, ambos pasos de test en success.
+- [x] Validación OpenAPI en el HEAD de esta ampliación: run 40057212129, success.
+- [ ] Recuperación ante terminación forzada del proceso y fallos entre sistemas externos.
+- [ ] Pruebas contractuales ejecutando cliente generado o cliente HTTP frente al servidor real de la PoC.
+- [ ] Comparativa móvil/gráficos y web reproducible en un entorno con toolchains instalados.
+- [ ] Benchmarks comparables de API/persistencia/build, revisión de licencias y seguridad.
+- [ ] Matriz final puntuada con mediciones y análisis de sensibilidad; ADR definitivo.
+- [ ] Verificación final de todos los checks del PR y revisión antes de merge.
+
+No se considera completado el Issue #9 hasta cerrar las condiciones pendientes con evidencia verificable.
