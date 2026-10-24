@@ -1,0 +1,59 @@
+name: Issue 9 Flutter iOS chart reference PoC
+
+on:
+  pull_request:
+    paths:
+      - 'pocs/issue-9/flutter/**'
+      - 'tests/stack_poc/fixtures/ohlcv_synthetic_v1.json'
+      - '.github/workflows/issue-9-flutter-ios-poc.yml'
+  push:
+    branches: [main, docs/issue-9-stack-evaluation]
+    paths:
+      - 'pocs/issue-9/flutter/**'
+      - 'tests/stack_poc/fixtures/ohlcv_synthetic_v1.json'
+      - '.github/workflows/issue-9-flutter-ios-poc.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  flutter-ios-reference:
+    runs-on: macos-latest
+    timeout-minutes: 45
+    env:
+      CI: 'true'
+      FLUTTER_SUPPRESS_ANALYTICS: 'true'
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - name: Verify app fixture matches canonical fixture byte-for-byte
+        run: cmp tests/stack_poc/fixtures/ohlcv_synthetic_v1.json pocs/issue-9/flutter/assets/ohlcv_synthetic_v1.json
+      - name: Install pinned Flutter SDK
+        uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2
+        with:
+          channel: stable
+          flutter-version: 3.35.7
+          cache: true
+      - name: Record macOS and Flutter toolchain
+        run: |
+          sw_vers
+          uname -a
+          system_profiler SPHardwareDataType
+          flutter config --no-analytics
+          flutter --version
+          xcodebuild -version
+      - name: Generate iOS platform project
+        working-directory: pocs/issue-9/flutter
+        run: flutter create --platforms=ios --project-name issue_9_flutter_chart_reference --org com.crypto.intelligence --no-pub .
+      - name: Resolve Flutter packages
+        working-directory: pocs/issue-9/flutter
+        run: flutter pub get
+      - name: Run Flutter widget tests
+        working-directory: pocs/issue-9/flutter
+        run: flutter test
+      - name: Build iOS without code signing and record resource data
+        working-directory: pocs/issue-9/flutter
+        run: |
+          /usr/bin/time -l flutter build ios --no-codesign 2>&1 | tee flutter-ios-build-measurement.log
+          du -sk build/ios/iphoneos/Runner.app | tee -a flutter-ios-build-measurement.log
