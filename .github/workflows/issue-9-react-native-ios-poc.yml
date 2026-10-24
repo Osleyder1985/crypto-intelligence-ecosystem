@@ -1,0 +1,138 @@
+name: Issue 9 React Native iOS chart reference PoC
+
+on:
+  pull_request:
+    paths:
+      - 'pocs/issue-9/react-native/**'
+      - 'tests/stack_poc/fixtures/ohlcv_synthetic_v1.json'
+      - '.github/workflows/issue-9-react-native-ios-poc.yml'
+  push:
+    branches: [main, docs/issue-9-stack-evaluation]
+    paths:
+      - 'pocs/issue-9/react-native/**'
+      - 'tests/stack_poc/fixtures/ohlcv_synthetic_v1.json'
+      - '.github/workflows/issue-9-react-native-ios-poc.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: issue-9-rn-ios-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  react-native-ios:
+    runs-on: macos-latest
+    timeout-minutes: 60
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - name: Set up Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22'
+      - name: Record macOS, Xcode and Node environment
+        run: |
+          sw_vers
+          uname -a
+          system_profiler SPHardwareDataType
+          xcodebuild -version
+          node --version
+          npm --version
+      - name: Verify app fixture matches canonical fixture byte-for-byte
+        run: cmp tests/stack_poc/fixtures/ohlcv_synthetic_v1.json pocs/issue-9/react-native/assets/ohlcv_synthetic_v1.json
+      - name: Scaffold pinned bare React Native project
+        working-directory: pocs/issue-9/react-native
+        run: npx --yes @react-native-community/cli@20.0.0 init Issue9RnReference --version 0.88.0 --directory build-project --skip-install
+      - name: Inject reference screen and shared fixture
+        working-directory: pocs/issue-9/react-native
+        run: |
+          cp App.js build-project/App.js
+          cp index.js build-project/index.js
+          cp app.json build-project/app.json
+          mkdir -p build-project/assets
+          cp assets/ohlcv_synthetic_v1.json build-project/assets/ohlcv_synthetic_v1.json
+      - name: Generate and install dependency lock
+        working-directory: pocs/issue-9/react-native/build-project
+        run: |
+          npm install --package-lock-only --ignore-scripts
+          actual=$(node -e "const fs=require('fs'),c=require('crypto');process.stdout.write(c.createHash('sha256').update(fs.readFileSync('package-lock.json')).digest('hex'))")
+          expected=$(cat ../package-lock.sha256)
+          test "$actual" = "$expected" || { echo "package-lock SHA-256 mismatch: $actual"; exit 1; }
+          npm ci
+      - name: Audit npm dependency advisories
+        working-directory: pocs/issue-9/react-native/build-project
+        run: npm audit --audit-level=high
+      - name: Record resolved dependency tree
+        working-directory: pocs/issue-9/react-native/build-project
+        run: npm ls --all --json > issue-9-rn-dependency-tree.json
+      - name: Set up Node.js 24 for the current licence inventory tool
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '24'
+      - name: Generate third-party licence inventory
+        working-directory: pocs/issue-9/react-native/build-project
+        run: npx --yes license-checker-rseidelsohn@5.0.1 --json > issue-9-rn-license-inventory.json
+      - name: Restore Node.js 22 for the React Native toolchain
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22'
+      - name: Validate OHLCV fixture
+        working-directory: pocs/issue-9/react-native
+        run: node scripts/validate_fixture.mjs
+      - name: Run three clean iOS simulator builds and record device Release measurements
+        working-directory: pocs/issue-9/react-native/build-project
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd ios
+          pod install
+          cd ..
+          workspace=$(find ios -maxdepth 2 -name '*.xcworkspace' | head -n 1)
+          scheme_file=$(find ios -path '*/xcshareddata/xcschemes/*.xcscheme' | head -n 1)
+          test -n "$workspace"
+          test -n "$scheme_file"
+          scheme=$(basename "$scheme_file" .xcscheme)
+          derived="$PWD/ios/DerivedData"
+          : > ios-build-measurement.log
+          for run in 1 2 3; do
+            xcodebuild -workspace "$workspace" -scheme "$scheme" -configuration Debug -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' ARCHS=arm64 ONLY_ACTIVE_ARCH=YES -derivedDataPath "$derived" CODE_SIGNING_ALLOWED=NO clean 2>&1 | tee -a ios-build-measurement.log
+            started=$(date +%s)
+            /usr/bin/time -l xcodebuild -workspace "$workspace" -scheme "$scheme" -configuration Debug -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' ARCHS=arm64 ONLY_ACTIVE_ARCH=YES -derivedDataPath "$derived" CODE_SIGNING_ALLOWED=NO build 2>&1 | tee -a ios-build-measurement.log
+            elapsed=$(($(date +%s)-started))
+            printf 'CLEAN_IOS_SIMULATOR_DEBUG_RUN=%s ELAPSED_SECONDS=%s\n' "$run" "$elapsed" | tee -a ios-build-measurement.log
+            app=$(find "$derived/Build/Products/Debug-iphonesimulator" -maxdepth 1 -name '*.app' -type d | head -n 1)
+            test -n "$app"
+            du -sk "$app" | tee -a ios-build-measurement.log
+          done
+          started=$(date +%s)
+          /usr/bin/time -l xcodebuild -workspace "$workspace" -scheme "$scheme" -configuration Release -sdk iphoneos -destination 'generic/platform=iOS' ARCHS=arm64 ONLY_ACTIVE_ARCH=YES -derivedDataPath "$derived" CODE_SIGNING_ALLOWED=NO build 2>&1 | tee -a ios-build-measurement.log
+          elapsed=$(($(date +%s)-started))
+          printf 'IOS_DEVICE_RELEASE_BUILD_COMPLETE ELAPSED_SECONDS=%s\n' "$elapsed" | tee -a ios-build-measurement.log
+          release_app=$(find "$derived/Build/Products/Release-iphoneos" -maxdepth 1 -name '*.app' -type d | head -n 1)
+          test -n "$release_app"
+          du -sk "$release_app" | tee -a ios-build-measurement.log
+          cp App.js App.js.benchmark-original
+          trap 'mv App.js.benchmark-original App.js 2>/dev/null || true' EXIT
+          printf '\n// Issue 9 benchmark-only source edit.\n' >> App.js
+          started=$(date +%s)
+          /usr/bin/time -l xcodebuild -workspace "$workspace" -scheme "$scheme" -configuration Release -sdk iphoneos -destination 'generic/platform=iOS' ARCHS=arm64 ONLY_ACTIVE_ARCH=YES -derivedDataPath "$derived" CODE_SIGNING_ALLOWED=NO build 2>&1 | tee -a ios-build-measurement.log
+          elapsed=$(($(date +%s)-started))
+          mv App.js.benchmark-original App.js
+          trap - EXIT
+          printf 'INCREMENTAL_IOS_DEVICE_RELEASE_AFTER_JS_EDIT ELAPSED_SECONDS=%s\n' "$elapsed" | tee -a ios-build-measurement.log
+          release_app=$(find "$derived/Build/Products/Release-iphoneos" -maxdepth 1 -name '*.app' -type d | head -n 1)
+          du -sk "$release_app" | tee -a ios-build-measurement.log
+      - name: Preserve lockfile and dependency/licence inventory
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: issue-9-react-native-ios-evidence
+          path: |
+            pocs/issue-9/react-native/build-project/package-lock.json
+            pocs/issue-9/react-native/build-project/issue-9-rn-dependency-tree.json
+            pocs/issue-9/react-native/build-project/issue-9-rn-license-inventory.json
+            pocs/issue-9/react-native/build-project/ios-build-measurement.log
+          if-no-files-found: warn
+          retention-days: 30

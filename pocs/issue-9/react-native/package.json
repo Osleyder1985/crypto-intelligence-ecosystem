@@ -1,0 +1,13 @@
+{
+  "name": "issue-9-react-native-chart-reference",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Bare React Native reference PoC. CI scaffolds the pinned React Native CLI template and injects this app screen.",
+  "scripts": {
+    "test:fixture": "node scripts/validate_fixture.mjs"
+  },
+  "dependencies": {
+    "react": "19.3.0",
+    "react-native": "0.88.0"
+  }
+}
