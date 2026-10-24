@@ -477,3 +477,10 @@ The diagnostic sensitivity input now includes the Kotlin native Android chart re
 The Python dependency review now preserves exact upstream release-tag licence text for four previously unresolved installed distributions in `docs/architecture/evidence/licenses/`. The review script only treats a version-bound upstream snapshot as text evidence when the file exists, and emits its source URL/path. The audit workflow records SHA-256 hashes for those snapshots. This addresses missing installed-package licence files, but not the separate legal obligation/notice review; that disposition remains PARTIAL until the updated audit output and all native/mobile licence artifacts are inspected.
 
 Current workflow checkpoints: [Android runtime rerun 40090510337](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/actions/runs/40090510337) and updated sensitivity/licence workflows on the current branch are pending at this checkpoint. Do not ratify ADR-0001 or close Issue #9 based on a queued/in-progress run.
+
+
+## 41. Evidence-gated scoring protocol
+
+The score anchors, N/E rules, sensitivity scenarios and ratification gates are now explicit in [Issue 9 scoring and sensitivity protocol](issue-9-scoring-and-sensitivity-protocol.md). Scores must be supported by a stable run/artifact/source reference; a green CI job alone is not enough to award a high score. The full matrix input remains intentionally incomplete, so no full ranking or full sensitivity result is authorized yet.
+
+Current check at 2026-10-24 11:45 UTC: the API/history PoC and Windows script validation are green on the current PR #301 head; the shared Android runtime comparison and Flutter/React Native platform workflows are still running. The earlier shared-emulator attempt was cancelled after its ADB/emulator failure and is not scored. ADR-0001 remains proposed, and Issue #9 remains open.
