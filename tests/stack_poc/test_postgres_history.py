@@ -16,17 +16,13 @@ class PostgreSQLHistoryTests(unittest.TestCase):
     def setUpClass(cls):
         cls.conn = psycopg.connect(DATABASE_URL, autocommit=True)
         cls.conn.execute(SCHEMA.read_text(encoding="utf-8"), prepare=False)
-        cls.conn.execute("DELETE FROM stack_poc_evaluations")
-        cls.conn.execute("DELETE FROM stack_poc_assets")
         cls.conn.execute(
-            "INSERT INTO stack_poc_assets(asset_id, canonical_symbol, display_name) VALUES (%s, %s, %s)",
+            "INSERT INTO stack_poc_assets(asset_id, canonical_symbol, display_name) VALUES (%s, %s, %s) ON CONFLICT (asset_id) DO NOTHING",
             ("asset-btc", "BTC", "Bitcoin"),
         )
 
     @classmethod
     def tearDownClass(cls):
-        cls.conn.execute("DELETE FROM stack_poc_evaluations")
-        cls.conn.execute("DELETE FROM stack_poc_assets")
         cls.conn.close()
 
     def test_history_is_append_only_and_ordered(self):
