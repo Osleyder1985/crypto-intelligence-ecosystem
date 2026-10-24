@@ -65,12 +65,13 @@ class PublicEventArchiveTests(unittest.TestCase):
     def test_archive_text_evidence_excludes_embedded_scripts_and_media(self):
         from scripts.market_selection.capture_public_event_feed import _ArchiveHTMLParser
 
-        parser = _ArchiveHTMLParser()
+        parser = _ArchiveHTMLParser(allowed_hosts={"www.federalreserve.gov", "federalreserve.gov"})
         parser.feed(
             '<html><body><script><a href="https://third-party.example/leak">Injected</a>'
             'SECRET_SCRIPT_TEXT</script><style>SECRET_STYLE_TEXT</style>'
             '<iframe>SECRET_FRAME_TEXT</iframe><svg><text>SECRET_SVG_TEXT</text></svg>'
             '<img src="https://third-party.example/image.png" alt="Third party image">'
+            '<a href="https://www.federalregister.gov/doc">THIRD_PARTY_LINK_LABEL</a>'
             '<a href="/newsevents/pressreleases/bcreg20260924a.htm">'
             'Federal Reserve Board requests public comment</a>'
             '<p>Published September 24, 2026</p></body></html>'
@@ -82,6 +83,7 @@ class PublicEventArchiveTests(unittest.TestCase):
         self.assertNotIn("SECRET_FRAME_TEXT", extracted)
         self.assertNotIn("SECRET_SVG_TEXT", extracted)
         self.assertNotIn("Third party image", extracted)
+        self.assertNotIn("THIRD_PARTY_LINK_LABEL", extracted)
         self.assertEqual(len(parser.anchors), 1)
         self.assertEqual(
             parser.anchors[0]["href"],
@@ -207,6 +209,24 @@ class PublicEventArchiveTests(unittest.TestCase):
         self.assertEqual(
             manifest["segments"][0]["stored_content_mode"],
             "EXTRACTED_TEXT_EVIDENCE",
+        )
+
+    def test_text_only_source_never_persists_unsupported_response_body(self):
+        from scripts.market_selection.capture_public_event_feed import _store_response_body_fields
+
+        entry = approved_source("federal_reserve_press_release_archive")
+        fields = _store_response_body_fields(
+            entry,
+            b"unexpected non-HTML payload",
+            html=False,
+        )
+        self.assertEqual(fields["stored_content_mode"], "UNSUPPORTED_CONTENT_NOT_PERSISTED")
+        self.assertIsNone(fields["raw_response_base64"])
+        self.assertIsNone(fields["text_evidence_base64"])
+        self.assertEqual(fields["raw_response_bytes"], len(b"unexpected non-HTML payload"))
+        self.assertEqual(
+            fields["raw_response_sha256"],
+            hashlib.sha256(b"unexpected non-HTML payload").hexdigest(),
         )
 
     def test_archive_capture_blocks_terms_pending_source_before_network(self):

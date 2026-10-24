@@ -493,11 +493,13 @@ class _ArchiveHTMLParser(HTMLParser):
     }
     _NON_TEXT_ELEMENTS = {"img", "source", "track"}
 
-    def __init__(self):
+    def __init__(self, allowed_hosts=None):
         super().__init__(convert_charrefs=True)
         self.anchors = []
         self.page_text = []
         self._anchor = None
+        self._anchor_external = False
+        self._allowed_hosts = {str(host).casefold() for host in (allowed_hosts or [])}
         self._suppressed_depth = 0
 
     def handle_starttag(self, tag, attrs):
@@ -513,7 +515,16 @@ class _ArchiveHTMLParser(HTMLParser):
             return
         if tag == "a":
             attrs_map = dict(attrs)
-            self._anchor = {"href": attrs_map.get("href"), "text": []}
+            href = attrs_map.get("href")
+            parts = urlsplit(href) if isinstance(href, str) else None
+            self._anchor_external = bool(
+                parts is not None
+                and (
+                    (parts.scheme and parts.scheme.casefold() not in {"http", "https"})
+                    or (parts.netloc and (parts.hostname or "").casefold() not in self._allowed_hosts)
+                )
+            )
+            self._anchor = {"href": href, "text": []}
 
     def handle_startendtag(self, tag, attrs):
         # Void elements carry no textual evidence and must not affect suppression depth.
@@ -526,7 +537,7 @@ class _ArchiveHTMLParser(HTMLParser):
         if self._suppressed_depth:
             return
         text = re.sub(r"\s+", " ", data).strip()
-        if text:
+        if text and not self._anchor_external:
             self.page_text.append(text)
             if self._anchor is not None:
                 self._anchor["text"].append(text)
@@ -539,13 +550,15 @@ class _ArchiveHTMLParser(HTMLParser):
             return
         if tag == "a" and self._anchor is not None:
             self._anchor["text"] = re.sub(r"\s+", " ", " ".join(self._anchor["text"])).strip()
-            self.anchors.append(self._anchor)
+            if not self._anchor_external:
+                self.anchors.append(self._anchor)
             self._anchor = None
+            self._anchor_external = False
 
 
-def _archive_text_evidence(raw: bytes) -> dict:
-    """Extract only visible archive text and first-party anchor text/URLs."""
-    parser = _ArchiveHTMLParser()
+def _archive_text_evidence(raw: bytes, allowed_hosts=None) -> dict:
+    """Extract visible text while excluding embedded payloads and external-link labels."""
+    parser = _ArchiveHTMLParser(allowed_hosts=allowed_hosts)
     parser.feed(raw.decode("utf-8", errors="replace"))
     parser.close()
     return {
@@ -591,7 +604,8 @@ def _load_archive_text_evidence(capture: dict) -> dict:
         raise PermissionError("archive capture body base64 is invalid") from exc
     if hashlib.sha256(raw).hexdigest() != capture.get("raw_response_sha256") or len(raw) != capture.get("raw_response_bytes"):
         raise PermissionError("archive capture body integrity check failed")
-    return _archive_text_evidence(raw)
+    source = get_source(capture.get("source_id"))
+    return _archive_text_evidence(raw, allowed_hosts=source.get("allowed_article_hosts"))
 
 
 def _store_response_body_fields(source: dict, raw: bytes, *, html: bool) -> dict:
@@ -603,7 +617,7 @@ def _store_response_body_fields(source: dict, raw: bytes, *, html: bool) -> dict
     }
     if source.get("response_storage_mode") == "EXTRACTED_TEXT_EVIDENCE" and html:
         payload = json.dumps(
-            _archive_text_evidence(raw),
+            _archive_text_evidence(raw, allowed_hosts=source.get("allowed_article_hosts")),
             sort_keys=True,
             separators=(",", ":"),
             ensure_ascii=False,
@@ -614,6 +628,14 @@ def _store_response_body_fields(source: dict, raw: bytes, *, html: bool) -> dict
             "text_evidence_base64": base64.b64encode(payload).decode("ascii"),
             "text_evidence_sha256": hashlib.sha256(payload).hexdigest(),
             "text_evidence_bytes": len(payload),
+        })
+    elif source.get("response_storage_mode") == "EXTRACTED_TEXT_EVIDENCE":
+        fields.update({
+            "stored_content_mode": "UNSUPPORTED_CONTENT_NOT_PERSISTED",
+            "raw_response_base64": None,
+            "text_evidence_base64": None,
+            "text_evidence_sha256": None,
+            "text_evidence_bytes": None,
         })
     else:
         fields.update({
