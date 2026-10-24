@@ -54,8 +54,9 @@ def main() -> int:
         metadata = item.get("License-Metadata", "UNKNOWN")
         classifier = item.get("License-Classifier", "UNKNOWN")
         upstream = UPSTREAM_TEXT_OVERRIDES.get(key)
-        text_present = known(item.get("LicenseText")) or upstream is not None
-        file_present = known(item.get("LicenseFile")) or upstream is not None
+        upstream_text_available = upstream is not None and Path(upstream[1]).is_file()
+        text_present = known(item.get("LicenseText")) or upstream_text_available
+        file_present = known(item.get("LicenseFile")) or upstream_text_available
         notice_present = known(item.get("NoticeText")) or known(item.get("NoticeFile"))
         expression = None
         basis = None
@@ -66,7 +67,7 @@ def main() -> int:
         if key in TEXT_OVERRIDES:
             expression, basis = TEXT_OVERRIDES[key]
             status = "identified-from-versioned-license-text"
-        elif upstream is not None:
+        elif upstream is not None and upstream_text_available:
             expression, license_evidence_path, license_source_url, basis = upstream
             status = "identified-from-versioned-upstream-license-text"
         elif known(metadata) and known(classifier):
