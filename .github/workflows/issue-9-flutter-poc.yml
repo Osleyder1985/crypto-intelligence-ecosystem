@@ -7,7 +7,7 @@ on:
       - 'tests/stack_poc/fixtures/ohlcv_synthetic_v1.json'
       - '.github/workflows/issue-9-flutter-poc.yml'
   push:
-    branches: [main, docs/issue-9-stack-evaluation]
+    branches: [main, docs/issue-9-stack-evaluation, feat/issue-9-flutter-chart-reference]
     paths:
       - 'pocs/issue-9/flutter/**'
       - 'tests/stack_poc/fixtures/ohlcv_synthetic_v1.json'
