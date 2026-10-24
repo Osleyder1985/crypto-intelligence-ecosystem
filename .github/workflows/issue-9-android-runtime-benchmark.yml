@@ -69,13 +69,21 @@ jobs:
       - name: Generate missing Flutter Android platform project
         working-directory: pocs/issue-9/flutter
         run: flutter create --platforms=android --project-name issue_9_flutter_chart_reference --org com.crypto.intelligence --no-pub .
-      - name: Build Flutter Release APK
+      - name: Run three clean Flutter Release builds and an incremental build
         working-directory: pocs/issue-9/flutter
         shell: bash
         run: |
-          flutter pub get
-          /usr/bin/time -f 'FLUTTER_RELEASE_BUILD_SECONDS=%e PEAK_RSS_KB=%M' flutter build apk --release 2>&1 | tee "$GITHUB_WORKSPACE/artifacts/issue-9-android-runtime/flutter-release-build.log"
-          stat --printf='FLUTTER_RELEASE_APK_BYTES=%s\n' build/app/outputs/flutter-apk/app-release.apk | tee -a "$GITHUB_WORKSPACE/artifacts/issue-9-android-runtime/flutter-release-build.log"
+          set -euo pipefail
+          : > "$GITHUB_WORKSPACE/artifacts/issue-9-android-runtime/flutter-release-build.log"
+          for run in 1 2 3; do
+            flutter clean
+            flutter pub get
+            /usr/bin/time -f "FLUTTER_CLEAN_RELEASE_RUN=$run ELAPSED_SECONDS=%e PEAK_RSS_KB=%M" flutter build apk --release 2>&1 | tee -a "$GITHUB_WORKSPACE/artifacts/issue-9-android-runtime/flutter-release-build.log"
+            stat --printf="FLUTTER_CLEAN_RELEASE_RUN=$run APK_BYTES=%s\n" build/app/outputs/flutter-apk/app-release.apk | tee -a "$GITHUB_WORKSPACE/artifacts/issue-9-android-runtime/flutter-release-build.log"
+          done
+          touch lib/main.dart
+          /usr/bin/time -f 'FLUTTER_INCREMENTAL_RELEASE_AFTER_SOURCE_TOUCH_SECONDS=%e PEAK_RSS_KB=%M' flutter build apk --release 2>&1 | tee -a "$GITHUB_WORKSPACE/artifacts/issue-9-android-runtime/flutter-release-build.log"
+          stat --printf='FLUTTER_INCREMENTAL_RELEASE_APK_BYTES=%s\n' build/app/outputs/flutter-apk/app-release.apk | tee -a "$GITHUB_WORKSPACE/artifacts/issue-9-android-runtime/flutter-release-build.log"
       - name: Set up Node.js
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
         with:
@@ -97,15 +105,30 @@ jobs:
           test "$actual" = "$expected" || { echo "package-lock SHA-256 mismatch: $actual"; exit 1; }
           npm ci
           npm audit --audit-level=high
-          /usr/bin/time -f 'RN_ANDROID_RELEASE_BUILD_SECONDS=%e PEAK_RSS_KB=%M' sh -c 'cd android && ./gradlew assembleRelease' 2>&1 | tee "$GITHUB_WORKSPACE/artifacts/issue-9-android-runtime/react-native-release-build.log"
-          stat --printf='RN_ANDROID_RELEASE_APK_BYTES=%s\n' android/app/build/outputs/apk/release/app-release.apk | tee -a "$GITHUB_WORKSPACE/artifacts/issue-9-android-runtime/react-native-release-build.log"
-      - name: Build Kotlin Android Release APK
+          : > "$GITHUB_WORKSPACE/artifacts/issue-9-android-runtime/react-native-release-build.log"
+          for run in 1 2 3; do
+            (cd android && ./gradlew clean)
+            /usr/bin/time -f "RN_CLEAN_RELEASE_RUN=$run ELAPSED_SECONDS=%e PEAK_RSS_KB=%M" sh -c 'cd android && ./gradlew assembleRelease' 2>&1 | tee -a "$GITHUB_WORKSPACE/artifacts/issue-9-android-runtime/react-native-release-build.log"
+            stat --printf="RN_CLEAN_RELEASE_RUN=$run APK_BYTES=%s\n" android/app/build/outputs/apk/release/app-release.apk | tee -a "$GITHUB_WORKSPACE/artifacts/issue-9-android-runtime/react-native-release-build.log"
+          done
+          touch App.js
+          /usr/bin/time -f 'RN_INCREMENTAL_RELEASE_AFTER_SOURCE_TOUCH_SECONDS=%e PEAK_RSS_KB=%M' sh -c 'cd android && ./gradlew assembleRelease' 2>&1 | tee -a "$GITHUB_WORKSPACE/artifacts/issue-9-android-runtime/react-native-release-build.log"
+          stat --printf='RN_INCREMENTAL_RELEASE_APK_BYTES=%s\n' android/app/build/outputs/apk/release/app-release.apk | tee -a "$GITHUB_WORKSPACE/artifacts/issue-9-android-runtime/react-native-release-build.log"
+      - name: Run three clean Kotlin Android Release builds and an incremental build
         working-directory: pocs/issue-9/kotlin-android
         shell: bash
         run: |
+          set -euo pipefail
           gradle wrapper --gradle-version 8.11.1
-          /usr/bin/time -f 'KOTLIN_ANDROID_RELEASE_BUILD_SECONDS=%e PEAK_RSS_KB=%M' ./gradlew assembleRelease 2>&1 | tee "$GITHUB_WORKSPACE/artifacts/issue-9-android-runtime/kotlin-release-build.log"
-          stat --printf='KOTLIN_ANDROID_RELEASE_APK_BYTES=%s\n' app/build/outputs/apk/release/app-release.apk | tee -a "$GITHUB_WORKSPACE/artifacts/issue-9-android-runtime/kotlin-release-build.log"
+          : > "$GITHUB_WORKSPACE/artifacts/issue-9-android-runtime/kotlin-release-build.log"
+          for run in 1 2 3; do
+            ./gradlew clean
+            /usr/bin/time -f "KOTLIN_CLEAN_RELEASE_RUN=$run ELAPSED_SECONDS=%e PEAK_RSS_KB=%M" ./gradlew assembleRelease 2>&1 | tee -a "$GITHUB_WORKSPACE/artifacts/issue-9-android-runtime/kotlin-release-build.log"
+            stat --printf="KOTLIN_CLEAN_RELEASE_RUN=$run APK_BYTES=%s\n" app/build/outputs/apk/release/app-release.apk | tee -a "$GITHUB_WORKSPACE/artifacts/issue-9-android-runtime/kotlin-release-build.log"
+          done
+          touch app/src/main/java/com/crypto/intelligence/issue9kotlin/MainActivity.kt
+          /usr/bin/time -f 'KOTLIN_INCREMENTAL_RELEASE_AFTER_SOURCE_TOUCH_SECONDS=%e PEAK_RSS_KB=%M' ./gradlew assembleRelease 2>&1 | tee -a "$GITHUB_WORKSPACE/artifacts/issue-9-android-runtime/kotlin-release-build.log"
+          stat --printf='KOTLIN_INCREMENTAL_RELEASE_APK_BYTES=%s\n' app/build/outputs/apk/release/app-release.apk | tee -a "$GITHUB_WORKSPACE/artifacts/issue-9-android-runtime/kotlin-release-build.log"
       - name: Install and measure all three apps on the same Android emulator
         uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d
         with:
