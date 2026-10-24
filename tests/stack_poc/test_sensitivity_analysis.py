@@ -32,7 +32,7 @@ class SensitivityAnalysisTests(unittest.TestCase):
 
     def test_boolean_is_not_a_valid_numeric_weight_or_score(self):
         with self.assertRaisesRegex(ValueError, 'weights must be positive'):
-            analyze({'weights': {'contracts': True, 'charts': 99}, 'candidates': []})
+            analyze({'weights': {'contracts': True, 'charts': 99}, 'candidates': [{'name': 'A'}]})
         result = analyze({
             'weights': {'contracts': 100},
             'candidates': [{'name': 'A', 'scores': {'contracts': True}, 'evidence': {'contracts': 'run-1'}}],
