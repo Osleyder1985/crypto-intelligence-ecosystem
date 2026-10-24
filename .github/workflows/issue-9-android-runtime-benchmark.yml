@@ -45,14 +45,26 @@ jobs:
       - name: Prepare measurement output directory
         run: mkdir -p artifacts/issue-9-android-runtime
       - name: Record shared runner environment
+        shell: bash
         run: |
-          uname -a
-          lscpu
-          free -b
-          java -version
-          node --version
-          npm --version
-          git rev-parse HEAD
+          set -o pipefail
+          {
+            echo "GITHUB_RUN_ID=$GITHUB_RUN_ID"
+            echo "GITHUB_RUN_ATTEMPT=$GITHUB_RUN_ATTEMPT"
+            echo "GITHUB_SHA=$GITHUB_SHA"
+            echo "GITHUB_REF=$GITHUB_REF"
+            echo "UTC_STARTED_AT=$(date -u +%FT%TZ)"
+            echo "RUNNER_OS=$RUNNER_OS"
+            echo "RUNNER_ARCH=$RUNNER_ARCH"
+            echo "ANDROID_API_TARGET=34"
+            uname -a
+            lscpu
+            free -b
+            java -version
+            node --version
+            npm --version
+            git rev-parse HEAD
+          } 2>&1 | tee "$OUTPUT_DIR/environment-manifest.txt"
       - name: Verify all three clients use the canonical fixture byte-for-byte
         run: |
           cmp tests/stack_poc/fixtures/ohlcv_synthetic_v1.json pocs/issue-9/flutter/assets/ohlcv_synthetic_v1.json
@@ -182,7 +194,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
-          name: issue-9-comparable-android-runtime
+          name: issue-9-comparable-android-runtime-${{ github.run_id }}-${{ github.run_attempt }}
           path: |
             artifacts/issue-9-android-runtime/**
             pocs/issue-9/flutter/build/app/outputs/flutter-apk/app-release.apk
