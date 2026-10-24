@@ -17,6 +17,8 @@ from urllib.error import HTTPError, URLError
 from urllib.parse import urlsplit
 from urllib.request import Request, urlopen
 
+ALLOWED_HOSTS = {"sec.gov", "www.sec.gov", "cftc.gov", "www.cftc.gov", "federalreserve.gov", "www.federalreserve.gov"}
+
 POLICY_URLS = {
     "sec_website_dissemination": "https://www.sec.gov/about/privacy-information",
     "sec_developer_resources": "https://www.sec.gov/about/developer-resources",
@@ -31,6 +33,12 @@ def utc_now() -> str:
 
 
 def capture(url: str, user_agent: str, timeout: float, attempts: int) -> tuple[dict, bytes | None]:
+    parsed_url = urlsplit(url)
+    if parsed_url.scheme != "https" or parsed_url.hostname not in ALLOWED_HOSTS or parsed_url.port not in (None, 443):
+        return {"requested_url": url, "final_url": None, "captured_at": utc_now(), "http_status": None,
+                "content_type": None, "last_modified": None, "etag": None, "response_headers": {},
+                "attempts_used": 0, "body_bytes": 0, "body_sha256": hashlib.sha256(b"").hexdigest(),
+                "capture_status": "BLOCKED_URL", "error": "URL must use HTTPS on an allowlisted official host."}, None
     last_error = None
     for attempt in range(1, attempts + 1):
         request = Request(url, headers={"User-Agent": user_agent, "Accept": "text/html,application/xhtml+xml"}, method="GET")
@@ -38,7 +46,17 @@ def capture(url: str, user_agent: str, timeout: float, attempts: int) -> tuple[d
             with urlopen(request, timeout=timeout) as response:
                 body = response.read()
                 status = int(getattr(response, "status", 200))
-                headers = {str(k): str(v) for k, v in response.headers.items()}
+                headers = {str(k): str(v) for k, v in response.headers.items() if str(k).lower() not in {"set-cookie", "cookie", "authorization"}}
+                final_parts = urlsplit(response.geturl())
+                if final_parts.scheme != "https" or final_parts.hostname not in ALLOWED_HOSTS or final_parts.port not in (None, 443):
+                    return {
+                        "requested_url": url, "final_url": response.geturl(), "captured_at": utc_now(),
+                        "http_status": status, "content_type": headers.get("Content-Type"),
+                        "last_modified": headers.get("Last-Modified"), "etag": headers.get("ETag"),
+                        "response_headers": headers, "attempts_used": attempt, "body_bytes": 0,
+                        "body_sha256": hashlib.sha256(b"").hexdigest(), "capture_status": "BLOCKED_REDIRECT",
+                        "error": "Redirect target is outside the official HTTPS host allowlist.",
+                    }, None
                 record = {
                     "requested_url": url,
                     "final_url": response.geturl(),
@@ -77,7 +95,7 @@ def capture(url: str, user_agent: str, timeout: float, attempts: int) -> tuple[d
                 "error": str(exc),
             }, body
         except (URLError, TimeoutError, OSError, socket.gaierror) as exc:
-            last_error = {"type": type(exc).__name__, "message": str(exc)}
+            last_error = {"type": type(exc).__name__, "message": "Network request failed after bounded retries."}
             if attempt < attempts:
                 time.sleep(min(2 ** (attempt - 1), 8))
     hostname = urlsplit(url).hostname

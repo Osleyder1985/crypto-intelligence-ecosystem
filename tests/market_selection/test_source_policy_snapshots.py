@@ -72,5 +72,25 @@ class SourcePolicyConnectivityTests(unittest.TestCase):
         resolve.assert_called_once()
 
 
+    def test_rejects_non_official_url_without_network(self):
+        with patch.object(snapshots, "urlopen") as open_url:
+            record, body = snapshots.capture(
+                "https://example.invalid/policy", "test-agent", 1.0, 1
+            )
+        open_url.assert_not_called()
+        self.assertIsNone(body)
+        self.assertEqual(record["capture_status"], "BLOCKED_URL")
+
+    def test_rejects_official_page_redirected_to_unapproved_host(self):
+        with patch.object(snapshots, "urlopen", return_value=FakeResponse(url="https://example.invalid/redirect")) as open_url:
+            record, body = snapshots.capture(
+                "https://www.sec.gov/about/privacy-information", "test-agent", 1.0, 1
+            )
+        open_url.assert_called_once()
+        self.assertIsNone(body)
+        self.assertEqual(record["capture_status"], "BLOCKED_REDIRECT")
+        self.assertEqual(record["body_bytes"], 0)
+
+
 if __name__ == "__main__":
     unittest.main()
