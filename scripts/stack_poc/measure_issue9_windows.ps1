@@ -85,7 +85,7 @@ if (Get-Command node -ErrorAction SilentlyContinue) {
   Push-Location $webDir
   try {
     $web = & node 'benchmark.js' 2>&1
-    if ($LASTEXITCODE -eq 0) { [System.IO.File]::WriteAllText($webReportPath, (($web | ForEach-Object { "$_" }) -join "`n"), (New-Object System.Text.UTF8Encoding($false))) }
+    if ($LASTEXITCODE -eq 0) { [System.IO.File]::WriteAllText($webReportPath, (($web | ForEach-Object { "$_" }) -join "`n"), ([System.Text.UTF8Encoding]::new($false))) }
   } finally { Pop-Location }
 }
 
@@ -150,6 +150,6 @@ $report = [ordered]@{
 }
 $json = $report | ConvertTo-Json -Depth 10
 $reportPath = Join-Path $logDir 'issue-9-windows-measurement.json'
-[System.IO.File]::WriteAllText($reportPath, $json, (New-Object System.Text.UTF8Encoding($false)))
+[System.IO.File]::WriteAllText($reportPath, $json, ([System.Text.UTF8Encoding]::new($false)))
 Write-Output "Measurement report: $reportPath"
 Write-Output "Logs: $logDir"
