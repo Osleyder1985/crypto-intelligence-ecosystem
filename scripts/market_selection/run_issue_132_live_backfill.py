@@ -258,6 +258,9 @@ def capture_btc_movement_context(
         end_ms,
         use_case="internal_analysis",
         authorization_record=authorization_record,
+        user_agent=authorization_record.get("approval_scope", {}).get("automated_access", {}).get(
+            "user_agent", "crypto-intelligence-ecosystem-ohlcv/1.0"
+        ),
     )
     if capture.get("overall_status") != "PASS":
         raise RuntimeError(
