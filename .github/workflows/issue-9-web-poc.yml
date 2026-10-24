@@ -67,7 +67,10 @@ jobs:
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: issue-9-web-geometry-benchmark
-          path: pocs/issue-9/web/benchmark-measurements/*.json
+          path: |
+            pocs/issue-9/web/benchmark-measurements/*.json
+            pocs/issue-9/web/package-lock.json
+            pocs/issue-9/web/npm-audit.json
           if-no-files-found: warn
           retention-days: 30
       - name: Validate shared fixture is present and provenance-labelled
