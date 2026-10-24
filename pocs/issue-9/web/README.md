@@ -41,3 +41,6 @@ For a local result, save the full JSON output together with the exact commit SHA
 | Security/licence | No third-party runtime package; still review repository policy and deployment headers before production |
 
 Do not compare this baseline's no-build setup against Flutter/React Native build numbers as if they were equivalent deliverables. The next client PoCs must implement the same workflow and fixture before ranking or matrix scoring.
+
+
+The reference page now provides accessible zoom-in/zoom-out and pan-left/pan-right controls. CI runs a Chromium smoke test against the served page to verify fixture rendering, the 12-row textual table, navigation controls and absence of page errors; geometry unit tests and the separate Node microbenchmark remain distinct measurements.
