@@ -20,6 +20,9 @@ permissions:
 jobs:
   flutter-chart-reference:
     runs-on: ubuntu-latest
+    env:
+      CI: 'true'
+      FLUTTER_SUPPRESS_ANALYTICS: 'true'
     steps:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
@@ -30,7 +33,9 @@ jobs:
           git clone --depth 1 --branch 3.35.7 https://github.com/flutter/flutter.git "$RUNNER_TEMP/flutter"
           echo "$RUNNER_TEMP/flutter/bin" >> "$GITHUB_PATH"
       - name: Record Flutter toolchain
-        run: flutter --version
+        run: |
+          flutter config --no-analytics
+          flutter --version
       - name: Resolve Flutter packages
         working-directory: pocs/issue-9/flutter
         run: flutter pub get
