@@ -27,6 +27,15 @@ TEXT_OVERRIDES = {
     ("urllib3", "2.8.0"): ("MIT", "LICENSE text identifies The MIT License"),
 }
 
+# Exact upstream licence texts preserved under docs/architecture/evidence/licenses.
+# The source URL is pinned to the package release tag; metadata alone is not used as a substitute for text.
+UPSTREAM_TEXT_OVERRIDES = {
+    ("license-expression", "30.4.4"): ("Apache-2.0", "docs/architecture/evidence/licenses/license-expression-30.4.4-Apache-2.0.LICENSE", "https://raw.githubusercontent.com/aboutcode-org/license-expression/v30.4.4/apache-2.0.LICENSE", "Version-tagged upstream Apache-2.0 licence text preserved in repository"),
+    ("packageurl-python", "0.17.6"): ("MIT", "docs/architecture/evidence/licenses/packageurl-python-0.17.6-MIT.LICENSE", "https://raw.githubusercontent.com/package-url/packageurl-python/v0.17.6/mit.LICENSE", "Version-tagged upstream MIT licence text preserved in repository"),
+    ("pip-requirements-parser", "32.0.1"): ("MIT", "docs/architecture/evidence/licenses/pip-requirements-parser-32.0.1-MIT.LICENSE", "https://raw.githubusercontent.com/aboutcode-org/pip-requirements-parser/v32.0.1/LICENSE", "Version-tagged upstream MIT licence text preserved in repository"),
+    ("typing_extensions", "4.16.0"): ("PSF-2.0", "docs/architecture/evidence/licenses/typing_extensions-4.16.0-PYTHON-LICENSE", "https://raw.githubusercontent.com/python/typing_extensions/4.16.0/LICENSE", "PyPI release metadata declares PSF-2.0; exact release LICENSE text preserved; it contains historical Python licence sections that must not be mistaken for the current package expression"),
+}
+
 
 def known(value: object) -> bool:
     return isinstance(value, str) and value.strip() and value.strip().upper() != "UNKNOWN"
@@ -44,16 +53,22 @@ def main() -> int:
         key = (name.casefold(), version)
         metadata = item.get("License-Metadata", "UNKNOWN")
         classifier = item.get("License-Classifier", "UNKNOWN")
-        text_present = known(item.get("LicenseText"))
-        file_present = known(item.get("LicenseFile"))
+        upstream = UPSTREAM_TEXT_OVERRIDES.get(key)
+        text_present = known(item.get("LicenseText")) or upstream is not None
+        file_present = known(item.get("LicenseFile")) or upstream is not None
         notice_present = known(item.get("NoticeText")) or known(item.get("NoticeFile"))
         expression = None
         basis = None
         status = "manual-review-required"
+        license_source_url = None
+        license_evidence_path = None
 
         if key in TEXT_OVERRIDES:
             expression, basis = TEXT_OVERRIDES[key]
             status = "identified-from-versioned-license-text"
+        elif upstream is not None:
+            expression, license_evidence_path, license_source_url, basis = upstream
+            status = "identified-from-versioned-upstream-license-text"
         elif known(metadata) and known(classifier):
             expression = str(metadata)
             basis = "package metadata and PyPI classifier both declare a licence; text not independently normalized here"
@@ -82,6 +97,8 @@ def main() -> int:
             "metadata_license": metadata,
             "classifier_license": classifier,
             "package_url": item.get("URL"),
+            "license_source_url": license_source_url,
+            "license_evidence_path": license_evidence_path,
         })
 
     unresolved = [x for x in reviewed if x["status"] == "manual-review-required"]
@@ -89,6 +106,7 @@ def main() -> int:
         "schema_version": "1.0",
         "inventory_count": len(reviewed),
         "identified_from_versioned_license_text": sum(x["status"] == "identified-from-versioned-license-text" for x in reviewed),
+        "identified_from_versioned_upstream_license_text": sum(x["status"] == "identified-from-versioned-upstream-license-text" for x in reviewed),
         "metadata_aligned_review_required": sum(x["status"] == "metadata-aligned-review-required" for x in reviewed),
         "metadata_review_required": sum(x["status"] == "metadata-review-required" for x in reviewed),
         "classifier_review_required": sum(x["status"] == "classifier-review-required" for x in reviewed),
