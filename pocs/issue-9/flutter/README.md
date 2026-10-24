@@ -1,6 +1,6 @@
 # Issue 9 Flutter chart reference PoC
 
-This app is a dependency-free Flutter reference for Android chart rendering. It loads a byte-for-byte copy of the canonical synthetic OHLCV fixture, draws candles and volume with `CustomPainter`, and displays a data table. It has no exchange integration or trading functionality.
+This app is a dependency-free Flutter reference for Android chart rendering. It loads a byte-for-byte copy of the canonical synthetic OHLCV fixture, draws candles and volume with `CustomPainter`, supports pinch-to-zoom and drag-to-pan through `InteractiveViewer`, and displays a data table. It has no exchange integration or trading functionality.
 
 ## Local commands
 
