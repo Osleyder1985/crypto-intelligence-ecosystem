@@ -1382,9 +1382,12 @@ def capture_public_event_archive_article(
         "http_status": status_code,
         "response_headers": headers,
         "content_type": headers.get("Content-Type") or headers.get("content-type"),
-        "raw_response_bytes": len(raw),
-        "raw_response_sha256": hashlib.sha256(raw).hexdigest(),
-        "raw_response_base64": base64.b64encode(raw).decode("ascii"),
+        **_store_response_body_fields(
+            source,
+            raw,
+            html=(headers.get("Content-Type") or headers.get("content-type") or "").split(";", 1)[0].strip().lower()
+            in {"text/html", "application/xhtml+xml"},
+        ),
         "capture_truncated": read_error is not None,
         "provider_policy_assessments": assessments,
         "provider_use_assessment": assessments[0],
