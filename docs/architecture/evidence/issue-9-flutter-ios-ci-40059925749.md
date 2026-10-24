@@ -19,7 +19,7 @@
 | Clean Debug build 1 | 40.14 s | 204,455,936 bytes | 76,482,240 bytes | 97,276 KB |
 | Clean Debug build 2 | 23.43 s | 202,899,456 bytes | 76,678,784 bytes | 97,276 KB |
 | Clean Debug build 3 | 22.49 s | 207,044,608 bytes | 76,318,336 bytes | 97,276 KB |
-| Incremental Debug after touching `lib/main.dart` | 9.61 s | 201,588,736 bytes | 76,695,168 bytes | 97,276 KB |
+| Incremental Debug after touching `lib/main.dart` | 9.61 s (timestamp-only preliminary; content-edit measurement pending) | 201,588,736 bytes | 76,695,168 bytes | 97,276 KB |
 | Release build | 29.56 s | 201,195,520 bytes | 75,204,288 bytes | 14,560 KB |
 
 Clean Debug median: **23.43 s**; range: **22.49–40.14 s**. Release build time: **29.56 s**. Release app bundle: **14,560 KB**. Code signing was disabled; this is a build artifact, not an installable signed distribution.
