@@ -246,3 +246,10 @@ Casos añadidos:
 - [ ] Verificación final de todos los checks del PR y revisión antes de merge.
 
 No se considera completado el Issue #9 hasta cerrar las condiciones pendientes con evidencia verificable.
+
+
+## 18. Herramienta de sensibilidad con puerta de evidencia
+
+Se añadió `scripts/stack_poc/sensitivity_analysis.py` y `tests/stack_poc/test_sensitivity_analysis.py`. La herramienta exige que cada alternativa tenga puntuación entera 1–5 y referencia de evidencia no vacía para **cada** criterio, y que los pesos sumen 100. Si falta cualquier dato, devuelve `status=incomplete`, una lista de ausencias y no calcula ranking (código de salida 2). Si la matriz está completa, calcula puntuación ponderada y cambia cada peso individualmente ±20%, renormaliza el total y registra si cambia el orden.
+
+Los tests cubren bloqueo por datos ausentes, ranking/sensibilidad con datos sintéticos de test y validación de pesos. Los candidatos sintéticos del test solo prueban el algoritmo; no son puntuaciones de Flutter, React Native ni de ninguna tecnología real. La matriz real permanece N/E hasta adjuntar evidencia comparativa. El workflow de PoC incluye ahora esta suite.
