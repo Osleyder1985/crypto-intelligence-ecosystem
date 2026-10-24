@@ -4,8 +4,12 @@ const canvas = document.querySelector('#chart');
 const status = document.querySelector('#status');
 const tbody = document.querySelector('#data tbody');
 const context = canvas.getContext('2d');
+let currentData = null;
+let zoom = 1;
+let panX = 0;
 
 function render(data) {
+  currentData = data;
   const candles = data.candles;
   const ratio = window.devicePixelRatio || 1;
   const bounds = canvas.getBoundingClientRect();
@@ -16,9 +20,16 @@ function render(data) {
   const height = 440;
   const plotHeight = 300;
   const padding = 32;
-  const geometry = computeCandleGeometry(candles, width, plotHeight, padding);
+  const virtualWidth = Math.max(width, width * zoom);
+  const geometry = computeCandleGeometry(candles, virtualWidth, plotHeight, padding);
+  panX = Math.max(0, Math.min(panX, virtualWidth - width));
   const maxVolume = Math.max(...candles.map(c => c.volume), 1);
   context.clearRect(0, 0, width, height);
+  context.save();
+  context.beginPath();
+  context.rect(0, 0, width, height);
+  context.clip();
+  context.translate(-panX, 0);
   context.font = '12px system-ui';
   context.fillStyle = getComputedStyle(document.body).color;
   context.strokeStyle = '#8888';
@@ -45,6 +56,7 @@ function render(data) {
   context.fillText(`High ${geometry.maxPrice}`, padding, 14);
   context.fillText(`Low ${geometry.minPrice}`, padding, plotHeight - 4);
   context.fillText('Volume', padding, 326);
+  context.restore();
   tbody.replaceChildren();
   for (const c of candles) {
     const row = document.createElement('tr');
@@ -55,7 +67,7 @@ function render(data) {
     }
     tbody.append(row);
   }
-  status.textContent = `Loaded ${candles.length} synthetic candles; UTC range ${candles[0].timestamp} to ${candles.at(-1).timestamp}. No live market source used.`;
+  status.textContent = 'Loaded ' + candles.length + ' synthetic candles; UTC range ' + candles[0].timestamp + ' to ' + candles.at(-1).timestamp + '. Zoom ' + Math.round(zoom * 100) + '%; pan ' + Math.round(panX) + 'px. No live market source used.';
 }
 
 async function load() {
@@ -70,5 +82,34 @@ async function load() {
   }
 }
 
+document.querySelector('#zoom-in').addEventListener('click', () => {
+  if (!currentData || zoom >= 4) return;
+  const bounds = canvas.getBoundingClientRect();
+  const oldZoom = zoom;
+  const center = panX + bounds.width / 2;
+  zoom = Math.min(4, Number((zoom + 0.25).toFixed(2)));
+  panX = Math.max(0, center * (zoom / oldZoom) - bounds.width / 2);
+  render(currentData);
+});
+document.querySelector('#zoom-out').addEventListener('click', () => {
+  if (!currentData || zoom <= 1) return;
+  const bounds = canvas.getBoundingClientRect();
+  const oldZoom = zoom;
+  const center = panX + bounds.width / 2;
+  zoom = Math.max(1, Number((zoom - 0.25).toFixed(2)));
+  panX = Math.max(0, center * (zoom / oldZoom) - bounds.width / 2);
+  render(currentData);
+});
+document.querySelector('#pan-left').addEventListener('click', () => {
+  if (!currentData) return;
+  panX = Math.max(0, panX - canvas.getBoundingClientRect().width * 0.25);
+  render(currentData);
+});
+document.querySelector('#pan-right').addEventListener('click', () => {
+  if (!currentData) return;
+  const width = canvas.getBoundingClientRect().width;
+  panX = Math.min(Math.max(0, width * zoom - width), panX + width * 0.25);
+  render(currentData);
+});
 window.addEventListener('resize', load);
 load();
