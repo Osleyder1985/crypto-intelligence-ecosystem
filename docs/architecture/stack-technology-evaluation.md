@@ -334,3 +334,20 @@ La matriz y el protocolo se alinean con estos modelos oficiales como referencia 
 The web PoC now exposes accessible buttons for zoom in/out and pan left/right, while retaining the textual OHLCV table. Chromium smoke test passed in [run 40060309796](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/actions/runs/40060309796): it loaded the 12-candle canonical fixture, verified 12 table rows, exercised zoom to 125%, panned right and left, returned to 100%, and observed no page errors. The three-process Node geometry microbenchmark in the same run reported per-process medians 0.003307, 0.003266 and 0.003327 ms; median-of-medians 0.003307 ms. p95 observations were 0.007203, 0.007133 and 0.007163 ms.
 
 This is a browser smoke test and geometry microbenchmark, not a full performance profile: it does not measure real-device rendering, frame time, GPU, memory peak, network latency or chart-ready time. Playwright is CI-only tooling and is not a web-client runtime dependency.
+
+
+## 26. Mobile PoC repeated-build evidence available at this checkpoint (2026-10-24)
+
+### Flutter Android (Debug + Release)
+
+[Run 40059925721](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/actions/runs/40059925721) passed on Ubuntu 24.04.5, AMD EPYC 7763, 4 vCPU, 16.77 GB RAM, Flutter 3.47.5 stable, Node 22.23.3 and Temurin JDK 17.0.20.1. Debug clean-build times were 163.34 / 19.42 / 18.74 s (median 19.42 s, range 18.74–163.34 s), incremental Debug 4.50 s, Debug APK 150,302,356 bytes. Release build was 57.13 s and Release APK 45,445,816 bytes. Maximum RSS observations were 281,224 / 116,092 / 108,880 KB for clean builds, 102,080 KB incremental and 124,632 KB Release. Full record: `docs/architecture/evidence/issue-9-flutter-android-ci-40059925721.md`.
+
+### React Native iOS (Debug)
+
+[Run 40059801779](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/actions/runs/40059801779) passed on macOS 26 ARM64, Apple M1 virtual, 3 cores, 7 GB RAM, Xcode 26.6 and Node 22.23.4. Debug clean-build times were 64.51 / 39.76 / 40.60 s (median 40.60 s, range 39.76–64.51 s), incremental Debug 13.86 s, Debug app bundle 163,404 KB. Maximum RSS observations: 205,275,136 / 214,040,576 / 212,500,480 bytes; peak memory footprint observations: 123,276,096 / 123,292,480 / 121,801,600 bytes. Full record: `docs/architecture/evidence/issue-9-react-native-ios-repeated-builds-40059801779.md`.
+
+### Comparability and missing cells
+
+These Android and iOS measurements are not compared against one another. Android Release/Debug can be compared only with React Native Android Release/Debug measured on the same runner image; iOS Debug/Release can be compared only with React Native iOS Debug/Release on the same macOS image. The current repeated React Native Android build/release workflow and the current Flutter iOS Debug/Release workflow are still pending. The earlier React Native Android result is one build only and cannot substitute for its three-run summary.
+
+The measurements support the feasibility of both Flutter and bare React Native, but do not yet justify a weighted winner. Real-device chart readiness, interaction latency, memory under a running chart, physical-device accessibility, and the target Windows PC report remain N/E. Do not ratify ADR-0001 or close Issue #9 at this checkpoint.
