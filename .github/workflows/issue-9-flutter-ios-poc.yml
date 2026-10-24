@@ -52,27 +52,36 @@ jobs:
       - name: Run Flutter widget tests
         working-directory: pocs/issue-9/flutter
         run: flutter test
-      - name: Run three clean iOS builds and record resource data
+      - name: Run three clean iOS simulator builds and record resource data
         working-directory: pocs/issue-9/flutter
+        shell: bash
         run: |
-          set -o pipefail
+          set -euo pipefail
           : > flutter-ios-build-measurement.log
           for run in 1 2 3; do
             flutter clean
             flutter pub get
+            started=$(date +%s)
             /usr/bin/time -l flutter build ios --simulator --debug --no-codesign 2>&1 | tee -a flutter-ios-build-measurement.log
-            printf 'CLEAN_IOS_BUILD_RUN=%s\n' "$run" | tee -a flutter-ios-build-measurement.log
+            elapsed=$(($(date +%s)-started))
+            printf 'CLEAN_IOS_SIMULATOR_DEBUG_RUN=%s ELAPSED_SECONDS=%s\\n' "$run" "$elapsed" | tee -a flutter-ios-build-measurement.log
             du -sk build/ios/iphonesimulator/Runner.app | tee -a flutter-ios-build-measurement.log
           done
           cp lib/main.dart lib/main.dart.benchmark-original
-          printf '\n// Issue 9 benchmark-only source edit.\n' >> lib/main.dart
+          trap 'mv lib/main.dart.benchmark-original lib/main.dart 2>/dev/null || true' EXIT
+          printf '\\n// Issue 9 benchmark-only source edit.\\n' >> lib/main.dart
+          started=$(date +%s)
           /usr/bin/time -l flutter build ios --simulator --debug --no-codesign 2>&1 | tee -a flutter-ios-build-measurement.log
+          elapsed=$(($(date +%s)-started))
           mv lib/main.dart.benchmark-original lib/main.dart
-          printf 'INCREMENTAL_DEBUG_IOS_BUILD_AFTER_SOURCE_TOUCH\n' | tee -a flutter-ios-build-measurement.log
+          trap - EXIT
+          printf 'INCREMENTAL_IOS_SIMULATOR_DEBUG_AFTER_SOURCE_EDIT ELAPSED_SECONDS=%s\\n' "$elapsed" | tee -a flutter-ios-build-measurement.log
           du -sk build/ios/iphonesimulator/Runner.app | tee -a flutter-ios-build-measurement.log
-          /usr/bin/time -l flutter build ios --simulator --release --no-codesign 2>&1 | tee -a flutter-ios-build-measurement.log
-          printf 'IOS_RELEASE_BUILD_COMPLETE\n' | tee -a flutter-ios-build-measurement.log
-          du -sk build/ios/iphonesimulator/Runner.app | tee -a flutter-ios-build-measurement.log
+          started=$(date +%s)
+          /usr/bin/time -l flutter build ios --release --no-codesign 2>&1 | tee -a flutter-ios-build-measurement.log
+          elapsed=$(($(date +%s)-started))
+          printf 'IOS_DEVICE_RELEASE_BUILD_COMPLETE ELAPSED_SECONDS=%s\\n' "$elapsed" | tee -a flutter-ios-build-measurement.log
+          du -sk build/ios/iphoneos/Runner.app | tee -a flutter-ios-build-measurement.log
       - name: Record Dart and iOS CocoaPods dependency inventories
         working-directory: pocs/issue-9/flutter
         shell: bash
