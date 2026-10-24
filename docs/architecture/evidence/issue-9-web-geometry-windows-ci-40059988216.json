@@ -1,0 +1,49 @@
+{
+  "evidence_id": "issue-9-web-geometry-windows-ci-40059988216",
+  "workflow_run": "https://github.com/Osleyder1985/crypto-intelligence-ecosystem/actions/runs/40059988216",
+  "source_commit": "d782d2e7179cd908700106062e1aecda0bb9ae5a",
+  "benchmark": "issue-9-web-chart-geometry-v1",
+  "fixture": {
+    "version": "1.0.0",
+    "sha256": "0265cfa5e4d4e6673476bc7db84ed98d43147409172a00deda958bd82823f63d",
+    "candle_count": 12,
+    "classification": "synthetic-not-market-data"
+  },
+  "environment": {
+    "os": "Microsoft Windows Server 2025 Datacenter",
+    "os_version": "10.0.26100",
+    "os_build": "26100",
+    "runtime": "Node.js v22.23.4",
+    "architecture": "AMD64",
+    "cpu": "AMD EPYC 9V74 80-Core Processor",
+    "logical_cpus": 4,
+    "total_memory_bytes": 17174360064,
+    "powershell": "7.6.7",
+    "java": "Temurin 17.0.20.1",
+    "runner_type": "GitHub-hosted Windows runner"
+  },
+  "conditions": {
+    "chart_width": 1200,
+    "chart_height": 640,
+    "padding": 24,
+    "warmup_iterations": 100,
+    "measured_iterations": 1000
+  },
+  "geometry_duration_ms": {
+    "min": 0.003,
+    "median": 0.0032,
+    "p95": 0.0076,
+    "max": 6.0256
+  },
+  "process_rss_bytes": {
+    "before": 35377152,
+    "after": 39354368,
+    "interpretation": "two point-in-time observations, not peak memory"
+  },
+  "limitations": [
+    "Hosted Windows Server runner, not the user's Windows 11 PC.",
+    "Node.js geometry microbenchmark only; excludes browser rendering, layout, GPU, network and actual chart readiness.",
+    "Do not compare these numbers directly with Linux runner results.",
+    "The benchmark input SHA now matches the canonical LF-normalized fixture used by Linux, confirming the .gitattributes fix."
+  ]
+}
