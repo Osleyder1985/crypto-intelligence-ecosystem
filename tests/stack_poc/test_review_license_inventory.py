@@ -55,7 +55,7 @@ class LicenceInventoryReviewTests(unittest.TestCase):
         report, _ = self.run_review([{
             "Name": "starlette", "Version": "1.10.0",
             "License-Metadata": "UNKNOWN", "License-Classifier": "UNKNOWN",
-            "LicenseText": "UNKNOWN", "LicenseFile": "UNKNOWN",
+            "LicenseText": "Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met.", "LicenseFile": "/package/LICENSE.md",
             "NoticeFile": "UNKNOWN", "NoticeText": "UNKNOWN",
             "URL": "https://github.com/Kludex/starlette",
         }])
