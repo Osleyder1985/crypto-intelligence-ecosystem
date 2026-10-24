@@ -928,18 +928,18 @@ def build_public_event_archive_coverage_manifest(
             or not _archive_url_allowed(source, capture.get("final_url"))
         ):
             raise PermissionError(f"segments[{index}] is not a complete capture from the currently approved archive source")
-        raw_b64 = capture.get("raw_response_base64")
-        if not isinstance(raw_b64, str):
-            raise PermissionError(f"segments[{index}] has no preserved response body")
         try:
-            raw = base64.b64decode(raw_b64, validate=True)
-        except (ValueError, base64.binascii.Error) as exc:
-            raise PermissionError(f"segments[{index}] response body is invalid base64") from exc
+            _load_archive_text_evidence(capture)
+        except PermissionError as exc:
+            raise PermissionError(f"segments[{index}] stored evidence integrity check failed: {exc}") from exc
         if (
-            hashlib.sha256(raw).hexdigest() != capture.get("raw_response_sha256")
-            or len(raw) != capture.get("raw_response_bytes")
+            isinstance(capture.get("raw_response_bytes"), bool)
+            or not isinstance(capture.get("raw_response_bytes"), int)
+            or capture.get("raw_response_bytes") < 0
+            or not isinstance(capture.get("raw_response_sha256"), str)
+            or not re.fullmatch(r"[0-9a-f]{64}", capture.get("raw_response_sha256", ""))
         ):
-            raise PermissionError(f"segments[{index}] response integrity check failed")
+            raise PermissionError(f"segments[{index}] original response hash/byte count is invalid")
         partition_id = segment.get("partition_id")
         page_index = segment.get("page_index")
         expected_page_count = segment.get("expected_page_count")
@@ -970,6 +970,9 @@ def build_public_event_archive_coverage_manifest(
             "http_status": capture.get("http_status"),
             "raw_response_bytes": capture.get("raw_response_bytes"),
             "raw_response_sha256": capture.get("raw_response_sha256"),
+            "stored_content_mode": capture.get("stored_content_mode", "FULL_RESPONSE"),
+            "text_evidence_sha256": capture.get("text_evidence_sha256"),
+            "text_evidence_bytes": capture.get("text_evidence_bytes"),
         })
     normalized_segments.sort(key=lambda item: (item["partition_id"], item["page_index"]))
     missing_pages = []
