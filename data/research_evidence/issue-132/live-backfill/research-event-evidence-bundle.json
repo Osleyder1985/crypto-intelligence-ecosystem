@@ -1,10 +1,10 @@
 {
-  "bundle_sha256": "56c15f13aef52a4d342c588696f2a3f8867ab78b9888fba802ebe15d6d6eaedb",
+  "bundle_sha256": "229d35f1215e1438e2b5a2fe41f83741714c8f8e9d5087a64aeef72513f4e9d3",
   "causality_claimed": false,
   "contextual_unmapped_sources": [
     {
-      "article_raw_response_sha256": "e8ff4ad2ce794fc6148cf17753d0605fe9fcc58887f7d95804abd5691c28a983",
-      "article_text_evidence_sha256": "d7fbaf5384a0dd097ebf829901039237a3af384bff0b3947664ebda1eb70bb01",
+      "article_raw_response_sha256": "71f71ec8b1a754ed240c8b065ebd63293d8fd1efa698a146a0ec4ff795a8fbe3",
+      "article_text_evidence_sha256": "3d354ab24e9a5e1c2ada29c567eadbbf80c817f83aab1f2bbd04bbb4ffef78d2",
       "article_url": "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm",
       "asset_mapping_status": "NOT_MAPPED",
       "causality_status": "NOT_ASSESSED",
@@ -14,7 +14,7 @@
       "title": "Federal Reserve Board requests public comment on two proposals related to establishing a regulatory framework for Board-supervised payment stablecoin issuers under the GENIUS Act"
     }
   ],
-  "created_at": "2026-10-24T02:29:12.472144Z",
+  "created_at": "2026-10-24T02:29:27.803694Z",
   "events": [
     {
       "asset_identifiers": [
@@ -24,9 +24,9 @@
         }
       ],
       "causality_status": "NOT_ASSESSED",
-      "event_id": "cftc_press_release_archive:faed8c7ad83768ccdd44657a245cc694c0c8772a93be43be4a5c393642013c65",
+      "event_id": "cftc_press_release_archive:5573a1c78394d1570f1981c8e02a4dd9ea56d63f3788ae01deb3808aca6382f4",
       "event_record_path": "cftc_press_release_archive/event-record.json",
-      "event_record_sha256": "718807dbaacd9ede56b9294234bfb1eb42a546582485584ead6461db4d86aec4",
+      "event_record_sha256": "16e776c0652f310f69461fcdc1bdc4ad0a2259f38949b347b8d9ecbb865495d3",
       "source_id": "cftc_press_release_archive",
       "temporal_association_status": "NOT_EVALUATED_NO_MOVEMENT_WINDOW"
     },
@@ -38,9 +38,9 @@
         }
       ],
       "causality_status": "NOT_ASSESSED",
-      "event_id": "sec_press_release_archive:e910adbb3fc85291330c35f47d80e2e7fdd640a37b5f68da88cf647bbf1d5f0f",
+      "event_id": "sec_press_release_archive:0ee60243b9092e1ae19435f8552a7cf57da3e4d2dd161484a84b832ab775a09c",
       "event_record_path": "sec_press_release_archive/event-record.json",
-      "event_record_sha256": "90da4ada1ace62c66622759764b62d13c89dc7173cd0ab5aa09de170f170a167",
+      "event_record_sha256": "17914f0a6b05d73abef6cfcc6a8df638a13a5cb56412c1510c962c3acdef4a4c",
       "source_id": "sec_press_release_archive",
       "temporal_association_status": "NOT_EVALUATED_NO_MOVEMENT_WINDOW"
     }
