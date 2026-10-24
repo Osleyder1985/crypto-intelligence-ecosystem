@@ -29,9 +29,11 @@ jobs:
       - name: Verify app fixture matches canonical fixture byte-for-byte
         run: cmp tests/stack_poc/fixtures/ohlcv_synthetic_v1.json pocs/issue-9/flutter/assets/ohlcv_synthetic_v1.json
       - name: Install pinned Flutter SDK
-        run: |
-          git clone --depth 1 --branch 3.35.7 https://github.com/flutter/flutter.git "$RUNNER_TEMP/flutter"
-          echo "$RUNNER_TEMP/flutter/bin" >> "$GITHUB_PATH"
+        uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2
+        with:
+          channel: stable
+          flutter-version: 3.35.7
+          cache: true
       - name: Record Flutter toolchain
         run: |
           flutter config --no-analytics
