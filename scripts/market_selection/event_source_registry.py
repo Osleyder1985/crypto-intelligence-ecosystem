@@ -137,7 +137,7 @@ EVENT_SOURCE_REGISTRY = {
                 "attribution": {"required": True, "format": "Source: U.S. Securities and Exchange Commission (SEC), with the canonical press-release URL."},
                 "automated_access": {
                     "approved_endpoint": "https://www.sec.gov/newsroom/press-releases",
-                    "user_agent": "CryptoIntelligenceEcosystem/1.0 (+https://github.com/Osleyder1985/crypto-intelligence-ecosystem)",
+                    "user_agent": "CryptoIntelligenceIssue132PolicyReview/1.0 (contact: repository maintainer)",
                     "max_aggregate_requests_per_second": 1,
                     "timeout_seconds": 20,
                     "redirect_policy": "HTTPS redirects only to allowlisted SEC hosts and approved press-release paths."
@@ -183,7 +183,7 @@ EVENT_SOURCE_REGISTRY = {
                 "attribution": {"required": True, "format": "Source: U.S. Commodity Futures Trading Commission (CFTC), with the canonical press-release URL."},
                 "automated_access": {
                     "approved_endpoint": "https://www.cftc.gov/PressRoom/PressReleases",
-                    "user_agent": "CryptoIntelligenceEcosystem/1.0 (+https://github.com/Osleyder1985/crypto-intelligence-ecosystem)",
+                    "user_agent": "CryptoIntelligenceIssue132PolicyReview/1.0 (contact: repository maintainer)",
                     "max_aggregate_requests_per_second": 1,
                     "timeout_seconds": 20,
                     "redirect_policy": "HTTPS redirects only to allowlisted CFTC hosts and approved press-release paths."
@@ -229,7 +229,7 @@ EVENT_SOURCE_REGISTRY = {
                 "attribution": {"required": True, "format": "Source: Board of Governors of the Federal Reserve System, with the canonical press-release URL."},
                 "automated_access": {
                     "approved_endpoint": "https://www.federalreserve.gov/newsevents/pressreleases.htm",
-                    "user_agent": "CryptoIntelligenceEcosystem/1.0 (+https://github.com/Osleyder1985/crypto-intelligence-ecosystem)",
+                    "user_agent": "CryptoIntelligenceIssue132PolicyReview/1.0 (contact: repository maintainer)",
                     "max_aggregate_requests_per_second": 1,
                     "timeout_seconds": 20,
                     "redirect_policy": "HTTPS redirects only to allowlisted Federal Reserve hosts and approved press-release paths."
