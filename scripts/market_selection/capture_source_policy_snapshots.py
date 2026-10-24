@@ -26,6 +26,7 @@ POLICY_URLS = {
     "cftc_web_policy": "https://www.cftc.gov/WebPolicy/index.htm",
     "cftc_rss_status": "https://www.cftc.gov/RSS/index.htm",
     "federal_reserve_disclaimer": "https://www.federalreserve.gov/disclaimer.htm",
+    "binance_spot_rest_api": "https://developers.binance.com/en/docs/products/spot/rest-api",
 }
 
 
