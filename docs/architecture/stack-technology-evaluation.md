@@ -281,3 +281,18 @@ This is a completed review for the current **Python PoC environment**, not for t
 ## 21. Matrix scoring and sensitivity status
 
 The sensitivity-analysis implementation exists and is tested to reject any candidate with missing scores or evidence references. However, the real candidate matrix still has critical dimensions without measured Flutter, React Native, web-browser and local-Windows evidence. **Do not produce a winner or mark the matrix complete yet.** A synthetic unit test of the sensitivity algorithm is not a sensitivity result for actual stack candidates. Once comparable evidence is available, score each criterion with an evidence link, run the ±20% one-weight-at-a-time scenarios, and record ranking stability before the ADR is ratified.
+
+
+## 22. Repeticiones independientes del microbenchmark web (2026-10-24)
+
+La segunda ejecución del workflow [40058638191](https://github.com/Osleyder1985/crypto-intelligence-ecosystem/actions/runs/40058638191) completó 3 procesos Node independientes; cada proceso hizo 100 calentamientos y 1.000 observaciones. Registro durable: `docs/architecture/evidence/issue-9-web-geometry-linux-ci-40058638191.json`.
+
+| Proceso | Mediana (ms) | p95 (ms) | RSS antes (bytes) | RSS después (bytes) |
+|---:|---:|---:|---:|---:|
+| 1 | 0.001663 | 0.003435 | 51,240,960 | 55,762,944 |
+| 2 | 0.001652 | 0.003505 | 51,232,768 | 55,754,752 |
+| 3 | 0.002985 | 0.003796 | 51,412,992 | 55,672,832 |
+
+Mediana de las tres medianas: **0.001663 ms**; rango de medianas: **0.001652–0.002985 ms**. Entorno: Linux hosted runner, Node v22.23.3, AMD EPYC 9V45, 4 vCPU, RAM reportada 16,766,414,848 bytes. Fixture SHA-256: `0265cfa5e4d4e6673476bc7db84ed98d43147409172a00deda958bd82823f63d`. Los 3 tests geométricos terminaron PASS.
+
+La repetición independiente mejora la reproducibilidad de la microoperación, pero no equivale a tres builds limpios ni mide la pantalla renderizada. El RSS sigue siendo muestreo antes/después, no pico. No usar esta cifra para clasificar el stack frente a Flutter/React Native ni para inferir experiencia real de usuario.
